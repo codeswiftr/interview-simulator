@@ -360,3 +360,130 @@ async def test_response_ownership_check(client: AsyncClient, session_override):
         headers={"Authorization": token2},
     )
     assert get_resp.status_code == 404  # Interview not found for user 2
+
+
+@pytest.mark.asyncio
+async def test_audio_upload(client: AsyncClient, session_override):
+    """Test audio file upload for interview responses."""
+    from io import BytesIO
+
+    token = await register_and_login(client, email="upload@example.com")
+
+    # Create behavioral questions for the interview
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Upload test question {i+1}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.EASY.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    # Create and start an interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Get assigned questions
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    question_id = questions_resp.json()[0]["id"]
+
+    # Create a fake audio file
+    fake_audio = BytesIO(b"fake audio content for testing")
+    fake_audio.name = "test.webm"
+
+    # Upload audio
+    upload_resp = await client.post(
+        "/api/v1/upload/audio",
+        files={"file": ("test.webm", fake_audio, "audio/webm")},
+        data={"session_id": interview_id, "question_id": question_id},
+        headers={"Authorization": token},
+    )
+    assert upload_resp.status_code == 201
+    data = upload_resp.json()
+    assert "audio_url" in data
+    assert data["file_size_bytes"] == 30
+    assert data["filename"].endswith(".webm")
+
+
+@pytest.mark.asyncio
+async def test_audio_upload_invalid_session(client: AsyncClient):
+    """Test upload fails for non-existent session."""
+    from io import BytesIO
+    import uuid
+
+    token = await register_and_login(client, email="invalid@example.com")
+
+    fake_audio = BytesIO(b"test audio")
+
+    # Try to upload to non-existent session
+    upload_resp = await client.post(
+        "/api/v1/upload/audio",
+        files={"file": ("test.mp3", fake_audio, "audio/mpeg")},
+        data={"session_id": str(uuid.uuid4()), "question_id": str(uuid.uuid4())},
+        headers={"Authorization": token},
+    )
+    assert upload_resp.status_code == 404
+    assert "not found" in upload_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_audio_upload_invalid_format(client: AsyncClient, session_override):
+    """Test upload rejects invalid file formats."""
+    from io import BytesIO
+
+    token = await register_and_login(client, email="format@example.com")
+
+    # Create questions and interview
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Format test question {i+1}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.EASY.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    question_id = questions_resp.json()[0]["id"]
+
+    # Try to upload invalid format
+    fake_file = BytesIO(b"not an audio file")
+    upload_resp = await client.post(
+        "/api/v1/upload/audio",
+        files={"file": ("test.txt", fake_file, "text/plain")},
+        data={"session_id": interview_id, "question_id": question_id},
+        headers={"Authorization": token},
+    )
+    assert upload_resp.status_code == 400
+    assert "not allowed" in upload_resp.json()["detail"].lower()

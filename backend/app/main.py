@@ -3,10 +3,13 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.api import feedback, health, interviews, questions, transcription, users
+from app.api import feedback, health, interviews, questions, transcription, upload, users
 from app.config import settings
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal
@@ -58,6 +61,12 @@ app.include_router(questions.router, prefix="/api/v1/questions", tags=["Question
 app.include_router(interviews.router, prefix="/api/v1/interviews", tags=["Interviews"])
 app.include_router(feedback.router, prefix="/api/v1/feedback", tags=["Feedback"])
 app.include_router(transcription.router, prefix="/api/v1/transcription", tags=["Transcription"])
+app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
+
+# Mount static files for uploaded content
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 @app.get("/")
