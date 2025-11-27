@@ -8,24 +8,18 @@ interface NewInterviewModalProps {
   onSubmit: (data: CreateInterviewFormData) => Promise<void>;
 }
 
-const categories = [
+const interviewTypes = [
   { value: 'behavioral', label: 'Behavioral', description: 'Focus on past experiences and soft skills' },
   { value: 'technical', label: 'Technical', description: 'Programming and problem-solving questions' },
   { value: 'system_design', label: 'System Design', description: 'Architecture and design discussions' },
+  { value: 'mixed', label: 'Mixed', description: 'Combination of all question types' },
 ] as const;
 
-const difficulties = [
-  { value: 'easy', label: 'Easy', description: 'Entry-level questions' },
-  { value: 'medium', label: 'Medium', description: 'Mid-level complexity' },
-  { value: 'hard', label: 'Hard', description: 'Advanced topics' },
-] as const;
-
-const questionCounts = [5, 10, 15];
+const questionCounts = [3, 5, 10];
 
 export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInterviewModalProps) {
   const [formData, setFormData] = useState<CreateInterviewFormData>({
-    category: 'behavioral',
-    difficulty: 'medium',
+    interview_type: 'behavioral',
     question_count: 5,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,8 +37,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
       onClose();
       // Reset form
       setFormData({
-        category: 'behavioral',
-        difficulty: 'medium',
+        interview_type: 'behavioral',
         question_count: 5,
       });
     } catch (err: any) {
@@ -69,55 +62,29 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Category Selection */}
+          {/* Interview Type Selection */}
           <div>
             <label className="label mb-3 block">Interview Type</label>
             <div className="grid gap-3">
-              {categories.map((cat) => (
+              {interviewTypes.map((type) => (
                 <label
-                  key={cat.value}
+                  key={type.value}
                   className={`card-interactive p-4 flex items-start gap-3 ${
-                    formData.category === cat.value ? 'border-electric-blue bg-electric-blue/5' : ''
+                    formData.interview_type === type.value ? 'border-electric-blue bg-electric-blue/5' : ''
                   }`}
                 >
                   <input
                     type="radio"
-                    name="category"
-                    value={cat.value}
-                    checked={formData.category === cat.value}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                    name="interview_type"
+                    value={type.value}
+                    checked={formData.interview_type === type.value}
+                    onChange={(e) => setFormData({ ...formData, interview_type: e.target.value as any })}
                     className="mt-1"
                   />
                   <div className="flex-1">
-                    <div className="font-semibold mb-1">{cat.label}</div>
-                    <div className="body-small text-text-secondary">{cat.description}</div>
+                    <div className="font-semibold mb-1">{type.label}</div>
+                    <div className="body-small text-text-secondary">{type.description}</div>
                   </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Difficulty Selection */}
-          <div>
-            <label className="label mb-3 block">Difficulty Level</label>
-            <div className="grid grid-cols-3 gap-3">
-              {difficulties.map((diff) => (
-                <label
-                  key={diff.value}
-                  className={`card-interactive p-4 text-center ${
-                    formData.difficulty === diff.value ? 'border-electric-blue bg-electric-blue/5' : ''
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="difficulty"
-                    value={diff.value}
-                    checked={formData.difficulty === diff.value}
-                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as any })}
-                    className="sr-only"
-                  />
-                  <div className="font-semibold mb-1">{diff.label}</div>
-                  <div className="body-small text-text-secondary">{diff.description}</div>
                 </label>
               ))}
             </div>

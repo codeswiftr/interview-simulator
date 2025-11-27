@@ -71,8 +71,8 @@ export const interviewsAPI = {
   getById: (id: string) => api.get(`/interviews/${id}`),
 
   create: (data: {
-    category: string;
-    difficulty: string;
+    interview_type: string;
+    company_style?: string;
     question_count?: number;
   }) => api.post('/interviews', data),
 

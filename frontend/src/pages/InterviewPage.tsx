@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { X, AlertCircle, CheckCircle, SkipForward } from 'lucide-react';
-import { interviewsAPI, questionsAPI, responsesAPI, uploadAPI } from '../lib/api';
+import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import Timer from '../components/interview/Timer';
 import RecordingIndicator from '../components/interview/RecordingIndicator';
@@ -52,7 +52,7 @@ export default function InterviewPage() {
         const sessionData = sessionResponse.data;
         setSession(sessionData);
 
-        // Start the session if it's scheduled
+        // Start the session if it's scheduled (this assigns questions on backend)
         if (sessionData.status === 'scheduled') {
           const startResponse = await interviewsAPI.start(id);
           setSession(startResponse.data);
@@ -61,21 +61,9 @@ export default function InterviewPage() {
         // Set session start time
         setSessionStartTime(Date.now());
 
-        // For now, use random questions matching the session criteria
-        // TODO: Update when backend provides interview-specific questions
-        const questionPromises = [];
-        for (let i = 0; i < sessionData.total_questions; i++) {
-          questionPromises.push(
-            questionsAPI.getRandomQuestion(
-              sessionData.category,
-              sessionData.difficulty
-            )
-          );
-        }
-
-        const questionResponses = await Promise.all(questionPromises);
-        const fetchedQuestions = questionResponses.map((res) => res.data);
-        setQuestions(fetchedQuestions);
+        // Fetch assigned questions from the backend
+        const questionsResponse = await interviewsAPI.getQuestions(id);
+        setQuestions(questionsResponse.data);
       } catch (err) {
         const error = err as { response?: { data?: { message?: string } } };
         setError(error.response?.data?.message || 'Failed to load interview');

@@ -18,10 +18,13 @@ export interface Question {
   id: string;
   category: 'behavioral' | 'technical' | 'system_design';
   difficulty: 'easy' | 'medium' | 'hard';
-  question_text: string;
-  follow_up_questions?: string[];
-  evaluation_criteria: string[];
+  content: string; // The question text
+  company_tags?: string[];
+  topic_tags?: string[];
+  sample_answer?: string;
+  evaluation_criteria?: Record<string, unknown>;
   expected_duration_seconds: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -29,17 +32,13 @@ export interface Question {
 // Interview Session types
 export interface InterviewSession {
   id: string;
-  user_id: string;
-  category: string;
-  difficulty: string;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  total_questions: number;
-  completed_questions: number;
+  interview_type: 'behavioral' | 'technical' | 'system_design' | 'mixed';
+  company_style?: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'analyzed' | 'cancelled';
+  question_count: number;
   overall_score?: number;
-  started_at?: string;
-  completed_at?: string;
+  duration_seconds?: number;
   created_at: string;
-  updated_at: string;
 }
 
 // Response types
@@ -113,8 +112,8 @@ export interface RegisterFormData {
 }
 
 export interface CreateInterviewFormData {
-  category: 'behavioral' | 'technical' | 'system_design';
-  difficulty: 'easy' | 'medium' | 'hard';
+  interview_type: 'behavioral' | 'technical' | 'system_design' | 'mixed';
+  company_style?: string;
   question_count: number;
 }
 

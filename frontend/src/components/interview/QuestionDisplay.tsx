@@ -42,17 +42,8 @@ export default function QuestionDisplay({
 
       {/* Question Text */}
       <h2 className="text-3xl font-bold leading-relaxed mb-4">
-        {question.question_text}
+        {question.content}
       </h2>
-
-      {/* Follow-up questions hint */}
-      {question.follow_up_questions && question.follow_up_questions.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-white/10">
-          <p className="text-sm text-white/60 mb-2">
-            Be prepared for follow-up questions
-          </p>
-        </div>
-      )}
 
       {/* Expected duration hint */}
       <div className="mt-4">
