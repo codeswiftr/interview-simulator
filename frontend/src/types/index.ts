@@ -47,7 +47,7 @@ export interface InterviewResponse {
   session_id: string;
   question_id: string;
   audio_url: string;
-  transcription?: string;
+  transcript?: string;
   duration_seconds?: number;
   submitted_at: string;
   created_at: string;
@@ -136,6 +136,20 @@ export interface CreateInterviewFormData {
   interview_type: 'behavioral' | 'technical' | 'system_design' | 'mixed';
   company_style?: string;
   question_count: number;
+}
+
+// Subscription types
+export interface SubscriptionStatus {
+  tier: 'free' | 'pro' | 'team';
+  status: string | null;
+  expires_at: string | null;
+  interviews_this_month: number;
+  interviews_limit: number | null;
+  can_create_interview: boolean;
+}
+
+export interface CheckoutSessionResponse {
+  url: string;
 }
 
 // API Error types

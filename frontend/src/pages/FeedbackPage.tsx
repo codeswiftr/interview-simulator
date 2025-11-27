@@ -12,6 +12,7 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import ScoreRing from '../components/feedback/ScoreRing';
 import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
@@ -178,7 +179,8 @@ export default function FeedbackPage() {
   const hasFeedback = sessionFeedback !== null;
 
   return (
-    <div className="min-h-screen bg-surface-primary py-8">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-surface-primary py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -354,7 +356,7 @@ export default function FeedbackPage() {
                     key={response.id}
                     questionNumber={idx + 1}
                     question={response.question?.content || 'Question text unavailable'}
-                    transcript={response.transcription}
+                    transcript={response.transcript}
                     feedback={contentFeedback?.detailed_feedback || 'Feedback analysis pending...'}
                     score={contentFeedback?.overall_content_score}
                     suggestions={contentFeedback?.improvements || []}
@@ -393,6 +395,7 @@ export default function FeedbackPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
