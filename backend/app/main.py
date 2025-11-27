@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import feedback, health, interviews, questions, transcription, upload, users
+from app.api import feedback, health, interviews, questions, subscriptions, transcription, upload, users
 from app.config import settings
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal
@@ -62,6 +62,7 @@ app.include_router(interviews.router, prefix="/api/v1/interviews", tags=["Interv
 app.include_router(feedback.router, prefix="/api/v1/feedback", tags=["Feedback"])
 app.include_router(transcription.router, prefix="/api/v1/transcription", tags=["Transcription"])
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
+app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
 
 # Mount static files for uploaded content
 uploads_dir = Path("uploads")
