@@ -101,6 +101,18 @@ async def test_question_crud_and_random(client: AsyncClient):
 async def test_interview_lifecycle(client: AsyncClient):
     token = await register_and_login(client, email="interview@example.com")
 
+    # Seed enough behavioral questions for assignment
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Behavioral question {i+1}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.MEDIUM.value,
+            },
+            headers={"Authorization": token},
+        )
+
     create_resp = await client.post(
         "/api/v1/interviews/",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
@@ -115,6 +127,14 @@ async def test_interview_lifecycle(client: AsyncClient):
     )
     assert start_resp.status_code == 200
     assert start_resp.json()["status"] == InterviewStatus.IN_PROGRESS
+
+    # Verify questions were assigned
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    assert len(questions_resp.json()) == 3
 
     end_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/end",
@@ -142,18 +162,30 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
     """Test submitting and retrieving responses to interview questions."""
     token = await register_and_login(client, email="response@example.com")
 
-    # Create a question first
+    # Create a TECHNICAL question that won't be assigned to behavioral interview
     question_resp = await client.post(
         "/api/v1/questions/",
         json={
-            "content": "Tell me about a time you faced a challenge",
-            "category": QuestionCategory.BEHAVIORAL.value,
+            "content": "Explain polymorphism in OOP",
+            "category": QuestionCategory.TECHNICAL.value,  # Different category
             "difficulty": Difficulty.MEDIUM.value,
         },
         headers={"Authorization": token},
     )
     assert question_resp.status_code == 201
-    question_id = question_resp.json()["id"]
+    unlinked_question_id = question_resp.json()["id"]
+
+    # Create enough behavioral questions for the interview
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Tell me about a time {i+1}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.MEDIUM.value,
+            },
+            headers={"Authorization": token},
+        )
 
     # Create an interview
     interview_resp = await client.post(
@@ -166,7 +198,7 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
 
     # Cannot submit response when interview is not started
     response_data = {
-        "question_id": question_id,
+        "question_id": unlinked_question_id,
         "transcript": "This is my answer to the question.",
         "duration_seconds": 120,
         "audio_url": "https://example.com/audio.mp3",
@@ -179,13 +211,14 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
     assert submit_resp.status_code == 400
     assert "in progress" in submit_resp.json()["detail"].lower()
 
-    # Start the interview
-    await client.post(
+    # Start the interview (this assigns behavioral questions)
+    start_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/start",
         headers={"Authorization": token},
     )
+    assert start_resp.status_code == 200
 
-    # Submit response should fail - question doesn't belong to interview
+    # Submit response should fail - technical question doesn't belong to behavioral interview
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json=response_data,

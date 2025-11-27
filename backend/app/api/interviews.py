@@ -20,10 +20,12 @@ from app.models.interview import (
     InterviewStatus,
     InterviewType,
 )
-from app.models.question import Question
+from app.models.question import Question, QuestionRead
 from app.models.user import User
+from app.services.interview_service import InterviewService
 
 router = APIRouter()
+interview_service = InterviewService()
 
 
 def _get_time() -> datetime:
@@ -99,16 +101,63 @@ async def start_interview(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> InterviewSession:
-    """Start an interview session."""
+    """Start an interview session.
+
+    When starting an interview, random questions are assigned based on
+    the interview type. Questions are linked via InterviewQuestion records.
+    """
     interview = await _get_interview_for_user(session, interview_id, current_user.id)
     if interview.status not in {InterviewStatus.SCHEDULED, InterviewStatus.IN_PROGRESS}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot start interview")
+
+    # Assign questions if not already assigned (idempotent for re-starting)
+    has_questions = await interview_service.has_assigned_questions(session, interview_id)
+    if not has_questions:
+        try:
+            await interview_service.assign_questions(session, interview)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
     interview.status = InterviewStatus.IN_PROGRESS
     interview.started_at = interview.started_at or _get_time()
     await session.commit()
     await session.refresh(interview)
     return interview
+
+
+@router.get("/{interview_id}/questions", response_model=list[QuestionRead])
+async def get_interview_questions(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[Question]:
+    """Get all questions assigned to an interview session.
+
+    Returns questions in the order they should be asked.
+    Must be called after the interview has been started.
+    """
+    # Verify interview exists and belongs to user
+    interview = await _get_interview_for_user(session, interview_id, current_user.id)
+
+    # Check if interview has been started (questions are assigned on start)
+    if interview.status == InterviewStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Interview has not been started. Call POST /start first.",
+        )
+
+    questions = await interview_service.get_interview_questions(session, interview_id)
+
+    if not questions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No questions found for this interview.",
+        )
+
+    return questions
 
 
 @router.post("/{interview_id}/end", response_model=InterviewSessionRead)

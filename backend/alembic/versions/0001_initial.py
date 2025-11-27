@@ -21,16 +21,20 @@ def upgrade() -> None:
         sa.Column("hashed_password", sa.String(), nullable=False),
         sa.Column("full_name", sa.String(), nullable=True),
         sa.Column("subscription_tier", sa.String(), nullable=False, server_default="free"),
-        sa.Column("subscription_expires_at", sa.DateTime(), nullable=True),
+        sa.Column("subscription_status", sa.String(), nullable=True),
+        sa.Column("subscription_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("stripe_customer_id", sa.String(), nullable=True),
+        sa.Column("stripe_subscription_id", sa.String(), nullable=True),
         sa.Column("interviews_this_month", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("total_interviews", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()),
         sa.Column("is_verified", sa.Boolean(), nullable=False, server_default=sa.sql.expression.false()),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("last_login_at", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_users_email", "users", ["email"], unique=True)
+    op.create_index("ix_users_stripe_customer_id", "users", ["stripe_customer_id"])
 
     op.create_table(
         "questions",
@@ -159,5 +163,6 @@ def downgrade() -> None:
     op.drop_index("ix_questions_difficulty", table_name="questions")
     op.drop_index("ix_questions_category", table_name="questions")
     op.drop_table("questions")
+    op.drop_index("ix_users_stripe_customer_id", table_name="users")
     op.drop_index("ix_users_email", table_name="users")
     op.drop_table("users")
