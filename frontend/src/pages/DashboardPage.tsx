@@ -6,6 +6,7 @@ import { interviewsAPI } from '../lib/api';
 import StatsCard from '../components/dashboard/StatsCard';
 import InterviewCard from '../components/interview/InterviewCard';
 import NewInterviewModal from '../components/interview/NewInterviewModal';
+import UpgradeModal from '../components/subscription/UpgradeModal';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
 
 export default function DashboardPage() {
@@ -15,6 +16,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     loadInterviews();
@@ -34,11 +36,21 @@ export default function DashboardPage() {
   };
 
   const handleCreateInterview = async (data: CreateInterviewFormData) => {
-    const response = await interviewsAPI.create(data);
-    const newSession = response.data;
+    try {
+      const response = await interviewsAPI.create(data);
+      const newSession = response.data;
 
-    // Navigate to the interview session
-    navigate(`/interview/${newSession.id}`);
+      // Navigate to the interview session
+      navigate(`/interview/${newSession.id}`);
+    } catch (err: any) {
+      if (err.response?.status === 402) {
+        // Quota exceeded - show upgrade modal
+        setShowUpgradeModal(true);
+        setError('Free tier limit reached. Upgrade to Pro for unlimited interviews.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to create interview');
+      }
+    }
   };
 
   const handleSessionClick = (session: InterviewSession) => {
@@ -175,6 +187,17 @@ export default function DashboardPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateInterview}
+      />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="free"
+        onSuccess={() => {
+          setShowUpgradeModal(false);
+          setError(null);
+        }}
       />
     </div>
   );

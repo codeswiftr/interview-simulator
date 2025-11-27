@@ -44,6 +44,12 @@ api.interceptors.response.use(
       window.location.href = '/login';
     }
 
+    // Handle 402 Payment Required (quota exceeded)
+    // Don't redirect, let component handle it
+    if (error.response?.status === 402) {
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -147,6 +153,16 @@ export const uploadAPI = {
       timeout: 60000, // 60 seconds for large audio files
     });
   },
+};
+
+// Subscriptions API
+export const subscriptionsAPI = {
+  getStatus: () => api.get('/subscriptions/status'),
+
+  createCheckout: (priceId: string) =>
+    api.post('/subscriptions/checkout', { price_id: priceId }),
+
+  cancel: () => api.post('/subscriptions/cancel'),
 };
 
 export default api;

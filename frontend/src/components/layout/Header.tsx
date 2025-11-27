@@ -32,6 +32,12 @@ export default function Header() {
                 >
                   Dashboard
                 </Link>
+                <Link
+                  to="/settings"
+                  className="text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Settings
+                </Link>
 
                 {/* User Menu */}
                 <div className="flex items-center gap-4">
