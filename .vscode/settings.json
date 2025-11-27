@@ -1,0 +1,21 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["backend/tests"],
+  "python.formatting.provider": "none",
+  "ruff.enable": true,
+  "ruff.importStrategy": "useBundled",
+  "ruff.lint.run": "onSave",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.ruff": true
+  },
+  "editor.defaultFormatter": "charliermarsh.ruff",
+  "[python]": {
+    "editor.formatOnSave": true
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "backend/.venv": true
+  }
+}

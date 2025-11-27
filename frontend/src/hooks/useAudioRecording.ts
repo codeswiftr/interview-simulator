@@ -1,0 +1,177 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+
+export type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped';
+
+export interface UseAudioRecordingReturn {
+  recordingState: RecordingState;
+  audioBlob: Blob | null;
+  audioUrl: string | null;
+  duration: number;
+  isRecording: boolean;
+  startRecording: () => Promise<void>;
+  stopRecording: () => void;
+  pauseRecording: () => void;
+  resumeRecording: () => void;
+  resetRecording: () => void;
+  error: string | null;
+}
+
+export function useAudioRecording(): UseAudioRecordingReturn {
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [duration, setDuration] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const startTimeRef = useRef<number>(0);
+  const pausedTimeRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Start recording
+  const startRecording = useCallback(async () => {
+    try {
+      setError(null);
+
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Create MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      // Handle data available
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      // Handle recording stop
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+
+        setRecordingState('stopped');
+      };
+
+      // Start recording
+      mediaRecorder.start();
+      startTimeRef.current = Date.now();
+      setRecordingState('recording');
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setDuration(Math.floor((Date.now() - startTimeRef.current - pausedTimeRef.current) / 1000));
+      }, 100);
+    } catch (err) {
+      const error = err as { message?: string };
+      setError(error.message || 'Failed to start recording. Please check microphone permissions.');
+      setRecordingState('idle');
+    }
+  }, []);
+
+  // Stop recording
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && recordingState === 'recording') {
+      mediaRecorderRef.current.stop();
+
+      // Clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, [recordingState]);
+
+  // Pause recording
+  const pauseRecording = useCallback(() => {
+    if (mediaRecorderRef.current && recordingState === 'recording') {
+      mediaRecorderRef.current.pause();
+      setRecordingState('paused');
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, [recordingState]);
+
+  // Resume recording
+  const resumeRecording = useCallback(() => {
+    if (mediaRecorderRef.current && recordingState === 'paused') {
+      const pauseStart = Date.now();
+      mediaRecorderRef.current.resume();
+      setRecordingState('recording');
+
+      // Update paused time
+      pausedTimeRef.current += pauseStart - startTimeRef.current;
+
+      // Restart timer
+      timerRef.current = setInterval(() => {
+        setDuration(Math.floor((Date.now() - startTimeRef.current - pausedTimeRef.current) / 1000));
+      }, 100);
+    }
+  }, [recordingState]);
+
+  // Reset recording
+  const resetRecording = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+
+    setRecordingState('idle');
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setDuration(0);
+    setError(null);
+    audioChunksRef.current = [];
+    startTimeRef.current = 0;
+    pausedTimeRef.current = 0;
+  }, [audioUrl]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+
+  return {
+    recordingState,
+    audioBlob,
+    audioUrl,
+    duration,
+    isRecording: recordingState === 'recording',
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording,
+    resetRecording,
+    error,
+  };
+}

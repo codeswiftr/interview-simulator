@@ -1,0 +1,126 @@
+// User types
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  created_at: string;
+  is_active: boolean;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+// Question types
+export interface Question {
+  id: string;
+  category: 'behavioral' | 'technical' | 'system_design';
+  difficulty: 'easy' | 'medium' | 'hard';
+  question_text: string;
+  follow_up_questions?: string[];
+  evaluation_criteria: string[];
+  expected_duration_seconds: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Interview Session types
+export interface InterviewSession {
+  id: string;
+  user_id: string;
+  category: string;
+  difficulty: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  total_questions: number;
+  completed_questions: number;
+  overall_score?: number;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Response types
+export interface InterviewResponse {
+  id: string;
+  session_id: string;
+  question_id: string;
+  audio_url: string;
+  transcription?: string;
+  duration_seconds?: number;
+  submitted_at: string;
+  created_at: string;
+  updated_at: string;
+  question?: Question;
+  feedback?: Feedback;
+}
+
+// Feedback types
+export interface Feedback {
+  id: string;
+  response_id: string;
+  overall_score: number;
+  content_score: number;
+  delivery_score: number;
+  structure_score: number;
+  technical_accuracy_score?: number;
+  communication_clarity_score: number;
+  strengths: string[];
+  weaknesses: string[];
+  improvement_suggestions: string[];
+  detailed_analysis: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Session Summary types
+export interface SessionSummary {
+  session: InterviewSession;
+  responses: InterviewResponse[];
+  average_scores: {
+    overall: number;
+    content: number;
+    delivery: number;
+    structure: number;
+    communication: number;
+  };
+  total_duration_seconds: number;
+}
+
+// Dashboard Stats types
+export interface DashboardStats {
+  total_sessions: number;
+  completed_sessions: number;
+  average_score: number;
+  total_practice_time_seconds: number;
+  recent_sessions: InterviewSession[];
+  score_trend: Array<{ date: string; score: number }>;
+}
+
+// Form types
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+export interface RegisterFormData {
+  email: string;
+  password: string;
+  full_name: string;
+  confirm_password: string;
+}
+
+export interface CreateInterviewFormData {
+  category: 'behavioral' | 'technical' | 'system_design';
+  difficulty: 'easy' | 'medium' | 'hard';
+  question_count: number;
+}
+
+// API Error types
+export interface APIError {
+  message: string;
+  errors?: Record<string, string[]>;
+  status_code?: number;
+}

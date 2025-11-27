@@ -1,0 +1,283 @@
+"""Feedback generation service for interview responses."""
+
+from collections import Counter
+from uuid import UUID
+
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.ai.content_analyzer import ContentAnalyzer
+from app.models.feedback import ContentFeedback, SessionFeedback
+from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus
+from app.models.question import Question
+
+
+class FeedbackService:
+    """Service for generating and managing interview feedback.
+
+    Handles:
+    - Content analysis of individual responses
+    - Session-level feedback aggregation
+    - Score calculation and storage
+    """
+
+    def __init__(self) -> None:
+        """Initialize feedback service with content analyzer."""
+        self.content_analyzer = ContentAnalyzer()
+
+    async def generate_feedback(
+        self, session: AsyncSession, response_id: UUID
+    ) -> ContentFeedback:
+        """Generate feedback for a single interview response.
+
+        Args:
+            session: Database session
+            response_id: UUID of the response to analyze
+
+        Returns:
+            ContentFeedback record with analysis results
+
+        Raises:
+            ValueError: If response not found or missing required data
+        """
+        # Fetch the response
+        result = await session.exec(
+            select(InterviewResponse).where(InterviewResponse.id == response_id)
+        )
+        response = result.first()
+        if not response:
+            raise ValueError(f"Response {response_id} not found")
+
+        # Check if feedback already exists
+        existing_feedback = await session.exec(
+            select(ContentFeedback).where(ContentFeedback.response_id == response_id)
+        )
+        if existing_feedback.first():
+            raise ValueError(f"Feedback already exists for response {response_id}")
+
+        # Verify we have transcript
+        if not response.transcript:
+            raise ValueError(f"Response {response_id} has no transcript to analyze")
+
+        # Fetch the question to get its type
+        question_result = await session.exec(
+            select(Question).where(Question.id == response.question_id)
+        )
+        question = question_result.first()
+        if not question:
+            raise ValueError(f"Question {response.question_id} not found")
+
+        # Analyze content using Claude
+        # Note: question.category is already a string, not an enum
+        question_type = question.category.value if hasattr(question.category, 'value') else question.category
+        metrics = await self.content_analyzer.analyze(
+            question=question.content,
+            transcript=response.transcript,
+            question_type=question_type,
+        )
+
+        # Calculate overall score
+        overall_score = self.content_analyzer.calculate_overall_score(
+            metrics, question_type
+        )
+
+        # Create feedback record
+        feedback = ContentFeedback(
+            response_id=response_id,
+            technical_accuracy=metrics.technical_accuracy,
+            star_adherence=metrics.star_adherence,
+            answer_structure=metrics.answer_structure,
+            completeness=metrics.completeness,
+            relevance=metrics.relevance,
+            overall_content_score=overall_score,
+            strengths=metrics.strengths,
+            improvements=metrics.improvements,
+            detailed_feedback=metrics.detailed_feedback,
+        )
+
+        session.add(feedback)
+        await session.commit()
+        await session.refresh(feedback)
+
+        return feedback
+
+    async def generate_session_feedback(
+        self, session: AsyncSession, session_id: UUID
+    ) -> SessionFeedback:
+        """Generate aggregated feedback for entire interview session.
+
+        Args:
+            session: Database session
+            session_id: UUID of the interview session
+
+        Returns:
+            SessionFeedback with aggregated scores and recommendations
+
+        Raises:
+            ValueError: If session not found or has no responses
+        """
+        # Verify session exists
+        interview_result = await session.exec(
+            select(InterviewSession).where(InterviewSession.id == session_id)
+        )
+        interview = interview_result.first()
+        if not interview:
+            raise ValueError(f"Interview session {session_id} not found")
+
+        # Check if session feedback already exists
+        existing_session_feedback = await session.exec(
+            select(SessionFeedback).where(SessionFeedback.session_id == session_id)
+        )
+        if existing_session_feedback.first():
+            raise ValueError(f"Session feedback already exists for session {session_id}")
+
+        # Get all responses for this session
+        responses_result = await session.exec(
+            select(InterviewResponse).where(InterviewResponse.session_id == session_id)
+        )
+        responses = list(responses_result.all())
+
+        if not responses:
+            raise ValueError(f"No responses found for session {session_id}")
+
+        # Generate feedback for any responses that don't have it
+        for response in responses:
+            existing_feedback = await session.exec(
+                select(ContentFeedback).where(ContentFeedback.response_id == response.id)
+            )
+            if not existing_feedback.first() and response.transcript:
+                try:
+                    await self.generate_feedback(session, response.id)
+                except ValueError as e:
+                    # Skip responses that can't be analyzed
+                    print(f"Skipping response {response.id}: {e}")
+                    continue
+
+        # Fetch all content feedback for responses
+        feedback_results = await session.exec(
+            select(ContentFeedback)
+            .join(InterviewResponse, ContentFeedback.response_id == InterviewResponse.id)
+            .where(InterviewResponse.session_id == session_id)
+        )
+        all_feedback = list(feedback_results.all())
+
+        if not all_feedback:
+            raise ValueError(f"No feedback could be generated for session {session_id}")
+
+        # Calculate aggregated scores
+        content_scores = [f.overall_content_score for f in all_feedback]
+        avg_content_score = sum(content_scores) / len(content_scores)
+
+        # For now, audio score is 0 (not implemented yet)
+        avg_audio_score = 0.0
+
+        # Overall score is weighted average (80% content, 20% audio)
+        overall_score = avg_content_score * 0.8 + avg_audio_score * 0.2
+
+        # Aggregate strengths and improvements
+        all_strengths = [strength for f in all_feedback for strength in f.strengths]
+        all_improvements = [improvement for f in all_feedback for improvement in f.improvements]
+
+        # Get top 3 most common strengths and improvements
+        strength_counter = Counter(all_strengths)
+        improvement_counter = Counter(all_improvements)
+
+        top_strengths = [item for item, _ in strength_counter.most_common(3)]
+        top_improvements = [item for item, _ in improvement_counter.most_common(3)]
+
+        # Determine recommended practice areas based on weak scores
+        practice_areas = []
+        avg_technical = sum(f.technical_accuracy for f in all_feedback) / len(all_feedback)
+        avg_structure = sum(f.answer_structure for f in all_feedback) / len(all_feedback)
+        avg_completeness = sum(f.completeness for f in all_feedback) / len(all_feedback)
+        avg_star = sum(f.star_adherence for f in all_feedback if f.star_adherence > 0) / max(
+            1, len([f for f in all_feedback if f.star_adherence > 0])
+        )
+
+        if avg_technical < 70:
+            practice_areas.append("Technical accuracy and depth")
+        if avg_structure < 70:
+            practice_areas.append("Answer structure and organization")
+        if avg_completeness < 70:
+            practice_areas.append("Completeness and thoroughness")
+        if avg_star < 70 and avg_star > 0:
+            practice_areas.append("STAR method application")
+
+        # Create session feedback
+        session_feedback = SessionFeedback(
+            session_id=session_id,
+            overall_score=overall_score,
+            audio_score=avg_audio_score,
+            content_score=avg_content_score,
+            top_strengths=top_strengths,
+            top_improvements=top_improvements,
+            recommended_practice_areas=practice_areas,
+            next_question_ids=[],  # TODO: Implement intelligent question recommendations
+        )
+
+        session.add(session_feedback)
+
+        # Update interview session with scores
+        interview.overall_score = overall_score
+        interview.audio_score = avg_audio_score
+        interview.content_score = avg_content_score
+        interview.status = InterviewStatus.ANALYZED
+
+        await session.commit()
+        await session.refresh(session_feedback)
+
+        return session_feedback
+
+    async def get_response_feedback(
+        self, session: AsyncSession, response_id: UUID
+    ) -> ContentFeedback | None:
+        """Retrieve feedback for a specific response.
+
+        Args:
+            session: Database session
+            response_id: UUID of the response
+
+        Returns:
+            ContentFeedback if exists, None otherwise
+        """
+        result = await session.exec(
+            select(ContentFeedback).where(ContentFeedback.response_id == response_id)
+        )
+        return result.first()
+
+    async def get_session_feedback(
+        self, session: AsyncSession, session_id: UUID
+    ) -> SessionFeedback | None:
+        """Retrieve aggregated feedback for a session.
+
+        Args:
+            session: Database session
+            session_id: UUID of the interview session
+
+        Returns:
+            SessionFeedback if exists, None otherwise
+        """
+        result = await session.exec(
+            select(SessionFeedback).where(SessionFeedback.session_id == session_id)
+        )
+        return result.first()
+
+    async def get_all_session_feedbacks(
+        self, session: AsyncSession, session_id: UUID
+    ) -> list[ContentFeedback]:
+        """Retrieve all response feedbacks for a session.
+
+        Args:
+            session: Database session
+            session_id: UUID of the interview session
+
+        Returns:
+            List of ContentFeedback records for all responses in session
+        """
+        result = await session.exec(
+            select(ContentFeedback)
+            .join(InterviewResponse, ContentFeedback.response_id == InterviewResponse.id)
+            .where(InterviewResponse.session_id == session_id)
+            .order_by(InterviewResponse.created_at)
+        )
+        return list(result.all())
