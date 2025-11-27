@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { X, AlertCircle, CheckCircle, SkipForward } from 'lucide-react';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import Timer from '../components/interview/Timer';
@@ -245,7 +246,8 @@ export default function InterviewPage() {
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-surface-primary">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-surface-primary">
       {/* Header */}
       <div className="bg-white border-b border-border-light">
         <div className="container mx-auto px-6 py-4">
@@ -384,6 +386,7 @@ export default function InterviewPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
