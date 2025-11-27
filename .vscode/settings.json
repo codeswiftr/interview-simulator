@@ -7,7 +7,7 @@
   "ruff.importStrategy": "useBundled",
   "ruff.lint.run": "onSave",
   "editor.codeActionsOnSave": {
-    "source.fixAll.ruff": true
+    "source.fixAll.ruff": "explicit"
   },
   "editor.defaultFormatter": "charliermarsh.ruff",
   "[python]": {
