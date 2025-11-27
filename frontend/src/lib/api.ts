@@ -121,6 +121,15 @@ export const feedbackAPI = {
 
   getBySessionId: (sessionId: string) =>
     api.get(`/feedback/session/${sessionId}`),
+
+  getAllBySessionId: (sessionId: string) =>
+    api.get(`/feedback/session/${sessionId}/all`),
+
+  generateForSession: (sessionId: string) =>
+    api.post(`/feedback/generate/session/${sessionId}`),
+
+  generateForResponse: (responseId: string) =>
+    api.post(`/feedback/generate/response/${responseId}`),
 };
 
 // Upload API for audio files

@@ -56,7 +56,28 @@ export interface InterviewResponse {
   feedback?: Feedback;
 }
 
-// Feedback types
+// Content Feedback (per response)
+export interface ContentFeedback {
+  technical_accuracy: number;
+  answer_structure: number;
+  completeness: number;
+  overall_content_score: number;
+  strengths: string[];
+  improvements: string[];
+  detailed_feedback: string;
+}
+
+// Session Feedback (aggregated)
+export interface SessionFeedback {
+  overall_score: number;
+  audio_score: number;
+  content_score: number;
+  top_strengths: string[];
+  top_improvements: string[];
+  recommended_practice_areas: string[];
+}
+
+// Legacy Feedback type for compatibility
 export interface Feedback {
   id: string;
   response_id: string;

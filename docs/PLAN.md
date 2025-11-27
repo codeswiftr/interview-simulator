@@ -14,22 +14,26 @@
 
 ## Critical Gap Analysis (2025-11-27)
 
-### Identified Issues
+### Identified Issues (STATUS: RESOLVED 2025-11-27)
 
-1. **Missing Question Assignment API** - No endpoint to assign questions to interviews
-   - `InterviewQuestion` model exists but isn't populated
-   - Frontend fetches random questions client-side as workaround
-   - Response submission will fail validation (checks `InterviewQuestion` link)
+1. ~~**Missing Question Assignment API**~~ ✅ FIXED
+   - Created `InterviewService` with `assign_questions()` method
+   - Questions auto-assigned when interview starts via `POST /interviews/{id}/start`
 
-2. **Missing Audio Upload API** - Frontend calls `POST /upload/audio` which doesn't exist
-   - Transcription endpoint exists but doesn't store files
-   - No audio URL returned for response submission
+2. ~~**Missing Audio Upload API**~~ ✅ FIXED
+   - Created `POST /api/v1/upload/audio` endpoint
+   - Files stored locally in `uploads/audio/` directory
+   - Returns `audio_url` for response submission
 
-3. **Missing GET /interviews/{id}/questions** - Frontend expects this endpoint
+3. ~~**Missing GET /interviews/{id}/questions**~~ ✅ FIXED
+   - Endpoint implemented at `GET /api/v1/interviews/{id}/questions`
+   - Returns questions assigned to the interview
 
 4. **Audio Analyzer is Stub** - Returns mock values for speech_rate, volume, confidence
+   - TODO: Task 4.2.2 - Implement real Librosa analysis
 
 5. **Feedback Page Falls Back to Mock Data** - Uses `generateMockFeedback()` when API fails
+   - TODO: Task 4.3.1 - Wire frontend to real feedback API
 
 ---
 
