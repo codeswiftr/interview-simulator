@@ -1,5 +1,7 @@
 """Interview session management endpoints."""
 
+import asyncio
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -7,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.dependencies import get_current_user
+from app.dependencies import check_interview_quota, get_current_user
 from app.db import get_session
 from app.models.interview import (
     InterviewQuestion,
@@ -22,7 +24,10 @@ from app.models.interview import (
 )
 from app.models.question import Question, QuestionRead
 from app.models.user import User
+from app.services.background_tasks import background_tasks
 from app.services.interview_service import InterviewService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 interview_service = InterviewService()
@@ -30,6 +35,8 @@ interview_service = InterviewService()
 
 def _get_time() -> datetime:
     return datetime.now(timezone.utc)
+
+
 
 
 async def _get_interview_for_user(
@@ -46,13 +53,21 @@ async def _get_interview_for_user(
     return interview
 
 
-@router.post("/", response_model=InterviewSessionRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=InterviewSessionRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_interview_quota)],
+)
 async def create_interview(
     payload: InterviewSessionCreate,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> InterviewSession:
-    """Create a new interview session."""
+    """Create a new interview session.
+
+    Enforces subscription quota limits (Free: 3/month, Pro: unlimited).
+    """
     interview = InterviewSession(
         user_id=current_user.id,
         interview_type=payload.interview_type,
@@ -62,6 +77,11 @@ async def create_interview(
         scheduled_at=payload.scheduled_at,
     )
     session.add(interview)
+
+    # Increment interview counter
+    current_user.interviews_this_month += 1
+    current_user.total_interviews += 1
+
     await session.commit()
     await session.refresh(interview)
     return interview
@@ -166,7 +186,10 @@ async def end_interview(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> InterviewSession:
-    """End an interview session."""
+    """End an interview session.
+
+    After ending, automatically triggers background generation of session feedback.
+    """
     interview = await _get_interview_for_user(session, interview_id, current_user.id)
     if interview.status not in {InterviewStatus.IN_PROGRESS, InterviewStatus.SCHEDULED}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot end interview")
@@ -178,6 +201,10 @@ async def end_interview(
     interview.duration_seconds = int((interview.ended_at - interview.started_at).total_seconds())
     await session.commit()
     await session.refresh(interview)
+
+    # Trigger background session feedback generation
+    asyncio.create_task(background_tasks.generate_session_feedback_async(interview_id))
+
     return interview
 
 
@@ -244,6 +271,14 @@ async def submit_response(
     session.add(response)
     await session.commit()
     await session.refresh(response)
+
+    # Process audio in background if audio_url is provided
+    if payload.audio_url and not payload.transcript:
+        # Start background task for audio processing
+        asyncio.create_task(
+            background_tasks.process_response_audio_async(response.id, payload.audio_url)
+        )
+
     return response
 
 

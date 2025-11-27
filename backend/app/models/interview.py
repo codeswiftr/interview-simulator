@@ -28,6 +28,16 @@ class InterviewStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class ProcessingStatus(str, Enum):
+    """Response processing status."""
+
+    PENDING = "pending"
+    TRANSCRIBING = "transcribing"
+    ANALYZING = "analyzing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class InterviewSession(SQLModel, table=True):
     """Interview session model."""
 
@@ -117,6 +127,16 @@ class InterviewResponse(SQLModel, table=True):
     duration_seconds: int = 0
     word_count: int | None = None
     filler_word_count: int | None = None
+
+    # Processing status
+    processing_status: ProcessingStatus = Field(
+        default=ProcessingStatus.PENDING,
+        sa_column=Column(String),
+        description="Status of audio processing: transcribing, analyzing, completed, failed",
+    )
+    processing_error: str | None = Field(
+        default=None, description="Error message if processing failed"
+    )
 
     # Timestamps
     created_at: datetime = Field(

@@ -7,7 +7,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.content_analyzer import ContentAnalyzer
-from app.models.feedback import ContentFeedback, SessionFeedback
+from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
 from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus
 from app.models.question import Question
 
@@ -168,8 +168,21 @@ class FeedbackService:
         content_scores = [f.overall_content_score for f in all_feedback]
         avg_content_score = sum(content_scores) / len(content_scores)
 
-        # For now, audio score is 0 (not implemented yet)
-        avg_audio_score = 0.0
+        # Get audio feedback for all responses
+        audio_feedback_results = await session.exec(
+            select(AudioFeedback)
+            .join(InterviewResponse, AudioFeedback.response_id == InterviewResponse.id)
+            .where(InterviewResponse.session_id == session_id)
+        )
+        all_audio_feedback = list(audio_feedback_results.all())
+
+        # Calculate average audio score
+        if all_audio_feedback:
+            audio_scores = [f.overall_audio_score for f in all_audio_feedback]
+            avg_audio_score = sum(audio_scores) / len(audio_scores)
+        else:
+            # No audio feedback available (e.g., no audio files uploaded)
+            avg_audio_score = 0.0
 
         # Overall score is weighted average (80% content, 20% audio)
         overall_score = avg_content_score * 0.8 + avg_audio_score * 0.2
