@@ -611,3 +611,78 @@ For each task:
 | Epic 2: Automated Processing | ✅ Complete | Background tasks, auto-transcription, 209+ test lines |
 | Epic 3: Frontend Integration | ✅ Complete | FeedbackPage wired, ErrorBoundary, field fixes |
 | Epic 4: Payments | ✅ Complete | Stripe checkout/webhooks, SettingsPage, 223+ test lines |
+
+---
+
+## Soft Launch Readiness Assessment (2025-11-30)
+
+### ✅ Features Complete & Working
+
+| Category | Status | Details |
+|----------|--------|---------|
+| **Backend API** | ✅ Ready | 30+ endpoints, FastAPI + SQLModel |
+| **Authentication** | ✅ Ready | JWT + PBKDF2, register/login/me |
+| **Interview Flow** | ✅ Ready | Create, start, submit responses, end |
+| **Question Bank** | ✅ Ready | 50 seeded questions, CRUD, random selection |
+| **Audio Upload** | ✅ Ready | Local file storage, validation |
+| **Transcription** | ✅ Ready | OpenAI Whisper integration |
+| **Audio Analysis** | ✅ Ready | Librosa: WPM, filler words, confidence |
+| **AI Feedback** | ✅ Ready | Claude content analysis, session aggregation |
+| **Subscriptions** | ✅ Ready | Stripe checkout/webhooks/cancel |
+| **Usage Limits** | ✅ Ready | Free: 3/month, Pro: unlimited |
+| **Frontend** | ✅ Ready | 7 pages, responsive design |
+| **Tests** | ✅ Ready | 71 passing, 73% coverage |
+
+### 🔧 Pre-Launch Tasks (Priority Order)
+
+| Task | Priority | Effort | Status |
+|------|----------|--------|--------|
+| Configure production environment | HIGH | 1h | 🔴 Not Started |
+| Set up production database | HIGH | 1h | 🔴 Not Started |
+| Configure production CORS origins | HIGH | 15m | 🔴 Not Started |
+| Set Stripe production keys | HIGH | 15m | 🔴 Not Started |
+| Deploy backend to Cloud Run/Railway | HIGH | 2h | 🔴 Not Started |
+| Deploy frontend to Vercel/Netlify | HIGH | 30m | 🔴 Not Started |
+| Add rate limiting middleware | MEDIUM | 1h | 🔴 Not Started |
+| Set up error monitoring (Sentry) | LOW | 30m | 🔴 Not Started |
+
+### 🚀 Soft Launch Checklist
+
+```
+Environment Setup:
+[ ] Create production PostgreSQL database
+[ ] Set DATABASE_URL for production
+[ ] Run Alembic migrations
+[ ] Set OPENAI_API_KEY for Whisper
+[ ] Set ANTHROPIC_API_KEY for Claude
+[ ] Set STRIPE_SECRET_KEY (production)
+[ ] Set STRIPE_WEBHOOK_SECRET (production)
+[ ] Set STRIPE_PRICE_ID_PRO_MONTHLY
+[ ] Configure CORS_ORIGINS for production domains
+
+Deployment:
+[ ] Build frontend: npm run build
+[ ] Deploy frontend to CDN (Vercel/Netlify)
+[ ] Deploy backend as container (Cloud Run/Railway)
+[ ] Verify all API endpoints respond
+[ ] Test full interview flow end-to-end
+[ ] Test Stripe checkout flow
+[ ] Test Stripe webhook handling
+
+Post-Deploy:
+[ ] Monitor error rates
+[ ] Verify audio processing works
+[ ] Check Claude API rate limits
+[ ] Confirm subscription upgrades work
+```
+
+### Current Metrics
+
+| Metric | Value |
+|--------|-------|
+| Backend Tests | 71 passing |
+| Test Coverage | 73% |
+| API Endpoints | 30+ |
+| Frontend Pages | 7 |
+| Seeded Questions | 50 |
+| Build Status | ✅ Clean |
