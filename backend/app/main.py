@@ -13,6 +13,7 @@ from app.api import feedback, health, interviews, questions, subscriptions, tran
 from app.config import settings
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal
+from app.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware
 
 
 @asynccontextmanager
@@ -53,6 +54,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting (only in production)
+if not settings.debug:
+    app.add_middleware(
+        RateLimitMiddleware,
+        config=RateLimitConfig(
+            requests_per_minute=60,
+            requests_per_hour=1000,
+        ),
+        exclude_paths=["/api/v1/health", "/docs", "/openapi.json", "/"],
+    )
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
