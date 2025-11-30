@@ -637,13 +637,14 @@ For each task:
 
 | Task | Priority | Effort | Status |
 |------|----------|--------|--------|
-| Configure production environment | HIGH | 1h | 🔴 Not Started |
+| Configure production environment | HIGH | 1h | ✅ Complete |
+| Create Dockerfile | HIGH | 30m | ✅ Complete |
+| Add rate limiting middleware | MEDIUM | 1h | ✅ Complete |
+| Configure frontend for production | HIGH | 15m | ✅ Complete |
 | Set up production database | HIGH | 1h | 🔴 Not Started |
-| Configure production CORS origins | HIGH | 15m | 🔴 Not Started |
 | Set Stripe production keys | HIGH | 15m | 🔴 Not Started |
 | Deploy backend to Cloud Run/Railway | HIGH | 2h | 🔴 Not Started |
 | Deploy frontend to Vercel/Netlify | HIGH | 30m | 🔴 Not Started |
-| Add rate limiting middleware | MEDIUM | 1h | 🔴 Not Started |
 | Set up error monitoring (Sentry) | LOW | 30m | 🔴 Not Started |
 
 ### 🚀 Soft Launch Checklist
