@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -64,7 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
               dashboard.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="text-left mb-6">
                 <summary className="body-small text-text-tertiary cursor-pointer mb-2">
                   Error details (development only)

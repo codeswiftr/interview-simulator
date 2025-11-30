@@ -12,8 +12,8 @@ interface UpgradeModalProps {
 export default function UpgradeModal({
   isOpen,
   onClose,
-  currentTier,
-  onSuccess,
+  currentTier: _currentTier,
+  onSuccess: _onSuccess,
 }: UpgradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
