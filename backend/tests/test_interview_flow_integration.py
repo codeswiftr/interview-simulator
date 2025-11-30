@@ -66,6 +66,18 @@ async def test_full_interview_flow(client, session_override):
     """Test complete interview flow: Create → Start → Submit → End → Feedback."""
     token = await register_and_login(client)
 
+    # Seed questions for the interview
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+            },
+            headers={"Authorization": token},
+        )
+
     # 1. Create interview
     create_resp = await client.post(
         "/api/v1/interviews/",
@@ -122,6 +134,18 @@ async def test_quota_enforcement_integration(client, session_override):
     """Test that free user is blocked on 4th interview."""
     token = await register_and_login(client)
 
+    # Seed questions for interviews
+    for i in range(5):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+            },
+            headers={"Authorization": token},
+        )
+
     # Create 3 interviews (should succeed)
     for i in range(3):
         resp = await client.post(
@@ -152,12 +176,25 @@ async def test_audio_processing_integration(client, session_override, tmp_path):
     """Test audio upload → Transcription → Analysis → Feedback flow."""
     token = await register_and_login(client)
 
+    # Seed questions for the interview
+    for i in range(2):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+            },
+            headers={"Authorization": token},
+        )
+
     # Create and start interview
     create_resp = await client.post(
         "/api/v1/interviews/",
         headers={"Authorization": token},
         json={"interview_type": "behavioral", "question_count": 1},
     )
+    assert create_resp.status_code == 201
     interview_id = create_resp.json()["id"]
 
     await client.post(

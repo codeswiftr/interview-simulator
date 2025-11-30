@@ -89,7 +89,12 @@ async def test_create_checkout_session_returns_url(client, session_override):
     """Test that checkout session creation returns valid Stripe URL."""
     token = await register_and_login(client)
 
-    with patch("app.api.subscriptions.stripe") as mock_stripe:
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        # Mock settings to enable Stripe
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+        mock_settings.cors_origins = ["http://localhost:3000"]
+
         mock_customer = MagicMock()
         mock_customer.id = "cus_test123"
         mock_stripe.Customer.create.return_value = mock_customer
@@ -115,7 +120,12 @@ async def test_create_checkout_session_creates_customer(client, session_override
     """Test that Stripe customer is created if user doesn't have one."""
     token = await register_and_login(client)
 
-    with patch("app.api.subscriptions.stripe") as mock_stripe:
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        # Mock settings to enable Stripe
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+        mock_settings.cors_origins = ["http://localhost:3000"]
+
         mock_customer = MagicMock()
         mock_customer.id = "cus_test123"
         mock_stripe.Customer.create.return_value = mock_customer
@@ -154,7 +164,16 @@ async def test_webhook_checkout_completed_upgrades_user(client, session_override
         },
     }
 
-    with patch("app.api.subscriptions.stripe") as mock_stripe:
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        # Mock settings to enable Stripe
+        mock_settings.stripe_webhook_secret = "whsec_test123"
+        mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
+        mock_settings.stripe_price_id_pro_annual = "price_pro_annual"
+
+        # Mock webhook event construction
+        mock_stripe.Webhook.construct_event.return_value = webhook_payload
+
         mock_subscription = MagicMock()
         mock_subscription.status = "active"
         mock_subscription.current_period_end = 1735689600  # Future timestamp
@@ -169,9 +188,8 @@ async def test_webhook_checkout_completed_upgrades_user(client, session_override
             headers={"stripe-signature": "test_signature"},
         )
 
-        # Webhook should process (may fail signature verification in test)
-        # But we can verify the logic is called
-        assert response.status_code in [200, 400]  # 400 if signature fails
+        # Webhook should process successfully
+        assert response.status_code == 200
 
 
 @pytest.mark.asyncio
