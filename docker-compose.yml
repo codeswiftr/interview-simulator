@@ -1,4 +1,5 @@
-version: "3.9"
+# Interview Simulator - Local Development Services
+# Usage: docker compose up -d
 
 services:
   postgres:
