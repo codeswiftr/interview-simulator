@@ -114,6 +114,12 @@ class BackgroundTaskService:
                     # Update status to FAILED
                     await self._update_processing_status_failed(session, response_id, str(e))
 
+        except Exception as e:
+            logger.error(
+                f"Failed to start background audio processing for response {response_id}: {e}",
+                exc_info=True,
+            )
+
     async def _process_audio_with_retry(
         self, session: AsyncSession, response_id: UUID, audio_path: str
     ) -> tuple[str, object]:
@@ -181,12 +187,6 @@ class BackgroundTaskService:
                 await session.commit()
         except Exception as e:
             logger.error(f"Failed to update processing status for {response_id}: {e}")
-
-        except Exception as e:
-            logger.error(
-                f"Failed to start background audio processing for response {response_id}: {e}",
-                exc_info=True,
-            )
 
     async def generate_content_feedback_async(
         self,
