@@ -68,7 +68,7 @@ async def test_full_interview_flow(client, session_override):
 
     # 1. Create interview
     create_resp = await client.post(
-        "/api/v1/interviews",
+        "/api/v1/interviews/",
         headers={"Authorization": token},
         json={
             "interview_type": "behavioral",
@@ -125,7 +125,7 @@ async def test_quota_enforcement_integration(client, session_override):
     # Create 3 interviews (should succeed)
     for i in range(3):
         resp = await client.post(
-            "/api/v1/interviews",
+            "/api/v1/interviews/",
             headers={"Authorization": token},
             json={
                 "interview_type": "behavioral",
@@ -136,7 +136,7 @@ async def test_quota_enforcement_integration(client, session_override):
 
     # 4th interview should fail with 402
     resp = await client.post(
-        "/api/v1/interviews",
+        "/api/v1/interviews/",
         headers={"Authorization": token},
         json={
             "interview_type": "behavioral",
@@ -154,7 +154,7 @@ async def test_audio_processing_integration(client, session_override, tmp_path):
 
     # Create and start interview
     create_resp = await client.post(
-        "/api/v1/interviews",
+        "/api/v1/interviews/",
         headers={"Authorization": token},
         json={"interview_type": "behavioral", "question_count": 1},
     )

@@ -232,9 +232,9 @@ class TestAudioService:
         self, audio_service, db_session, sample_response, sample_question
     ):
         """Test that audio feedback scores are calculated correctly."""
-        # Set up response
-        sample_response.transcript = "This is a test transcript"
-        sample_response.word_count = 4
+        # Set up response with realistic word count
+        sample_response.transcript = "This is a test transcript with enough words"
+        sample_response.word_count = 100  # 1 filler in 100 words = 1% filler rate
         await db_session.commit()
 
         metrics = AudioMetrics(

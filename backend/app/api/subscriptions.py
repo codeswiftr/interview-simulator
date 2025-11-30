@@ -41,9 +41,15 @@ class SubscriptionStatus(BaseModel):
     can_create_interview: bool
 
 
+class CheckoutRequest(BaseModel):
+    """Request model for checkout session creation."""
+
+    price_id: str
+
+
 @router.post("/checkout", response_model=CheckoutSessionResponse)
 async def create_checkout_session(
-    price_id: str,
+    payload: CheckoutRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> CheckoutSessionResponse:
@@ -85,7 +91,7 @@ async def create_checkout_session(
             payment_method_types=["card"],
             line_items=[
                 {
-                    "price": price_id,
+                    "price": payload.price_id,
                     "quantity": 1,
                 }
             ],
