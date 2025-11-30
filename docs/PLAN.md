@@ -641,11 +641,14 @@ For each task:
 | Create Dockerfile | HIGH | 30m | ✅ Complete |
 | Add rate limiting middleware | MEDIUM | 1h | ✅ Complete |
 | Configure frontend for production | HIGH | 15m | ✅ Complete |
+| Create deployment documentation | HIGH | 30m | ✅ Complete |
 | Set up production database | HIGH | 1h | 🔴 Not Started |
 | Set Stripe production keys | HIGH | 15m | 🔴 Not Started |
 | Deploy backend to Cloud Run/Railway | HIGH | 2h | 🔴 Not Started |
 | Deploy frontend to Vercel/Netlify | HIGH | 30m | 🔴 Not Started |
 | Set up error monitoring (Sentry) | LOW | 30m | 🔴 Not Started |
+
+> 📖 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions
 
 ### 🚀 Soft Launch Checklist
 
