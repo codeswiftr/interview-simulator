@@ -31,9 +31,26 @@ api.interceptors.request.use(
 
 // Response interceptor to handle errors and token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Minimal debug logging in development builds
+    if (import.meta.env.DEV) {
+      const requestId = response.headers['x-correlation-id'] || response.headers['X-Correlation-ID'];
+      if (requestId) {
+        console.debug(`[API] ${response.config.method?.toUpperCase()} ${response.config.url} - Request ID: ${requestId}`);
+      }
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Minimal debug logging in development builds
+    if (import.meta.env.DEV) {
+      const requestId = error.response?.headers['x-correlation-id'] || error.response?.headers['X-Correlation-ID'];
+      if (requestId) {
+        console.warn(`[API Error] ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} - Request ID: ${requestId} - Status: ${error.response?.status}`);
+      }
+    }
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -134,6 +151,9 @@ export const feedbackAPI = {
   getAllBySessionId: (sessionId: string) =>
     api.get(`/feedback/session/${sessionId}/all`),
 
+  getSessionStatus: (sessionId: string) =>
+    api.get(`/feedback/session/${sessionId}/status`),
+
   generateForSession: (sessionId: string) =>
     api.post(`/feedback/generate/session/${sessionId}`),
 
@@ -166,6 +186,13 @@ export const subscriptionsAPI = {
     api.post('/subscriptions/checkout', { price_id: priceId }),
 
   cancel: () => api.post('/subscriptions/cancel'),
+};
+
+// User API
+export const userAPI = {
+  getStats: () => api.get('/users/me/stats'),
+
+  getProgress: () => api.get('/users/me/progress'),
 };
 
 export default api;

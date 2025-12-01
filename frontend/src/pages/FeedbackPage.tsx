@@ -16,6 +16,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import ScoreRing from '../components/feedback/ScoreRing';
 import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
+import ProcessingStatus from '../components/feedback/ProcessingStatus';
 import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
 import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback } from '../types';
 
@@ -224,6 +225,17 @@ export default function FeedbackPage() {
           <div className="card p-4 mb-8 border-status-error bg-status-error/10">
             <p className="text-status-error">{error}</p>
           </div>
+        )}
+
+        {/* Processing Status - Show when session is completed but feedback not ready */}
+        {session.status === 'completed' && !hasFeedback && id && (
+          <ProcessingStatus
+            sessionId={id}
+            onComplete={() => {
+              // Reload feedback when processing completes
+              loadFeedback();
+            }}
+          />
         )}
 
         {/* No Feedback Yet - Show Generate Button */}
