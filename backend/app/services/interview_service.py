@@ -140,3 +140,45 @@ class InterviewService:
         result = await session.exec(stmt)
         count = result.one()
         return count > 0
+
+    async def assign_specific_question(
+        self,
+        session: AsyncSession,
+        interview: InterviewSession,
+        question_id: UUID,
+    ) -> InterviewQuestion:
+        """Assign a specific question to an interview session (for quick practice).
+
+        Args:
+            session: Database session
+            interview: The interview session to assign question to
+            question_id: UUID of the specific question to assign
+
+        Returns:
+            Created InterviewQuestion record
+
+        Raises:
+            ValueError: If question doesn't exist or is inactive
+        """
+        # Verify question exists and is active
+        stmt = select(Question).where(
+            Question.id == question_id,
+            Question.is_active == True,  # noqa: E712
+        )
+        result = await session.exec(stmt)
+        question = result.first()
+
+        if not question:
+            raise ValueError("Question not found or is inactive")
+
+        # Create InterviewQuestion record
+        interview_question = InterviewQuestion(
+            session_id=interview.id,
+            question_id=question.id,
+            order=1,
+            time_limit_seconds=question.expected_duration_seconds,
+        )
+        session.add(interview_question)
+        await session.flush()
+
+        return interview_question

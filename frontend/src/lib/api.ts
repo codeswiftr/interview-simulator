@@ -102,6 +102,11 @@ export const interviewsAPI = {
     question_count?: number;
   }) => api.post('/interviews', data),
 
+  quickPractice: (questionId: string) =>
+    api.post('/interviews/quick-practice', null, {
+      params: { question_id: questionId },
+    }),
+
   start: (id: string) => api.post(`/interviews/${id}/start`),
 
   end: (id: string) => api.post(`/interviews/${id}/end`),

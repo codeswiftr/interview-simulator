@@ -33,6 +33,12 @@ export default function Header() {
                   Dashboard
                 </Link>
                 <Link
+                  to="/questions"
+                  className="text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Questions
+                </Link>
+                <Link
                   to="/settings"
                   className="text-text-secondary hover:text-text-primary transition-colors"
                 >

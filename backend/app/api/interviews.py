@@ -305,3 +305,71 @@ async def get_responses(
 async def get_interview_feedback(interview_id: UUID) -> dict[str, str]:
     """Placeholder for feedback retrieval."""
     return {"message": f"Get feedback for interview {interview_id} - not yet implemented"}
+
+
+@router.post(
+    "/quick-practice",
+    response_model=InterviewSessionRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_interview_quota)],
+)
+async def create_quick_practice(
+    question_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> InterviewSession:
+    """Create a 1-question practice session with a specific question.
+
+    Allows users to practice individual questions from the question bank.
+    Enforces subscription quota limits (Free: 3/month, Pro: unlimited).
+    """
+    # First, verify the question exists and get its details
+    result = await session.exec(
+        select(Question).where(
+            Question.id == question_id,
+            Question.is_active == True,  # noqa: E712
+        )
+    )
+    question = result.first()
+
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found or is inactive",
+        )
+
+    # Map question category to interview type
+    category_to_type = {
+        "behavioral": InterviewType.BEHAVIORAL,
+        "technical": InterviewType.TECHNICAL,
+        "system_design": InterviewType.SYSTEM_DESIGN,
+    }
+    interview_type = category_to_type.get(question.category, InterviewType.BEHAVIORAL)
+
+    # Create interview session
+    interview = InterviewSession(
+        user_id=current_user.id,
+        interview_type=interview_type,
+        company_style=question.company_tags[0] if question.company_tags else None,
+        question_count=1,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session.add(interview)
+    await session.flush()
+
+    # Assign the specific question
+    try:
+        await interview_service.assign_specific_question(session, interview, question_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    # Increment interview counter
+    current_user.interviews_this_month += 1
+    current_user.total_interviews += 1
+
+    await session.commit()
+    await session.refresh(interview)
+    return interview
