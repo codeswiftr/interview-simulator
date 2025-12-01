@@ -18,6 +18,7 @@ from app.models.interview import (
     InterviewSession,
     InterviewStatus,
     InterviewType,
+    ProcessingStatus,
 )
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.services.feedback_service import FeedbackService
@@ -654,3 +655,131 @@ async def test_feedback_authorization(client, session_override):
         headers={"Authorization": token2},
     )
     assert get_resp.status_code == 404  # Not found (unauthorized)
+
+
+@pytest.mark.asyncio
+async def test_get_session_processing_status_returns_counts_and_flags(client, session_override):
+    """Test that processing status endpoint returns counts and flags."""
+    token = await register_and_login(client, email="status@example.com")
+
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Create responses with different processing statuses
+    response1 = InterviewResponse(
+        session_id=interview_id,
+        question_id=question.id,
+        transcript="Test answer 1",
+        duration_seconds=30,
+        processing_status=ProcessingStatus.COMPLETED,
+    )
+    response2 = InterviewResponse(
+        session_id=interview_id,
+        question_id=question.id,
+        transcript="Test answer 2",
+        duration_seconds=30,
+        processing_status=ProcessingStatus.TRANSCRIBING,
+    )
+    session_override.add(response1)
+    session_override.add(response2)
+    await session_override.commit()
+
+    # Get processing status
+    status_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/status",
+        headers={"Authorization": token},
+    )
+
+    assert status_resp.status_code == 200
+    data = status_resp.json()
+    assert "status_counts" in data
+    assert "total_responses" in data
+    assert "has_session_feedback" in data
+    assert "all_processed" in data
+    assert "current_step" in data
+    assert data["status_counts"]["completed"] == 1
+    assert data["status_counts"]["transcribing"] == 1
+    assert data["total_responses"] == 2
+    assert data["all_processed"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_session_processing_status_authorization(client, session_override):
+    """Test that users cannot see another user's session status."""
+    token1 = await register_and_login(client, email="user1_status@example.com")
+
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token1},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # User 2 tries to access User 1's session status
+    token2 = await register_and_login(client, email="user2_status@example.com")
+    status_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/status",
+        headers={"Authorization": token2},
+    )
+    assert status_resp.status_code == 404  # Not found (unauthorized)
+
+
+@pytest.mark.asyncio
+async def test_get_session_processing_status_handles_no_responses(client, session_override):
+    """Test that processing status returns sensible defaults when no responses exist."""
+    token = await register_and_login(client, email="no_responses@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Get processing status for session with no responses
+    status_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/status",
+        headers={"Authorization": token},
+    )
+
+    assert status_resp.status_code == 200
+    data = status_resp.json()
+    assert data["total_responses"] == 0
+    assert data["all_processed"] is False
+    assert data["has_session_feedback"] is False
+    assert data["current_step"] == "idle"

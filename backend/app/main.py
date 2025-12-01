@@ -1,13 +1,17 @@
 """FastAPI application entry point for Interview Simulator."""
 
+import logging
+import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+from uuid import uuid4
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import feedback, health, interviews, questions, subscriptions, transcription, upload, users
 from app.config import settings
@@ -16,11 +20,101 @@ from app.db import SessionLocal
 from app.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware
 
 
+def configure_logging() -> None:
+    """Configure structured logging for the application.
+    
+    Sets up JSON-formatted logging in production, simple format in development.
+    """
+    log_level = logging.DEBUG if settings.debug else logging.INFO
+    log_format = (
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        if settings.debug
+        else "%(asctime)s [%(levelname)s] %(name)s [%(correlation_id)s]: %(message)s"
+    )
+    
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        handlers=[logging.StreamHandler(sys.stdout)],
+    )
+    
+    # Set specific loggers
+    logging.getLogger("uvicorn").setLevel(log_level)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING if not settings.debug else logging.INFO)
+
+
+class CorrelationIDMiddleware(BaseHTTPMiddleware):
+    """Middleware to add correlation ID to requests for log tracing."""
+    
+    async def dispatch(self, request: Request, call_next):
+        correlation_id = request.headers.get("X-Correlation-ID", str(uuid4()))
+        request.state.correlation_id = correlation_id
+        
+        # Add to logging context
+        logger = logging.getLogger(__name__)
+        old_factory = logging.getLogRecordFactory()
+        
+        def record_factory(*args, **kwargs):
+            record = old_factory(*args, **kwargs)
+            record.correlation_id = correlation_id
+            return record
+        
+        logging.setLogRecordFactory(record_factory)
+        
+        try:
+            response = await call_next(request)
+            response.headers["X-Correlation-ID"] = correlation_id
+            return response
+        finally:
+            logging.setLogRecordFactory(old_factory)
+
+
+def init_error_monitoring() -> None:
+    """Initialize error monitoring (Sentry) if configured.
+    
+    Only initializes if SENTRY_DSN is set in environment.
+    """
+    sentry_dsn = getattr(settings, "sentry_dsn", None)
+    if sentry_dsn and not settings.debug:
+        try:
+            import sentry_sdk
+            from sentry_sdk.integrations.fastapi import FastApiIntegration
+            from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+            
+            sentry_sdk.init(
+                dsn=sentry_dsn,
+                integrations=[
+                    FastApiIntegration(),
+                    SqlalchemyIntegration(),
+                ],
+                traces_sample_rate=0.1,
+                environment=settings.environment,
+            )
+            logging.getLogger(__name__).info("Sentry error monitoring initialized")
+        except ImportError:
+            logging.getLogger(__name__).warning("Sentry SDK not installed, skipping error monitoring")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup/shutdown events."""
+    # Configure logging first
+    configure_logging()
+    logger = logging.getLogger(__name__)
+    
+    # Validate environment for production
+    try:
+        settings.validate_for_production()
+    except ValueError as e:
+        logger.error(f"Environment validation failed: {e}")
+        if not settings.debug:
+            raise  # Fail fast in production
+    
+    # Initialize error monitoring
+    init_error_monitoring()
+    
     # Startup
-    print(f"Starting Interview Simulator v{app.version}")
+    logger.info(f"Starting Interview Simulator v{app.version}")
     # TODO: Initialize database connections
     # TODO: Initialize Redis connection
     # TODO: Warm up AI models
@@ -32,7 +126,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Shutdown
-    print("Shutting down Interview Simulator")
+    logger.info("Shutting down Interview Simulator")
     # TODO: Close database connections
     # TODO: Close Redis connection
 
@@ -45,6 +139,9 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
 )
+
+# Correlation ID middleware (add early for request tracing)
+app.add_middleware(CorrelationIDMiddleware)
 
 # CORS configuration
 app.add_middleware(

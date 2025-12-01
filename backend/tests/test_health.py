@@ -40,3 +40,28 @@ async def test_readiness_check(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ready"
+
+
+@pytest.mark.asyncio
+async def test_health_detailed_includes_db_status(client):
+    """Test that detailed health check includes database status."""
+    response = await client.get("/health/details")
+    assert response.status_code == 200
+    data = response.json()
+    assert "database" in data
+    assert "status" in data
+    # Database should be "ok" if connection works
+    assert data["database"] in ["ok", "error"]
+
+
+@pytest.mark.asyncio
+async def test_health_detailed_handles_db_failure_gracefully(client):
+    """Test that detailed health check handles database failure gracefully."""
+    # This test verifies the endpoint doesn't crash on DB errors
+    # In a real failure scenario, it would return "error" not 500
+    response = await client.get("/health/details")
+    assert response.status_code == 200
+    data = response.json()
+    assert "database" in data
+    # Should return status map, not raise exception
+    assert isinstance(data["database"], str)

@@ -33,6 +33,36 @@ class BackgroundTaskService:
         self.audio_service = AudioService()
         self.feedback_service = FeedbackService()
 
+    def _log_with_context(
+        self,
+        level: int,
+        message: str,
+        response_id: UUID | None = None,
+        session_id: UUID | None = None,
+        task_name: str | None = None,
+        **kwargs,
+    ) -> None:
+        """Log message with correlation fields for background tasks.
+        
+        Args:
+            level: Logging level (logging.INFO, logging.ERROR, etc.)
+            message: Log message
+            response_id: Optional response ID for correlation
+            session_id: Optional session ID for correlation
+            task_name: Optional task name for correlation
+            **kwargs: Additional fields to include in log
+        """
+        extra = {}
+        if response_id:
+            extra["response_id"] = str(response_id)
+        if session_id:
+            extra["session_id"] = str(session_id)
+        if task_name:
+            extra["task_name"] = task_name
+        
+        extra.update(kwargs)
+        logger.log(level, message, extra=extra)
+
     async def process_response_audio_async(
         self,
         response_id: UUID,
@@ -95,28 +125,35 @@ class BackgroundTaskService:
                         response.processing_status = ProcessingStatus.COMPLETED
                         await session.commit()
 
-                    logger.info(
+                    self._log_with_context(
+                        logging.INFO,
                         f"Successfully processed audio for response {response_id}",
-                        extra={
-                            "response_id": str(response_id),
-                            "duration_seconds": response.duration_seconds if response else None,
-                        },
+                        response_id=response_id,
+                        session_id=response.session_id if response else None,
+                        task_name="process_response_audio",
+                        duration_seconds=response.duration_seconds if response else None,
                     )
 
                     # Auto-generate content feedback if transcript is available
                     await self.generate_content_feedback_async(response_id)
 
                 except Exception as e:
-                    logger.error(
+                    self._log_with_context(
+                        logging.ERROR,
                         f"Background audio processing failed for response {response_id}: {e}",
+                        response_id=response_id,
+                        task_name="process_response_audio",
                         exc_info=True,
                     )
                     # Update status to FAILED
                     await self._update_processing_status_failed(session, response_id, str(e))
 
         except Exception as e:
-            logger.error(
+            self._log_with_context(
+                logging.ERROR,
                 f"Failed to start background audio processing for response {response_id}: {e}",
+                response_id=response_id,
+                task_name="process_response_audio",
                 exc_info=True,
             )
 
@@ -209,25 +246,46 @@ class BackgroundTaskService:
                         select(ContentFeedback).where(ContentFeedback.response_id == response_id)
                     )
                     if existing.first():
-                        logger.debug(f"ContentFeedback already exists for response {response_id}")
+                        self._log_with_context(
+                            logging.DEBUG,
+                            f"ContentFeedback already exists for response {response_id}",
+                            response_id=response_id,
+                            task_name="generate_content_feedback",
+                        )
                         return
 
                     # Generate feedback
                     await self.feedback_service.generate_feedback(session, response_id)
-                    logger.info(f"Successfully generated content feedback for response {response_id}")
+                    self._log_with_context(
+                        logging.INFO,
+                        f"Successfully generated content feedback for response {response_id}",
+                        response_id=response_id,
+                        task_name="generate_content_feedback",
+                    )
 
                 except ValueError as e:
                     # Expected errors (e.g., no transcript, already exists)
-                    logger.debug(f"Could not generate feedback for response {response_id}: {e}")
+                    self._log_with_context(
+                        logging.DEBUG,
+                        f"Could not generate feedback for response {response_id}: {e}",
+                        response_id=response_id,
+                        task_name="generate_content_feedback",
+                    )
                 except Exception as e:
-                    logger.error(
+                    self._log_with_context(
+                        logging.ERROR,
                         f"Background content feedback generation failed for response {response_id}: {e}",
+                        response_id=response_id,
+                        task_name="generate_content_feedback",
                         exc_info=True,
                     )
 
         except Exception as e:
-            logger.error(
+            self._log_with_context(
+                logging.ERROR,
                 f"Failed to start content feedback generation for response {response_id}: {e}",
+                response_id=response_id,
+                task_name="generate_content_feedback",
                 exc_info=True,
             )
 
@@ -258,33 +316,49 @@ class BackgroundTaskService:
                         select(SessionFeedback).where(SessionFeedback.session_id == session_id)
                     )
                     if existing.first():
-                        logger.debug(f"SessionFeedback already exists for session {session_id}")
+                        self._log_with_context(
+                            logging.DEBUG,
+                            f"SessionFeedback already exists for session {session_id}",
+                            session_id=session_id,
+                            task_name="generate_session_feedback",
+                        )
                         return
 
                     # Generate session feedback
                     feedback = await self.feedback_service.generate_session_feedback(
                         session, session_id
                     )
-                    logger.info(
+                    self._log_with_context(
+                        logging.INFO,
                         f"Successfully generated session feedback for session {session_id}",
-                        extra={
-                            "session_id": str(session_id),
-                            "overall_score": feedback.overall_score if feedback else None,
-                        },
+                        session_id=session_id,
+                        task_name="generate_session_feedback",
+                        overall_score=feedback.overall_score if feedback else None,
                     )
 
                 except ValueError as e:
                     # Expected errors (e.g., no responses, already exists)
-                    logger.debug(f"Could not generate session feedback for {session_id}: {e}")
+                    self._log_with_context(
+                        logging.DEBUG,
+                        f"Could not generate session feedback for {session_id}: {e}",
+                        session_id=session_id,
+                        task_name="generate_session_feedback",
+                    )
                 except Exception as e:
-                    logger.error(
+                    self._log_with_context(
+                        logging.ERROR,
                         f"Background session feedback generation failed for session {session_id}: {e}",
+                        session_id=session_id,
+                        task_name="generate_session_feedback",
                         exc_info=True,
                     )
 
         except Exception as e:
-            logger.error(
+            self._log_with_context(
+                logging.ERROR,
                 f"Failed to start session feedback generation for session {session_id}: {e}",
+                session_id=session_id,
+                task_name="generate_session_feedback",
                 exc_info=True,
             )
 

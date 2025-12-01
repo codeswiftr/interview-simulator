@@ -8,6 +8,7 @@ from app.dependencies import get_current_user
 from app.db import get_session
 from app.models.user import Token, User, UserCreate, UserLogin, UserRead
 from app.security import create_access_token, hash_password, verify_password
+from app.services.feedback_service import FeedbackService
 
 router = APIRouter()
 
@@ -46,3 +47,104 @@ async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)
 async def get_me(current_user: User = Depends(get_current_user)) -> User:
     """Get current authenticated user."""
     return current_user
+
+
+@router.get("/me/stats")
+async def get_my_stats(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get user statistics: total sessions, completed sessions, average score, practice time.
+    
+    Args:
+        current_user: Authenticated user
+        session: Database session
+        
+    Returns:
+        Dictionary with user statistics
+    """
+    from app.models.interview import InterviewSession, InterviewStatus
+    
+    # Get all sessions for user
+    sessions_result = await session.exec(
+        select(InterviewSession).where(InterviewSession.user_id == current_user.id)
+    )
+    all_sessions = list(sessions_result.all())
+    
+    total_sessions = len(all_sessions)
+    completed_sessions = [s for s in all_sessions if s.status == InterviewStatus.COMPLETED or s.status == InterviewStatus.ANALYZED]
+    completed_count = len(completed_sessions)
+    
+    # Calculate average score from completed sessions
+    scores = [s.overall_score for s in completed_sessions if s.overall_score is not None]
+    average_score = sum(scores) / len(scores) if scores else None
+    
+    # Calculate total practice time (sum of duration_seconds)
+    total_practice_time = sum(s.duration_seconds or 0 for s in completed_sessions)
+    
+    return {
+        "total_sessions": total_sessions,
+        "completed_sessions": completed_count,
+        "average_score": round(average_score, 1) if average_score else None,
+        "total_practice_time_seconds": total_practice_time,
+    }
+
+
+@router.get("/me/progress")
+async def get_my_progress(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get user progress: time-series of session scores and practice recommendations.
+    
+    Args:
+        current_user: Authenticated user
+        session: Database session
+        
+    Returns:
+        Dictionary with progress data and recommendations
+    """
+    from app.models.interview import InterviewSession, InterviewStatus
+    from app.models.feedback import SessionFeedback
+    
+    # Get completed sessions with feedback
+    sessions_result = await session.exec(
+        select(InterviewSession)
+        .where(
+            InterviewSession.user_id == current_user.id,
+            InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED])
+        )
+        .order_by(InterviewSession.created_at.desc())
+        .limit(20)  # Last 20 sessions
+    )
+    sessions = list(sessions_result.all())
+    
+    # Get session feedbacks
+    session_ids = [s.id for s in sessions]
+    feedbacks_result = await session.exec(
+        select(SessionFeedback).where(SessionFeedback.session_id.in_(session_ids))
+    )
+    feedbacks = {f.session_id: f for f in feedbacks_result.all()}
+    
+    # Build time-series data
+    score_trend = []
+    for s in reversed(sessions):  # Oldest first for trend
+        feedback = feedbacks.get(s.id)
+        if feedback:
+            score_trend.append({
+                "date": s.created_at.isoformat(),
+                "score": feedback.overall_score,
+                "content_score": feedback.content_score,
+                "audio_score": feedback.audio_score,
+            })
+    
+    # Get practice recommendations from FeedbackService
+    feedback_service = FeedbackService()
+    progress_data = await feedback_service.get_user_progress(session, current_user.id)
+    
+    return {
+        "score_trend": score_trend,
+        "recommended_practice_areas": progress_data.get("recommended_practice_areas", []),
+        "average_audio_score": progress_data.get("average_audio_score"),
+        "average_content_score": progress_data.get("average_content_score"),
+    }

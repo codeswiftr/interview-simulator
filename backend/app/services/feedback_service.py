@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.content_analyzer import ContentAnalyzer
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus
+from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, ProcessingStatus
 from app.models.question import Question
 
 
@@ -294,3 +294,147 @@ class FeedbackService:
             .order_by(InterviewResponse.created_at)
         )
         return list(result.all())
+
+    async def get_processing_summary(
+        self, session: AsyncSession, session_id: UUID
+    ) -> dict:
+        """Get processing status summary for a session.
+
+        Returns counts of responses by processing_status, whether session feedback exists,
+        and whether all responses are fully processed.
+
+        Args:
+            session: Database session
+            session_id: UUID of the interview session
+
+        Returns:
+            Dictionary with processing status summary
+        """
+        # Get all responses for this session
+        responses_result = await session.exec(
+            select(InterviewResponse).where(InterviewResponse.session_id == session_id)
+        )
+        responses = list(responses_result.all())
+
+        # Count responses by status
+        status_counts = {
+            ProcessingStatus.PENDING: 0,
+            ProcessingStatus.TRANSCRIBING: 0,
+            ProcessingStatus.ANALYZING: 0,
+            ProcessingStatus.COMPLETED: 0,
+            ProcessingStatus.FAILED: 0,
+        }
+
+        for response in responses:
+            status = response.processing_status
+            if status in status_counts:
+                status_counts[status] += 1
+
+        # Check if session feedback exists
+        session_feedback_result = await session.exec(
+            select(SessionFeedback).where(SessionFeedback.session_id == session_id)
+        )
+        has_session_feedback = session_feedback_result.first() is not None
+
+        # Determine if all responses are fully processed
+        total_responses = len(responses)
+        completed_or_failed = status_counts[ProcessingStatus.COMPLETED] + status_counts[ProcessingStatus.FAILED]
+        all_processed = total_responses > 0 and completed_or_failed == total_responses
+
+        # Determine current step
+        current_step = "idle"
+        if status_counts[ProcessingStatus.TRANSCRIBING] > 0:
+            current_step = "transcribing"
+        elif status_counts[ProcessingStatus.ANALYZING] > 0:
+            current_step = "analyzing"
+        elif status_counts[ProcessingStatus.COMPLETED] > 0 and not has_session_feedback:
+            current_step = "generating_feedback"
+        elif has_session_feedback:
+            current_step = "complete"
+        elif status_counts[ProcessingStatus.FAILED] > 0 and completed_or_failed == total_responses:
+            current_step = "failed"
+
+        return {
+            "status_counts": {
+                "pending": status_counts[ProcessingStatus.PENDING],
+                "transcribing": status_counts[ProcessingStatus.TRANSCRIBING],
+                "analyzing": status_counts[ProcessingStatus.ANALYZING],
+                "completed": status_counts[ProcessingStatus.COMPLETED],
+                "failed": status_counts[ProcessingStatus.FAILED],
+            },
+            "total_responses": total_responses,
+            "has_session_feedback": has_session_feedback,
+            "all_processed": all_processed,
+            "current_step": current_step,
+        }
+
+    async def get_user_progress(
+        self, session: AsyncSession, user_id: UUID
+    ) -> dict:
+        """Get aggregate progress metrics for a user.
+        
+        Returns last N sessions' scores, average audio/content scores,
+        and top recurring recommended practice areas.
+        
+        Args:
+            session: Database session
+            user_id: UUID of the user
+            
+        Returns:
+            Dictionary with progress metrics
+        """
+        from app.models.interview import InterviewSession, InterviewStatus
+        
+        # Get last 10 completed sessions
+        sessions_result = await session.exec(
+            select(InterviewSession)
+            .where(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED])
+            )
+            .order_by(InterviewSession.created_at.desc())
+            .limit(10)
+        )
+        sessions = list(sessions_result.all())
+        
+        if not sessions:
+            return {
+                "recommended_practice_areas": [],
+                "average_audio_score": None,
+                "average_content_score": None,
+            }
+        
+        # Get session feedbacks
+        session_ids = [s.id for s in sessions]
+        feedbacks_result = await session.exec(
+            select(SessionFeedback).where(SessionFeedback.session_id.in_(session_ids))
+        )
+        feedbacks = list(feedbacks_result.all())
+        
+        if not feedbacks:
+            return {
+                "recommended_practice_areas": [],
+                "average_audio_score": None,
+                "average_content_score": None,
+            }
+        
+        # Calculate averages
+        audio_scores = [f.audio_score for f in feedbacks if f.audio_score is not None]
+        content_scores = [f.content_score for f in feedbacks if f.content_score is not None]
+        
+        avg_audio = sum(audio_scores) / len(audio_scores) if audio_scores else None
+        avg_content = sum(content_scores) / len(content_scores) if content_scores else None
+        
+        # Aggregate recommended practice areas (most common across sessions)
+        all_practice_areas = []
+        for f in feedbacks:
+            all_practice_areas.extend(f.recommended_practice_areas)
+        
+        practice_area_counter = Counter(all_practice_areas)
+        top_practice_areas = [area for area, _ in practice_area_counter.most_common(3)]
+        
+        return {
+            "recommended_practice_areas": top_practice_areas,
+            "average_audio_score": round(avg_audio, 1) if avg_audio else None,
+            "average_content_score": round(avg_content, 1) if avg_content else None,
+        }

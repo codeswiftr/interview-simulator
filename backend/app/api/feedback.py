@@ -263,3 +263,35 @@ async def generate_session_feedback(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
+
+
+@router.get("/session/{session_id}/status")
+async def get_session_processing_status(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get processing status summary for an interview session.
+
+    Returns counts of responses by processing_status, whether session feedback exists,
+    and whether all responses are fully processed.
+
+    Args:
+        session_id: UUID of the interview session
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        Dictionary with processing status summary
+
+    Raises:
+        HTTPException: If session not found or unauthorized
+    """
+    # Verify ownership
+    await _verify_session_ownership(session, session_id, current_user.id)
+
+    # Get processing summary
+    feedback_service = FeedbackService()
+    summary = await feedback_service.get_processing_summary(session, session_id)
+
+    return summary
