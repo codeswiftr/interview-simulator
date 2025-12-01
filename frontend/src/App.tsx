@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider } from './hooks/useToast';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -13,6 +14,7 @@ import SettingsPage from './pages/SettingsPage';
 function App() {
   return (
     <ErrorBoundary>
+      <ToastProvider>
       <div className="min-h-screen bg-surface-primary">
         <Header />
         <Routes>
@@ -53,6 +55,7 @@ function App() {
         />
         </Routes>
       </div>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

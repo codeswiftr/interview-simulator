@@ -1,18 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X, AlertCircle, CheckCircle, SkipForward } from 'lucide-react';
+import { X, AlertCircle, CheckCircle, SkipForward, RefreshCw } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
+import { useToast } from '../hooks/useToast';
 import Timer from '../components/interview/Timer';
 import RecordingIndicator from '../components/interview/RecordingIndicator';
 import RecordButton from '../components/interview/RecordButton';
 import QuestionDisplay from '../components/interview/QuestionDisplay';
 import type { InterviewSession, Question } from '../types';
 
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
+
 export default function InterviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
 
   // Session state
   const [session, setSession] = useState<InterviewSession | null>(null);
@@ -26,6 +31,7 @@ export default function InterviewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [hasRecorded, setHasRecorded] = useState(false);
+  const [lastFailedUpload, setLastFailedUpload] = useState<{ blob: Blob; questionId: string } | null>(null);
 
   // Audio recording hook
   const {
@@ -93,6 +99,69 @@ export default function InterviewPage() {
     setHasRecorded(true);
   };
 
+  // Upload with retry logic
+  const uploadWithRetry = useCallback(async (
+    blob: Blob,
+    sessionId: string,
+    questionId: string,
+    attempt: number = 1
+  ): Promise<string> => {
+    try {
+      const audioFile = new File([blob], `answer-${currentQuestionIndex + 1}.webm`, {
+        type: 'audio/webm',
+      });
+
+      const uploadResponse = await uploadAPI.uploadAudio(audioFile, sessionId, questionId);
+      return uploadResponse.data.audio_url;
+    } catch (err) {
+      if (attempt < MAX_RETRY_ATTEMPTS) {
+        toast.warning('Upload failed', `Retrying... (attempt ${attempt + 1}/${MAX_RETRY_ATTEMPTS})`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+        return uploadWithRetry(blob, sessionId, questionId, attempt + 1);
+      }
+      throw err;
+    }
+  }, [currentQuestionIndex, toast]);
+
+  // Handle retry failed upload
+  const handleRetryUpload = async () => {
+    if (!lastFailedUpload || !session) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const audioUrl = await uploadWithRetry(
+        lastFailedUpload.blob,
+        session.id,
+        lastFailedUpload.questionId
+      );
+
+      await responsesAPI.submit(session.id, {
+        question_id: lastFailedUpload.questionId,
+        audio_url: audioUrl,
+        duration_seconds: duration,
+      });
+
+      toast.success('Answer submitted', 'Your response was uploaded successfully');
+      setLastFailedUpload(null);
+
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        resetRecording();
+        setHasRecorded(false);
+      } else {
+        await handleEndInterview();
+      }
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error('Upload failed', 'Please check your connection and try again');
+      setError(error.response?.data?.message || 'Failed to upload. Click retry to try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle submit answer
   const handleSubmitAnswer = async () => {
     if (!audioBlob || !session || !questions[currentQuestionIndex]) {
@@ -102,21 +171,12 @@ export default function InterviewPage() {
     try {
       setIsSubmitting(true);
       setError(null);
+      setLastFailedUpload(null);
 
       const currentQuestion = questions[currentQuestionIndex];
 
-      // Upload audio file
-      const audioFile = new File([audioBlob], `answer-${currentQuestionIndex + 1}.webm`, {
-        type: 'audio/webm',
-      });
-
-      const uploadResponse = await uploadAPI.uploadAudio(
-        audioFile,
-        session.id,
-        currentQuestion.id
-      );
-
-      const audioUrl = uploadResponse.data.audio_url;
+      // Upload audio file with retry
+      const audioUrl = await uploadWithRetry(audioBlob, session.id, currentQuestion.id);
 
       // Submit response
       await responsesAPI.submit(session.id, {
@@ -124,6 +184,8 @@ export default function InterviewPage() {
         audio_url: audioUrl,
         duration_seconds: duration,
       });
+
+      toast.success('Answer submitted', 'Moving to next question...');
 
       // Move to next question or finish
       if (currentQuestionIndex < questions.length - 1) {
@@ -136,7 +198,9 @@ export default function InterviewPage() {
       }
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to submit answer');
+      setError(error.response?.data?.message || 'Failed to submit answer. Click retry to try again.');
+      setLastFailedUpload({ blob: audioBlob, questionId: questions[currentQuestionIndex].id });
+      toast.error('Upload failed', 'Your answer could not be uploaded. Please retry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -350,17 +414,28 @@ export default function InterviewPage() {
                   Skip Question
                 </button>
 
-                <button
-                  onClick={handleSubmitAnswer}
-                  disabled={!hasRecorded || isSubmitting || isRecording}
-                  className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting
-                    ? 'Submitting...'
-                    : currentQuestionIndex < questions.length - 1
-                    ? 'Next Question'
-                    : 'Finish Interview'}
-                </button>
+                {lastFailedUpload ? (
+                  <button
+                    onClick={handleRetryUpload}
+                    disabled={isSubmitting}
+                    className="btn-primary flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600"
+                  >
+                    <RefreshCw size={20} className={isSubmitting ? 'animate-spin' : ''} />
+                    {isSubmitting ? 'Retrying...' : 'Retry Upload'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSubmitAnswer}
+                    disabled={!hasRecorded || isSubmitting || isRecording}
+                    className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting
+                      ? 'Submitting...'
+                      : currentQuestionIndex < questions.length - 1
+                      ? 'Next Question'
+                      : 'Finish Interview'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
