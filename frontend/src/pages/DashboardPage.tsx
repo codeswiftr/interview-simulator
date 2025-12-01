@@ -1,26 +1,68 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BarChart2, Target, TrendingUp, AlertCircle } from 'lucide-react';
+import { Plus, BarChart2, Target, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { interviewsAPI } from '../lib/api';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { interviewsAPI, userAPI } from '../lib/api';
 import StatsCard from '../components/dashboard/StatsCard';
 import InterviewCard from '../components/interview/InterviewCard';
 import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
+import WelcomeModal from '../components/onboarding/WelcomeModal';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
+
+interface UserStats {
+  total_sessions: number;
+  completed_sessions: number;
+  average_score: number | null;
+  total_practice_time_seconds: number;
+}
+
+interface UserProgress {
+  score_trend: Array<{ date: string; score: number; content_score: number; audio_score: number }>;
+  recommended_practice_areas: string[];
+  average_audio_score: number | null;
+  average_content_score: number | null;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { shouldShowWelcome, markWelcomeSeen } = useOnboarding(user?.id);
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Show welcome modal for new users after data loads
+  useEffect(() => {
+    if (!isLoading && shouldShowWelcome && sessions.length === 0) {
+      setShowWelcomeModal(true);
+    }
+  }, [isLoading, shouldShowWelcome, sessions.length]);
+
+  const handleWelcomeClose = () => {
+    markWelcomeSeen();
+    setShowWelcomeModal(false);
+  };
+
+  const handleWelcomeStartInterview = () => {
+    markWelcomeSeen();
+    setShowWelcomeModal(false);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
-    loadInterviews();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    await Promise.all([loadInterviews(), loadStats(), loadProgress()]);
+  };
 
   const loadInterviews = async () => {
     try {
@@ -32,6 +74,26 @@ export default function DashboardPage() {
       setError(err.response?.data?.message || 'Failed to load interviews');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await userAPI.getStats();
+      setUserStats(response.data);
+    } catch (err) {
+      // Silently fail - stats are nice to have
+      console.warn('Failed to load user stats:', err);
+    }
+  };
+
+  const loadProgress = async () => {
+    try {
+      const response = await userAPI.getProgress();
+      setUserProgress(response.data);
+    } catch (err) {
+      // Silently fail - progress is nice to have
+      console.warn('Failed to load user progress:', err);
     }
   };
 
@@ -57,14 +119,14 @@ export default function DashboardPage() {
     navigate(`/interview/${session.id}`);
   };
 
-  // Calculate stats
+  // Use API stats if available, fallback to calculated
   const stats = {
-    totalInterviews: sessions.length,
-    completedInterviews: sessions.filter((s) => s.status === 'completed').length,
-    averageScore: sessions
+    totalInterviews: userStats?.total_sessions ?? sessions.length,
+    completedInterviews: userStats?.completed_sessions ?? sessions.filter((s) => s.status === 'completed' || s.status === 'analyzed').length,
+    averageScore: userStats?.average_score ?? (sessions
       .filter((s) => s.overall_score !== null && s.overall_score !== undefined)
       .reduce((acc, s) => acc + (s.overall_score || 0), 0) /
-      Math.max(1, sessions.filter((s) => s.overall_score !== null).length),
+      Math.max(1, sessions.filter((s) => s.overall_score !== null).length)),
     inProgress: sessions.filter((s) => s.status === 'in_progress').length,
   };
 
@@ -87,9 +149,9 @@ export default function DashboardPage() {
           />
           <StatsCard
             title="Average Score"
-            value={stats.averageScore > 0 ? `${Math.round(stats.averageScore)}/100` : 'N/A'}
+            value={stats.averageScore && stats.averageScore > 0 ? `${Math.round(stats.averageScore)}/100` : 'N/A'}
             icon={Target}
-            subtitle={stats.averageScore > 0 ? 'All time average' : 'Complete interviews to see'}
+            subtitle={stats.averageScore && stats.averageScore > 0 ? 'All time average' : 'Complete interviews to see'}
           />
           <StatsCard
             title="In Progress"
@@ -98,23 +160,113 @@ export default function DashboardPage() {
             subtitle={stats.inProgress > 0 ? 'Resume practice' : 'Start a new interview'}
           />
           <StatsCard
-            title="Practice Streak"
-            value="Coming Soon"
+            title="Practice Time"
+            value={userStats?.total_practice_time_seconds ? `${Math.round(userStats.total_practice_time_seconds / 60)} min` : '0 min'}
             icon={TrendingUp}
-            subtitle="Feature in development"
+            subtitle="Total practice time"
           />
         </div>
 
-        {/* Start New Interview CTA */}
-        <div className="mb-8">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn-primary w-full md:w-auto flex items-center justify-center gap-2"
-          >
-            <Plus size={20} />
-            Start New Interview
-          </button>
-        </div>
+        {/* Progress Section - Practice Recommendations */}
+        {userProgress && userProgress.recommended_practice_areas.length > 0 && (
+          <div className="card p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Lightbulb className="w-6 h-6 text-electric-blue" />
+              <h2 className="heading-section">Focus Areas</h2>
+            </div>
+            <p className="body-default text-text-secondary mb-4">
+              Based on your recent interviews, here are areas to focus on:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {userProgress.recommended_practice_areas.map((area, idx) => (
+                <span key={idx} className="badge badge-in-progress">
+                  {area}
+                </span>
+              ))}
+            </div>
+            {userProgress.average_audio_score !== null && userProgress.average_content_score !== null && (
+              <div className="mt-4 pt-4 border-t border-border-light">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-text-tertiary">Avg Content Score: </span>
+                    <span className="font-medium">{Math.round(userProgress.average_content_score)}/100</span>
+                  </div>
+                  <div>
+                    <span className="text-text-tertiary">Avg Audio Score: </span>
+                    <span className="font-medium">{Math.round(userProgress.average_audio_score)}/100</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Onboarding Panel - Show for new users */}
+        {!isLoading && sessions.length === 0 && (
+          <div className="card p-8 mb-8 border-2 border-electric-blue bg-electric-blue/5">
+            <h2 className="heading-section mb-4">Get Started</h2>
+            <p className="body-default text-text-secondary mb-6">
+              Complete these steps to start improving your interview skills:
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-electric-blue text-white flex items-center justify-center font-semibold flex-shrink-0">
+                  1
+                </div>
+                <div>
+                  <h3 className="heading-card mb-1">Create your first interview</h3>
+                  <p className="body-small text-text-secondary">
+                    Choose from behavioral, technical, or system design questions
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-border-light text-text-tertiary flex items-center justify-center font-semibold flex-shrink-0">
+                  2
+                </div>
+                <div>
+                  <h3 className="heading-card mb-1">Complete one session</h3>
+                  <p className="body-small text-text-secondary">
+                    Record your answers and submit them for analysis
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-border-light text-text-tertiary flex items-center justify-center font-semibold flex-shrink-0">
+                  3
+                </div>
+                <div>
+                  <h3 className="heading-card mb-1">Review AI feedback</h3>
+                  <p className="body-small text-text-secondary">
+                    Get detailed insights on your performance and areas to improve
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="btn-primary inline-flex items-center justify-center gap-2"
+              >
+                <Plus size={20} />
+                Create Your First Interview
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Start New Interview CTA - Show when user has sessions */}
+        {!isLoading && sessions.length > 0 && (
+          <div className="mb-8">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary w-full md:w-auto flex items-center justify-center gap-2"
+            >
+              <Plus size={20} />
+              Start New Interview
+            </button>
+          </div>
+        )}
 
         {/* Interview History */}
         <div className="mb-4">
@@ -198,6 +350,14 @@ export default function DashboardPage() {
           setShowUpgradeModal(false);
           setError(null);
         }}
+      />
+
+      {/* Welcome Modal for New Users */}
+      <WelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={handleWelcomeClose}
+        onStartInterview={handleWelcomeStartInterview}
+        userName={user?.full_name?.split(' ')[0]}
       />
     </div>
   );
