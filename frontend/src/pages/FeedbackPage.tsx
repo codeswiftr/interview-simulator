@@ -369,6 +369,7 @@ export default function FeedbackPage() {
                     questionNumber={idx + 1}
                     question={response.question?.content || 'Question text unavailable'}
                     transcript={response.transcript}
+                    audioUrl={response.audio_url}
                     feedback={contentFeedback?.detailed_feedback || 'Feedback analysis pending...'}
                     score={contentFeedback?.overall_content_score}
                     suggestions={contentFeedback?.improvements || []}

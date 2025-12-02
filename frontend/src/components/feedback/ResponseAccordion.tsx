@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronDown, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ChevronDown, CheckCircle, AlertTriangle, Play } from 'lucide-react';
+import AudioPlayer from './AudioPlayer';
 
 interface ResponseAccordionProps {
   question: string;
@@ -8,6 +9,7 @@ interface ResponseAccordionProps {
   score?: number;
   suggestions: string[];
   questionNumber: number;
+  audioUrl?: string;
 }
 
 export default function ResponseAccordion({
@@ -17,6 +19,7 @@ export default function ResponseAccordion({
   score,
   suggestions,
   questionNumber,
+  audioUrl,
 }: ResponseAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -64,6 +67,17 @@ export default function ResponseAccordion({
         }`}
       >
         <div className="px-6 pb-6 space-y-6">
+          {/* Audio Player */}
+          {audioUrl && (
+            <div>
+              <h4 className="body-small font-semibold text-text-secondary uppercase tracking-wide mb-2 flex items-center gap-2">
+                <Play className="w-4 h-4" />
+                Your Recording
+              </h4>
+              <AudioPlayer audioUrl={audioUrl} />
+            </div>
+          )}
+
           {/* Transcript */}
           {transcript && (
             <div>

@@ -49,6 +49,8 @@ export interface InterviewResponse {
   audio_url: string;
   transcript?: string;
   duration_seconds?: number;
+  word_count?: number;
+  filler_word_count?: number;
   submitted_at: string;
   created_at: string;
   updated_at: string;
