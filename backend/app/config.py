@@ -50,6 +50,16 @@ class Settings(BaseSettings):
     # Error Monitoring (optional)
     sentry_dsn: str = ""
 
+    # Email / SMTP
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@careerswiftr.com"
+
+    # Frontend URL for email links
+    frontend_url: str = "http://localhost:5173"
+
     @property
     def async_database_url(self) -> str:
         """Get async database URL."""

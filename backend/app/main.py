@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api import feedback, health, interviews, questions, subscriptions, transcription, upload, users
+from app.api import auth, feedback, health, interviews, questions, subscriptions, transcription, upload, users
 from app.config import settings
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal
@@ -165,6 +165,7 @@ if not settings.debug:
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(questions.router, prefix="/api/v1/questions", tags=["Questions"])
 app.include_router(interviews.router, prefix="/api/v1/interviews", tags=["Interviews"])

@@ -12,6 +12,7 @@ from app.models.interview import (
     InterviewResponseRead,
 )
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
+from app.models.password_reset import PasswordResetToken
 
 __all__ = [
     "User",
@@ -28,4 +29,5 @@ __all__ = [
     "AudioFeedback",
     "ContentFeedback",
     "SessionFeedback",
+    "PasswordResetToken",
 ]
