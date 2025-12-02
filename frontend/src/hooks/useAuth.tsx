@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../lib/api';
-import type { User, AuthResponse } from '../types';
+import type { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -46,10 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await authAPI.login(email, password);
-      const data: AuthResponse = response.data;
+      const { access_token } = response.data;
 
-      localStorage.setItem('access_token', data.access_token);
-      setUser(data.user);
+      localStorage.setItem('access_token', access_token);
+
+      // Fetch user data after storing token
+      const userResponse = await authAPI.getCurrentUser();
+      setUser(userResponse.data);
 
       navigate('/dashboard');
     } catch (error) {
@@ -59,11 +62,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, full_name: string) => {
     try {
-      const response = await authAPI.register(email, password, full_name);
-      const data: AuthResponse = response.data;
+      // Register creates the user but doesn't return a token
+      await authAPI.register(email, password, full_name);
 
-      localStorage.setItem('access_token', data.access_token);
-      setUser(data.user);
+      // Login to get the token
+      const loginResponse = await authAPI.login(email, password);
+      const { access_token } = loginResponse.data;
+
+      localStorage.setItem('access_token', access_token);
+
+      // Fetch user data
+      const userResponse = await authAPI.getCurrentUser();
+      setUser(userResponse.data);
 
       navigate('/dashboard');
     } catch (error) {
