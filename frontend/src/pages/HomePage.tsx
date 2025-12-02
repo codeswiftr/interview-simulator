@@ -7,24 +7,33 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-charcoal to-gray-800 text-white py-20">
         <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="heading-hero mb-6 text-white">
-              Master Your Interview Skills with AI-Powered Practice
-            </h1>
-            <p className="body-large text-gray-300 mb-8">
-              Simulate real interview scenarios, get instant feedback, and track your progress.
-              Practice behavioral, technical, and system design questions with confidence.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Link to="/register" className="btn-primary">
-                Start Practicing Free
-              </Link>
-              <Link
-                to="/login"
-                className="px-6 py-3 rounded-lg font-semibold text-white border border-white/30 hover:bg-white/10 transition-all"
-              >
-                Login
-              </Link>
+          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
+            <div className="text-center lg:text-left">
+              <h1 className="heading-hero mb-6 text-white">
+                Master Your Interview Skills with AI-Powered Practice
+              </h1>
+              <p className="body-large text-gray-300 mb-8">
+                Simulate real interview scenarios, get instant feedback, and track your progress.
+                Practice behavioral, technical, and system design questions with confidence.
+              </p>
+              <div className="flex gap-4 justify-center lg:justify-start">
+                <Link to="/register" className="btn-primary">
+                  Start Practicing Free
+                </Link>
+                <Link
+                  to="/login"
+                  className="px-6 py-3 rounded-lg font-semibold text-white border border-white/30 hover:bg-white/10 transition-all"
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+            <div className="hidden lg:block">
+              <img
+                src="/images/hero-illustration.png"
+                alt="AI-powered interview practice"
+                className="w-full max-w-lg mx-auto rounded-2xl shadow-2xl"
+              />
             </div>
           </div>
         </div>

@@ -37,14 +37,16 @@ export default function Header() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-electric-blue to-sky-500 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">CS</span>
-            </div>
+            <img
+              src="/images/logo-192.png"
+              alt="CareerSwiftr"
+              className="w-8 h-8 rounded-lg"
+            />
             <div className="flex flex-col">
               <span className="font-heading font-bold text-lg leading-none">
                 Interview Simulator
               </span>
-              <span className="text-xs text-text-tertiary hidden sm:block">by CodeSwiftr</span>
+              <span className="text-xs text-text-tertiary hidden sm:block">by CareerSwiftr</span>
             </div>
           </Link>
 

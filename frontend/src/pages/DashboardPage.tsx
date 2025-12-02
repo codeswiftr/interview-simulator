@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BarChart2, AlertCircle, Lightbulb } from 'lucide-react';
+import { Plus, AlertCircle, Lightbulb } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { interviewsAPI, userAPI } from '../lib/api';
@@ -323,7 +323,11 @@ export default function DashboardPage() {
         {!isLoading && !error && sessions.length === 0 && (
           <div className="card p-12 text-center">
             <div className="max-w-md mx-auto">
-              <BarChart2 size={48} className="text-text-tertiary mx-auto mb-4" />
+              <img
+                src="/images/empty-state.png"
+                alt="No interviews yet"
+                className="w-48 h-48 mx-auto mb-6 opacity-80"
+              />
               <h3 className="heading-card mb-2">No interviews yet</h3>
               <p className="text-text-secondary mb-6">
                 Get started by creating your first interview session. Practice makes perfect!
