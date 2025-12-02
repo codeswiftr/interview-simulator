@@ -1,4 +1,4 @@
-import { Play, Pause, RotateCcw, CheckCircle } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle, Loader2, Upload, Send } from 'lucide-react';
 
 interface AudioPreviewProps {
   isPlaying: boolean;
@@ -9,6 +9,8 @@ interface AudioPreviewProps {
   onReRecord: () => void;
   onConfirm: () => void;
   disabled?: boolean;
+  isSubmitting?: boolean;
+  submitProgress?: 'uploading' | 'processing' | null;
 }
 
 function formatTime(seconds: number): string {
@@ -25,9 +27,44 @@ export default function AudioPreview({
   onPause,
   onReRecord,
   onConfirm,
-  disabled = false
+  disabled = false,
+  isSubmitting = false,
+  submitProgress = null
 }: AudioPreviewProps) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const getSubmitButtonContent = () => {
+    if (isSubmitting) {
+      if (submitProgress === 'uploading') {
+        return (
+          <>
+            <Upload size={20} className="animate-bounce" />
+            Uploading...
+          </>
+        );
+      }
+      if (submitProgress === 'processing') {
+        return (
+          <>
+            <Loader2 size={20} className="animate-spin" />
+            Processing...
+          </>
+        );
+      }
+      return (
+        <>
+          <Loader2 size={20} className="animate-spin" />
+          Submitting...
+        </>
+      );
+    }
+    return (
+      <>
+        <Send size={20} />
+        Submit Answer
+      </>
+    );
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -39,6 +76,12 @@ export default function AudioPreview({
 
       {/* Audio Player */}
       <div className="bg-surface-secondary rounded-lg p-6 space-y-4">
+        {/* Recording Duration Summary */}
+        <div className="text-center mb-2">
+          <span className="text-text-secondary text-sm">Recording Length: </span>
+          <span className="font-mono font-semibold text-text-primary">{formatTime(duration)}</span>
+        </div>
+
         {/* Time Display */}
         <div className="flex items-center justify-between text-sm text-text-secondary">
           <span>{formatTime(currentTime)}</span>
@@ -57,7 +100,7 @@ export default function AudioPreview({
         <div className="flex justify-center">
           <button
             onClick={isPlaying ? onPause : onPlay}
-            disabled={disabled}
+            disabled={disabled || isSubmitting}
             className={`
               flex items-center justify-center
               w-16 h-16 rounded-full
@@ -65,20 +108,25 @@ export default function AudioPreview({
               hover:bg-sky-600 hover:scale-105
               transition-all duration-200
               shadow-lg hover:shadow-blue-glow
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+              ${(disabled || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}
               focus:outline-none focus:ring-4 focus:ring-electric-blue/50
             `}
           >
             {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" />}
           </button>
         </div>
+
+        {/* Playback hint */}
+        <p className="text-center text-sm text-text-tertiary">
+          {isPlaying ? 'Click to pause' : 'Click to preview your recording'}
+        </p>
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-4">
         <button
           onClick={onReRecord}
-          disabled={disabled}
+          disabled={disabled || isSubmitting}
           className="btn-secondary flex-1 flex items-center justify-center gap-2"
         >
           <RotateCcw size={20} />
@@ -87,13 +135,23 @@ export default function AudioPreview({
 
         <button
           onClick={onConfirm}
-          disabled={disabled}
-          className="btn-primary flex-1 flex items-center justify-center gap-2"
+          disabled={disabled || isSubmitting}
+          className={`btn-primary flex-1 flex items-center justify-center gap-2 ${
+            isSubmitting ? 'bg-electric-blue/70' : ''
+          }`}
         >
-          <CheckCircle size={20} />
-          Submit Answer
+          {getSubmitButtonContent()}
         </button>
       </div>
+
+      {/* Submission progress message */}
+      {isSubmitting && (
+        <div className="text-center text-sm text-text-secondary bg-surface-secondary rounded-lg p-3">
+          {submitProgress === 'uploading' && 'Uploading your audio recording...'}
+          {submitProgress === 'processing' && 'Your answer is being processed. This may take a moment.'}
+          {!submitProgress && 'Submitting your answer...'}
+        </div>
+      )}
     </div>
   );
 }

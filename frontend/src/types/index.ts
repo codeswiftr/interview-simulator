@@ -41,6 +41,9 @@ export interface InterviewSession {
   created_at: string;
 }
 
+// Processing status for responses
+export type ProcessingStatus = 'pending' | 'transcribing' | 'analyzing' | 'completed' | 'failed';
+
 // Response types
 export interface InterviewResponse {
   id: string;
@@ -51,6 +54,8 @@ export interface InterviewResponse {
   duration_seconds?: number;
   word_count?: number;
   filler_word_count?: number;
+  processing_status: ProcessingStatus;
+  processing_error?: string;
   submitted_at: string;
   created_at: string;
   updated_at: string;

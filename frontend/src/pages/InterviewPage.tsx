@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X, AlertCircle, SkipForward, RefreshCw } from 'lucide-react';
+import { X, AlertCircle, SkipForward, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
@@ -10,10 +10,21 @@ import RecordingIndicator from '../components/interview/RecordingIndicator';
 import RecordButton from '../components/interview/RecordButton';
 import QuestionDisplay from '../components/interview/QuestionDisplay';
 import AudioPreview from '../components/interview/AudioPreview';
-import type { InterviewSession, Question } from '../types';
+import TranscriptionDisplay from '../components/interview/TranscriptionDisplay';
+import type { InterviewSession, Question, InterviewResponse, ProcessingStatus } from '../types';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
+const TRANSCRIPTION_POLL_INTERVAL = 3000; // Poll every 3 seconds
+
+// Simplified response for transcription tracking
+interface SubmittedResponse {
+  id: string;
+  questionIndex: number;
+  processingStatus: ProcessingStatus;
+  transcript?: string;
+  processingError?: string;
+}
 
 export default function InterviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,10 +37,16 @@ export default function InterviewPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
 
+  // Transcription state
+  const [submittedResponses, setSubmittedResponses] = useState<SubmittedResponse[]>([]);
+  const [showTranscriptionPanel, setShowTranscriptionPanel] = useState(false);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // UI state
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState<'uploading' | 'processing' | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
   const [lastFailedUpload, setLastFailedUpload] = useState<{ blob: Blob; questionId: string } | null>(null);
 
@@ -108,6 +125,71 @@ export default function InterviewPage() {
 
     loadInterview();
   }, [id]);
+
+  // Poll for transcription status updates
+  useEffect(() => {
+    const pollTranscriptions = async () => {
+      if (!session || submittedResponses.length === 0) return;
+
+      // Find responses that are still processing
+      const processingResponses = submittedResponses.filter(
+        r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed'
+      );
+
+      if (processingResponses.length === 0) {
+        // All done processing, clear interval
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        return;
+      }
+
+      try {
+        // Fetch all responses for the session
+        const { data: responses } = await interviewsAPI.getResponses(session.id);
+
+        // Update our tracked responses with new data
+        setSubmittedResponses(prev => prev.map(tracked => {
+          const updated = responses.find((r: InterviewResponse) => r.id === tracked.id);
+          if (updated) {
+            // Notify user when transcription completes
+            if (tracked.processingStatus !== 'completed' && updated.processing_status === 'completed') {
+              toast.success('Transcription ready', `Answer ${tracked.questionIndex + 1} has been transcribed`);
+            }
+            return {
+              ...tracked,
+              processingStatus: updated.processing_status,
+              transcript: updated.transcript,
+              processingError: updated.processing_error,
+            };
+          }
+          return tracked;
+        }));
+      } catch (err) {
+        // Silently handle polling errors
+        console.error('Failed to poll transcription status:', err);
+      }
+    };
+
+    // Start polling if we have processing responses
+    const hasProcessingResponses = submittedResponses.some(
+      r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed'
+    );
+
+    if (hasProcessingResponses && !pollingIntervalRef.current) {
+      pollingIntervalRef.current = setInterval(pollTranscriptions, TRANSCRIPTION_POLL_INTERVAL);
+      // Also poll immediately
+      pollTranscriptions();
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [session, submittedResponses, toast]);
 
   // Handle recording start
   const handleStartRecording = async () => {
@@ -208,6 +290,7 @@ export default function InterviewPage() {
 
     try {
       setIsSubmitting(true);
+      setSubmitProgress('uploading');
       setError(null);
       setLastFailedUpload(null);
 
@@ -217,13 +300,29 @@ export default function InterviewPage() {
       const audioUrl = await uploadWithRetry(blob, session.id, currentQuestion.id);
 
       // Submit response
-      await responsesAPI.submit(session.id, {
+      setSubmitProgress('processing');
+      const submitResponse = await responsesAPI.submit(session.id, {
         question_id: currentQuestion.id,
         audio_url: audioUrl,
         duration_seconds: duration,
       });
 
-      toast.success('Answer submitted', 'Moving to next question...');
+      // Track this response for transcription polling
+      const responseData = submitResponse.data;
+      setSubmittedResponses(prev => [...prev, {
+        id: responseData.id,
+        questionIndex: currentQuestionIndex,
+        processingStatus: responseData.processing_status || 'pending',
+        transcript: responseData.transcript,
+        processingError: responseData.processing_error,
+      }]);
+
+      // Auto-expand transcription panel when first answer is submitted
+      if (submittedResponses.length === 0) {
+        setShowTranscriptionPanel(true);
+      }
+
+      toast.success('Answer submitted', 'Your answer is being transcribed...');
 
       // Move to next question or finish
       if (currentQuestionIndex < questions.length - 1) {
@@ -240,6 +339,7 @@ export default function InterviewPage() {
       toast.error('Upload failed', 'Your answer could not be uploaded. Please retry.');
     } finally {
       setIsSubmitting(false);
+      setSubmitProgress(null);
     }
   };
 
@@ -428,6 +528,8 @@ export default function InterviewPage() {
                 onReRecord={handleReRecord}
                 onConfirm={handleSubmitAnswer}
                 disabled={isSubmitting}
+                isSubmitting={isSubmitting}
+                submitProgress={submitProgress}
               />
             ) : (
               /* Recording Mode */
@@ -469,6 +571,42 @@ export default function InterviewPage() {
             )}
           </div>
         </div>
+
+        {/* Transcription Panel - shows submitted answers being processed */}
+        {submittedResponses.length > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => setShowTranscriptionPanel(!showTranscriptionPanel)}
+              className="w-full flex items-center justify-between p-4 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-text-primary">
+                  Your Transcriptions ({submittedResponses.length})
+                </span>
+                {submittedResponses.some(r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed') && (
+                  <span className="text-xs bg-electric-blue/10 text-electric-blue px-2 py-0.5 rounded-full">
+                    Processing...
+                  </span>
+                )}
+              </div>
+              {showTranscriptionPanel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+
+            {showTranscriptionPanel && (
+              <div className="mt-2 space-y-3">
+                {submittedResponses.map((response) => (
+                  <TranscriptionDisplay
+                    key={response.id}
+                    processingStatus={response.processingStatus}
+                    transcript={response.transcript}
+                    processingError={response.processingError}
+                    questionNumber={response.questionIndex + 1}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Exit Confirmation Modal */}

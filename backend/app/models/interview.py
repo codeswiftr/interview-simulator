@@ -201,4 +201,6 @@ class InterviewResponseRead(SQLModel):
     duration_seconds: int
     word_count: int | None
     filler_word_count: int | None
+    processing_status: ProcessingStatus
+    processing_error: str | None
     created_at: datetime
