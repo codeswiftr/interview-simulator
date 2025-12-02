@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BarChart2, Target, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
+import { Plus, BarChart2, AlertCircle, Lightbulb } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { interviewsAPI, userAPI } from '../lib/api';
-import StatsCard from '../components/dashboard/StatsCard';
+import StatsOverview from '../components/dashboard/StatsOverview';
+import ProgressChart from '../components/dashboard/ProgressChart';
+import CategoryBreakdown from '../components/dashboard/CategoryBreakdown';
 import InterviewCard from '../components/interview/InterviewCard';
 import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
@@ -130,6 +132,30 @@ export default function DashboardPage() {
     inProgress: sessions.filter((s) => s.status === 'in_progress').length,
   };
 
+  // Calculate category breakdown from sessions
+  const categoryBreakdown = useMemo(() => {
+    const breakdown: Record<string, { count: number; scores: number[] }> = {};
+
+    sessions.forEach((session) => {
+      const category = session.interview_type || 'mixed';
+      if (!breakdown[category]) {
+        breakdown[category] = { count: 0, scores: [] };
+      }
+      breakdown[category].count++;
+      if (session.overall_score !== null && session.overall_score !== undefined) {
+        breakdown[category].scores.push(session.overall_score);
+      }
+    });
+
+    return Object.entries(breakdown).map(([category, data]) => ({
+      category,
+      count: data.count,
+      averageScore: data.scores.length > 0
+        ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length
+        : undefined,
+    }));
+  }, [sessions]);
+
   return (
     <div className="min-h-screen bg-surface-primary">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
@@ -139,33 +165,26 @@ export default function DashboardPage() {
           <p className="text-text-secondary">Track your progress and continue practicing your interview skills.</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title="Total Interviews"
-            value={stats.totalInterviews}
-            icon={BarChart2}
-            subtitle={`${stats.completedInterviews} completed`}
-          />
-          <StatsCard
-            title="Average Score"
-            value={stats.averageScore && stats.averageScore > 0 ? `${Math.round(stats.averageScore)}/100` : 'N/A'}
-            icon={Target}
-            subtitle={stats.averageScore && stats.averageScore > 0 ? 'All time average' : 'Complete interviews to see'}
-          />
-          <StatsCard
-            title="In Progress"
-            value={stats.inProgress}
-            icon={TrendingUp}
-            subtitle={stats.inProgress > 0 ? 'Resume practice' : 'Start a new interview'}
-          />
-          <StatsCard
-            title="Practice Time"
-            value={userStats?.total_practice_time_seconds ? `${Math.round(userStats.total_practice_time_seconds / 60)} min` : '0 min'}
-            icon={TrendingUp}
-            subtitle="Total practice time"
+        {/* Stats Overview */}
+        <div className="mb-8">
+          <StatsOverview
+            totalSessions={stats.totalInterviews}
+            completedSessions={stats.completedInterviews}
+            averageScore={stats.averageScore && stats.averageScore > 0 ? stats.averageScore : null}
+            totalPracticeTimeSeconds={userStats?.total_practice_time_seconds ?? 0}
           />
         </div>
+
+        {/* Progress Charts - Only show when user has sessions */}
+        {sessions.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <ProgressChart
+              data={userProgress?.score_trend || []}
+              height={220}
+            />
+            <CategoryBreakdown data={categoryBreakdown} />
+          </div>
+        )}
 
         {/* Progress Section - Practice Recommendations */}
         {userProgress && userProgress.recommended_practice_areas.length > 0 && (
