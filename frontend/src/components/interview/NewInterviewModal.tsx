@@ -22,12 +22,12 @@ const difficultyLevels = [
   { value: 'mixed', label: 'Mixed', icon: BarChart2, color: 'text-blue-500', description: 'Variety of difficulties' },
 ] as const;
 
-const questionCounts = [3, 5, 10];
+const questionCounts = [1, 2, 3, 5, 10];
 
 export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInterviewModalProps) {
   const [formData, setFormData] = useState<CreateInterviewFormData>({
     interview_type: 'behavioral',
-    question_count: 5,
+    question_count: 2,
     difficulty: 'medium',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +46,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
       // Reset form
       setFormData({
         interview_type: 'behavioral',
-        question_count: 5,
+        question_count: 2,
         difficulty: 'medium',
       });
     } catch (err: unknown) {
@@ -127,7 +127,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
           {/* Question Count Selection */}
           <div>
             <label className="label mb-3 block">Number of Questions</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-5 gap-3">
               {questionCounts.map((count) => (
                 <button
                   key={count}
