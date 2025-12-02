@@ -8,7 +8,9 @@
 | Sprint 1 | Core Interview Flow | 1 week | ✅ Complete |
 | Sprint 2 | AI Integration | 1 week | ✅ Complete |
 | Sprint 3 | Audio Analysis + Frontend | 1 week | ✅ Complete |
-| Sprint 4 | Launch Prep | 1 week | ✅ 80% Complete |
+| Sprint 4 | Launch Prep | 1 week | ✅ Complete |
+| Sprint 5 | User Experience & Growth | 1 week | ✅ Complete |
+| Sprint 6 | UX Polish & Production | 1 week | 🔵 Ready to Start |
 
 ---
 
@@ -1321,4 +1323,609 @@ For each task:
 - [ ] Tests passing (maintain >69% coverage)
 - [ ] No TypeScript/Python errors
 - [ ] Responsive design verified
+- [ ] Committed with conventional commits
+
+---
+
+## Sprint 6: User Experience Polish & Production Readiness
+
+| Sprint | Focus | Status |
+|--------|-------|--------|
+| Sprint 6 | Password Reset, Browser Compatibility, Audio Preview, Test Coverage | 🔵 Ready to Start |
+
+### Production Readiness Assessment: 75%
+
+The frontend workflow evaluation identified the following gaps that need to be addressed before full production launch.
+
+---
+
+### Epic 13: Password Reset & Email Verification
+**Priority: HIGH**
+**Status**: 🔵 Not Started
+**Goal**: Complete authentication flows with forgot password and email verification
+
+#### Overview
+Currently, users have no way to recover their account if they forget their password. Email verification is also missing. These are critical for user trust and account security.
+
+#### Task 13.1: Password Reset Backend
+**Files to create/change:**
+- `backend/app/api/auth.py` (new router)
+- `backend/app/services/email_service.py` (new)
+- `backend/app/models/password_reset.py` (new model)
+- `backend/alembic/versions/0005_password_reset_tokens.py` (new migration)
+
+**Functions to implement:**
+
+```python
+# backend/app/models/password_reset.py
+class PasswordResetToken(SQLModel, table=True):
+    """Stores password reset tokens with expiration."""
+    __tablename__ = "password_reset_tokens"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id")
+    token: str = Field(unique=True, index=True)
+    expires_at: datetime
+    used: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# backend/app/api/auth.py
+@router.post("/forgot-password")
+async def forgot_password(email: str, session: AsyncSession) -> dict:
+    """Generates password reset token and sends email.
+    Token expires in 1 hour. Returns success even if email not found (security)."""
+
+@router.post("/reset-password")
+async def reset_password(token: str, new_password: str, session: AsyncSession) -> dict:
+    """Validates reset token and updates password.
+    Invalidates token after use. Returns success or specific error."""
+
+# backend/app/services/email_service.py
+class EmailService:
+    """Handles email sending via SMTP or email API."""
+
+    async def send_password_reset(self, email: str, reset_url: str) -> bool:
+        """Sends password reset email with secure token link."""
+
+    async def send_verification_email(self, email: str, verify_url: str) -> bool:
+        """Sends email verification link to new users."""
+```
+
+**Environment variables to add:**
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-smtp-user
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM_EMAIL=noreply@careerswiftr.com
+FRONTEND_URL=https://app.careerswiftr.com
+```
+
+**Tests to add:**
+- `test_forgot_password_generates_token` - Token created and stored
+- `test_forgot_password_sends_email` - Email service called with correct URL
+- `test_forgot_password_unknown_email_no_error` - No 404 for unknown emails (security)
+- `test_reset_password_validates_token` - Valid token allows password change
+- `test_reset_password_rejects_expired_token` - Expired tokens rejected
+- `test_reset_password_rejects_used_token` - Used tokens cannot be reused
+- `test_reset_password_hashes_new_password` - New password properly hashed
+
+---
+
+#### Task 13.2: Password Reset Frontend
+**Files to create:**
+- `frontend/src/pages/ForgotPasswordPage.tsx` (new)
+- `frontend/src/pages/ResetPasswordPage.tsx` (new)
+- `frontend/src/lib/api.ts` (add auth endpoints)
+- `frontend/src/App.tsx` (add routes)
+
+**Components to implement:**
+
+```typescript
+// frontend/src/pages/ForgotPasswordPage.tsx
+export default function ForgotPasswordPage() {
+  /**
+   * Simple form with email input
+   * Shows success message regardless of email existence (security)
+   * Link back to login page
+   * Rate limiting message if too many attempts
+   */
+}
+
+// frontend/src/pages/ResetPasswordPage.tsx
+export default function ResetPasswordPage() {
+  /**
+   * Reads token from URL query param (?token=xxx)
+   * Form with new password + confirm password
+   * Password strength indicator
+   * Success redirects to login with toast notification
+   * Handles expired/invalid token errors
+   */
+}
+
+// frontend/src/lib/api.ts
+export const authAPI = {
+  // ADD:
+  forgotPassword: (email: string) =>
+    api.post('/auth/forgot-password', { email }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    api.post('/auth/reset-password', { token, new_password: newPassword }),
+};
+```
+
+**Routes to add:**
+- `/forgot-password` - ForgotPasswordPage
+- `/reset-password` - ResetPasswordPage (with ?token= query param)
+
+**Tests to add:**
+- `ForgotPasswordPage renders email form`
+- `ForgotPasswordPage shows success on submit`
+- `ResetPasswordPage validates matching passwords`
+- `ResetPasswordPage handles invalid token error`
+
+---
+
+#### Task 13.3: Email Verification (Optional Enhancement)
+**Priority: MEDIUM**
+**Files to change:**
+- `backend/app/models/user.py` (add verification fields)
+- `backend/app/api/users.py` (add verification endpoint)
+- `frontend/src/pages/VerifyEmailPage.tsx` (new)
+
+**Functions to implement:**
+
+```python
+# backend/app/models/user.py
+class User(SQLModel, table=True):
+    # ADD:
+    email_verified: bool = Field(default=False)
+    email_verification_token: str | None = None
+    email_verification_sent_at: datetime | None = None
+
+# backend/app/api/users.py
+@router.post("/verify-email")
+async def verify_email(token: str, session: AsyncSession) -> dict:
+    """Verifies user email address. Sets email_verified=True."""
+
+@router.post("/resend-verification")
+async def resend_verification(current_user: User, session: AsyncSession) -> dict:
+    """Resends verification email. Rate limited to 1 per minute."""
+```
+
+**Tests to add:**
+- `test_verify_email_sets_verified_flag`
+- `test_resend_verification_rate_limited`
+
+---
+
+### Epic 14: Browser Compatibility & Audio Enhancement
+**Priority: HIGH**
+**Status**: 🔵 Not Started
+**Goal**: Ensure audio recording works across all major browsers, add audio preview
+
+#### Overview
+Safari doesn't natively support WebM audio format. Users should also be able to preview their audio before submitting.
+
+#### Task 14.1: Safari Audio Compatibility
+**Files to change:**
+- `frontend/src/components/interview/AudioRecorder.tsx`
+- `frontend/src/lib/audio-utils.ts` (new)
+
+**Changes to implement:**
+
+```typescript
+// frontend/src/lib/audio-utils.ts
+export function getSupportedMimeType(): string {
+  /**
+   * Returns best supported audio MIME type for current browser
+   * Safari: audio/mp4 or audio/webm (via polyfill)
+   * Chrome/Firefox: audio/webm;codecs=opus
+   * Fallback: audio/wav
+   */
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+    'audio/wav'
+  ];
+  return types.find(type => MediaRecorder.isTypeSupported(type)) || 'audio/wav';
+}
+
+export function isSafari(): boolean {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
+// frontend/src/components/interview/AudioRecorder.tsx
+// MODIFY: Use getSupportedMimeType() instead of hardcoded webm
+const mediaRecorder = new MediaRecorder(stream, {
+  mimeType: getSupportedMimeType(),
+});
+```
+
+**Backend changes (if needed):**
+```python
+# backend/app/api/interviews.py
+# MODIFY: Accept multiple audio formats in submit_response
+# Whisper API accepts: mp3, mp4, mpeg, mpga, m4a, wav, webm
+ALLOWED_AUDIO_TYPES = {'audio/webm', 'audio/mp4', 'audio/wav', 'audio/mpeg', 'audio/ogg'}
+```
+
+**Tests to add:**
+- `getSupportedMimeType returns webm for Chrome`
+- `getSupportedMimeType returns mp4 fallback for Safari`
+- `AudioRecorder uses correct MIME type per browser`
+
+---
+
+#### Task 14.2: Audio Preview Before Submit
+**Files to change:**
+- `frontend/src/components/interview/AudioRecorder.tsx`
+- `frontend/src/pages/InterviewPage.tsx`
+
+**Components to modify:**
+
+```typescript
+// frontend/src/components/interview/AudioRecorder.tsx
+interface AudioRecorderProps {
+  onRecordingComplete: (blob: Blob, previewUrl: string) => void;
+  // ADD:
+  onPreviewPlay?: () => void;
+  onPreviewStop?: () => void;
+}
+
+export function AudioRecorder({ onRecordingComplete, onPreviewPlay, onPreviewStop }) {
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  /**
+   * After recording stops:
+   * 1. Create object URL for preview
+   * 2. Show audio player with play/pause
+   * 3. Show "Re-record" and "Submit" buttons
+   * 4. Only call onRecordingComplete when user clicks Submit
+   */
+
+  const handlePlayPreview = () => {
+    if (previewUrl) {
+      const audio = new Audio(previewUrl);
+      audio.play();
+      setIsPlaying(true);
+      audio.onended = () => setIsPlaying(false);
+    }
+  };
+
+  const handleReRecord = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setRecordedBlob(null);
+    setPreviewUrl(null);
+    // Reset to recording state
+  };
+}
+
+// frontend/src/pages/InterviewPage.tsx
+// MODIFY: Add state for preview mode
+const [audioPreview, setAudioPreview] = useState<{blob: Blob, url: string} | null>(null);
+
+// Show preview UI before allowing submission
+{audioPreview && (
+  <div className="audio-preview">
+    <AudioPlayer src={audioPreview.url} />
+    <Button onClick={handleReRecord}>Re-record</Button>
+    <Button onClick={handleSubmit}>Submit Answer</Button>
+  </div>
+)}
+```
+
+**Tests to add:**
+- `AudioRecorder shows preview after recording`
+- `AudioRecorder allows re-recording`
+- `InterviewPage waits for user confirmation before submit`
+- `Preview URL is properly revoked to prevent memory leaks`
+
+---
+
+### Epic 15: Frontend Test Coverage
+**Priority: MEDIUM**
+**Status**: 🔵 Not Started
+**Goal**: Add comprehensive frontend tests using Vitest and React Testing Library
+
+#### Overview
+Frontend has no automated tests. Adding tests for critical user flows ensures reliability and prevents regressions.
+
+#### Task 15.1: Test Infrastructure Setup
+**Files to create:**
+- `frontend/vitest.config.ts`
+- `frontend/src/test/setup.ts`
+- `frontend/src/test/mocks/handlers.ts` (MSW handlers)
+
+**Dependencies to add:**
+```json
+{
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "vitest": "^1.0.0",
+    "msw": "^2.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
+  }
+}
+```
+
+**Config to add:**
+
+```typescript
+// frontend/vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+    },
+  },
+});
+
+// frontend/src/test/setup.ts
+import '@testing-library/jest-dom';
+import { server } from './mocks/server';
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+---
+
+#### Task 15.2: Authentication Flow Tests
+**Files to create:**
+- `frontend/src/pages/__tests__/LoginPage.test.tsx`
+- `frontend/src/pages/__tests__/RegisterPage.test.tsx`
+- `frontend/src/hooks/__tests__/useAuth.test.ts`
+
+**Tests to implement:**
+
+```typescript
+// frontend/src/pages/__tests__/LoginPage.test.tsx
+describe('LoginPage', () => {
+  it('renders email and password fields');
+  it('shows validation error for invalid email');
+  it('shows error toast on login failure');
+  it('redirects to dashboard on successful login');
+  it('stores token in localStorage on success');
+  it('shows link to forgot password page');
+});
+
+// frontend/src/pages/__tests__/RegisterPage.test.tsx
+describe('RegisterPage', () => {
+  it('renders all required fields');
+  it('validates password requirements');
+  it('shows error for existing email');
+  it('redirects to welcome flow on success');
+});
+
+// frontend/src/hooks/__tests__/useAuth.test.ts
+describe('useAuth', () => {
+  it('returns null user when not logged in');
+  it('returns user data when logged in');
+  it('login stores token and fetches user');
+  it('logout clears token and user state');
+});
+```
+
+---
+
+#### Task 15.3: Interview Flow Tests
+**Files to create:**
+- `frontend/src/pages/__tests__/InterviewPage.test.tsx`
+- `frontend/src/components/interview/__tests__/AudioRecorder.test.tsx`
+- `frontend/src/components/interview/__tests__/QuestionDisplay.test.tsx`
+
+**Tests to implement:**
+
+```typescript
+// frontend/src/pages/__tests__/InterviewPage.test.tsx
+describe('InterviewPage', () => {
+  it('shows loading state initially');
+  it('displays current question');
+  it('shows timer counting down');
+  it('enables recording when timer starts');
+  it('submits response and moves to next question');
+  it('shows end session button');
+  it('navigates to feedback page when ended');
+  it('handles upload errors gracefully');
+});
+
+// frontend/src/components/interview/__tests__/AudioRecorder.test.tsx
+describe('AudioRecorder', () => {
+  it('shows record button initially');
+  it('shows stop button when recording');
+  it('calls onRecordingComplete with blob');
+  it('shows waveform visualization');
+  // Note: MediaRecorder tests require mocking
+});
+```
+
+---
+
+#### Task 15.4: Component Unit Tests
+**Files to create:**
+- `frontend/src/components/__tests__/WelcomeModal.test.tsx`
+- `frontend/src/components/feedback/__tests__/ResponseAccordion.test.tsx`
+- `frontend/src/components/dashboard/__tests__/ProgressChart.test.tsx`
+
+**Tests to implement:**
+
+```typescript
+// frontend/src/components/__tests__/WelcomeModal.test.tsx
+describe('WelcomeModal', () => {
+  it('renders welcome message for new users');
+  it('shows 3 quick start options');
+  it('closes on "Get Started" click');
+  it('remembers dismissal in localStorage');
+});
+
+// frontend/src/components/feedback/__tests__/ResponseAccordion.test.tsx
+describe('ResponseAccordion', () => {
+  it('shows question text in header');
+  it('expands to show feedback on click');
+  it('displays audio player when audio_url exists');
+  it('shows transcript text');
+  it('displays strengths and improvements');
+});
+```
+
+---
+
+### Epic 16: UX Polish & Accessibility
+**Priority: LOW**
+**Status**: 🔵 Not Started
+**Goal**: Minor UX improvements and accessibility compliance
+
+#### Task 16.1: Dark Mode Support
+**Files to change:**
+- `frontend/src/components/ThemeProvider.tsx` (new)
+- `frontend/src/App.tsx`
+- `frontend/tailwind.config.js`
+
+**Implementation:**
+```typescript
+// frontend/src/components/ThemeProvider.tsx
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() =>
+    localStorage.getItem('theme') || 'system'
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark);
+    root.classList.toggle('dark', isDark);
+  }, [theme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+```
+
+**Tests to add:**
+- `ThemeProvider applies dark class correctly`
+- `ThemeProvider persists preference to localStorage`
+
+---
+
+#### Task 16.2: Interview History Search
+**Files to change:**
+- `frontend/src/pages/DashboardPage.tsx`
+- `frontend/src/components/dashboard/InterviewHistoryList.tsx` (new)
+
+**Implementation:**
+```typescript
+// frontend/src/components/dashboard/InterviewHistoryList.tsx
+export function InterviewHistoryList({ sessions }) {
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'date' | 'score'>('date');
+
+  const filtered = useMemo(() => {
+    return sessions
+      .filter(s => !categoryFilter || s.interview_type === categoryFilter)
+      .filter(s => !search || s.questions?.some(q =>
+        q.content.toLowerCase().includes(search.toLowerCase())
+      ))
+      .sort((a, b) => /* sort logic */);
+  }, [sessions, search, categoryFilter, sortBy]);
+
+  return (
+    <div>
+      <input placeholder="Search interviews..." onChange={e => setSearch(e.target.value)} />
+      <Select value={categoryFilter} onChange={setCategoryFilter}>
+        <option value="">All Categories</option>
+        <option value="behavioral">Behavioral</option>
+        <option value="technical">Technical</option>
+        <option value="system_design">System Design</option>
+      </Select>
+      {/* render filtered list */}
+    </div>
+  );
+}
+```
+
+---
+
+#### Task 16.3: Accessibility Improvements
+**Files to change:**
+- Various components
+
+**Improvements to make:**
+- Add `aria-label` to icon-only buttons
+- Ensure proper heading hierarchy (h1 → h2 → h3)
+- Add `role="alert"` to error messages
+- Ensure color contrast meets WCAG AA
+- Add keyboard navigation for audio controls
+- Add skip links for main content
+
+**Tests to add:**
+- `Components have proper aria attributes`
+- `Color contrast meets WCAG AA standards`
+- `Forms are keyboard navigable`
+
+---
+
+## Sprint 6 Summary
+
+| Epic | Priority | Tasks | Estimated Effort |
+|------|----------|-------|------------------|
+| Epic 13: Password Reset | HIGH | 3 tasks | 2-3 days |
+| Epic 14: Audio Enhancement | HIGH | 2 tasks | 1-2 days |
+| Epic 15: Frontend Tests | MEDIUM | 4 tasks | 2-3 days |
+| Epic 16: UX Polish | LOW | 3 tasks | 1-2 days |
+
+### Junior Developer Guidelines
+
+**Before starting:**
+1. Read through the existing codebase structure
+2. Run `npm run dev` (frontend) and `uv run uvicorn app.main:app --reload` (backend)
+3. Test the current login/register flow manually
+4. Familiarize yourself with the Bruno collection in `backend/bruno/`
+
+**Code style:**
+- Follow existing patterns in the codebase
+- Use TypeScript strict mode
+- Add JSDoc comments for complex functions
+- Use conventional commits: `feat:`, `fix:`, `test:`, `docs:`
+
+**Testing workflow:**
+1. Write tests first (TDD encouraged)
+2. Run `npm run test` before committing
+3. Ensure no TypeScript errors: `npm run type-check`
+4. Run backend tests: `cd backend && uv run pytest`
+
+**Getting help:**
+- Check existing implementations for patterns
+- Use Bruno collection to test backend endpoints
+- Ask for clarification on requirements before implementing
+
+---
+
+## Definition of Done (Sprint 6)
+
+For each task:
+- [ ] Code implemented and linted
+- [ ] Tests passing (frontend + backend)
+- [ ] No TypeScript/Python errors
+- [ ] Responsive design verified (mobile + desktop)
+- [ ] Accessibility basics checked (keyboard nav, aria labels)
+- [ ] Manual testing completed
 - [ ] Committed with conventional commits
