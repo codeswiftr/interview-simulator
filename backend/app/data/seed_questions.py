@@ -3,7 +3,7 @@
 from app.models.question import Difficulty, Question, QuestionCategory
 
 SEED_QUESTIONS = [
-    # ========== BEHAVIORAL QUESTIONS (10 total) ==========
+    # ========== BEHAVIORAL QUESTIONS (30 total: 10 easy, 10 medium, 10 hard) ==========
     Question(
         content="Tell me about a time you led a project under a tight deadline.",
         category=QuestionCategory.BEHAVIORAL,
@@ -73,6 +73,149 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Netflix", "Stripe", "Airbnb"],
         topic_tags=["technical_debt", "advocacy", "business_alignment"],
+    ),
+    # Additional BEHAVIORAL EASY questions
+    Question(
+        content="Tell me about a time you helped a colleague with their work.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Google", "Meta", "startup"],
+        topic_tags=["teamwork", "collaboration", "helping_others"],
+    ),
+    Question(
+        content="Describe a project you're most proud of.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Amazon", "Microsoft", "Apple"],
+        topic_tags=["achievement", "pride", "accomplishment"],
+    ),
+    Question(
+        content="How do you stay organized when working on multiple tasks?",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["enterprise", "startup", "Meta"],
+        topic_tags=["organization", "time_management", "multitasking"],
+    ),
+    Question(
+        content="Tell me about a time you had to learn something new quickly.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Google", "Amazon", "startup"],
+        topic_tags=["learning", "adaptability", "quick_learner"],
+    ),
+    Question(
+        content="What motivates you to do your best work?",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Meta", "Netflix", "Microsoft"],
+        topic_tags=["motivation", "drive", "values"],
+    ),
+    Question(
+        content="Describe your ideal work environment.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Google", "Apple", "startup"],
+        topic_tags=["culture_fit", "work_style", "preferences"],
+    ),
+    Question(
+        content="How do you handle stress and pressure at work?",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Amazon", "Meta", "enterprise"],
+        topic_tags=["stress_management", "resilience", "pressure"],
+    ),
+    Question(
+        content="Tell me about a time you went above and beyond for a project.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.EASY,
+        company_tags=["Netflix", "Apple", "startup"],
+        topic_tags=["dedication", "initiative", "extra_effort"],
+    ),
+    # Additional BEHAVIORAL MEDIUM questions
+    Question(
+        content="Tell me about a time you had to make a decision without all the information you needed.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        company_tags=["Amazon", "startup", "Meta"],
+        topic_tags=["decision_making", "ambiguity", "judgment"],
+    ),
+    Question(
+        content="Describe a situation where you had to adapt to a major change at work.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        company_tags=["Google", "Microsoft", "enterprise"],
+        topic_tags=["adaptability", "change_management", "flexibility"],
+    ),
+    Question(
+        content="Tell me about a time you disagreed with your manager or team lead.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        company_tags=["Netflix", "Meta", "Apple"],
+        topic_tags=["disagreement", "communication", "assertiveness"],
+    ),
+    Question(
+        content="Describe a time when you had to convince a team to adopt a new approach.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        company_tags=["Amazon", "Google", "Uber"],
+        topic_tags=["influence", "persuasion", "change_agent"],
+    ),
+    Question(
+        content="Tell me about a time you improved a process or system.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        company_tags=["Microsoft", "Netflix", "startup"],
+        topic_tags=["improvement", "optimization", "initiative"],
+    ),
+    Question(
+        content="Describe a challenging bug or issue you debugged and how you solved it.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        company_tags=["Google", "Meta", "Apple"],
+        topic_tags=["debugging", "problem_solving", "persistence"],
+    ),
+    # Additional BEHAVIORAL HARD questions
+    Question(
+        content="Describe a time when you had to lead a team through a crisis or major setback.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.HARD,
+        company_tags=["Amazon", "Netflix", "enterprise"],
+        topic_tags=["crisis_management", "leadership", "resilience"],
+    ),
+    Question(
+        content="Tell me about a time you had to balance technical excellence with business constraints.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.HARD,
+        company_tags=["Google", "Meta", "Stripe"],
+        topic_tags=["tradeoffs", "pragmatism", "business_acumen"],
+    ),
+    Question(
+        content="Describe a situation where you had to mentor or develop a struggling team member.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.HARD,
+        company_tags=["Microsoft", "Amazon", "Apple"],
+        topic_tags=["mentoring", "leadership", "people_development"],
+    ),
+    Question(
+        content="Tell me about a time you had to make an unpopular decision and stand by it.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.HARD,
+        company_tags=["Netflix", "startup", "enterprise"],
+        topic_tags=["decision_making", "courage", "conviction"],
+    ),
+    Question(
+        content="Describe the most complex cross-functional project you've led or been a key part of.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.HARD,
+        company_tags=["Google", "Amazon", "Meta"],
+        topic_tags=["cross_functional", "collaboration", "complexity"],
+    ),
+    Question(
+        content="Tell me about a time you identified and addressed a significant risk to a project.",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.HARD,
+        company_tags=["Apple", "Microsoft", "Uber"],
+        topic_tags=["risk_management", "foresight", "proactive"],
     ),
 
     # ========== TECHNICAL QUESTIONS (20 total) ==========
