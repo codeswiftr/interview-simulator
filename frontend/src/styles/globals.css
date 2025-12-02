@@ -70,27 +70,30 @@
 }
 
 @layer base {
-  /* CSS variables that automatically switch in dark mode */
+  /* Light mode - default */
   :root {
-    --bg-primary: var(--color-surface-primary);
-    --bg-secondary: var(--color-surface-secondary);
-    --fg-primary: var(--color-text-primary);
-    --fg-secondary: var(--color-text-secondary);
-    --fg-tertiary: var(--color-text-tertiary);
-    --border: var(--color-border-light);
+    --bg-primary: #F8FAFC;
+    --bg-secondary: #F1F5F9;
+    --bg-tertiary: #E2E8F0;
+    --fg-primary: #111827;
+    --fg-secondary: #475569;
+    --fg-tertiary: #94A3B8;
+    --border-color: #E2E8F0;
   }
 
+  /* Dark mode */
   .dark {
-    --bg-primary: var(--color-dark-surface-primary);
-    --bg-secondary: var(--color-dark-surface-secondary);
-    --fg-primary: var(--color-dark-text-primary);
-    --fg-secondary: var(--color-dark-text-secondary);
-    --fg-tertiary: var(--color-dark-text-tertiary);
-    --border: var(--color-dark-border-light);
+    --bg-primary: #0F172A;
+    --bg-secondary: #1E293B;
+    --bg-tertiary: #334155;
+    --fg-primary: #F8FAFC;
+    --fg-secondary: #CBD5E1;
+    --fg-tertiary: #94A3B8;
+    --border-color: #334155;
   }
 
   * {
-    border-color: var(--border);
+    border-color: var(--border-color);
   }
 
   body {
