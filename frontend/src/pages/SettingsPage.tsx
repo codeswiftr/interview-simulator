@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette } from 'lucide-react';
 import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
@@ -12,6 +12,7 @@ import type { SubscriptionStatus } from '../types';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const { user, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -53,6 +54,24 @@ export default function SettingsPage() {
       });
     }
   }, [user]);
+
+  // Handle Stripe redirect query params
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true') {
+      toast.success('Subscription successful!', 'Welcome to Pro! Your account has been upgraded.');
+      // Reload subscription to get updated status
+      loadSubscription();
+      // Clear the query params
+      setSearchParams({});
+    } else if (canceled === 'true') {
+      toast.info('Checkout canceled', 'Your subscription upgrade was canceled. No charges were made.');
+      // Clear the query params
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, toast]);
 
   const loadSubscription = async () => {
     try {

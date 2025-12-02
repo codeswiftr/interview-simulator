@@ -96,8 +96,8 @@ async def create_checkout_session(
                 }
             ],
             mode="subscription",
-            success_url=f"{settings.cors_origins[0]}/settings?success=true",
-            cancel_url=f"{settings.cors_origins[0]}/settings?canceled=true",
+            success_url=f"{settings.frontend_url}/settings?success=true",
+            cancel_url=f"{settings.frontend_url}/settings?canceled=true",
             metadata={"user_id": str(current_user.id)},
         )
 
