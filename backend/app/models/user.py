@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
 
@@ -30,8 +30,11 @@ class User(SQLModel, table=True):
     hashed_password: str
     full_name: str | None = None
 
-    # Subscription
-    subscription_tier: SubscriptionTier = Field(default=SubscriptionTier.FREE)
+    # Subscription - use sa_column to force String type (avoid PostgreSQL enum)
+    subscription_tier: SubscriptionTier = Field(
+        default=SubscriptionTier.FREE,
+        sa_column=Column(String, nullable=False, default="free")
+    )
     subscription_status: str | None = Field(default=None)  # active, canceled, past_due, trialing, incomplete
     subscription_expires_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), nullable=True)

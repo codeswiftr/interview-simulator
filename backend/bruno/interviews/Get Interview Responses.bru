@@ -1,0 +1,15 @@
+meta {
+  name: Get Interview Responses
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/interviews/{{interviewId}}/responses
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

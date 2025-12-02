@@ -1,0 +1,29 @@
+meta {
+  name: Submit Response
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/interviews/{{interviewId}}/responses
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "question_id": "{{questionId}}",
+    "transcript": "This is my answer to the question. I would approach this problem by first understanding the requirements and then implementing a solution.",
+    "duration_seconds": 120
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("responseId", res.body.id);
+  }
+}

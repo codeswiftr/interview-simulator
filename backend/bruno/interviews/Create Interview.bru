@@ -1,0 +1,29 @@
+meta {
+  name: Create Interview
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/interviews
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "interview_type": "behavioral",
+    "question_count": 3,
+    "difficulty": "medium"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("interviewId", res.body.id);
+  }
+}

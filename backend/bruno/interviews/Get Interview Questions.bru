@@ -1,0 +1,15 @@
+meta {
+  name: Get Interview Questions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/interviews/{{interviewId}}/questions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

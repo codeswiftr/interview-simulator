@@ -77,17 +77,17 @@ api.interceptors.response.use(
 // Authentication API
 export const authAPI = {
   login: (email: string, password: string) =>
-    api.post('/auth/login', { username: email, password }),
+    api.post('/users/login', { email, password }),
 
   register: (email: string, password: string, full_name: string) =>
-    api.post('/auth/register', { email, password, full_name }),
+    api.post('/users/register', { email, password, full_name }),
 
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
   },
 
-  getCurrentUser: () => api.get('/auth/me'),
+  getCurrentUser: () => api.get('/users/me'),
 };
 
 // Interview Sessions API

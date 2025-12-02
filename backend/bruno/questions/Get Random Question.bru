@@ -1,0 +1,20 @@
+meta {
+  name: Get Random Question
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/questions/random
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+params:query {
+  ~category: behavioral
+  ~difficulty: medium
+}

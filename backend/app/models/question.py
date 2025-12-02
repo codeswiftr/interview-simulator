@@ -38,7 +38,7 @@ class Question(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     content: str = Field(description="The question text")
     category: QuestionCategory = Field(sa_column=Column(String, index=True))
-    difficulty: Difficulty = Field(sa_column=Column(String, index=True))
+    difficulty: Difficulty = Field(default=Difficulty.MEDIUM, sa_column=Column(String, index=True))
 
     # Tags for filtering
     company_tags: list[str] = Field(
