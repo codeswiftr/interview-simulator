@@ -50,8 +50,33 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     try {
       setError(null);
 
+      // Check browser support for MediaRecorder
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Your browser does not support audio recording. Please use Chrome, Firefox, Safari, or Edge.');
+        return;
+      }
+
+      if (typeof MediaRecorder === 'undefined') {
+        setError('Your browser does not support MediaRecorder. Please update your browser or try Chrome/Firefox.');
+        return;
+      }
+
       // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (permissionError) {
+        const err = permissionError as { name?: string };
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setError('Microphone access denied. Please allow microphone access in your browser settings and refresh the page.');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          setError('No microphone found. Please connect a microphone and try again.');
+        } else {
+          setError('Could not access microphone. Please check your device settings.');
+        }
+        setRecordingState('idle');
+        return;
+      }
       streamRef.current = stream;
 
       // Get supported MIME type for cross-browser compatibility (Safari needs MP4/WAV)
