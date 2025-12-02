@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Zap, BarChart2, Target } from 'lucide-react';
 import type { CreateInterviewFormData } from '../../types';
 
 interface NewInterviewModalProps {
@@ -15,12 +15,20 @@ const interviewTypes = [
   { value: 'mixed', label: 'Mixed', description: 'Combination of all question types' },
 ] as const;
 
+const difficultyLevels = [
+  { value: 'easy', label: 'Easy', icon: Zap, color: 'text-green-500', description: 'Great for beginners' },
+  { value: 'medium', label: 'Medium', icon: BarChart2, color: 'text-yellow-500', description: 'Standard difficulty' },
+  { value: 'hard', label: 'Hard', icon: Target, color: 'text-red-500', description: 'Challenging questions' },
+  { value: 'mixed', label: 'Mixed', icon: BarChart2, color: 'text-blue-500', description: 'Variety of difficulties' },
+] as const;
+
 const questionCounts = [3, 5, 10];
 
 export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInterviewModalProps) {
   const [formData, setFormData] = useState<CreateInterviewFormData>({
     interview_type: 'behavioral',
     question_count: 5,
+    difficulty: 'medium',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +47,11 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
       setFormData({
         interview_type: 'behavioral',
         question_count: 5,
+        difficulty: 'medium',
       });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create interview session');
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } } };
+      setError(apiError.response?.data?.message || 'Failed to create interview session');
     } finally {
       setIsSubmitting(false);
     }
@@ -87,6 +97,30 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                   </div>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* Difficulty Selection */}
+          <div>
+            <label className="label mb-3 block">Difficulty Level</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {difficultyLevels.map((level) => {
+                const Icon = level.icon;
+                return (
+                  <button
+                    key={level.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, difficulty: level.value as 'easy' | 'medium' | 'hard' | 'mixed' })}
+                    className={`card-interactive p-4 text-center ${
+                      formData.difficulty === level.value ? 'border-electric-blue bg-electric-blue/5' : ''
+                    }`}
+                  >
+                    <Icon size={24} className={`mx-auto mb-2 ${level.color}`} />
+                    <div className="font-semibold text-sm">{level.label}</div>
+                    <div className="text-xs text-text-tertiary mt-1">{level.description}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -12,6 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.dependencies import check_interview_quota, get_current_user
 from app.db import get_session
 from app.models.interview import (
+    DifficultyLevel,
     InterviewQuestion,
     InterviewResponse,
     InterviewResponseCreate,
@@ -73,6 +74,7 @@ async def create_interview(
         interview_type=payload.interview_type,
         company_style=payload.company_style,
         question_count=payload.question_count,
+        difficulty=payload.difficulty,
         status=InterviewStatus.SCHEDULED,
         scheduled_at=payload.scheduled_at,
     )

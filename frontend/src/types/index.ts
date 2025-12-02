@@ -136,6 +136,7 @@ export interface CreateInterviewFormData {
   interview_type: 'behavioral' | 'technical' | 'system_design' | 'mixed';
   company_style?: string;
   question_count: number;
+  difficulty?: 'easy' | 'medium' | 'hard' | 'mixed';
 }
 
 // Subscription types

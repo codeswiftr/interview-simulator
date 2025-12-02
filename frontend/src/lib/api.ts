@@ -100,6 +100,7 @@ export const interviewsAPI = {
     interview_type: string;
     company_style?: string;
     question_count?: number;
+    difficulty?: string;
   }) => api.post('/interviews', data),
 
   quickPractice: (questionId: string) =>

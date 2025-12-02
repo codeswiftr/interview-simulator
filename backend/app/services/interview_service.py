@@ -42,8 +42,8 @@ class InterviewService:
     ) -> list[InterviewQuestion]:
         """Select random questions and assign them to the interview session.
 
-        Selects questions matching the interview type (category) and creates
-        InterviewQuestion records to link them to the session.
+        Selects questions matching the interview type (category) and difficulty,
+        then creates InterviewQuestion records to link them to the session.
 
         Args:
             session: Database session
@@ -64,6 +64,10 @@ class InterviewService:
         if category:
             stmt = stmt.where(Question.category == category.value)
 
+        # Filter by difficulty if specified (and not 'mixed')
+        if interview.difficulty and interview.difficulty.value != "mixed":
+            stmt = stmt.where(Question.difficulty == interview.difficulty.value)
+
         # Get random questions using ORDER BY RANDOM()
         stmt = stmt.order_by(func.random()).limit(interview.question_count)
 
@@ -72,10 +76,15 @@ class InterviewService:
 
         if len(questions) < interview.question_count:
             available = len(questions)
+            difficulty_info = (
+                f", difficulty '{interview.difficulty.value}'"
+                if interview.difficulty and interview.difficulty.value != "mixed"
+                else ""
+            )
             raise ValueError(
                 f"Not enough questions available. "
                 f"Requested {interview.question_count}, found {available} "
-                f"for category '{category.value if category else 'mixed'}'"
+                f"for category '{category.value if category else 'mixed'}'{difficulty_info}"
             )
 
         # Create InterviewQuestion records

@@ -18,6 +18,15 @@ class InterviewType(str, Enum):
     MIXED = "mixed"
 
 
+class DifficultyLevel(str, Enum):
+    """Question difficulty levels."""
+
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+    MIXED = "mixed"
+
+
 class InterviewStatus(str, Enum):
     """Interview session status."""
 
@@ -56,6 +65,9 @@ class InterviewSession(SQLModel, table=True):
         default=None, description="e.g., 'faang', 'startup', 'enterprise'"
     )
     question_count: int = Field(default=5)
+    difficulty: DifficultyLevel | None = Field(
+        default=None, sa_column=Column(String), description="Preferred difficulty level"
+    )
 
     # Status
     status: InterviewStatus = Field(
@@ -150,6 +162,7 @@ class InterviewSessionCreate(SQLModel):
     interview_type: InterviewType = InterviewType.BEHAVIORAL
     company_style: str | None = None
     question_count: int = 5
+    difficulty: DifficultyLevel | None = None
     scheduled_at: datetime | None = None
 
 
