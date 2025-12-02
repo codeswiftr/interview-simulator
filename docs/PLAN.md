@@ -912,3 +912,398 @@ Post-Deploy:
 | Epic 6: Observability | ✅ Complete | Structured logging, correlation IDs, health checks, Sentry integration, 3 tests |
 | Epic 7: Analytics | ✅ Complete | User stats/progress endpoints, dashboard progress panel, 3 tests |
 | Epic 8: Launch Prep | ✅ Complete | Pricing table, onboarding panel, env validation, 2 tests |
+
+---
+
+## Sprint 5: User Experience & Growth Features
+
+| Sprint | Focus | Status |
+|--------|-------|--------|
+| Sprint 5 | Question Browser, Response Review, Account Management | 🟡 In Progress |
+
+---
+
+## Next 4 Epics: Detailed Implementation Plan (Sprint 5)
+
+### Epic 9: Question Browser & Targeted Practice ✅ COMPLETE
+**Priority: HIGH**
+**Status**: ✅ Implemented with Question Browser, Quick Practice API, and Difficulty Selector
+**Goal**: Allow users to browse questions, filter by category/difficulty/company, and practice individual questions
+
+### Implementation Summary (Epic 9)
+- **QuestionsPage.tsx**: Full-featured question browser with category, difficulty, company filters
+- **QuestionCard.tsx**: Question preview with badges, company tags, and Practice button
+- **QuestionFilters.tsx**: Real-time filtering with search, dropdowns, and clear functionality
+- **Quick Practice API**: `/interviews/quick-practice` endpoint for single-question sessions
+- **Difficulty Selector**: Added to NewInterviewModal with Easy/Medium/Hard/Mixed options
+- **Backend Support**: DifficultyLevel enum, question filtering in interview_service
+
+#### Overview
+Currently users can only access questions through interview sessions. We need a Question Browser page where users can:
+1. Browse all available questions with filters
+2. Practice a single question without starting a full session
+3. Select difficulty when creating interviews
+
+#### Task 9.1: Question Browser Page
+**Files to create/change:**
+- `frontend/src/pages/QuestionsPage.tsx` (new)
+- `frontend/src/components/questions/QuestionCard.tsx` (new)
+- `frontend/src/components/questions/QuestionFilters.tsx` (new)
+- `frontend/src/App.tsx` (add route)
+
+**Functions to implement:**
+
+```typescript
+// frontend/src/pages/QuestionsPage.tsx
+export default function QuestionsPage() {
+  // Displays filterable list of questions with category, difficulty, company tags
+  // Includes "Practice This" button for quick practice mode
+}
+
+// frontend/src/components/questions/QuestionCard.tsx
+export function QuestionCard({ question, onPractice }) {
+  // Shows question preview with category badge, difficulty indicator
+  // Company tags displayed as chips, "Practice" CTA button
+}
+
+// frontend/src/components/questions/QuestionFilters.tsx
+export function QuestionFilters({ onFilterChange }) {
+  // Category dropdown, difficulty dropdown, company tag search
+  // Real-time filtering without page reload
+}
+```
+
+**Tests to add:**
+- `QuestionCard renders category and difficulty correctly`
+- `QuestionFilters updates on selection change`
+- `QuestionsPage loads questions from API`
+
+---
+
+#### Task 9.2: Quick Practice Mode API
+**Files to change:**
+- `backend/app/api/interviews.py`
+- `backend/app/services/interview_service.py`
+
+**Functions to implement:**
+
+```python
+# backend/app/api/interviews.py
+@router.post("/quick-practice", response_model=InterviewSessionRead)
+async def create_quick_practice(
+    question_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> InterviewSession:
+    """Creates a 1-question practice session with the specified question.
+    Bypasses random selection, directly assigns the chosen question."""
+
+# backend/app/services/interview_service.py
+async def create_practice_session(
+    session: AsyncSession,
+    user_id: UUID,
+    question_id: UUID,
+) -> InterviewSession:
+    """Creates interview session with single specified question.
+    Sets interview_type based on question category."""
+```
+
+**Tests to add:**
+- `test_quick_practice_creates_single_question_session`
+- `test_quick_practice_assigns_correct_question`
+- `test_quick_practice_respects_quota_limits`
+
+---
+
+#### Task 9.3: Enhanced Interview Creation
+**Files to change:**
+- `frontend/src/components/interview/NewInterviewModal.tsx`
+- `frontend/src/types/index.ts`
+
+**Functions to implement:**
+
+```typescript
+// frontend/src/components/interview/NewInterviewModal.tsx
+// ADD: Difficulty selector (easy/medium/hard/mixed)
+// ADD: Company style quick-select buttons (FAANG, Startup, Enterprise)
+
+interface CreateInterviewFormData {
+  // ADD:
+  difficulty?: 'easy' | 'medium' | 'hard' | 'mixed';
+}
+```
+
+**Tests to add:**
+- `NewInterviewModal includes difficulty selector`
+- `Form submits difficulty preference correctly`
+
+---
+
+### Epic 10: Interview Response Review ✅ COMPLETE
+**Priority: HIGH**
+**Status**: ✅ Implemented with AudioPlayer, ResponseReview components
+**Goal**: Enable users to review individual responses with audio playback and detailed feedback
+
+### Implementation Summary (Epic 10)
+- **AudioPlayer.tsx**: Full-featured audio player with play/pause, seek, playback speed (0.75x-2x), mute toggle
+- **ResponseReview.tsx**: Detailed response card with audio player, transcript, sample answer comparison, feedback display
+- **ResponseAccordion Enhancement**: Integrated AudioPlayer for audio playback in question-by-question analysis
+- **FeedbackPage Integration**: Audio URLs passed to response accordions for playback
+- **Type Updates**: Added word_count and filler_word_count to InterviewResponse type
+
+#### Overview
+After completing an interview, users should be able to:
+1. See a timeline of their responses
+2. Play back their audio recordings
+3. View per-question feedback with strengths/improvements
+4. Compare their transcript to sample answers
+
+#### Task 10.1: Response Review Component
+**Files to create/change:**
+- `frontend/src/components/feedback/ResponseReview.tsx` (new)
+- `frontend/src/components/feedback/AudioPlayer.tsx` (new)
+- `frontend/src/pages/FeedbackPage.tsx` (enhance)
+
+**Functions to implement:**
+
+```typescript
+// frontend/src/components/feedback/AudioPlayer.tsx
+export function AudioPlayer({ audioUrl, onTimeUpdate }) {
+  // Custom audio player with play/pause, seek bar, playback speed
+  // Shows current time and duration, waveform visualization optional
+}
+
+// frontend/src/components/feedback/ResponseReview.tsx
+export function ResponseReview({ response, question, feedback }) {
+  // Full response card with audio player at top
+  // Transcript display with optional sample answer comparison
+  // Feedback scores and detailed analysis below
+}
+```
+
+**Tests to add:**
+- `AudioPlayer renders and plays audio correctly`
+- `ResponseReview displays transcript and feedback`
+- `ResponseReview handles missing audio gracefully`
+
+---
+
+#### Task 10.2: Enhanced Feedback API
+**Files to change:**
+- `backend/app/api/feedback.py`
+- `backend/app/services/feedback_service.py`
+
+**Functions to implement:**
+
+```python
+# backend/app/api/feedback.py
+@router.get("/session/{session_id}/detailed", response_model=DetailedSessionFeedback)
+async def get_detailed_session_feedback(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Returns session feedback with full response details.
+    Includes question content, audio URLs, transcripts, and individual feedback."""
+
+# New response model
+class DetailedSessionFeedback(SQLModel):
+    session: InterviewSessionRead
+    session_feedback: SessionFeedbackRead
+    responses: list[ResponseWithFeedback]
+```
+
+**Tests to add:**
+- `test_detailed_feedback_includes_all_responses`
+- `test_detailed_feedback_includes_audio_urls`
+- `test_detailed_feedback_authorization_check`
+
+---
+
+### Epic 11: Account Management & Security
+**Priority: MEDIUM**
+**Status**: 🔴 Not Started
+**Goal**: Allow users to manage their account, reset password, update profile
+
+#### Overview
+Essential account management features:
+1. Password reset via email
+2. Profile update (name, email)
+3. Account deletion (GDPR compliance)
+4. Session management (view/revoke active sessions)
+
+#### Task 11.1: Password Reset Flow
+**Files to create/change:**
+- `backend/app/api/auth.py` (add endpoints)
+- `backend/app/services/email_service.py` (new)
+- `frontend/src/pages/ForgotPasswordPage.tsx` (new)
+- `frontend/src/pages/ResetPasswordPage.tsx` (new)
+
+**Functions to implement:**
+
+```python
+# backend/app/api/auth.py
+@router.post("/forgot-password")
+async def forgot_password(email: str) -> dict:
+    """Generates password reset token and sends email.
+    Token expires in 1 hour. Returns success even if email not found (security)."""
+
+@router.post("/reset-password")
+async def reset_password(token: str, new_password: str) -> dict:
+    """Validates reset token and updates password.
+    Invalidates all existing sessions for security."""
+
+# backend/app/services/email_service.py
+class EmailService:
+    async def send_password_reset(self, email: str, reset_url: str) -> bool:
+        """Sends password reset email with secure token link.
+        Uses configured SMTP or email API (SendGrid/Postmark)."""
+```
+
+**Tests to add:**
+- `test_forgot_password_generates_token`
+- `test_reset_password_validates_token`
+- `test_reset_password_invalidates_old_token`
+- `test_reset_password_hashes_new_password`
+
+---
+
+#### Task 11.2: Profile Management
+**Files to create/change:**
+- `backend/app/api/users.py` (add endpoints)
+- `frontend/src/pages/SettingsPage.tsx` (enhance)
+
+**Functions to implement:**
+
+```python
+# backend/app/api/users.py
+@router.patch("/me", response_model=UserRead)
+async def update_profile(
+    updates: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Updates user profile fields (name, email).
+    Email change requires verification (future enhancement)."""
+
+@router.delete("/me")
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Soft-deletes user account and anonymizes data.
+    Cancels any active subscriptions first."""
+```
+
+**Tests to add:**
+- `test_update_profile_changes_name`
+- `test_update_profile_validates_email_format`
+- `test_delete_account_soft_deletes`
+- `test_delete_account_cancels_subscription`
+
+---
+
+### Epic 12: Data Visualization & Insights
+**Priority: MEDIUM**
+**Status**: 🔴 Not Started
+**Goal**: Add charts and visualizations for progress tracking
+
+#### Overview
+Enhance the dashboard with:
+1. Score trend chart over time
+2. Category-wise performance breakdown
+3. Practice time distribution
+4. Strengths/weaknesses radar chart
+
+#### Task 12.1: Progress Charts
+**Files to create/change:**
+- `frontend/src/components/dashboard/ProgressChart.tsx` (new)
+- `frontend/src/components/dashboard/CategoryBreakdown.tsx` (new)
+- `frontend/src/pages/DashboardPage.tsx` (enhance)
+
+**Functions to implement:**
+
+```typescript
+// frontend/src/components/dashboard/ProgressChart.tsx
+export function ProgressChart({ scoreTrend }) {
+  // Line chart showing score over time using lightweight charting lib
+  // Shows overall, content, and audio scores as separate lines
+  // Responsive design with tooltips on hover
+}
+
+// frontend/src/components/dashboard/CategoryBreakdown.tsx
+export function CategoryBreakdown({ categoryStats }) {
+  // Bar chart or pie chart showing performance by category
+  // Behavioral, Technical, System Design breakdown
+  // Click to filter dashboard by category
+}
+```
+
+**Dependencies to add:**
+- `recharts` or `chart.js` for lightweight charting
+
+**Tests to add:**
+- `ProgressChart renders with valid data`
+- `ProgressChart handles empty data gracefully`
+- `CategoryBreakdown shows correct percentages`
+
+---
+
+#### Task 12.2: Enhanced Progress API
+**Files to change:**
+- `backend/app/api/users.py`
+- `backend/app/services/feedback_service.py`
+
+**Functions to implement:**
+
+```python
+# backend/app/api/users.py
+@router.get("/me/insights", response_model=UserInsights)
+async def get_user_insights(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Returns detailed insights for visualization.
+    Category breakdown, weekly trends, top strengths/weaknesses."""
+
+# backend/app/services/feedback_service.py
+async def get_category_breakdown(
+    session: AsyncSession,
+    user_id: UUID,
+) -> dict:
+    """Aggregates scores by question category.
+    Returns avg scores and attempt counts per category."""
+
+async def get_weekly_trend(
+    session: AsyncSession,
+    user_id: UUID,
+    weeks: int = 8,
+) -> list[dict]:
+    """Returns weekly score averages for trend visualization.
+    Groups by week, calculates mean scores."""
+```
+
+**Tests to add:**
+- `test_insights_returns_category_breakdown`
+- `test_insights_returns_weekly_trend`
+- `test_insights_handles_new_user`
+
+---
+
+## Implementation Priority
+
+| Epic | Priority | Estimated Effort | Dependencies |
+|------|----------|------------------|--------------|
+| Epic 9: Question Browser | HIGH | 2 days | None |
+| Epic 10: Response Review | HIGH | 2 days | None |
+| Epic 11: Account Management | MEDIUM | 2 days | Email service setup |
+| Epic 12: Data Visualization | MEDIUM | 2 days | Charting library |
+
+## Definition of Done (Sprint 5)
+
+For each task:
+- [ ] Code implemented and linted
+- [ ] Tests passing (maintain >69% coverage)
+- [ ] No TypeScript/Python errors
+- [ ] Responsive design verified
+- [ ] Committed with conventional commits
