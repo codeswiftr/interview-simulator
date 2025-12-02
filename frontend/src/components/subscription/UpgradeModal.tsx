@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check, Crown, Loader2 } from 'lucide-react';
 import { subscriptionsAPI } from '../../lib/api';
 
@@ -17,6 +17,20 @@ export default function UpgradeModal({
 }: UpgradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [priceId, setPriceId] = useState<string | null>(null);
+
+  // Fetch pricing configuration when modal opens
+  useEffect(() => {
+    if (isOpen && !priceId) {
+      subscriptionsAPI.getPricing()
+        .then((response) => {
+          setPriceId(response.data.pro_monthly_price_id);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch pricing:', err);
+        });
+    }
+  }, [isOpen, priceId]);
 
   if (!isOpen) return null;
 
@@ -25,9 +39,11 @@ export default function UpgradeModal({
       setLoading(true);
       setError(null);
 
-      // TODO: Get actual price ID from config or API
-      // For now, using placeholder - should come from backend config
-      const priceId = 'price_pro_monthly'; // This should be fetched from API or config
+      if (!priceId) {
+        setError('Pricing not configured. Please contact support.');
+        setLoading(false);
+        return;
+      }
 
       const response = await subscriptionsAPI.createCheckout(priceId);
       const checkoutUrl = response.data.url;
@@ -35,7 +51,7 @@ export default function UpgradeModal({
       // Redirect to Stripe checkout
       window.location.href = checkoutUrl;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create checkout session');
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Failed to create checkout session');
       setLoading(false);
     }
   };

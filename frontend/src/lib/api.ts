@@ -194,6 +194,8 @@ export const uploadAPI = {
 export const subscriptionsAPI = {
   getStatus: () => api.get('/subscriptions/status'),
 
+  getPricing: () => api.get<{ pro_monthly_price_id: string | null; pro_annual_price_id: string | null }>('/subscriptions/pricing'),
+
   createCheckout: (priceId: string) =>
     api.post('/subscriptions/checkout', { price_id: priceId }),
 

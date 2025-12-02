@@ -307,6 +307,26 @@ async def get_subscription_status(
     )
 
 
+class PricingConfig(BaseModel):
+    """Response model for pricing configuration."""
+
+    pro_monthly_price_id: str | None
+    pro_annual_price_id: str | None
+
+
+@router.get("/pricing", response_model=PricingConfig)
+async def get_pricing_config() -> PricingConfig:
+    """Get Stripe pricing configuration.
+
+    Returns price IDs for subscription tiers. Frontend should use these
+    when creating checkout sessions.
+    """
+    return PricingConfig(
+        pro_monthly_price_id=settings.stripe_price_id_pro_monthly or None,
+        pro_annual_price_id=settings.stripe_price_id_pro_annual or None,
+    )
+
+
 @router.post("/cancel")
 async def cancel_subscription(
     current_user: User = Depends(get_current_user),
