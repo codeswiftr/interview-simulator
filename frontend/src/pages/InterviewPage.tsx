@@ -52,6 +52,26 @@ export default function InterviewPage() {
     error: recordingError,
   } = useAudioRecording();
 
+  // Warn user before leaving with unsaved progress
+  useEffect(() => {
+    const hasUnsavedProgress = isRecording || isPreviewMode || currentQuestionIndex > 0;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedProgress) {
+        e.preventDefault();
+        // Modern browsers ignore custom messages, but we still need to set returnValue
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRecording, isPreviewMode, currentQuestionIndex]);
+
   // Load interview session and questions
   useEffect(() => {
     if (!id) return;

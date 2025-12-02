@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   register: (email: string, password: string, full_name: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectTo?: string) => {
     try {
       const response = await authAPI.login(email, password);
       const { access_token } = response.data;
@@ -54,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userResponse = await authAPI.getCurrentUser();
       setUser(userResponse.data);
 
-      navigate('/dashboard');
+      // Navigate to intended destination or default to dashboard
+      navigate(redirectTo || '/dashboard');
     } catch (error) {
       throw error;
     }

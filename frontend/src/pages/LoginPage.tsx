@@ -1,15 +1,25 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
 
+interface LocationState {
+  from?: {
+    pathname: string;
+  };
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get the intended destination from location state (set by ProtectedRoute)
+  const from = (location.state as LocationState)?.from?.pathname;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -17,9 +27,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid email or password');
+      await login(email, password, from);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { detail?: string } } };
+      setError(apiError.response?.data?.detail || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }

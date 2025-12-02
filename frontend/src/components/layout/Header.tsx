@@ -1,14 +1,39 @@
-import { Link } from 'react-router-dom';
-import { User, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { User, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ThemeToggle } from '../ThemeToggle';
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  const handleLogout = () => {
+    setIsMobileMenuOpen(false);
+    logout();
+  };
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-border-light">
-      <div className="container mx-auto px-6 py-4">
+      <div className="container mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
@@ -19,12 +44,12 @@ export default function Header() {
               <span className="font-heading font-bold text-lg leading-none">
                 Interview Simulator
               </span>
-              <span className="text-xs text-text-tertiary">by CodeSwiftr</span>
+              <span className="text-xs text-text-tertiary hidden sm:block">by CodeSwiftr</span>
             </div>
           </Link>
 
-          {/* Navigation */}
-          <nav className="flex items-center gap-6">
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6">
             {isAuthenticated ? (
               <>
                 <Link
@@ -58,7 +83,7 @@ export default function Header() {
 
                   <button
                     onClick={logout}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-text-secondary hover:text-red-600 hover:bg-red-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-text-secondary hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                     <span className="text-sm font-medium">Logout</span>
@@ -82,7 +107,81 @@ export default function Header() {
               </>
             )}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-3 md:hidden">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <nav className="md:hidden mt-4 pb-4 border-t border-border-light pt-4">
+            {isAuthenticated ? (
+              <div className="flex flex-col gap-2">
+                {/* User info */}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-secondary mb-2">
+                  <User className="w-4 h-4 text-text-secondary" />
+                  <span className="text-sm font-medium">{user?.full_name}</span>
+                </div>
+
+                <Link
+                  to="/dashboard"
+                  className="px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/questions"
+                  className="px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+                >
+                  Questions
+                </Link>
+                <Link
+                  to="/settings"
+                  className="px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+                >
+                  Settings
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-sm font-medium">Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/login"
+                  className="px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="btn-primary text-center"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+          </nav>
+        )}
       </div>
     </header>
   );

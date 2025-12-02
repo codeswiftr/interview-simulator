@@ -42,6 +42,8 @@ export function useAudioRecording(): UseAudioRecordingReturn {
   const pausedTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Start recording
   const startRecording = useCallback(async () => {
@@ -50,6 +52,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
 
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
 
       // Get supported MIME type for cross-browser compatibility (Safari needs MP4/WAV)
       const mimeType = getSupportedMimeType();
@@ -72,12 +75,19 @@ export function useAudioRecording(): UseAudioRecordingReturn {
         const blob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
         setAudioBlob(blob);
 
+        // Revoke previous URL if exists
+        if (audioUrlRef.current) {
+          URL.revokeObjectURL(audioUrlRef.current);
+        }
+
         // Create object URL for preview
         const url = URL.createObjectURL(blob);
+        audioUrlRef.current = url;
         setAudioUrl(url);
 
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
 
         // Enter preview mode instead of stopped
         setRecordingState('preview');
@@ -150,8 +160,16 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     }
 
     if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
+      if (mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
       mediaRecorderRef.current = null;
+    }
+
+    // Stop any active stream tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
 
     if (audioElementRef.current) {
@@ -159,8 +177,10 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       audioElementRef.current = null;
     }
 
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
+    // Use ref for cleanup to avoid stale closure
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
     }
 
     setRecordingState('idle');
@@ -174,7 +194,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     audioChunksRef.current = [];
     startTimeRef.current = 0;
     pausedTimeRef.current = 0;
-  }, [audioUrl]);
+  }, []);
 
   // Play preview
   const playPreview = useCallback(() => {
@@ -202,8 +222,10 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       audioElementRef.current = null;
     }
 
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
+    // Use ref for cleanup to avoid stale closure
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
     }
 
     setRecordingState('idle');
@@ -213,7 +235,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     setIsPlaying(false);
     setCurrentTime(0);
     setAudioDuration(0);
-  }, [audioUrl]);
+  }, []);
 
   // Confirm recording and return blob
   const confirmRecording = useCallback(() => {
@@ -256,20 +278,40 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     };
   }, [recordingState, audioUrl]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - using refs to avoid stale closures
   useEffect(() => {
     return () => {
+      // Clear timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+
+      // Stop recording if in progress
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
       }
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
+
+      // Stop any active stream tracks (important for releasing microphone)
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
+      // Clean up audio element
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current = null;
+      }
+
+      // Revoke object URL to prevent memory leak
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
       }
     };
-  }, [audioUrl]);
+  }, []); // Empty deps - cleanup should always work with refs
 
   return {
     recordingState,
