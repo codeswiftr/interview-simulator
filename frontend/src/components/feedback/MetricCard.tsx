@@ -58,7 +58,7 @@ export default function MetricCard({
       <h3 className="heading-card mb-2">{title}</h3>
 
       <div className="flex items-baseline gap-2 mb-3">
-        <span className={`score-display ${scoreColor}`}>{score}</span>
+        <span className={`score-display ${scoreColor}`}>{Math.round(score * 10) / 10}</span>
         <span className="body-small text-text-tertiary">/ 100</span>
       </div>
 

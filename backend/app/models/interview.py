@@ -189,6 +189,15 @@ class InterviewResponseCreate(SQLModel):
     duration_seconds: int = 0
 
 
+class QuestionInResponse(SQLModel):
+    """Minimal question data embedded in response."""
+
+    id: UUID
+    content: str
+    category: str
+    difficulty: str
+
+
 class InterviewResponseRead(SQLModel):
     """Schema for interview response output."""
 
@@ -204,3 +213,4 @@ class InterviewResponseRead(SQLModel):
     processing_status: ProcessingStatus
     processing_error: str | None
     created_at: datetime
+    question: QuestionInResponse | None = None

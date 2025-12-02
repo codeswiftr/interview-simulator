@@ -289,8 +289,8 @@ async def get_responses(
     interview_id: UUID,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[InterviewResponse]:
-    """Get all responses for an interview session."""
+) -> list[dict]:
+    """Get all responses for an interview session with question data."""
     # Verify interview exists and belongs to user
     await _get_interview_for_user(session, interview_id, current_user.id)
 
@@ -300,7 +300,45 @@ async def get_responses(
         .where(InterviewResponse.session_id == interview_id)
         .order_by(InterviewResponse.created_at)
     )
-    return result.all()
+    responses = result.all()
+
+    # Fetch questions for all responses
+    question_ids = [r.question_id for r in responses]
+    if question_ids:
+        question_result = await session.exec(
+            select(Question).where(Question.id.in_(question_ids))
+        )
+        questions_map = {q.id: q for q in question_result.all()}
+    else:
+        questions_map = {}
+
+    # Build response with embedded question data
+    response_data = []
+    for r in responses:
+        question = questions_map.get(r.question_id)
+        response_dict = {
+            "id": r.id,
+            "session_id": r.session_id,
+            "question_id": r.question_id,
+            "audio_url": r.audio_url,
+            "video_url": r.video_url,
+            "transcript": r.transcript,
+            "duration_seconds": r.duration_seconds,
+            "word_count": r.word_count,
+            "filler_word_count": r.filler_word_count,
+            "processing_status": r.processing_status,
+            "processing_error": r.processing_error,
+            "created_at": r.created_at,
+            "question": {
+                "id": question.id,
+                "content": question.content,
+                "category": question.category,
+                "difficulty": question.difficulty,
+            } if question else None,
+        }
+        response_data.append(response_dict)
+
+    return response_data
 
 
 @router.get("/{interview_id}/feedback")

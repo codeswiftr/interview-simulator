@@ -63,7 +63,7 @@ export default function ScoreRing({
   showLabel = true,
   animated = true,
 }: ScoreRingProps) {
-  const [animatedScore, setAnimatedScore] = useState(animated ? 0 : score);
+  const [animatedScore, setAnimatedScore] = useState(animated ? 0 : Math.round(score * 10) / 10);
   const config = getScoreConfig(score);
   const dimensions = getSizeDimensions(size);
 
@@ -79,7 +79,7 @@ export default function ScoreRing({
     const timer = setInterval(() => {
       currentStep++;
       if (currentStep >= steps) {
-        setAnimatedScore(score);
+        setAnimatedScore(Math.round(score * 10) / 10);
         clearInterval(timer);
       } else {
         setAnimatedScore(Math.round(increment * currentStep));
