@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     # AI Services
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    openrouter_api_key: str = ""
+    groq_api_key: str = ""
+
+    # AI Provider Selection (openai, openrouter, groq)
+    transcription_provider: str = "openai"  # openai or groq
+    content_analysis_provider: str = "anthropic"  # anthropic or openrouter
 
     # Stripe
     stripe_secret_key: str = ""

@@ -145,15 +145,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
 
-    # Check AI services configuration
-    if settings.openai_api_key:
-        logger.info("OpenAI API key configured")
+    # Check AI services configuration based on selected providers
+    # Transcription provider check
+    if settings.transcription_provider == "groq":
+        if settings.groq_api_key:
+            logger.info(f"Transcription configured: Groq (whisper-large-v3)")
+        else:
+            logger.warning("Groq API key not configured - transcription will fail")
     else:
-        logger.warning("OpenAI API key not configured - transcription will fail")
-    if settings.anthropic_api_key:
-        logger.info("Anthropic API key configured")
+        if settings.openai_api_key:
+            logger.info(f"Transcription configured: OpenAI (whisper-1)")
+        else:
+            logger.warning("OpenAI API key not configured - transcription will fail")
+
+    # Content analysis provider check
+    if settings.content_analysis_provider == "openrouter":
+        if settings.openrouter_api_key:
+            logger.info(f"Content analysis configured: OpenRouter (Claude)")
+        else:
+            logger.warning("OpenRouter API key not configured - feedback generation will fail")
     else:
-        logger.warning("Anthropic API key not configured - feedback generation will fail")
+        if settings.anthropic_api_key:
+            logger.info(f"Content analysis configured: Anthropic (Claude)")
+        else:
+            logger.warning("Anthropic API key not configured - feedback generation will fail")
 
     # Seed data in debug/local environments
     if settings.debug:

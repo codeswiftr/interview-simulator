@@ -1,10 +1,16 @@
-"""Content analysis service using Claude for semantic evaluation."""
+"""Content analysis service using Claude for semantic evaluation.
+
+Supports multiple providers:
+- Anthropic (direct)
+- OpenRouter (via OpenAI-compatible API)
+"""
 
 import json
 import logging
 from dataclasses import dataclass
 
 from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from app.config import settings
 
@@ -78,8 +84,20 @@ For behavioral questions, also evaluate:
 """
 
     def __init__(self) -> None:
-        """Initialize the content analyzer."""
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        """Initialize the content analyzer based on configured provider."""
+        self.provider = settings.content_analysis_provider
+
+        if self.provider == "openrouter":
+            self.openrouter_client = AsyncOpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url="https://openrouter.ai/api/v1",
+            )
+            self.anthropic_client = None
+            logger.info("ContentAnalyzer using OpenRouter provider")
+        else:
+            self.anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+            self.openrouter_client = None
+            logger.info("ContentAnalyzer using Anthropic provider")
 
     async def analyze(
         self,
@@ -107,18 +125,27 @@ For behavioral questions, also evaluate:
         )
 
         try:
-            response = await self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=2048,
-                temperature=0.3,  # Lower temperature for more consistent scoring
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-            # Parse the JSON response
-            first_block = response.content[0]
-            if not hasattr(first_block, "text"):
-                raise ValueError("Response does not contain text content")
-            content = first_block.text
+            if self.provider == "openrouter":
+                # Use OpenRouter with Claude via OpenAI-compatible API
+                response = await self.openrouter_client.chat.completions.create(
+                    model="anthropic/claude-sonnet-4-20250514",
+                    max_tokens=2048,
+                    temperature=0.3,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                content = response.choices[0].message.content
+            else:
+                # Use Anthropic directly
+                response = await self.anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=2048,
+                    temperature=0.3,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                first_block = response.content[0]
+                if not hasattr(first_block, "text"):
+                    raise ValueError("Response does not contain text content")
+                content = first_block.text
             logger.debug(f"Raw Claude response: {content}")
 
             # Extract JSON from the response (it might be wrapped in markdown)

@@ -1,4 +1,9 @@
-"""Audio transcription service using OpenAI Whisper API."""
+"""Audio transcription service using OpenAI Whisper API.
+
+Supports multiple providers:
+- OpenAI (direct Whisper API)
+- Groq (fast, free Whisper API)
+"""
 
 import logging
 import tempfile
@@ -35,8 +40,20 @@ class Transcriber:
     MAX_FILE_SIZE_MB = 25
 
     def __init__(self) -> None:
-        """Initialize the transcriber."""
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+        """Initialize the transcriber based on configured provider."""
+        self.provider = settings.transcription_provider
+
+        if self.provider == "groq":
+            self.client = AsyncOpenAI(
+                api_key=settings.groq_api_key,
+                base_url="https://api.groq.com/openai/v1",
+            )
+            self.model = "whisper-large-v3"
+            logger.info("Transcriber using Groq provider")
+        else:
+            self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+            self.model = "whisper-1"
+            logger.info("Transcriber using OpenAI provider")
 
     async def transcribe(
         self,
@@ -83,7 +100,7 @@ class Transcriber:
             with open(audio_path, "rb") as audio_file:
                 # Build transcription options
                 options: dict = {
-                    "model": "whisper-1",
+                    "model": self.model,
                     "file": audio_file,
                     "response_format": "verbose_json" if include_timestamps else "json",
                 }
