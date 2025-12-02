@@ -70,13 +70,32 @@
 }
 
 @layer base {
+  /* CSS variables that automatically switch in dark mode */
+  :root {
+    --bg-primary: var(--color-surface-primary);
+    --bg-secondary: var(--color-surface-secondary);
+    --fg-primary: var(--color-text-primary);
+    --fg-secondary: var(--color-text-secondary);
+    --fg-tertiary: var(--color-text-tertiary);
+    --border: var(--color-border-light);
+  }
+
+  .dark {
+    --bg-primary: var(--color-dark-surface-primary);
+    --bg-secondary: var(--color-dark-surface-secondary);
+    --fg-primary: var(--color-dark-text-primary);
+    --fg-secondary: var(--color-dark-text-secondary);
+    --fg-tertiary: var(--color-dark-text-tertiary);
+    --border: var(--color-dark-border-light);
+  }
+
   * {
-    border-color: var(--color-border-light);
+    border-color: var(--border);
   }
 
   body {
-    background-color: var(--color-surface-primary);
-    color: var(--color-text-primary);
+    background-color: var(--bg-primary);
+    color: var(--fg-primary);
     font-family: var(--font-family-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -99,16 +118,6 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
-  }
-
-  /* Dark Mode Overrides */
-  .dark body {
-    background-color: var(--color-dark-surface-primary);
-    color: var(--color-dark-text-primary);
-  }
-
-  .dark * {
-    border-color: var(--color-dark-border-light);
   }
 }
 

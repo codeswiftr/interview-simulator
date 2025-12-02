@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export type ScoreSize = 'small' | 'medium' | 'large';
 
@@ -64,8 +65,12 @@ export default function ScoreRing({
   animated = true,
 }: ScoreRingProps) {
   const [animatedScore, setAnimatedScore] = useState(animated ? 0 : Math.round(score * 10) / 10);
+  const { resolvedTheme } = useTheme();
   const config = getScoreConfig(score);
   const dimensions = getSizeDimensions(size);
+
+  // Dark mode adaptive colors
+  const bgCircleColor = resolvedTheme === 'dark' ? '#334155' : '#E2E8F0';
 
   useEffect(() => {
     if (!animated) return;
@@ -104,7 +109,7 @@ export default function ScoreRing({
             cy={height / 2}
             r={radius}
             fill="none"
-            stroke="#E2E8F0"
+            stroke={bgCircleColor}
             strokeWidth={strokeWidth}
           />
           {/* Progress circle */}
