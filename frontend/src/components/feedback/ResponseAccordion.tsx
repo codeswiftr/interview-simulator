@@ -35,14 +35,14 @@ export default function ResponseAccordion({
       {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-surface-secondary transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-surface-secondary dark:hover:bg-dark-surface-tertiary transition-colors"
       >
         <div className="flex items-start gap-4 flex-1 text-left">
           <span className="flex-shrink-0 w-8 h-8 rounded-full bg-electric-blue/10 text-electric-blue flex items-center justify-center font-semibold text-sm">
             {questionNumber}
           </span>
           <div className="flex-1 min-w-0">
-            <h3 className="body-large font-semibold text-text-primary mb-1">
+            <h3 className="body-large font-semibold text-text-primary dark:text-dark-text-primary mb-1">
               {question}
             </h3>
             {score !== undefined && (
@@ -70,7 +70,7 @@ export default function ResponseAccordion({
           {/* Audio Player */}
           {audioUrl && (
             <div>
-              <h4 className="body-small font-semibold text-text-secondary uppercase tracking-wide mb-2 flex items-center gap-2">
+              <h4 className="body-small font-semibold text-text-secondary dark:text-dark-text-secondary uppercase tracking-wide mb-2 flex items-center gap-2">
                 <Play className="w-4 h-4" />
                 Your Recording
               </h4>
@@ -81,11 +81,11 @@ export default function ResponseAccordion({
           {/* Transcript */}
           {transcript && (
             <div>
-              <h4 className="body-small font-semibold text-text-secondary uppercase tracking-wide mb-2">
+              <h4 className="body-small font-semibold text-text-secondary dark:text-dark-text-secondary uppercase tracking-wide mb-2">
                 Your Response
               </h4>
-              <div className="bg-surface-secondary rounded-lg p-4">
-                <p className="body-default text-text-primary whitespace-pre-wrap">
+              <div className="bg-surface-secondary dark:bg-dark-surface-tertiary rounded-lg p-4">
+                <p className="body-default text-text-primary dark:text-dark-text-primary whitespace-pre-wrap">
                   {transcript}
                 </p>
               </div>
@@ -94,18 +94,18 @@ export default function ResponseAccordion({
 
           {/* Feedback */}
           <div>
-            <h4 className="body-small font-semibold text-text-secondary uppercase tracking-wide mb-2">
+            <h4 className="body-small font-semibold text-text-secondary dark:text-dark-text-secondary uppercase tracking-wide mb-2">
               Feedback
             </h4>
             <div className="bg-status-info/5 border border-status-info/20 rounded-lg p-4">
-              <p className="body-default text-text-primary">{feedback}</p>
+              <p className="body-default text-text-primary dark:text-dark-text-primary">{feedback}</p>
             </div>
           </div>
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
             <div>
-              <h4 className="body-small font-semibold text-text-secondary uppercase tracking-wide mb-3 flex items-center gap-2">
+              <h4 className="body-small font-semibold text-text-secondary dark:text-dark-text-secondary uppercase tracking-wide mb-3 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 Areas for Improvement
               </h4>
@@ -113,7 +113,7 @@ export default function ResponseAccordion({
                 {suggestions.map((suggestion, idx) => (
                   <li key={idx} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-status-warning flex-shrink-0 mt-0.5" />
-                    <span className="body-default text-text-primary flex-1">
+                    <span className="body-default text-text-primary dark:text-dark-text-primary flex-1">
                       {suggestion}
                     </span>
                   </li>
