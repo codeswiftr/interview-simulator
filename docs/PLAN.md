@@ -919,7 +919,7 @@ Post-Deploy:
 
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| Sprint 5 | Question Browser, Response Review, Account Management | 🟡 In Progress |
+| Sprint 5 | Question Browser, Response Review, Account Management, Data Visualization | ✅ Complete |
 
 ---
 
@@ -1120,14 +1120,22 @@ class DetailedSessionFeedback(SQLModel):
 
 ---
 
-### Epic 11: Account Management & Security
+### Epic 11: Account Management & Security ✅ COMPLETE
 **Priority: MEDIUM**
-**Status**: 🔴 Not Started
+**Status**: ✅ Implemented with profile, password, and deletion
 **Goal**: Allow users to manage their account, reset password, update profile
+
+### Implementation Summary (Epic 11)
+- **Profile Update**: PATCH /users/me endpoint for name and email changes
+- **Password Change**: POST /users/me/change-password with current password verification
+- **Account Deletion**: DELETE /users/me with soft delete and data anonymization
+- **SettingsPage Enhancement**: Profile edit form, password change form, danger zone with DELETE confirmation
+- **UserUpdate & PasswordChange Schemas**: Backend validation models
+- **refreshUser Hook**: Added to useAuth for profile updates
 
 #### Overview
 Essential account management features:
-1. Password reset via email
+1. Password reset via email (Note: Email flow deferred - direct password change implemented)
 2. Profile update (name, email)
 3. Account deletion (GDPR compliance)
 4. Session management (view/revoke active sessions)
@@ -1203,10 +1211,17 @@ async def delete_account(
 
 ---
 
-### Epic 12: Data Visualization & Insights
+### Epic 12: Data Visualization & Insights ✅ COMPLETE
 **Priority: MEDIUM**
-**Status**: 🔴 Not Started
+**Status**: ✅ Implemented with custom SVG charts
 **Goal**: Add charts and visualizations for progress tracking
+
+### Implementation Summary (Epic 12)
+- **ProgressChart.tsx**: SVG line chart with trend indicator (up/down/stable), gradient fill, interactive data points
+- **CategoryBreakdown.tsx**: Stacked bar visualization with category icons, counts, and average scores per category
+- **StatsOverview.tsx**: 4-card grid with total sessions, average score, practice time, completion rate
+- **DashboardPage Integration**: Charts shown when user has sessions, category breakdown calculated from session data
+- **No External Dependencies**: Used custom SVG charts instead of recharts/chart.js for lighter bundle
 
 #### Overview
 Enhance the dashboard with:
