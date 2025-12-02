@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getSupportedMimeType } from '../lib/audio-utils';
 
-export type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped';
+export type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped' | 'preview';
 
 export interface UseAudioRecordingReturn {
   recordingState: RecordingState;
@@ -9,11 +9,19 @@ export interface UseAudioRecordingReturn {
   audioUrl: string | null;
   duration: number;
   isRecording: boolean;
+  isPreviewMode: boolean;
+  isPlaying: boolean;
+  currentTime: number;
+  audioDuration: number;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
   resetRecording: () => void;
+  playPreview: () => void;
+  pausePreview: () => void;
+  clearPreview: () => void;
+  confirmRecording: () => Blob | null;
   error: string | null;
 }
 
@@ -23,6 +31,9 @@ export function useAudioRecording(): UseAudioRecordingReturn {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -30,6 +41,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
   const startTimeRef = useRef<number>(0);
   const pausedTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
   // Start recording
   const startRecording = useCallback(async () => {
@@ -59,12 +71,16 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       mediaRecorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
         setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
+
+        // Create object URL for preview
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
 
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
 
-        setRecordingState('stopped');
+        // Enter preview mode instead of stopped
+        setRecordingState('preview');
       };
 
       // Start recording
@@ -138,6 +154,11 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       mediaRecorderRef.current = null;
     }
 
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current = null;
+    }
+
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
@@ -147,10 +168,93 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     setAudioUrl(null);
     setDuration(0);
     setError(null);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setAudioDuration(0);
     audioChunksRef.current = [];
     startTimeRef.current = 0;
     pausedTimeRef.current = 0;
   }, [audioUrl]);
+
+  // Play preview
+  const playPreview = useCallback(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.play().catch((err) => {
+        const error = err as { message?: string };
+        setError(error.message || 'Failed to play audio preview');
+      });
+      setIsPlaying(true);
+    }
+  }, []);
+
+  // Pause preview
+  const pausePreview = useCallback(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, []);
+
+  // Clear preview and return to idle
+  const clearPreview = useCallback(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current = null;
+    }
+
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+
+    setRecordingState('idle');
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setDuration(0);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setAudioDuration(0);
+  }, [audioUrl]);
+
+  // Confirm recording and return blob
+  const confirmRecording = useCallback(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current = null;
+    }
+    return audioBlob;
+  }, [audioBlob]);
+
+  // Setup audio element for preview
+  useEffect(() => {
+    if (recordingState === 'preview' && audioUrl && !audioElementRef.current) {
+      const audio = new Audio(audioUrl);
+      audioElementRef.current = audio;
+
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration);
+      };
+
+      audio.ontimeupdate = () => {
+        setCurrentTime(audio.currentTime);
+      };
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+      };
+
+      audio.onerror = () => {
+        setError('Failed to load audio preview');
+      };
+    }
+
+    return () => {
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current = null;
+      }
+    };
+  }, [recordingState, audioUrl]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -173,11 +277,19 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     audioUrl,
     duration,
     isRecording: recordingState === 'recording',
+    isPreviewMode: recordingState === 'preview',
+    isPlaying,
+    currentTime,
+    audioDuration,
     startRecording,
     stopRecording,
     pauseRecording,
     resumeRecording,
     resetRecording,
+    playPreview,
+    pausePreview,
+    clearPreview,
+    confirmRecording,
     error,
   };
 }

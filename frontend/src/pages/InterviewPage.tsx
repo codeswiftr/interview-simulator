@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X, AlertCircle, CheckCircle, SkipForward, RefreshCw } from 'lucide-react';
+import { X, AlertCircle, SkipForward, RefreshCw } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
@@ -9,6 +9,7 @@ import Timer from '../components/interview/Timer';
 import RecordingIndicator from '../components/interview/RecordingIndicator';
 import RecordButton from '../components/interview/RecordButton';
 import QuestionDisplay from '../components/interview/QuestionDisplay';
+import AudioPreview from '../components/interview/AudioPreview';
 import type { InterviewSession, Question } from '../types';
 
 const MAX_RETRY_ATTEMPTS = 3;
@@ -30,18 +31,24 @@ export default function InterviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
-  const [hasRecorded, setHasRecorded] = useState(false);
   const [lastFailedUpload, setLastFailedUpload] = useState<{ blob: Blob; questionId: string } | null>(null);
 
   // Audio recording hook
   const {
     recordingState,
-    audioBlob,
     duration,
     isRecording,
+    isPreviewMode,
+    isPlaying,
+    currentTime,
+    audioDuration,
     startRecording,
     stopRecording,
     resetRecording,
+    playPreview,
+    pausePreview,
+    clearPreview,
+    confirmRecording,
     error: recordingError,
   } = useAudioRecording();
 
@@ -86,17 +93,22 @@ export default function InterviewPage() {
   const handleStartRecording = async () => {
     try {
       await startRecording();
-      setHasRecorded(false);
     } catch (err) {
       const error = err as { message?: string };
       setError(error.message || 'Failed to start recording');
     }
   };
 
-  // Handle recording stop
+  // Handle recording stop (enters preview mode)
   const handleStopRecording = () => {
     stopRecording();
-    setHasRecorded(true);
+    // Note: preview mode is now handled by the hook
+  };
+
+  // Handle re-record
+  const handleReRecord = () => {
+    clearPreview();
+    setError(null);
   };
 
   // Upload with retry logic
@@ -149,7 +161,6 @@ export default function InterviewPage() {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         resetRecording();
-        setHasRecorded(false);
       } else {
         await handleEndInterview();
       }
@@ -164,7 +175,14 @@ export default function InterviewPage() {
 
   // Handle submit answer
   const handleSubmitAnswer = async () => {
-    if (!audioBlob || !session || !questions[currentQuestionIndex]) {
+    if (!session || !questions[currentQuestionIndex]) {
+      return;
+    }
+
+    // Confirm recording and get the blob
+    const blob = confirmRecording();
+    if (!blob) {
+      setError('No recording available to submit');
       return;
     }
 
@@ -176,7 +194,7 @@ export default function InterviewPage() {
       const currentQuestion = questions[currentQuestionIndex];
 
       // Upload audio file with retry
-      const audioUrl = await uploadWithRetry(audioBlob, session.id, currentQuestion.id);
+      const audioUrl = await uploadWithRetry(blob, session.id, currentQuestion.id);
 
       // Submit response
       await responsesAPI.submit(session.id, {
@@ -191,7 +209,6 @@ export default function InterviewPage() {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         resetRecording();
-        setHasRecorded(false);
       } else {
         // All questions answered, end the session
         await handleEndInterview();
@@ -199,7 +216,7 @@ export default function InterviewPage() {
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || 'Failed to submit answer. Click retry to try again.');
-      setLastFailedUpload({ blob: audioBlob, questionId: questions[currentQuestionIndex].id });
+      setLastFailedUpload({ blob, questionId: questions[currentQuestionIndex].id });
       toast.error('Upload failed', 'Your answer could not be uploaded. Please retry.');
     } finally {
       setIsSubmitting(false);
@@ -229,7 +246,6 @@ export default function InterviewPage() {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         resetRecording();
-        setHasRecorded(false);
       } else {
         // All questions answered, end the session
         await handleEndInterview();
@@ -381,63 +397,56 @@ export default function InterviewPage() {
         {/* Recording Section */}
         <div className="mt-8">
           <div className="card p-8">
-            <div className="flex flex-col items-center gap-6">
-              {/* Recording Indicator */}
-              <RecordingIndicator isRecording={isRecording} duration={duration} />
-
-              {/* Record Button */}
-              <RecordButton
-                recordingState={recordingState}
-                onStart={handleStartRecording}
-                onStop={handleStopRecording}
+            {isPreviewMode ? (
+              /* Preview Mode */
+              <AudioPreview
+                isPlaying={isPlaying}
+                currentTime={currentTime}
+                duration={audioDuration}
+                onPlay={playPreview}
+                onPause={pausePreview}
+                onReRecord={handleReRecord}
+                onConfirm={handleSubmitAnswer}
                 disabled={isSubmitting}
               />
+            ) : (
+              /* Recording Mode */
+              <div className="flex flex-col items-center gap-6">
+                {/* Recording Indicator */}
+                <RecordingIndicator isRecording={isRecording} duration={duration} />
 
-              {/* Success Message */}
-              {hasRecorded && !isRecording && (
-                <div className="flex items-center gap-2 text-status-success">
-                  <CheckCircle size={20} />
-                  <span className="body-small font-medium">
-                    Answer recorded ({Math.floor(duration / 60)}:{String(duration % 60).padStart(2, '0')})
-                  </span>
+                {/* Record Button */}
+                <RecordButton
+                  recordingState={recordingState}
+                  onStart={handleStartRecording}
+                  onStop={handleStopRecording}
+                  disabled={isSubmitting}
+                />
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 w-full max-w-md mt-4">
+                  <button
+                    onClick={handleSkipQuestion}
+                    disabled={isSubmitting || isRecording}
+                    className="btn-ghost flex-1 flex items-center justify-center gap-2"
+                  >
+                    <SkipForward size={20} />
+                    Skip Question
+                  </button>
+
+                  {lastFailedUpload && (
+                    <button
+                      onClick={handleRetryUpload}
+                      disabled={isSubmitting}
+                      className="btn-primary flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600"
+                    >
+                      <RefreshCw size={20} className={isSubmitting ? 'animate-spin' : ''} />
+                      {isSubmitting ? 'Retrying...' : 'Retry Upload'}
+                    </button>
+                  )}
                 </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-4 w-full max-w-md mt-4">
-                <button
-                  onClick={handleSkipQuestion}
-                  disabled={isSubmitting || isRecording}
-                  className="btn-ghost flex-1 flex items-center justify-center gap-2"
-                >
-                  <SkipForward size={20} />
-                  Skip Question
-                </button>
-
-                {lastFailedUpload ? (
-                  <button
-                    onClick={handleRetryUpload}
-                    disabled={isSubmitting}
-                    className="btn-primary flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600"
-                  >
-                    <RefreshCw size={20} className={isSubmitting ? 'animate-spin' : ''} />
-                    {isSubmitting ? 'Retrying...' : 'Retry Upload'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSubmitAnswer}
-                    disabled={!hasRecorded || isSubmitting || isRecording}
-                    className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting
-                      ? 'Submitting...'
-                      : currentQuestionIndex < questions.length - 1
-                      ? 'Next Question'
-                      : 'Finish Interview'}
-                  </button>
-                )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
