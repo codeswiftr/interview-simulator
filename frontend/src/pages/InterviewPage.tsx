@@ -127,23 +127,25 @@ export default function InterviewPage() {
   }, [id]);
 
   // Poll for transcription status updates
-  useEffect(() => {
-    const pollTranscriptions = async () => {
-      if (!session || submittedResponses.length === 0) return;
+  // Use a ref to track submitted responses to avoid re-triggering the effect
+  const submittedResponsesRef = useRef<SubmittedResponse[]>([]);
+  submittedResponsesRef.current = submittedResponses;
 
-      // Find responses that are still processing
-      const processingResponses = submittedResponses.filter(
+  useEffect(() => {
+    if (!session) return;
+
+    const pollTranscriptions = async () => {
+      const currentResponses = submittedResponsesRef.current;
+
+      // Skip polling if no responses yet or all are done
+      if (currentResponses.length === 0) return;
+
+      const processingResponses = currentResponses.filter(
         r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed'
       );
 
-      if (processingResponses.length === 0) {
-        // All done processing, clear interval
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        return;
-      }
+      // Skip API call if nothing to poll, but keep interval running for future submissions
+      if (processingResponses.length === 0) return;
 
       try {
         // Fetch all responses for the session
@@ -172,16 +174,8 @@ export default function InterviewPage() {
       }
     };
 
-    // Start polling if we have processing responses
-    const hasProcessingResponses = submittedResponses.some(
-      r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed'
-    );
-
-    if (hasProcessingResponses && !pollingIntervalRef.current) {
-      pollingIntervalRef.current = setInterval(pollTranscriptions, TRANSCRIPTION_POLL_INTERVAL);
-      // Also poll immediately
-      pollTranscriptions();
-    }
+    // Start polling interval when session is available - runs for the duration of the interview
+    pollingIntervalRef.current = setInterval(pollTranscriptions, TRANSCRIPTION_POLL_INTERVAL);
 
     return () => {
       if (pollingIntervalRef.current) {
@@ -189,7 +183,7 @@ export default function InterviewPage() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [session, submittedResponses, toast]);
+  }, [session, toast]);
 
   // Handle recording start
   const handleStartRecording = async () => {
