@@ -128,7 +128,7 @@ For behavioral questions, also evaluate:
             if self.provider == "openrouter":
                 # Use OpenRouter with Claude via OpenAI-compatible API
                 response = await self.openrouter_client.chat.completions.create(
-                    model="anthropic/claude-3.5-haiku",
+                    model="anthropic/claude-sonnet-4.5",
                     max_tokens=2048,
                     temperature=0.3,
                     messages=[{"role": "user", "content": prompt}],
