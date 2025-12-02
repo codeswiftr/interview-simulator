@@ -360,7 +360,44 @@ SEED_QUESTIONS = [
         topic_tags=["graphs", "algorithms", "shortest_path", "heap"],
     ),
 
-    # ========== SYSTEM DESIGN QUESTIONS (20 total) ==========
+    # ========== SYSTEM DESIGN QUESTIONS (25 total: 5 easy, 8 medium, 12 hard) ==========
+    # EASY system design questions
+    Question(
+        content="Design a simple key-value store for a single machine.",
+        category=QuestionCategory.SYSTEM_DESIGN,
+        difficulty=Difficulty.EASY,
+        company_tags=["startup", "enterprise", "Google"],
+        topic_tags=["system_design", "data_structures", "storage"],
+    ),
+    Question(
+        content="Design a basic user authentication system.",
+        category=QuestionCategory.SYSTEM_DESIGN,
+        difficulty=Difficulty.EASY,
+        company_tags=["startup", "Amazon", "Microsoft"],
+        topic_tags=["system_design", "security", "authentication"],
+    ),
+    Question(
+        content="Design a simple task queue system.",
+        category=QuestionCategory.SYSTEM_DESIGN,
+        difficulty=Difficulty.EASY,
+        company_tags=["startup", "enterprise", "Uber"],
+        topic_tags=["system_design", "queues", "async_processing"],
+    ),
+    Question(
+        content="Design a basic caching layer for a web application.",
+        category=QuestionCategory.SYSTEM_DESIGN,
+        difficulty=Difficulty.EASY,
+        company_tags=["startup", "Google", "Meta"],
+        topic_tags=["system_design", "caching", "performance"],
+    ),
+    Question(
+        content="Design a simple blog platform with posts and comments.",
+        category=QuestionCategory.SYSTEM_DESIGN,
+        difficulty=Difficulty.EASY,
+        company_tags=["startup", "Medium", "WordPress"],
+        topic_tags=["system_design", "databases", "crud"],
+    ),
+    # MEDIUM system design questions
     Question(
         content="Design a URL shortener service.",
         category=QuestionCategory.SYSTEM_DESIGN,
