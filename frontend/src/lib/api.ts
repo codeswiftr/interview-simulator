@@ -199,6 +199,17 @@ export const userAPI = {
   getStats: () => api.get('/users/me/stats'),
 
   getProgress: () => api.get('/users/me/progress'),
+
+  updateProfile: (data: { full_name?: string; email?: string }) =>
+    api.patch('/users/me', data),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/users/me/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+
+  deleteAccount: () => api.delete('/users/me'),
 };
 
 export default api;

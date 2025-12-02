@@ -93,3 +93,17 @@ class Token(SQLModel):
 
     access_token: str
     token_type: str = "bearer"
+
+
+class UserUpdate(SQLModel):
+    """Schema for updating user profile."""
+
+    full_name: str | None = None
+    email: str | None = None
+
+
+class PasswordChange(SQLModel):
+    """Schema for changing password."""
+
+    current_password: str
+    new_password: str

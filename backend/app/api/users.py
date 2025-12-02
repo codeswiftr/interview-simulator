@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.dependencies import get_current_user
 from app.db import get_session
-from app.models.user import Token, User, UserCreate, UserLogin, UserRead
+from app.models.user import PasswordChange, Token, User, UserCreate, UserLogin, UserRead, UserUpdate
 from app.security import create_access_token, hash_password, verify_password
 from app.services.feedback_service import FeedbackService
 
@@ -47,6 +47,86 @@ async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)
 async def get_me(current_user: User = Depends(get_current_user)) -> User:
     """Get current authenticated user."""
     return current_user
+
+
+@router.patch("/me", response_model=UserRead)
+async def update_profile(
+    updates: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Update user profile (name, email).
+
+    Email changes require the new email to be unique.
+    """
+    # Update full_name if provided
+    if updates.full_name is not None:
+        current_user.full_name = updates.full_name
+
+    # Update email if provided and different
+    if updates.email is not None and updates.email.lower() != current_user.email:
+        # Check if email is already taken
+        existing = await session.exec(
+            select(User).where(User.email == updates.email.lower())
+        )
+        if existing.first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        current_user.email = updates.email.lower()
+
+    await session.commit()
+    await session.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/change-password")
+async def change_password(
+    payload: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Change user password.
+
+    Requires current password for verification.
+    """
+    # Verify current password
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Hash and set new password
+    current_user.hashed_password = hash_password(payload.new_password)
+    await session.commit()
+
+    return {"message": "Password updated successfully"}
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete user account (soft delete).
+
+    Sets is_active to False and anonymizes personal data.
+    """
+    import uuid
+
+    # Anonymize user data
+    current_user.email = f"deleted_{uuid.uuid4().hex[:8]}@deleted.user"
+    current_user.full_name = "Deleted User"
+    current_user.is_active = False
+
+    # Clear Stripe info if any
+    current_user.stripe_customer_id = None
+    current_user.stripe_subscription_id = None
+    current_user.subscription_status = None
+
+    await session.commit()
 
 
 @router.get("/me/stats")
