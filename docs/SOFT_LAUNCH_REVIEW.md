@@ -1,8 +1,8 @@
 # Soft Launch Readiness Review
 
-**Date**: 2025-12-02
-**Reviewer**: Claude Code
-**Version**: Sprint 6 Complete
+**Date**: 2025-12-02 (Updated)
+**Reviewer**: Claude Code (Opus 4.5)
+**Version**: Sprint 6 Complete + Deep Code Review
 
 ---
 
@@ -239,25 +239,42 @@ All major API endpoints are integrated:
 
 **None identified** - Core flows work end-to-end
 
+### CRITICAL - Must Monitor
+
+| Issue | Location | Impact | Notes |
+|-------|----------|--------|-------|
+| Memory leak in audio cleanup | `useAudioRecording.ts:259-272` | Memory accumulation | Object URLs not revoked on unmount during recording |
+| No mobile navigation (hamburger menu) | `Header.tsx:27-84` | Mobile unusable | Nav items overflow on small screens |
+
 ### P1 - Important (Fix within 2 weeks)
 
 | Issue | Location | Impact | Effort |
 |-------|----------|--------|--------|
-| No refresh token mechanism | useAuth.tsx | Users logged out after 30 min | Medium |
-| Email change without verification | SettingsPage.tsx:82-95 | Security risk | Medium |
-| No beforeunload warning | InterviewPage.tsx | Lost progress on accidental close | Low |
-| Microphone permission guidance | useAudioRecording.ts:51-52 | Users stuck if denied | Low |
+| No refresh token mechanism | `api.ts:56-65`, `useAuth.tsx:46-61` | Users logged out unexpectedly | Medium |
+| Refresh token stored but never used | `api.ts:60` removes token that's never set | Token cleanup incomplete | Low |
+| Email change without verification | `SettingsPage.tsx:82-95` | Security risk | Medium |
+| No beforeunload warning | `InterviewPage.tsx` | Lost progress on accidental close | Low |
+| Microphone permission guidance | `useAudioRecording.ts:51-52` | Users stuck if denied | Low |
+| ProtectedRoute doesn't preserve destination | `ProtectedRoute.tsx:22-24` | Poor UX on deep links | Low |
+| No MediaRecorder support check | `useAudioRecording.ts:47-100` | Cryptic error on unsupported browsers | Low |
+| Race condition in registration flow | `useAuth.tsx:63-81` | Confusing state if auto-login fails | Low |
 
 ### P2 - Nice to Have (Fix within month)
 
 | Issue | Location | Impact | Effort |
 |-------|----------|--------|--------|
-| Weak password validation | RegisterPage.tsx:26-29 | Security | Low |
-| Missing email format validation | LoginPage.tsx:49-58 | UX | Low |
-| Audio pause time bug | useAudioRecording.ts:131-136 | Duration accuracy | Low |
-| Feedback index matching | FeedbackPage.tsx:364-366 | Data integrity | Low |
-| Profile form validation | SettingsPage.tsx:201-241 | Data quality | Low |
-| Password strength indicator | RegisterPage, SettingsPage | UX | Low |
+| Weak password validation | `RegisterPage.tsx:26-29` | Security | Low |
+| Missing email format validation | `LoginPage.tsx:44-58` | UX | Low |
+| No maximum recording duration | `useAudioRecording.ts` | Large file uploads | Low |
+| Timer drift potential | `Timer.tsx:28-40` | Accuracy over long sessions | Low |
+| Feedback index matching (fragile) | `FeedbackPage.tsx:365-366` | Data integrity | Low |
+| Profile form validation | `SettingsPage.tsx:201-241` | Data quality | Low |
+| Password strength indicator | `RegisterPage.tsx`, `SettingsPage.tsx` | UX | Low |
+| `any` type usage in catch blocks | Multiple files | Type safety | Low |
+| Duplicate email not specifically handled | `RegisterPage.tsx:35-37` | UX | Low |
+| Polling continues when tab hidden | `ProcessingStatus.tsx:38-86` | Battery/bandwidth | Low |
+| Questions filter state lost on navigation | `QuestionsPage.tsx:21-26` | UX | Low |
+| Error recovery uses window.location.reload | `QuestionsPage.tsx:164` | Disruptive UX | Low |
 
 ### P3 - Minor Improvements
 
@@ -267,6 +284,19 @@ All major API endpoints are integrated:
 | Share results disabled | FeedbackPage.tsx | Feature incomplete |
 | Skip question no confirmation | InterviewPage.tsx | UX |
 | Console.log in production | Multiple files | Performance |
+
+---
+
+## Security Considerations
+
+| Concern | Status | Notes |
+|---------|--------|-------|
+| JWT in localStorage | ACCEPTABLE for soft launch | XSS risk exists; consider httpOnly cookies long-term |
+| Token refresh | NOT IMPLEMENTED | Users will be logged out when tokens expire |
+| Email enumeration | PROTECTED | Forgot password shows success even for non-existent emails |
+| Password requirements | WEAK | Only 8 char minimum; no complexity requirements |
+| Account deletion | PROTECTED | Requires typing "DELETE" confirmation |
+| CSRF protection | N/A | Token-based auth doesn't need CSRF |
 
 ---
 
@@ -317,24 +347,34 @@ All major API endpoints are integrated:
 ### Current State
 
 - Backend: 95 tests passing, ~67% coverage
-- Frontend: 6 tests (1 component test)
+- **Frontend: 0 tests** (No test files found in src/)
 
-### Recommended Tests
+> **Critical Gap**: Frontend has no automated tests. Test infrastructure (Vitest + RTL + MSW) is configured but no tests exist.
 
-1. **Unit Tests**:
-   - Email/password validation functions
-   - Audio recording state machine
-   - Theme context behavior
+### Priority Test Coverage (Post-Launch Sprint)
 
-2. **Integration Tests**:
-   - Auth flow (register -> login -> dashboard)
-   - Interview flow (create -> record -> submit)
-   - Settings updates
+1. **Unit Tests** (Priority: HIGH):
+   - `useAudioRecording.ts` - State machine edge cases, cleanup
+   - `useAuth.tsx` - Login/logout/token management
+   - Form validation utilities
+   - API response handlers
 
-3. **E2E Tests**:
-   - Complete interview journey
+2. **Integration Tests** (Priority: HIGH):
+   - Auth flow: register -> login -> dashboard -> logout
+   - Interview flow: create -> record -> submit -> feedback
+   - Settings: profile update, password change
+
+3. **E2E Tests** (Priority: MEDIUM):
+   - Complete interview journey with audio
    - Password reset flow
+   - New user onboarding
    - Subscription upgrade flow
+
+4. **Critical Edge Cases**:
+   - Network failure during upload (retry logic)
+   - Browser back button during interview
+   - Multiple rapid recordings
+   - Token expiration during long session
 
 ---
 
@@ -366,7 +406,27 @@ All major API endpoints are integrated:
 
 The Interview Simulator frontend is **production-ready for soft launch**. Core user journeys work correctly, error handling is robust, and the design system is consistent. The identified issues are manageable and none block the initial release.
 
-**GO for soft launch** with:
-- Close monitoring of auth/token issues
-- Plan to address P1 issues within 2 weeks
-- Feedback mechanism for early users
+### Verdict: **GO for Soft Launch**
+
+**Conditions:**
+1. **Monitor auth closely** - Token expiry will log users out (no refresh mechanism)
+2. **Desktop-first launch** - Mobile navigation needs hamburger menu
+3. **Limit initial users** - No frontend tests = manual QA burden
+4. **Feedback channel required** - Users need easy way to report issues
+
+**Week 1 Post-Launch Priorities:**
+1. Add mobile navigation (hamburger menu)
+2. Fix memory leak in audio recording cleanup
+3. Add beforeunload warning on interview page
+4. Implement protected route redirect preservation
+
+**Month 1 Priorities:**
+1. Implement refresh token mechanism
+2. Add frontend test coverage (target 60%)
+3. Full mobile responsive polish
+4. Add email verification for profile email changes
+
+---
+
+*Review completed: 2025-12-02*
+*Next review recommended: 1 week post-launch*
