@@ -2,27 +2,36 @@
 
 import logging
 import sys
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-from uuid import uuid4
-
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api import auth, feedback, health, interviews, questions, subscriptions, transcription, upload, users
+from app.api import (
+    auth,
+    feedback,
+    health,
+    interviews,
+    questions,
+    subscriptions,
+    transcription,
+    upload,
+    users,
+)
 from app.config import settings
 from app.data.seed_questions import seed_questions
-from app.db import SessionLocal
+from app.db import SessionLocal, check_db_connection, close_db_connections
 from app.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware
 
 
 def configure_logging() -> None:
     """Configure structured logging for the application.
-    
+
     Sets up JSON-formatted logging in production, simple format in development.
     """
     log_level = logging.DEBUG if settings.debug else logging.INFO
@@ -31,13 +40,13 @@ def configure_logging() -> None:
         if settings.debug
         else "%(asctime)s [%(levelname)s] %(name)s [%(correlation_id)s]: %(message)s"
     )
-    
+
     logging.basicConfig(
         level=log_level,
         format=log_format,
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    
+
     # Set specific loggers
     logging.getLogger("uvicorn").setLevel(log_level)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING if not settings.debug else logging.INFO)
@@ -45,22 +54,21 @@ def configure_logging() -> None:
 
 class CorrelationIDMiddleware(BaseHTTPMiddleware):
     """Middleware to add correlation ID to requests for log tracing."""
-    
+
     async def dispatch(self, request: Request, call_next):
         correlation_id = request.headers.get("X-Correlation-ID", str(uuid4()))
         request.state.correlation_id = correlation_id
-        
+
         # Add to logging context
-        logger = logging.getLogger(__name__)
         old_factory = logging.getLogRecordFactory()
-        
+
         def record_factory(*args, **kwargs):
             record = old_factory(*args, **kwargs)
             record.correlation_id = correlation_id
             return record
-        
+
         logging.setLogRecordFactory(record_factory)
-        
+
         try:
             response = await call_next(request)
             response.headers["X-Correlation-ID"] = correlation_id
@@ -71,7 +79,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
 
 def init_error_monitoring() -> None:
     """Initialize error monitoring (Sentry) if configured.
-    
+
     Only initializes if SENTRY_DSN is set in environment.
     """
     sentry_dsn = getattr(settings, "sentry_dsn", None)
@@ -80,7 +88,7 @@ def init_error_monitoring() -> None:
             import sentry_sdk
             from sentry_sdk.integrations.fastapi import FastApiIntegration
             from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-            
+
             sentry_sdk.init(
                 dsn=sentry_dsn,
                 integrations=[
@@ -101,7 +109,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Configure logging first
     configure_logging()
     logger = logging.getLogger(__name__)
-    
+
     # Validate environment for production
     try:
         settings.validate_for_production()
@@ -109,15 +117,44 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Environment validation failed: {e}")
         if not settings.debug:
             raise  # Fail fast in production
-    
+
     # Initialize error monitoring
     init_error_monitoring()
-    
+
     # Startup
     logger.info(f"Starting Interview Simulator v{app.version}")
-    # TODO: Initialize database connections
-    # TODO: Initialize Redis connection
-    # TODO: Warm up AI models
+
+    # Verify database connection
+    db_ok = await check_db_connection()
+    if db_ok:
+        logger.info("Database connection verified")
+    else:
+        logger.error("Database connection failed!")
+        if not settings.debug:
+            raise RuntimeError("Cannot start: database unreachable")
+
+    # Verify Redis connection (optional)
+    try:
+        import redis.asyncio as redis
+        redis_client = redis.from_url(settings.redis_url, socket_timeout=5.0)
+        await redis_client.ping()
+        await redis_client.aclose()
+        logger.info("Redis connection verified")
+    except ImportError:
+        logger.warning("Redis package not installed, skipping")
+    except Exception as e:
+        logger.warning(f"Redis connection failed (non-critical): {e}")
+
+    # Check AI services configuration
+    if settings.openai_api_key:
+        logger.info("OpenAI API key configured")
+    else:
+        logger.warning("OpenAI API key not configured - transcription will fail")
+    if settings.anthropic_api_key:
+        logger.info("Anthropic API key configured")
+    else:
+        logger.warning("Anthropic API key not configured - feedback generation will fail")
+
     # Seed data in debug/local environments
     if settings.debug:
         async with SessionLocal() as session:
@@ -127,8 +164,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("Shutting down Interview Simulator")
-    # TODO: Close database connections
-    # TODO: Close Redis connection
+    await close_db_connections()
+    logger.info("Database connections closed")
 
 
 app = FastAPI(

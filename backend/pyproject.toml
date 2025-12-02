@@ -67,3 +67,8 @@ ignore = ["E501"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.6",
+]

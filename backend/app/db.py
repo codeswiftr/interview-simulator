@@ -28,3 +28,23 @@ async def init_db() -> None:
     """Create tables based on SQLModel metadata (used mainly for local/dev)."""
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+
+async def check_db_connection() -> bool:
+    """Check database connectivity by executing a simple query.
+
+    Returns:
+        True if database is reachable, False otherwise.
+    """
+    try:
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+
+
+async def close_db_connections() -> None:
+    """Close all database connections gracefully."""
+    await engine.dispose()
