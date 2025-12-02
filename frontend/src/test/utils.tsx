@@ -1,18 +1,16 @@
-import { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { render, type RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '@/hooks/useAuth';
 
 interface AllProvidersProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
+// Simple wrapper without AuthProvider to avoid navigation issues in tests
 function AllProviders({ children }: AllProvidersProps) {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
+      {children}
     </BrowserRouter>
   );
 }
