@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { getSupportedMimeType } from '../lib/audio-utils';
 
 export type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped';
 
@@ -25,6 +26,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const mimeTypeRef = useRef<string>('audio/webm');
   const startTimeRef = useRef<number>(0);
   const pausedTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -37,8 +39,12 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+      // Get supported MIME type for cross-browser compatibility (Safari needs MP4/WAV)
+      const mimeType = getSupportedMimeType();
+      mimeTypeRef.current = mimeType;
+
       // Create MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -51,7 +57,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
 
       // Handle recording stop
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
 
