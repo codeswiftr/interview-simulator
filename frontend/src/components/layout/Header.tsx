@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { User, LogOut } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { ThemeToggle } from '../ThemeToggle';
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -45,6 +46,9 @@ export default function Header() {
                   Settings
                 </Link>
 
+                {/* Theme Toggle */}
+                <ThemeToggle />
+
                 {/* User Menu */}
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-secondary">
@@ -63,6 +67,9 @@ export default function Header() {
               </>
             ) : (
               <>
+                {/* Theme Toggle for non-authenticated users */}
+                <ThemeToggle />
+
                 <Link
                   to="/login"
                   className="px-4 py-2 rounded-lg text-text-secondary hover:text-text-primary transition-colors"

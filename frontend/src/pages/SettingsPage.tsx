@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette } from 'lucide-react';
 import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../contexts/ThemeContext';
 import SubscriptionCard from '../components/subscription/SubscriptionCard';
 import BillingInfo from '../components/subscription/BillingInfo';
 import UpgradeModal from '../components/subscription/UpgradeModal';
@@ -13,6 +14,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user, refreshUser } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -237,6 +239,72 @@ export default function SettingsPage() {
                 )}
               </button>
             </form>
+          </div>
+
+          {/* Theme Section */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Palette className="w-5 h-5 text-electric-blue" />
+              <h2 className="heading-section">Appearance</h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="label mb-3 block">Theme</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      theme === 'light'
+                        ? 'border-electric-blue bg-electric-blue/10'
+                        : 'border-border-light hover:border-electric-blue/50'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-lg bg-white border border-border-light flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400"></div>
+                      </div>
+                      <span className="font-medium">Light</span>
+                      <span className="text-xs text-text-tertiary">Bright and clear</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      theme === 'dark'
+                        ? 'border-electric-blue bg-electric-blue/10'
+                        : 'border-border-light hover:border-electric-blue/50'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500"></div>
+                      </div>
+                      <span className="font-medium">Dark</span>
+                      <span className="text-xs text-text-tertiary">Easy on the eyes</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setTheme('system')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      theme === 'system'
+                        ? 'border-electric-blue bg-electric-blue/10'
+                        : 'border-border-light hover:border-electric-blue/50'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-gray-800 border border-border-light flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-electric-blue to-sky-500"></div>
+                      </div>
+                      <span className="font-medium">System</span>
+                      <span className="text-xs text-text-tertiary">Auto-adjust</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Password Section */}

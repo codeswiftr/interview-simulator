@@ -6,23 +6,33 @@
   --color-electric-blue: #38BDF8;
   --color-clean-white: #F8FAFC;
 
-  /* Surface Colors */
+  /* Surface Colors - Light Mode */
   --color-surface-primary: #F8FAFC;
   --color-surface-secondary: #F1F5F9;
   --color-surface-tertiary: #E2E8F0;
   --color-surface-dark: #111827;
   --color-surface-dark-alt: #1F2937;
 
-  /* Text Colors */
+  /* Text Colors - Light Mode */
   --color-text-primary: #111827;
   --color-text-secondary: #475569;
   --color-text-tertiary: #94A3B8;
   --color-text-inverse: #F8FAFC;
 
-  /* Border Colors */
+  /* Border Colors - Light Mode */
   --color-border-light: #E2E8F0;
   --color-border-medium: #CBD5E1;
   --color-border-focus: #38BDF8;
+
+  /* Dark Mode Colors */
+  --color-dark-surface-primary: #0F172A;
+  --color-dark-surface-secondary: #1E293B;
+  --color-dark-surface-tertiary: #334155;
+  --color-dark-text-primary: #F8FAFC;
+  --color-dark-text-secondary: #CBD5E1;
+  --color-dark-text-tertiary: #94A3B8;
+  --color-dark-border-light: #334155;
+  --color-dark-border-medium: #475569;
 
   /* Score Colors */
   --color-score-excellent: #10B981;
@@ -89,6 +99,16 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+
+  /* Dark Mode Overrides */
+  .dark body {
+    background-color: var(--color-dark-surface-primary);
+    color: var(--color-dark-text-primary);
+  }
+
+  .dark * {
+    border-color: var(--color-dark-border-light);
   }
 }
 
@@ -252,6 +272,11 @@
     transition: box-shadow 0.2s;
   }
 
+  .dark .card {
+    background-color: var(--color-dark-surface-secondary);
+    border-color: var(--color-dark-border-light);
+  }
+
   .card:hover {
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   }
@@ -263,6 +288,11 @@
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     cursor: pointer;
     transition: all 0.2s;
+  }
+
+  .dark .card-interactive {
+    background-color: var(--color-dark-surface-secondary);
+    border-color: var(--color-dark-border-light);
   }
 
   .card-interactive:hover {
@@ -280,6 +310,11 @@
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   }
 
+  .dark .card-glass {
+    background-color: rgb(30 41 59 / 0.7);
+    border: 1px solid rgb(255 255 255 / 0.1);
+  }
+
   /* Input Styles */
   .input {
     width: 100%;
@@ -291,8 +326,18 @@
     transition: all 0.2s;
   }
 
+  .dark .input {
+    background-color: var(--color-dark-surface-secondary);
+    border-color: var(--color-dark-border-light);
+    color: var(--color-dark-text-primary);
+  }
+
   .input::placeholder {
     color: var(--color-text-tertiary);
+  }
+
+  .dark .input::placeholder {
+    color: var(--color-dark-text-tertiary);
   }
 
   .input:focus {
@@ -392,10 +437,29 @@
     border: 1px solid rgba(255, 255, 255, 0.5);
   }
 
+  .dark .glass {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
   .glass-dark {
     background: rgba(17, 24, 39, 0.8);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Dark Mode Button Overrides */
+@layer utilities {
+  .dark .btn-secondary {
+    background-color: var(--color-dark-surface-tertiary);
+    color: var(--color-dark-text-primary);
+    border-color: var(--color-dark-border-light);
+  }
+
+  .dark .btn-secondary:hover {
+    background-color: var(--color-dark-surface-dark);
+    border-color: var(--color-dark-border-medium);
   }
 }
