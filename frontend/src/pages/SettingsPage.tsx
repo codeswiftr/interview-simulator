@@ -55,23 +55,24 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  // Handle Stripe redirect query params
+  // Handle Stripe redirect query params (run only once on mount)
   useEffect(() => {
     const success = searchParams.get('success');
     const canceled = searchParams.get('canceled');
 
     if (success === 'true') {
       toast.success('Subscription successful!', 'Welcome to Pro! Your account has been upgraded.');
-      // Reload subscription to get updated status
-      loadSubscription();
-      // Clear the query params
-      setSearchParams({});
+      // Clear the query params immediately to prevent re-runs
+      searchParams.delete('success');
+      navigate('/settings', { replace: true });
     } else if (canceled === 'true') {
       toast.info('Checkout canceled', 'Your subscription upgrade was canceled. No charges were made.');
-      // Clear the query params
-      setSearchParams({});
+      // Clear the query params immediately to prevent re-runs
+      searchParams.delete('canceled');
+      navigate('/settings', { replace: true });
     }
-  }, [searchParams, setSearchParams, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadSubscription = async () => {
     try {
