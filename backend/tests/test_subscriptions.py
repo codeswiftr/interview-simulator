@@ -174,12 +174,17 @@ async def test_webhook_checkout_completed_upgrades_user(client, session_override
         # Mock webhook event construction
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
-        mock_subscription = MagicMock()
-        mock_subscription.status = "active"
-        mock_subscription.current_period_end = 1735689600  # Future timestamp
-        mock_subscription.items.data = [
-            MagicMock(price=MagicMock(id="price_pro_monthly"))
-        ]
+        # Mock subscription with dict-like structure (new Stripe API)
+        mock_subscription = {
+            "id": "sub_test123",
+            "status": "active",
+            "items": {
+                "data": [{
+                    "price": {"id": "price_pro_monthly"},
+                    "current_period_end": 1735689600,  # Future timestamp
+                }]
+            },
+        }
         mock_stripe.Subscription.retrieve.return_value = mock_subscription
 
         response = await client.post(

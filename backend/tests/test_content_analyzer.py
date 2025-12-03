@@ -9,6 +9,15 @@ from app.ai.content_analyzer import ContentAnalyzer, ContentMetrics
 
 
 @pytest.fixture
+def mock_settings():
+    """Mock settings to use anthropic provider."""
+    with patch("app.ai.content_analyzer.settings") as mock:
+        mock.content_analysis_provider = "anthropic"
+        mock.anthropic_api_key = "test_key"
+        yield mock
+
+
+@pytest.fixture
 def mock_anthropic_response():
     """Create a mock Anthropic API response."""
 
@@ -50,13 +59,13 @@ def mock_anthropic_response():
 
 
 @pytest.mark.asyncio
-async def test_analyze_behavioral_question(mock_anthropic_response):
+async def test_analyze_behavioral_question(mock_settings, mock_anthropic_response):
     """Test analyzing a behavioral question with STAR method."""
     analyzer = ContentAnalyzer()
 
     mock_response = mock_anthropic_response(star_adherence=85.0)
 
-    with patch.object(analyzer.client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Tell me about a time you faced a challenging project deadline.",
             transcript="In my previous role, we had a critical feature release scheduled. "
@@ -76,7 +85,7 @@ async def test_analyze_behavioral_question(mock_anthropic_response):
 
 
 @pytest.mark.asyncio
-async def test_analyze_technical_question(mock_anthropic_response):
+async def test_analyze_technical_question(mock_settings, mock_anthropic_response):
     """Test analyzing a technical question."""
     analyzer = ContentAnalyzer()
 
@@ -85,7 +94,7 @@ async def test_analyze_technical_question(mock_anthropic_response):
         star_adherence=0.0,  # Not applicable for technical questions
     )
 
-    with patch.object(analyzer.client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Explain the difference between SQL and NoSQL databases.",
             transcript="SQL databases are relational with structured schemas, while NoSQL "
@@ -102,7 +111,7 @@ async def test_analyze_technical_question(mock_anthropic_response):
 
 
 @pytest.mark.asyncio
-async def test_analyze_system_design_question(mock_anthropic_response):
+async def test_analyze_system_design_question(mock_settings, mock_anthropic_response):
     """Test analyzing a system design question."""
     analyzer = ContentAnalyzer()
 
@@ -112,7 +121,7 @@ async def test_analyze_system_design_question(mock_anthropic_response):
         star_adherence=0.0,
     )
 
-    with patch.object(analyzer.client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Design a URL shortening service like bit.ly.",
             transcript="I would use a hash function to generate short codes, store mappings in "
@@ -128,7 +137,7 @@ async def test_analyze_system_design_question(mock_anthropic_response):
 
 
 @pytest.mark.asyncio
-async def test_analyze_handles_json_in_markdown():
+async def test_analyze_handles_json_in_markdown(mock_settings):
     """Test that analyzer correctly extracts JSON from markdown code blocks."""
     analyzer = ContentAnalyzer()
 
@@ -149,7 +158,7 @@ async def test_analyze_handles_json_in_markdown():
     mock_content.text = f"```json\n{json.dumps(response_data)}\n```"
     mock_response.content = [mock_content]
 
-    with patch.object(analyzer.client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Test question",
             transcript="Test answer",
@@ -161,12 +170,12 @@ async def test_analyze_handles_json_in_markdown():
 
 
 @pytest.mark.asyncio
-async def test_analyze_handles_api_errors():
+async def test_analyze_handles_api_errors(mock_settings):
     """Test that analyzer gracefully handles API errors."""
     analyzer = ContentAnalyzer()
 
     with patch.object(
-        analyzer.client.messages,
+        analyzer.anthropic_client.messages,
         "create",
         side_effect=Exception("API connection failed"),
     ):
@@ -188,7 +197,7 @@ async def test_analyze_handles_api_errors():
 
 
 @pytest.mark.asyncio
-async def test_analyze_handles_malformed_json():
+async def test_analyze_handles_malformed_json(mock_settings):
     """Test that analyzer handles malformed JSON responses gracefully."""
     analyzer = ContentAnalyzer()
 
@@ -197,7 +206,7 @@ async def test_analyze_handles_malformed_json():
     mock_content.text = "This is not valid JSON at all"
     mock_response.content = [mock_content]
 
-    with patch.object(analyzer.client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Test question",
             transcript="Test answer",
@@ -276,7 +285,7 @@ def test_calculate_overall_score_system_design():
 
 
 @pytest.mark.asyncio
-async def test_prompt_includes_star_instruction_for_behavioral():
+async def test_prompt_includes_star_instruction_for_behavioral(mock_settings):
     """Test that STAR instruction is included for behavioral questions."""
     analyzer = ContentAnalyzer()
 
@@ -298,7 +307,7 @@ async def test_prompt_includes_star_instruction_for_behavioral():
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
         await analyzer.analyze(
             question="Tell me about a challenge",
             transcript="I faced a challenge...",
@@ -316,7 +325,7 @@ async def test_prompt_includes_star_instruction_for_behavioral():
 
 
 @pytest.mark.asyncio
-async def test_prompt_excludes_star_instruction_for_technical():
+async def test_prompt_excludes_star_instruction_for_technical(mock_settings):
     """Test that STAR instruction is excluded for technical questions."""
     analyzer = ContentAnalyzer()
 
@@ -338,7 +347,7 @@ async def test_prompt_excludes_star_instruction_for_technical():
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
         await analyzer.analyze(
             question="What is polymorphism?",
             transcript="Polymorphism is...",
