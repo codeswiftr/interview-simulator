@@ -278,15 +278,26 @@ def _get_tier_from_price(price_id: str) -> SubscriptionTier:
 @router.get("/status", response_model=SubscriptionStatus)
 async def get_subscription_status(
     current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ) -> SubscriptionStatus:
     """Get current subscription status and usage limits.
 
+    Syncs subscription data from Stripe if the user has a customer ID.
+
     Args:
         current_user: Authenticated user
+        session: Database session
 
     Returns:
         SubscriptionStatus with tier, limits, and usage
     """
+    # Sync subscription status from Stripe if customer exists
+    if current_user.stripe_customer_id and settings.stripe_secret_key:
+        try:
+            await _sync_subscription_from_stripe(current_user, session)
+        except Exception as e:
+            logger.warning(f"Failed to sync subscription from Stripe: {e}")
+
     # Determine interview limit based on tier
     interviews_limit = None
     if current_user.subscription_tier == SubscriptionTier.FREE:
@@ -305,6 +316,47 @@ async def get_subscription_status(
         interviews_limit=interviews_limit,
         can_create_interview=can_create_interview,
     )
+
+
+async def _sync_subscription_from_stripe(user: User, session: AsyncSession) -> None:
+    """Sync subscription status from Stripe API.
+
+    Fetches the latest subscription data from Stripe and updates the user record.
+    This provides a fallback when webhooks aren't configured or fail.
+    """
+    if not user.stripe_customer_id:
+        return
+
+    # Get subscriptions for this customer
+    subscriptions = stripe.Subscription.list(
+        customer=user.stripe_customer_id,
+        status="all",
+        limit=1,
+    )
+
+    if subscriptions.data:
+        sub = subscriptions.data[0]
+        tier = _get_tier_from_price(sub["items"]["data"][0]["price"]["id"])
+
+        # Update user subscription data
+        user.stripe_subscription_id = sub["id"]
+        user.subscription_tier = tier
+        user.subscription_status = sub["status"]
+        user.subscription_expires_at = datetime.fromtimestamp(
+            sub["current_period_end"], tz=timezone.utc
+        )
+
+        await session.commit()
+        logger.info(f"Synced subscription for user {user.id}: {tier.value} ({sub['status']})")
+    else:
+        # No active subscription found - downgrade to free if currently has subscription
+        if user.subscription_tier != SubscriptionTier.FREE:
+            user.subscription_tier = SubscriptionTier.FREE
+            user.subscription_status = "canceled"
+            user.stripe_subscription_id = None
+            user.subscription_expires_at = None
+            await session.commit()
+            logger.info(f"No subscription found for user {user.id}, downgraded to free")
 
 
 class PricingConfig(BaseModel):
