@@ -39,8 +39,8 @@ Current feedback is one-size-fits-all. A junior engineer gets the same advice as
 ### Success Criteria
 - [x] Users can set their experience level (junior/mid/senior) ✅ Done
 - [x] Feedback adjusts expectations based on level ✅ Done (Phase 3)
-- [ ] Dashboard shows score trend over last 10 sessions (Phase 4)
-- [ ] FeedbackPage shows improvement % vs average (Phase 4)
+- [x] Dashboard shows score trend over last 10 sessions ✅ Already existed
+- [x] FeedbackPage shows improvement % vs average ✅ Done (Phase 4)
 
 ---
 
@@ -87,18 +87,26 @@ Current feedback is one-size-fits-all. A junior engineer gets the same advice as
 - Added 4 new tests (103 total passing)
 - Added "Feedback tailored for {level}" indicator to FeedbackPage
 
-### Phase 4: Progress Tracking
+### Phase 4: Progress Tracking ✅ COMPLETE
 | Task | Description | Est | Status |
 |------|-------------|-----|--------|
-| 4.1 | Add score history endpoint (last 10 sessions) | 1h | Pending |
-| 4.2 | Calculate improvement % vs user's average | 30m | Pending |
-| 4.3 | Add score trend chart to DashboardPage | 2h | Pending |
-| 4.4 | Show improvement % on FeedbackPage | 1h | Pending |
+| 4.1 | ~~Add score history endpoint (last 10 sessions)~~ | - | ✅ Already exists (`/users/me/progress`) |
+| 4.2 | ~~Add score trend chart to DashboardPage~~ | - | ✅ Already exists (ProgressChart component) |
+| 4.3 | Add session comparison endpoint | 30m | ✅ Done |
+| 4.4 | Show improvement % on FeedbackPage | 1h | ✅ Done |
 
-**Files to modify:**
-- `backend/app/api/users.py` - New endpoint
-- `frontend/src/pages/DashboardPage.tsx` - Trend chart
-- `frontend/src/pages/FeedbackPage.tsx` - Improvement indicator
+**Discovery Notes:**
+The exploration revealed existing infrastructure:
+- `GET /users/me/stats` - Returns total_sessions, completed_sessions, average_score, total_practice_time_seconds
+- `GET /users/me/progress` - Returns score_trend (last 20 sessions with scores and dates)
+- `ProgressChart` component - SVG-based line chart with trend direction indicator
+- `StatsOverview` component - Displays overall stats on Dashboard
+
+**Implementation Summary:**
+- Added `GET /feedback/session/{id}/comparison` endpoint to return session score vs user average
+- Added ImprovementBanner to FeedbackPage showing "+X% vs your average" with trend icons
+- Frontend API updated with `feedbackAPI.getComparison()` method
+- All 103 tests passing
 
 ---
 

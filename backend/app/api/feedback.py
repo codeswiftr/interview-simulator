@@ -295,3 +295,68 @@ async def get_session_processing_status(
     summary = await feedback_service.get_processing_summary(session, session_id)
 
     return summary
+
+
+@router.get("/session/{session_id}/comparison")
+async def get_session_comparison(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get session score comparison vs user's average.
+
+    Returns the session score, user's overall average score, and improvement percentage.
+
+    Args:
+        session_id: UUID of the interview session
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        Dictionary with session_score, average_score, and improvement_percent
+
+    Raises:
+        HTTPException: If session not found, unauthorized, or no feedback available
+    """
+    from app.models.interview import InterviewSession, InterviewStatus
+
+    # Verify ownership
+    await _verify_session_ownership(session, session_id, current_user.id)
+
+    # Get session feedback
+    feedback_service = FeedbackService()
+    session_feedback = await feedback_service.get_session_feedback(session, session_id)
+
+    if not session_feedback:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Feedback not yet generated for this session.",
+        )
+
+    # Get user's average score from all completed sessions (excluding current)
+    sessions_result = await session.exec(
+        select(InterviewSession).where(
+            InterviewSession.user_id == current_user.id,
+            InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED]),
+            InterviewSession.id != session_id,  # Exclude current session
+        )
+    )
+    other_sessions = list(sessions_result.all())
+
+    # Calculate average from other sessions
+    other_scores = [s.overall_score for s in other_sessions if s.overall_score is not None]
+    average_score = sum(other_scores) / len(other_scores) if other_scores else None
+
+    # Calculate improvement percentage
+    improvement_percent = None
+    if average_score is not None and average_score > 0:
+        improvement_percent = round(
+            ((session_feedback.overall_score - average_score) / average_score) * 100, 1
+        )
+
+    return {
+        "session_score": round(session_feedback.overall_score, 1),
+        "average_score": round(average_score, 1) if average_score else None,
+        "improvement_percent": improvement_percent,
+        "sessions_compared": len(other_scores),
+    }

@@ -11,6 +11,9 @@ import {
   Clock,
   Loader2,
   Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import ScoreRing from '../components/feedback/ScoreRing';
@@ -26,6 +29,13 @@ interface FeedbackState {
   sessionFeedback: SessionFeedback | null;
   responses: InterviewResponse[];
   contentFeedbacks: ContentFeedback[];
+}
+
+interface ComparisonData {
+  session_score: number;
+  average_score: number | null;
+  improvement_percent: number | null;
+  sessions_compared: number;
 }
 
 const interviewTypeLabels: Record<string, string> = {
@@ -54,6 +64,7 @@ export default function FeedbackPage() {
     responses: [],
     contentFeedbacks: [],
   });
+  const [comparison, setComparison] = useState<ComparisonData | null>(null);
 
   const loadFeedback = async () => {
     if (!id) return;
@@ -87,6 +98,17 @@ export default function FeedbackPage() {
         contentFeedbacks = contentRes.data;
       } catch {
         // No content feedbacks yet
+      }
+
+      // Fetch comparison data if session feedback exists
+      if (sessionFeedback) {
+        try {
+          const comparisonRes = await feedbackAPI.getComparison(id);
+          setComparison(comparisonRes.data);
+        } catch {
+          // No comparison data available (e.g., first session)
+          setComparison(null);
+        }
       }
 
       setFeedbackState({
@@ -295,6 +317,34 @@ export default function FeedbackPage() {
               <p className="body-large text-text-secondary mt-6 max-w-2xl mx-auto">
                 You completed {responses.length} of {session.question_count} questions.
               </p>
+
+              {/* Improvement Banner */}
+              {comparison && comparison.sessions_compared > 0 && comparison.improvement_percent !== null && (
+                <div className={`inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full ${
+                  comparison.improvement_percent > 0
+                    ? 'bg-status-success/10 text-status-success'
+                    : comparison.improvement_percent < 0
+                      ? 'bg-status-error/10 text-status-error'
+                      : 'bg-text-tertiary/10 text-text-secondary'
+                }`}>
+                  {comparison.improvement_percent > 0 ? (
+                    <TrendingUp className="w-4 h-4" />
+                  ) : comparison.improvement_percent < 0 ? (
+                    <TrendingDown className="w-4 h-4" />
+                  ) : (
+                    <Minus className="w-4 h-4" />
+                  )}
+                  <span className="body-small font-medium">
+                    {comparison.improvement_percent > 0 ? '+' : ''}
+                    {comparison.improvement_percent}% vs your average ({comparison.average_score})
+                  </span>
+                </div>
+              )}
+              {comparison && comparison.sessions_compared === 0 && (
+                <p className="body-small text-text-tertiary mt-4">
+                  Complete more sessions to see your improvement trend
+                </p>
+              )}
             </div>
 
             {/* Score Breakdown */}

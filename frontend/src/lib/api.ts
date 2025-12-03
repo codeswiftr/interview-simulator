@@ -166,6 +166,14 @@ export const feedbackAPI = {
   getSessionStatus: (sessionId: string) =>
     api.get(`/feedback/session/${sessionId}/status`),
 
+  getComparison: (sessionId: string) =>
+    api.get<{
+      session_score: number;
+      average_score: number | null;
+      improvement_percent: number | null;
+      sessions_compared: number;
+    }>(`/feedback/session/${sessionId}/comparison`),
+
   generateForSession: (sessionId: string) =>
     api.post(`/feedback/generate/session/${sessionId}`),
 
