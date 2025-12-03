@@ -18,6 +18,7 @@ import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
 import ProcessingStatus from '../components/feedback/ProcessingStatus';
 import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback } from '../types';
 
 interface FeedbackState {
@@ -34,9 +35,16 @@ const interviewTypeLabels: Record<string, string> = {
   mixed: 'Mixed',
 };
 
+const experienceLevelLabels: Record<string, string> = {
+  junior: 'Junior Engineers',
+  mid: 'Mid-Level Engineers',
+  senior: 'Senior Engineers',
+};
+
 export default function FeedbackPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -277,7 +285,12 @@ export default function FeedbackPage() {
           <>
             {/* Overall Score Hero */}
             <div className="card-glass p-8 sm:p-12 mb-8 text-center">
-              <h2 className="heading-section mb-6">Overall Performance</h2>
+              <h2 className="heading-section mb-2">Overall Performance</h2>
+              {user?.experience_level && (
+                <p className="body-small text-electric-blue mb-4">
+                  Feedback tailored for {experienceLevelLabels[user.experience_level] || 'Mid-Level Engineers'}
+                </p>
+              )}
               <ScoreRing score={sessionFeedback.overall_score} size="large" />
               <p className="body-large text-text-secondary mt-6 max-w-2xl mx-auto">
                 You completed {responses.length} of {session.question_count} questions.

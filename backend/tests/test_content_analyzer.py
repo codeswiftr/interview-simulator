@@ -358,3 +358,157 @@ async def test_prompt_excludes_star_instruction_for_technical(mock_settings):
     call_args = create_mock.call_args
     prompt_content = call_args[1]["messages"][0]["content"]
     assert "STAR" not in prompt_content or "STAR Adherence" not in prompt_content
+
+
+@pytest.mark.asyncio
+async def test_prompt_includes_junior_experience_context(mock_settings):
+    """Test that junior experience level context is included in the prompt."""
+    analyzer = ContentAnalyzer()
+
+    mock_response = MagicMock()
+    mock_content = MagicMock()
+    mock_content.text = json.dumps(
+        {
+            "technical_accuracy": 80,
+            "star_adherence": 0,
+            "answer_structure": 80,
+            "completeness": 80,
+            "relevance": 80,
+            "strengths": ["test"],
+            "improvements": ["test"],
+            "detailed_feedback": "test",
+        }
+    )
+    mock_response.content = [mock_content]
+
+    create_mock = AsyncMock(return_value=mock_response)
+
+    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+        await analyzer.analyze(
+            question="What is a REST API?",
+            transcript="A REST API is...",
+            question_type="technical",
+            experience_level="junior",
+        )
+
+    # Check that the prompt includes junior context
+    call_args = create_mock.call_args
+    prompt_content = call_args[1]["messages"][0]["content"]
+    assert "JUNIOR engineer" in prompt_content
+    assert "0-2 years experience" in prompt_content
+    assert "encouraging" in prompt_content.lower()
+
+
+@pytest.mark.asyncio
+async def test_prompt_includes_senior_experience_context(mock_settings):
+    """Test that senior experience level context is included in the prompt."""
+    analyzer = ContentAnalyzer()
+
+    mock_response = MagicMock()
+    mock_content = MagicMock()
+    mock_content.text = json.dumps(
+        {
+            "technical_accuracy": 80,
+            "star_adherence": 0,
+            "answer_structure": 80,
+            "completeness": 80,
+            "relevance": 80,
+            "strengths": ["test"],
+            "improvements": ["test"],
+            "detailed_feedback": "test",
+        }
+    )
+    mock_response.content = [mock_content]
+
+    create_mock = AsyncMock(return_value=mock_response)
+
+    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+        await analyzer.analyze(
+            question="Design a distributed cache system",
+            transcript="I would use consistent hashing...",
+            question_type="system_design",
+            experience_level="senior",
+        )
+
+    # Check that the prompt includes senior context
+    call_args = create_mock.call_args
+    prompt_content = call_args[1]["messages"][0]["content"]
+    assert "SENIOR engineer" in prompt_content
+    assert "5+ years experience" in prompt_content
+    assert "direct" in prompt_content.lower()
+    assert "leadership" in prompt_content.lower()
+
+
+@pytest.mark.asyncio
+async def test_prompt_includes_mid_experience_context_by_default(mock_settings):
+    """Test that mid experience level context is used by default."""
+    analyzer = ContentAnalyzer()
+
+    mock_response = MagicMock()
+    mock_content = MagicMock()
+    mock_content.text = json.dumps(
+        {
+            "technical_accuracy": 80,
+            "star_adherence": 0,
+            "answer_structure": 80,
+            "completeness": 80,
+            "relevance": 80,
+            "strengths": ["test"],
+            "improvements": ["test"],
+            "detailed_feedback": "test",
+        }
+    )
+    mock_response.content = [mock_content]
+
+    create_mock = AsyncMock(return_value=mock_response)
+
+    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+        # Don't pass experience_level - should default to mid
+        await analyzer.analyze(
+            question="What is polymorphism?",
+            transcript="Polymorphism is...",
+            question_type="technical",
+        )
+
+    # Check that the prompt includes mid-level context
+    call_args = create_mock.call_args
+    prompt_content = call_args[1]["messages"][0]["content"]
+    assert "MID-LEVEL engineer" in prompt_content
+    assert "2-5 years experience" in prompt_content
+
+
+@pytest.mark.asyncio
+async def test_prompt_uses_mid_for_unknown_experience_level(mock_settings):
+    """Test that unknown experience levels fall back to mid."""
+    analyzer = ContentAnalyzer()
+
+    mock_response = MagicMock()
+    mock_content = MagicMock()
+    mock_content.text = json.dumps(
+        {
+            "technical_accuracy": 80,
+            "star_adherence": 0,
+            "answer_structure": 80,
+            "completeness": 80,
+            "relevance": 80,
+            "strengths": ["test"],
+            "improvements": ["test"],
+            "detailed_feedback": "test",
+        }
+    )
+    mock_response.content = [mock_content]
+
+    create_mock = AsyncMock(return_value=mock_response)
+
+    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+        await analyzer.analyze(
+            question="What is polymorphism?",
+            transcript="Polymorphism is...",
+            question_type="technical",
+            experience_level="expert",  # Unknown level
+        )
+
+    # Should fall back to mid-level context
+    call_args = create_mock.call_args
+    prompt_content = call_args[1]["messages"][0]["content"]
+    assert "MID-LEVEL engineer" in prompt_content

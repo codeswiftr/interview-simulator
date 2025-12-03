@@ -10,6 +10,7 @@ from app.ai.content_analyzer import ContentAnalyzer
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
 from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, ProcessingStatus
 from app.models.question import Question
+from app.models.user import User
 
 
 class FeedbackService:
@@ -67,6 +68,23 @@ class FeedbackService:
         if not question:
             raise ValueError(f"Question {response.question_id} not found")
 
+        # Fetch the interview session to get user_id
+        interview_result = await session.exec(
+            select(InterviewSession).where(InterviewSession.id == response.session_id)
+        )
+        interview = interview_result.first()
+
+        # Fetch the user's experience level
+        experience_level = "mid"  # Default
+        if interview:
+            user_result = await session.exec(
+                select(User).where(User.id == interview.user_id)
+            )
+            user = user_result.first()
+            if user and user.experience_level:
+                # Handle both enum and string values
+                experience_level = user.experience_level.value if hasattr(user.experience_level, 'value') else user.experience_level
+
         # Analyze content using Claude
         # Note: question.category is already a string, not an enum
         question_type = question.category.value if hasattr(question.category, 'value') else question.category
@@ -74,6 +92,7 @@ class FeedbackService:
             question=question.content,
             transcript=response.transcript,
             question_type=question_type,
+            experience_level=experience_level,
         )
 
         # Calculate overall score

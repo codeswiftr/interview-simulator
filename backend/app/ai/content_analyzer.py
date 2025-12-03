@@ -43,7 +43,7 @@ class ContentAnalyzer:
     """
 
     ANALYSIS_PROMPT = """You are an expert interview coach analyzing a candidate's response.
-
+{experience_context}
 Question: {question}
 Question Type: {question_type}
 Candidate's Answer: {transcript}
@@ -83,6 +83,42 @@ For behavioral questions, also evaluate:
    - Result: Did they share the outcome with metrics if possible?
 """
 
+    # Experience-level specific context for personalized feedback
+    EXPERIENCE_CONTEXT = {
+        "junior": """
+CANDIDATE CONTEXT: This candidate is a JUNIOR engineer (0-2 years experience).
+
+When providing feedback, please:
+- Be encouraging and supportive in tone while still being constructive
+- Acknowledge that they are building foundational skills
+- Provide explicit, actionable tips they can apply immediately
+- Focus on fundamental concepts rather than advanced nuances
+- Celebrate what they did well before diving into improvements
+- Score slightly more leniently on depth of technical knowledge, but maintain standards for clarity and structure
+""",
+        "mid": """
+CANDIDATE CONTEXT: This candidate is a MID-LEVEL engineer (2-5 years experience).
+
+When providing feedback, please:
+- Balance encouragement with direct constructive criticism
+- Focus on growth areas and next-level skills they should develop
+- Expect solid fundamentals and look for emerging strategic thinking
+- Provide actionable improvements focused on career advancement
+- Point out opportunities to demonstrate more senior-level thinking
+""",
+        "senior": """
+CANDIDATE CONTEXT: This candidate is a SENIOR engineer (5+ years experience).
+
+When providing feedback, please:
+- Be direct and concise - senior engineers appreciate candid feedback
+- Hold to higher standards for depth, leadership qualities, and strategic thinking
+- Focus on nuance, trade-offs, and system-wide implications
+- Expect them to demonstrate mentorship mindset and sound decision-making
+- Point out areas where they could better showcase their seniority
+- Look for evidence of leadership, ownership, and technical depth
+""",
+    }
+
     def __init__(self) -> None:
         """Initialize the content analyzer based on configured provider."""
         self.provider = settings.content_analysis_provider
@@ -104,6 +140,7 @@ For behavioral questions, also evaluate:
         question: str,
         transcript: str,
         question_type: str,
+        experience_level: str = "mid",
     ) -> ContentMetrics:
         """Analyze response content using Claude.
 
@@ -111,17 +148,22 @@ For behavioral questions, also evaluate:
             question: The interview question
             transcript: The candidate's transcribed response
             question_type: Type of question (behavioral, technical, system_design)
+            experience_level: User's experience level (junior, mid, senior)
 
         Returns:
             ContentMetrics with analysis results
         """
         star_instruction = self.STAR_INSTRUCTION if question_type == "behavioral" else ""
 
+        # Get experience-level-specific context
+        experience_context = self.EXPERIENCE_CONTEXT.get(experience_level, self.EXPERIENCE_CONTEXT["mid"])
+
         prompt = self.ANALYSIS_PROMPT.format(
             question=question,
             question_type=question_type,
             transcript=transcript,
             star_instruction=star_instruction,
+            experience_context=experience_context,
         )
 
         try:
