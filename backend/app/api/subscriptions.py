@@ -364,17 +364,22 @@ async def _sync_subscription_from_stripe(user: User, session: AsyncSession) -> N
         sub_item = sub["items"]["data"][0]
         tier = _get_tier_from_price(sub_item["price"]["id"])
 
+        # Determine subscription status - check for scheduled cancellation
+        status = sub["status"]
+        if status == "active" and (sub.get("cancel_at_period_end") or sub.get("cancel_at")):
+            status = "cancel_at_period_end"
+
         # Update user subscription data
         user.stripe_subscription_id = sub["id"]
         user.subscription_tier = tier
-        user.subscription_status = sub["status"]
+        user.subscription_status = status
         # current_period_end is now on the subscription item in new Stripe API
         user.subscription_expires_at = datetime.fromtimestamp(
             sub_item["current_period_end"], tz=timezone.utc
         )
 
         await session.commit()
-        logger.info(f"Synced subscription for user {user.id}: {tier.value} ({sub['status']})")
+        logger.info(f"Synced subscription for user {user.id}: {tier.value} ({status})")
     else:
         # No active subscription found - downgrade to free if currently has subscription
         if user.subscription_tier != SubscriptionTier.FREE:
