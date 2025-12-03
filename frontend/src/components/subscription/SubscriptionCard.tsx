@@ -7,7 +7,10 @@ interface SubscriptionCardProps {
 }
 
 export default function SubscriptionCard({ subscription, onUpgrade }: SubscriptionCardProps) {
-  const { tier, interviews_this_month, interviews_limit, can_create_interview } = subscription;
+  const { tier, status, interviews_this_month, interviews_limit, can_create_interview } = subscription;
+
+  // Show upgrade button for free tier OR canceled subscriptions
+  const showUpgradeButton = tier === 'free' || status === 'canceled';
 
   const tierLabels: Record<string, string> = {
     free: 'Free',
@@ -34,9 +37,9 @@ export default function SubscriptionCard({ subscription, onUpgrade }: Subscripti
           </div>
           <h3 className="heading-card">Current Plan</h3>
         </div>
-        {tier === 'free' && onUpgrade && (
+        {showUpgradeButton && onUpgrade && (
           <button onClick={onUpgrade} className="btn-primary">
-            Upgrade
+            {status === 'canceled' ? 'Resubscribe' : 'Upgrade'}
           </button>
         )}
       </div>
