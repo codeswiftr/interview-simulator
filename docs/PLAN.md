@@ -37,51 +37,99 @@ Transform generic feedback into personalized, actionable guidance that accelerat
 Current feedback is one-size-fits-all. A junior engineer gets the same advice as a senior. Users can't see if they're improving. This reduces perceived value and retention.
 
 ### Success Criteria
-- [ ] Users can set their experience level (junior/mid/senior)
-- [ ] Feedback adjusts expectations based on level
-- [ ] Dashboard shows score trend over last 10 sessions
-- [ ] FeedbackPage shows improvement % vs average
+- [x] Users can set their experience level (junior/mid/senior) ✅ Done
+- [ ] Feedback adjusts expectations based on level (Phase 3 - IN PROGRESS)
+- [ ] Dashboard shows score trend over last 10 sessions (Phase 4)
+- [ ] FeedbackPage shows improvement % vs average (Phase 4)
 
 ---
 
 ## Implementation Tasks
 
-### Phase 1: User Experience Level (Backend)
+### Phase 1: User Experience Level (Backend) ✅ COMPLETE
 | Task | Description | Est | Status |
 |------|-------------|-----|--------|
-| 1.1 | Add `experience_level` enum to User model | 30m | Pending |
-| 1.2 | Create Alembic migration | 15m | Pending |
-| 1.3 | Add experience_level to registration endpoint | 30m | Pending |
-| 1.4 | Add PATCH endpoint to update experience level | 30m | Pending |
-| 1.5 | Add tests for new endpoints | 30m | Pending |
+| 1.1 | Add `experience_level` enum to User model | 30m | ✅ Done |
+| 1.2 | Create Alembic migration | 15m | ✅ Done |
+| 1.3 | Add experience_level to registration endpoint | 30m | ✅ Done |
+| 1.4 | Add PATCH endpoint to update experience level | 30m | ✅ Done |
+| 1.5 | Add tests for new endpoints | 30m | ✅ Done |
 
-**Files to modify:**
-- `backend/app/models/user.py` - Add ExperienceLevel enum
-- `backend/app/api/users.py` - Update register and add endpoint
-- `backend/tests/test_users.py` - Add tests
+**Commits:**
+- `f2bbad6` - feat(user): add experience level for personalized feedback
 
-### Phase 2: User Experience Level (Frontend)
+### Phase 2: User Experience Level (Frontend) ✅ COMPLETE
 | Task | Description | Est | Status |
 |------|-------------|-----|--------|
-| 2.1 | Add experience level select to RegisterPage | 30m | Pending |
-| 2.2 | Add experience level field to SettingsPage | 30m | Pending |
-| 2.3 | Update auth context with experience level | 15m | Pending |
+| 2.1 | Add experience level select to RegisterPage | 30m | ✅ Done |
+| 2.2 | Add experience level field to SettingsPage | 30m | ✅ Done |
+| 2.3 | Update auth context with experience level | 15m | ✅ Done |
 
-**Files to modify:**
-- `frontend/src/pages/RegisterPage.tsx`
-- `frontend/src/pages/SettingsPage.tsx`
-- `frontend/src/types/index.ts`
+**Commits:**
+- `5446f87` - feat(frontend): add experience level selection to register and settings
 
-### Phase 3: Personalized Feedback
+### Phase 3: Personalized Feedback - 🔄 IN PROGRESS
 | Task | Description | Est | Status |
 |------|-------------|-----|--------|
-| 3.1 | Update content analyzer prompt by experience level | 1h | Pending |
-| 3.2 | Add level-specific scoring adjustments | 30m | Pending |
-| 3.3 | Test feedback quality at each level | 30m | Pending |
+| 3.1 | Update ContentAnalyzer.analyze() to accept experience_level param | 30m | Pending |
+| 3.2 | Create experience-level-specific prompt templates | 1h | Pending |
+| 3.3 | Update FeedbackService to fetch user's experience_level | 45m | Pending |
+| 3.4 | Add unit tests for experience-level-aware feedback | 1h | Pending |
+| 3.5 | Add "Tailored for {level}" indicator to FeedbackPage | 30m | Pending |
 
 **Files to modify:**
-- `backend/app/ai/content_analyzer.py` - Adjust prompts
-- `backend/app/services/feedback_service.py` - Pass level through
+- `backend/app/ai/content_analyzer.py` - Add experience_level param, personalized prompts
+- `backend/app/services/feedback_service.py` - Fetch user.experience_level, pass to analyzer
+- `backend/tests/test_api.py` - Add tests for personalized feedback
+- `frontend/src/pages/FeedbackPage.tsx` - Show experience level indicator
+
+**Detailed Implementation:**
+
+#### Task 3.1-3.2: ContentAnalyzer Changes
+Add experience-level context to ANALYSIS_PROMPT:
+```python
+EXPERIENCE_CONTEXT = {
+    "junior": """
+The candidate is a JUNIOR engineer (0-2 years experience). When providing feedback:
+- Be encouraging and supportive in tone
+- Acknowledge that they're still learning fundamentals
+- Provide explicit, actionable tips they can apply immediately
+- Focus on foundational skills rather than advanced concepts
+- Score slightly more leniently on depth, but maintain standards for clarity
+""",
+    "mid": """
+The candidate is a MID-LEVEL engineer (2-5 years experience). When providing feedback:
+- Balance encouragement with constructive criticism
+- Focus on growth areas and next-level skills
+- Expect solid fundamentals but room for strategic thinking
+- Provide actionable improvements for career advancement
+""",
+    "senior": """
+The candidate is a SENIOR engineer (5+ years experience). When providing feedback:
+- Be direct and concise - they can handle candid feedback
+- Hold to higher standards for depth, leadership, and strategic thinking
+- Focus on nuance, trade-offs, and system-wide implications
+- Expect them to demonstrate mentorship and decision-making skills
+- Point out areas where they could show more seniority
+"""
+}
+```
+
+#### Task 3.3: FeedbackService Changes
+```python
+# In generate_feedback(): fetch user.experience_level
+user_result = await session.exec(select(User).where(User.id == interview.user_id))
+user = user_result.first()
+experience_level = user.experience_level if user else "mid"
+
+# Pass to analyzer
+feedback = await self.content_analyzer.analyze(
+    transcript=response.transcript,
+    question=question.content,
+    question_type=question.category,
+    experience_level=experience_level  # NEW
+)
+```
 
 ### Phase 4: Progress Tracking
 | Task | Description | Est | Status |
