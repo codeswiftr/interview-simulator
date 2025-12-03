@@ -16,7 +16,8 @@ export default function BillingInfo({ subscription, onSubscriptionChange }: Bill
   const [isCanceling, setIsCanceling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  if (tier === 'free') {
+  // Don't show billing info for free tier or if there's no subscription status
+  if (tier === 'free' || !status) {
     return null;
   }
 
@@ -66,6 +67,7 @@ export default function BillingInfo({ subscription, onSubscriptionChange }: Bill
   };
 
   const isCanceled = status === 'canceled' || status === 'cancel_at_period_end';
+  const canCancel = status === 'active'; // Only allow cancel for active subscriptions
 
   return (
     <div className="card p-6">
@@ -112,7 +114,7 @@ export default function BillingInfo({ subscription, onSubscriptionChange }: Bill
             )}
           </button>
 
-          {!isCanceled && !showCancelConfirm && (
+          {canCancel && !showCancelConfirm && (
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="btn-ghost text-status-error w-full"
