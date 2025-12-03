@@ -210,13 +210,15 @@ async def _handle_checkout_completed(session_obj: dict, db_session: AsyncSession
     subscription_id = session_obj.get("subscription")
     if subscription_id:
         subscription = stripe.Subscription.retrieve(subscription_id)
-        tier = _get_tier_from_price(subscription.items.data[0].price.id)
+        sub_item = subscription["items"]["data"][0]
+        tier = _get_tier_from_price(sub_item["price"]["id"])
 
         user.stripe_subscription_id = subscription_id
         user.subscription_tier = tier
-        user.subscription_status = subscription.status
+        user.subscription_status = subscription["status"]
+        # current_period_end is now on the subscription item in new Stripe API
         user.subscription_expires_at = datetime.fromtimestamp(
-            subscription.current_period_end, tz=timezone.utc
+            sub_item["current_period_end"], tz=timezone.utc
         )
 
         await db_session.commit()
@@ -239,13 +241,15 @@ async def _handle_subscription_updated(subscription_obj: dict, db_session: Async
     if not user:
         return
 
-    tier = _get_tier_from_price(subscription_obj["items"]["data"][0]["price"]["id"])
+    sub_item = subscription_obj["items"]["data"][0]
+    tier = _get_tier_from_price(sub_item["price"]["id"])
 
     user.stripe_subscription_id = subscription_id
     user.subscription_tier = tier
     user.subscription_status = subscription_obj.get("status")
+    # current_period_end is now on the subscription item in new Stripe API
     user.subscription_expires_at = datetime.fromtimestamp(
-        subscription_obj.get("current_period_end", 0), tz=timezone.utc
+        sub_item.get("current_period_end", 0), tz=timezone.utc
     )
 
     await db_session.commit()
@@ -357,14 +361,16 @@ async def _sync_subscription_from_stripe(user: User, session: AsyncSession) -> N
 
     if subscriptions.data:
         sub = subscriptions.data[0]
-        tier = _get_tier_from_price(sub["items"]["data"][0]["price"]["id"])
+        sub_item = sub["items"]["data"][0]
+        tier = _get_tier_from_price(sub_item["price"]["id"])
 
         # Update user subscription data
         user.stripe_subscription_id = sub["id"]
         user.subscription_tier = tier
         user.subscription_status = sub["status"]
+        # current_period_end is now on the subscription item in new Stripe API
         user.subscription_expires_at = datetime.fromtimestamp(
-            sub["current_period_end"], tz=timezone.utc
+            sub_item["current_period_end"], tz=timezone.utc
         )
 
         await session.commit()
