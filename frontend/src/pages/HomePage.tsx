@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Mic, BarChart2, TrendingUp, MessageSquare } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export default function HomePage() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -17,15 +20,23 @@ export default function HomePage() {
                 Practice behavioral, technical, and system design questions with confidence.
               </p>
               <div className="flex gap-4 justify-center lg:justify-start">
-                <Link to="/register" className="btn-primary">
-                  Start Practicing Free
-                </Link>
-                <Link
-                  to="/login"
-                  className="px-6 py-3 rounded-lg font-semibold text-white border border-white/30 hover:bg-white/10 transition-all"
-                >
-                  Login
-                </Link>
+                {isAuthenticated ? (
+                  <Link to="/dashboard" className="btn-primary">
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/register" className="btn-primary">
+                      Start Practicing Free
+                    </Link>
+                    <Link
+                      to="/login"
+                      className="px-6 py-3 rounded-lg font-semibold text-white border border-white/30 hover:bg-white/10 transition-all"
+                    >
+                      Login
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
             <div className="hidden lg:block">
@@ -97,12 +108,21 @@ export default function HomePage() {
           <p className="body-large mb-8 text-white/90 max-w-2xl mx-auto">
             Join thousands of engineers who have improved their interview skills with our AI-powered simulator.
           </p>
-          <Link
-            to="/register"
-            className="inline-block px-8 py-4 rounded-lg font-semibold bg-white text-electric-blue hover:bg-gray-100 transition-colors"
-          >
-            Get Started Now
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              to="/dashboard"
+              className="inline-block px-8 py-4 rounded-lg font-semibold bg-white text-electric-blue hover:bg-gray-100 transition-colors"
+            >
+              Go to Dashboard
+            </Link>
+          ) : (
+            <Link
+              to="/register"
+              className="inline-block px-8 py-4 rounded-lg font-semibold bg-white text-electric-blue hover:bg-gray-100 transition-colors"
+            >
+              Get Started Now
+            </Link>
+          )}
         </div>
       </section>
     </div>

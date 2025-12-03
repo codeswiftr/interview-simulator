@@ -158,6 +158,33 @@
 }
 
 /* Utility Classes */
+/* Dark Mode Surface Overrides - uses dynamic CSS variables */
+@layer base {
+  .dark .bg-surface-primary {
+    background-color: var(--bg-primary) !important;
+  }
+
+  .dark .bg-surface-secondary {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  .dark .bg-surface-tertiary {
+    background-color: var(--bg-tertiary) !important;
+  }
+
+  .dark .text-text-primary {
+    color: var(--fg-primary) !important;
+  }
+
+  .dark .text-text-secondary {
+    color: var(--fg-secondary) !important;
+  }
+
+  .dark .text-text-tertiary {
+    color: var(--fg-tertiary) !important;
+  }
+}
+
 @layer utilities {
   .heading-hero {
     font-family: var(--font-family-heading);

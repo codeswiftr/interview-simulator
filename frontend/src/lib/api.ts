@@ -199,6 +199,9 @@ export const subscriptionsAPI = {
   createCheckout: (priceId: string) =>
     api.post('/subscriptions/checkout', { price_id: priceId }),
 
+  createPortalSession: () =>
+    api.post<{ url: string }>('/subscriptions/portal'),
+
   cancel: () => api.post('/subscriptions/cancel'),
 };
 

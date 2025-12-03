@@ -392,7 +392,7 @@ export default function SettingsPage() {
           {subscription && (
             <div className="space-y-6">
               <SubscriptionCard subscription={subscription} onUpgrade={handleUpgrade} />
-              <BillingInfo subscription={subscription} />
+              <BillingInfo subscription={subscription} onSubscriptionChange={loadSubscription} />
             </div>
           )}
 

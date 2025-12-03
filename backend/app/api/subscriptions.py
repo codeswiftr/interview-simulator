@@ -327,6 +327,52 @@ async def get_pricing_config() -> PricingConfig:
     )
 
 
+class PortalSessionResponse(BaseModel):
+    """Response model for customer portal session."""
+
+    url: str
+
+
+@router.post("/portal", response_model=PortalSessionResponse)
+async def create_portal_session(
+    current_user: User = Depends(get_current_user),
+) -> PortalSessionResponse:
+    """Create Stripe Customer Portal session for managing subscription.
+
+    Allows users to view invoices, update payment methods, and cancel subscription.
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        PortalSessionResponse with redirect URL to Stripe portal
+    """
+    if not settings.stripe_secret_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe is not configured",
+        )
+
+    if not current_user.stripe_customer_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No Stripe customer found. Please subscribe first.",
+        )
+
+    try:
+        portal_session = stripe.billing_portal.Session.create(
+            customer=current_user.stripe_customer_id,
+            return_url=f"{settings.frontend_url}/settings",
+        )
+        return PortalSessionResponse(url=portal_session.url)
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error creating portal session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to create portal session: {str(e)}",
+        ) from e
+
+
 @router.post("/cancel")
 async def cancel_subscription(
     current_user: User = Depends(get_current_user),
