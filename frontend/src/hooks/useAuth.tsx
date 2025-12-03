@@ -2,14 +2,14 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../lib/api';
-import type { User } from '../types';
+import type { User, ExperienceLevel } from '../types';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
-  register: (email: string, password: string, full_name: string) => Promise<void>;
+  register: (email: string, password: string, full_name: string, experience_level?: ExperienceLevel) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -61,10 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, full_name: string) => {
+  const register = async (email: string, password: string, full_name: string, experience_level?: ExperienceLevel) => {
     try {
       // Register creates the user but doesn't return a token
-      await authAPI.register(email, password, full_name);
+      await authAPI.register(email, password, full_name, experience_level);
 
       // Login to get the token
       const loginResponse = await authAPI.login(email, password);

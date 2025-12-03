@@ -1,10 +1,16 @@
+// Experience Level type
+export type ExperienceLevel = 'junior' | 'mid' | 'senior';
+
 // User types
 export interface User {
   id: string;
   email: string;
   full_name: string;
+  experience_level: ExperienceLevel;
+  subscription_tier: 'free' | 'pro' | 'team';
+  interviews_this_month: number;
+  total_interviews: number;
   created_at: string;
-  is_active: boolean;
 }
 
 export interface AuthResponse {
@@ -137,6 +143,7 @@ export interface RegisterFormData {
   password: string;
   full_name: string;
   confirm_password: string;
+  experience_level?: ExperienceLevel;
 }
 
 export interface CreateInterviewFormData {

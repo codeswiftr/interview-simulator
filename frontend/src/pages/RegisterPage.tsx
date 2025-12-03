@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
+import type { ExperienceLevel } from '../types';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -10,6 +11,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('mid');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,7 +33,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await register(email, password, fullName);
+      await register(email, password, fullName, experienceLevel);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
     } finally {
@@ -118,6 +120,25 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 required
               />
+            </div>
+
+            <div>
+              <label htmlFor="experienceLevel" className="block text-sm font-medium text-text-primary mb-2">
+                Experience Level
+              </label>
+              <select
+                id="experienceLevel"
+                value={experienceLevel}
+                onChange={(e) => setExperienceLevel(e.target.value as ExperienceLevel)}
+                className="input"
+              >
+                <option value="junior">Junior (0-2 years)</option>
+                <option value="mid">Mid-Level (2-5 years)</option>
+                <option value="senior">Senior (5+ years)</option>
+              </select>
+              <p className="mt-1 text-xs text-text-tertiary">
+                This helps us tailor feedback to your experience level
+              </p>
             </div>
 
             <button

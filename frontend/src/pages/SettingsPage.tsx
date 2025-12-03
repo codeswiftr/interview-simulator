@@ -8,11 +8,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import SubscriptionCard from '../components/subscription/SubscriptionCard';
 import BillingInfo from '../components/subscription/BillingInfo';
 import UpgradeModal from '../components/subscription/UpgradeModal';
-import type { SubscriptionStatus } from '../types';
+import type { SubscriptionStatus, ExperienceLevel } from '../types';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const { user, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -23,9 +23,14 @@ export default function SettingsPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Profile edit state
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<{
+    full_name: string;
+    email: string;
+    experience_level: ExperienceLevel;
+  }>({
     full_name: '',
     email: '',
+    experience_level: 'mid',
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -51,6 +56,7 @@ export default function SettingsPage() {
       setProfileData({
         full_name: user.full_name || '',
         email: user.email || '',
+        experience_level: user.experience_level || 'mid',
       });
     }
   }, [user]);
@@ -239,6 +245,22 @@ export default function SettingsPage() {
                   className="input w-full"
                   placeholder="Enter your email"
                 />
+              </div>
+
+              <div>
+                <label className="label mb-2 block">Experience Level</label>
+                <select
+                  value={profileData.experience_level}
+                  onChange={(e) => setProfileData({ ...profileData, experience_level: e.target.value as ExperienceLevel })}
+                  className="input w-full"
+                >
+                  <option value="junior">Junior (0-2 years)</option>
+                  <option value="mid">Mid-Level (2-5 years)</option>
+                  <option value="senior">Senior (5+ years)</option>
+                </select>
+                <p className="mt-1 text-xs text-text-tertiary">
+                  This helps tailor feedback to your experience level
+                </p>
               </div>
 
               <button

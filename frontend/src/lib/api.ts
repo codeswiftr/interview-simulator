@@ -79,8 +79,8 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/users/login', { email, password }),
 
-  register: (email: string, password: string, full_name: string) =>
-    api.post('/users/register', { email, password, full_name }),
+  register: (email: string, password: string, full_name: string, experience_level?: string) =>
+    api.post('/users/register', { email, password, full_name, experience_level }),
 
   logout: () => {
     localStorage.removeItem('access_token');
@@ -211,7 +211,7 @@ export const userAPI = {
 
   getProgress: () => api.get('/users/me/progress'),
 
-  updateProfile: (data: { full_name?: string; email?: string }) =>
+  updateProfile: (data: { full_name?: string; email?: string; experience_level?: string }) =>
     api.patch('/users/me', data),
 
   changePassword: (currentPassword: string, newPassword: string) =>
