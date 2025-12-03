@@ -84,6 +84,18 @@ async def create_checkout_session(
             customer_id = customer.id
             current_user.stripe_customer_id = customer_id
             await session.commit()
+        else:
+            # Check for existing active subscription
+            existing_subs = stripe.Subscription.list(
+                customer=customer_id,
+                status="active",
+                limit=1,
+            )
+            if existing_subs.data:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You already have an active subscription. Use 'Manage Subscription' to make changes.",
+                )
 
         # Create checkout session
         checkout_session = stripe.checkout.Session.create(
@@ -323,16 +335,25 @@ async def _sync_subscription_from_stripe(user: User, session: AsyncSession) -> N
 
     Fetches the latest subscription data from Stripe and updates the user record.
     This provides a fallback when webhooks aren't configured or fail.
+    Prioritizes active subscriptions over canceled ones.
     """
     if not user.stripe_customer_id:
         return
 
-    # Get subscriptions for this customer
+    # First try to get active subscription
     subscriptions = stripe.Subscription.list(
         customer=user.stripe_customer_id,
-        status="all",
+        status="active",
         limit=1,
     )
+
+    # If no active, check for any subscription (including canceled)
+    if not subscriptions.data:
+        subscriptions = stripe.Subscription.list(
+            customer=user.stripe_customer_id,
+            status="all",
+            limit=1,
+        )
 
     if subscriptions.data:
         sub = subscriptions.data[0]
