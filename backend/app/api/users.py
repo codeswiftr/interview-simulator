@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.dependencies import get_current_user
 from app.db import get_session
-from app.models.user import PasswordChange, Token, User, UserCreate, UserLogin, UserRead, UserUpdate
+from app.models.user import ExperienceLevel, PasswordChange, Token, User, UserCreate, UserLogin, UserRead, UserUpdate
 from app.security import create_access_token, hash_password, verify_password
 from app.services.feedback_service import FeedbackService
 
@@ -24,6 +24,7 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
         email=payload.email.lower(),
         hashed_password=hash_password(payload.password),
         full_name=payload.full_name,
+        experience_level=payload.experience_level or ExperienceLevel.MID,
     )
     session.add(user)
     await session.commit()
@@ -62,6 +63,10 @@ async def update_profile(
     # Update full_name if provided
     if updates.full_name is not None:
         current_user.full_name = updates.full_name
+
+    # Update experience_level if provided
+    if updates.experience_level is not None:
+        current_user.experience_level = updates.experience_level
 
     # Update email if provided and different
     if updates.email is not None and updates.email.lower() != current_user.email:

@@ -1,124 +1,160 @@
-# Milestone: Fix Test Suite Regressions
+# CareerSwiftr Interview Simulator - Implementation Plan
 
-## Status: Ready
-## Target: Immediate (2-4 hours)
-
----
-
-## Overview
-The test suite has 9 failing tests after recent changes to the ContentAnalyzer (multi-provider support) and subscription webhook (Stripe API structure changes). These tests were written for the old implementation and need to be updated to match the current code.
-
-## Success Criteria
-- [ ] All 95 tests pass (currently 86 passing, 9 failing)
-- [ ] Test coverage maintained at ≥69%
-- [ ] No new regressions introduced
-
-## Root Cause Analysis
-
-### Issue 1: ContentAnalyzer Tests (8 failures)
-**Problem**: Tests patch `analyzer.client.messages.create` but the refactored `ContentAnalyzer` now uses:
-- `self.anthropic_client` (for Anthropic provider)
-- `self.openrouter_client` (for OpenRouter provider)
-
-**Tests affected**:
-- `test_analyze_behavioral_question`
-- `test_analyze_technical_question`
-- `test_analyze_system_design_question`
-- `test_analyze_handles_json_in_markdown`
-- `test_analyze_handles_api_errors`
-- `test_analyze_handles_malformed_json`
-- `test_prompt_includes_star_instruction_for_behavioral`
-- `test_prompt_excludes_star_instruction_for_technical`
-
-**Fix**: Update patches to use `analyzer.anthropic_client.messages.create`
-
-### Issue 2: Subscription Webhook Test (1 failure)
-**Problem**: Test mocks `stripe.Subscription.retrieve()` but the new code accesses `subscription["items"]["data"][0]["current_period_end"]` (dict-like) instead of `subscription.current_period_end` (object attribute).
-
-**Test affected**:
-- `test_webhook_checkout_completed_upgrades_user`
-
-**Fix**: Configure mock to return proper nested dict structure with `current_period_end` on subscription item
+## Current Status: Post-Launch Value Optimization
+## Last Updated: 2025-12-03
 
 ---
 
-## Implementation Plan
+## Completed Milestones
 
-### Phase 1: Fix ContentAnalyzer Tests
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1 | Update mock patches from `analyzer.client` to `analyzer.anthropic_client` | 30m |
-| 1.2 | Run content analyzer tests and verify all 8 pass | 10m |
+### ✅ Milestone: Test Suite Regressions (Dec 3)
+- Fixed ContentAnalyzer tests (8 failures → 0)
+- Fixed subscription webhook test (1 failure → 0)
+- All 95 tests passing with 66% coverage
 
-**Changes Required** (tests/test_content_analyzer.py):
+### ✅ Milestone: Stripe Subscription Flow (Dec 2-3)
+- Checkout session creation
+- Webhook handling for subscription events
+- Cancel subscription with UI update
+- Stripe API compatibility for 2025-11-17 version
+- Subscription sync from Stripe on page load
+
+### ✅ Milestone: Soft Launch Ready (Dec 2)
+- All core features working
+- Dark mode with system detection
+- Mobile navigation
+- Branded assets integrated
+- 10 screens validated feature-complete
+
+---
+
+## Active Sprint: "Feedback That Helps"
+
+### Goal
+Transform generic feedback into personalized, actionable guidance that accelerates interview improvement.
+
+### Problem Statement
+Current feedback is one-size-fits-all. A junior engineer gets the same advice as a senior. Users can't see if they're improving. This reduces perceived value and retention.
+
+### Success Criteria
+- [ ] Users can set their experience level (junior/mid/senior)
+- [ ] Feedback adjusts expectations based on level
+- [ ] Dashboard shows score trend over last 10 sessions
+- [ ] FeedbackPage shows improvement % vs average
+
+---
+
+## Implementation Tasks
+
+### Phase 1: User Experience Level (Backend)
+| Task | Description | Est | Status |
+|------|-------------|-----|--------|
+| 1.1 | Add `experience_level` enum to User model | 30m | Pending |
+| 1.2 | Create Alembic migration | 15m | Pending |
+| 1.3 | Add experience_level to registration endpoint | 30m | Pending |
+| 1.4 | Add PATCH endpoint to update experience level | 30m | Pending |
+| 1.5 | Add tests for new endpoints | 30m | Pending |
+
+**Files to modify:**
+- `backend/app/models/user.py` - Add ExperienceLevel enum
+- `backend/app/api/users.py` - Update register and add endpoint
+- `backend/tests/test_users.py` - Add tests
+
+### Phase 2: User Experience Level (Frontend)
+| Task | Description | Est | Status |
+|------|-------------|-----|--------|
+| 2.1 | Add experience level select to RegisterPage | 30m | Pending |
+| 2.2 | Add experience level field to SettingsPage | 30m | Pending |
+| 2.3 | Update auth context with experience level | 15m | Pending |
+
+**Files to modify:**
+- `frontend/src/pages/RegisterPage.tsx`
+- `frontend/src/pages/SettingsPage.tsx`
+- `frontend/src/types/index.ts`
+
+### Phase 3: Personalized Feedback
+| Task | Description | Est | Status |
+|------|-------------|-----|--------|
+| 3.1 | Update content analyzer prompt by experience level | 1h | Pending |
+| 3.2 | Add level-specific scoring adjustments | 30m | Pending |
+| 3.3 | Test feedback quality at each level | 30m | Pending |
+
+**Files to modify:**
+- `backend/app/ai/content_analyzer.py` - Adjust prompts
+- `backend/app/services/feedback_service.py` - Pass level through
+
+### Phase 4: Progress Tracking
+| Task | Description | Est | Status |
+|------|-------------|-----|--------|
+| 4.1 | Add score history endpoint (last 10 sessions) | 1h | Pending |
+| 4.2 | Calculate improvement % vs user's average | 30m | Pending |
+| 4.3 | Add score trend chart to DashboardPage | 2h | Pending |
+| 4.4 | Show improvement % on FeedbackPage | 1h | Pending |
+
+**Files to modify:**
+- `backend/app/api/users.py` - New endpoint
+- `frontend/src/pages/DashboardPage.tsx` - Trend chart
+- `frontend/src/pages/FeedbackPage.tsx` - Improvement indicator
+
+---
+
+## Future Sprints
+
+### Sprint 2: "Practice Like the Real Thing"
+- Target company customization
+- Interview readiness score
+- Add sample answers to 75 questions
+
+### Sprint 3: "More Questions, Better Quality"
+- Expand question bank to 150+
+- Improve filler word detection with NLP
+- Add pause/pacing analysis
+
+---
+
+## Technical Notes
+
+### Experience Level Enum
 ```python
-# OLD (broken):
-with patch.object(analyzer.client.messages, "create", new=AsyncMock(...)):
-
-# NEW (fixed):
-with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(...)):
+class ExperienceLevel(str, Enum):
+    JUNIOR = "junior"      # 0-2 years
+    MID = "mid"            # 2-5 years
+    SENIOR = "senior"      # 5+ years
 ```
 
-**Checkpoint**: All `test_content_analyzer.py` tests pass (11/11)
+### Claude Prompt Adjustments by Level
+- **Junior**: Focus on fundamentals, be more encouraging, expect basic STAR usage
+- **Mid**: Balanced expectations, look for depth and specificity
+- **Senior**: High standards, expect leadership stories, strategic thinking
 
-### Phase 2: Fix Subscription Webhook Test
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1 | Update mock subscription to return dict-like structure | 30m |
-| 2.2 | Run subscription tests and verify all pass | 10m |
-
-**Changes Required** (tests/test_subscriptions.py):
+### Score History Query
 ```python
-# OLD (broken):
-mock_subscription = MagicMock()
-mock_subscription.status = "active"
-mock_subscription.current_period_end = 1735689600
-mock_subscription.items.data = [MagicMock(price=MagicMock(id="price_pro_monthly"))]
-
-# NEW (fixed):
-mock_subscription = {
-    "status": "active",
-    "items": {
-        "data": [{
-            "price": {"id": "price_pro_monthly"},
-            "current_period_end": 1735689600,
-        }]
-    },
-}
+# Get last 10 completed sessions with scores
+SELECT id, overall_score, created_at
+FROM session_feedback sf
+JOIN interview_session s ON sf.session_id = s.id
+WHERE s.user_id = :user_id AND s.status = 'COMPLETED'
+ORDER BY s.created_at DESC
+LIMIT 10
 ```
-
-**Checkpoint**: All `test_subscriptions.py` tests pass (5/5)
-
-### Phase 3: Verification
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.1 | Run full test suite to ensure no regressions | 5m |
-| 3.2 | Commit with conventional commit format | 5m |
-
-**Checkpoint**: Full test suite passes (95/95)
 
 ---
 
-## Testing Strategy
-- **Unit Tests**: Run affected test files individually first
-- **Full Suite**: Run complete pytest suite to catch regressions
-- **Commands**:
-  ```bash
-  uv run pytest tests/test_content_analyzer.py -v
-  uv run pytest tests/test_subscriptions.py -v
-  uv run pytest -q  # Full suite
-  ```
+## Quality Gates
 
-## Risks & Mitigations
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Mock changes break other tests | Medium | Run full suite after each change |
-| Provider logic differs between tests | Low | Ensure tests use default Anthropic provider |
+Before marking sprint complete:
+- [ ] All new endpoints have tests
+- [ ] Full test suite passes (95+ tests)
+- [ ] Frontend builds without errors
+- [ ] Manual testing of registration → feedback flow
+- [ ] Experience level visible in dashboard
+- [ ] Score trend chart renders correctly
 
-## Files to Modify
-1. `backend/tests/test_content_analyzer.py` - Update 8 patches
-2. `backend/tests/test_subscriptions.py` - Update 1 mock structure
+---
 
 ## References
-- Content Analyzer: `backend/app/ai/content_analyzer.py:86-100` (new client structure)
-- Subscription Handler: `backend/app/api/subscriptions.py:210-225` (new Stripe API access)
+
+- **Audit Report**: See docs/PROMPT.md for full codebase audit
+- **Design System**: docs/DESIGN_SYSTEM.md
+- **UI Flow**: docs/UI_SCREEN_FLOW.md
+- **Deployment**: docs/DEPLOYMENT.md

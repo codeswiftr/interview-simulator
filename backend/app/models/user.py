@@ -16,6 +16,14 @@ class SubscriptionTier(str, Enum):
     TEAM = "team"
 
 
+class ExperienceLevel(str, Enum):
+    """User experience level for personalized feedback."""
+
+    JUNIOR = "junior"      # 0-2 years experience
+    MID = "mid"            # 2-5 years experience
+    SENIOR = "senior"      # 5+ years experience
+
+
 class User(SQLModel, table=True):
     """User account model."""
 
@@ -29,6 +37,12 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     hashed_password: str
     full_name: str | None = None
+
+    # Experience level for personalized feedback
+    experience_level: ExperienceLevel = Field(
+        default=ExperienceLevel.MID,
+        sa_column=Column(String, nullable=False, default="mid")
+    )
 
     # Subscription - use sa_column to force String type (avoid PostgreSQL enum)
     subscription_tier: SubscriptionTier = Field(
@@ -70,6 +84,7 @@ class UserCreate(SQLModel):
     email: str
     password: str
     full_name: str | None = None
+    experience_level: ExperienceLevel | None = None  # Optional during registration
 
 
 class UserLogin(SQLModel):
@@ -85,6 +100,7 @@ class UserRead(SQLModel):
     id: UUID
     email: str
     full_name: str | None
+    experience_level: ExperienceLevel
     subscription_tier: SubscriptionTier
     interviews_this_month: int
     total_interviews: int
@@ -103,6 +119,7 @@ class UserUpdate(SQLModel):
 
     full_name: str | None = None
     email: str | None = None
+    experience_level: ExperienceLevel | None = None
 
 
 class PasswordChange(SQLModel):

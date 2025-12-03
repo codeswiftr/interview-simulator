@@ -1,6 +1,6 @@
 """SQLModel data models for Interview Simulator."""
 
-from app.models.user import User
+from app.models.user import User, ExperienceLevel
 from app.models.question import Question, QuestionCategory, Difficulty
 from app.models.interview import (
     InterviewSession,
@@ -16,6 +16,7 @@ from app.models.password_reset import PasswordResetToken
 
 __all__ = [
     "User",
+    "ExperienceLevel",
     "Question",
     "QuestionCategory",
     "Difficulty",

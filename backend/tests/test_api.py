@@ -487,3 +487,86 @@ async def test_audio_upload_invalid_format(client: AsyncClient, session_override
     )
     assert upload_resp.status_code == 400
     assert "not allowed" in upload_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_register_with_experience_level(client: AsyncClient):
+    """Test that users can register with an experience level."""
+    resp = await client.post(
+        "/api/v1/users/register",
+        json={
+            "email": "senior@example.com",
+            "password": "password123",
+            "experience_level": "senior"
+        }
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["experience_level"] == "senior"
+
+
+@pytest.mark.asyncio
+async def test_register_without_experience_level_defaults_to_mid(client: AsyncClient):
+    """Test that users without explicit experience level get 'mid' by default."""
+    resp = await client.post(
+        "/api/v1/users/register",
+        json={
+            "email": "default@example.com",
+            "password": "password123"
+        }
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["experience_level"] == "mid"
+
+
+@pytest.mark.asyncio
+async def test_update_experience_level(client: AsyncClient):
+    """Test updating experience level via PATCH /me."""
+    token = await register_and_login(client, email="update@example.com")
+
+    # Verify default is mid
+    me_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+    assert me_resp.json()["experience_level"] == "mid"
+
+    # Update to senior
+    update_resp = await client.patch(
+        "/api/v1/users/me",
+        json={"experience_level": "senior"},
+        headers={"Authorization": token}
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["experience_level"] == "senior"
+
+    # Update to junior
+    update_resp = await client.patch(
+        "/api/v1/users/me",
+        json={"experience_level": "junior"},
+        headers={"Authorization": token}
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["experience_level"] == "junior"
+
+
+@pytest.mark.asyncio
+async def test_experience_level_returned_in_me(client: AsyncClient):
+    """Test that /me endpoint returns experience level."""
+    resp = await client.post(
+        "/api/v1/users/register",
+        json={
+            "email": "me_test@example.com",
+            "password": "password123",
+            "experience_level": "junior"
+        }
+    )
+    assert resp.status_code == 201
+
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "me_test@example.com", "password": "password123"}
+    )
+    token = f"Bearer {login_resp.json()['access_token']}"
+
+    me_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+    assert me_resp.status_code == 200
+    assert me_resp.json()["experience_level"] == "junior"
