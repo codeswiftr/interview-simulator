@@ -1,5 +1,18 @@
-import { Calendar } from 'lucide-react';
+import { Calendar, Building2 } from 'lucide-react';
 import type { InterviewSession } from '../../types';
+
+const companyLabels: Record<string, string> = {
+  google: 'Google',
+  amazon: 'Amazon',
+  meta: 'Meta',
+  microsoft: 'Microsoft',
+  apple: 'Apple',
+  netflix: 'Netflix',
+  stripe: 'Stripe',
+  uber: 'Uber',
+  airbnb: 'Airbnb',
+  linkedin: 'LinkedIn',
+};
 
 interface InterviewCardProps {
   session: InterviewSession;
@@ -74,11 +87,18 @@ export default function InterviewCard({ session, onClick }: InterviewCardProps) 
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-sm text-text-secondary">
+      <div className="flex items-center gap-4 text-sm text-text-secondary flex-wrap">
         <div className="flex items-center gap-1.5">
           <Calendar size={16} />
           <span>{formatDate(session.created_at)}</span>
         </div>
+
+        {session.target_company && (
+          <div className="flex items-center gap-1.5 text-electric-blue">
+            <Building2 size={16} />
+            <span>{companyLabels[session.target_company] || session.target_company}</span>
+          </div>
+        )}
 
         {session.overall_score !== null && session.overall_score !== undefined && (
           <div className="flex items-center gap-1.5 text-electric-blue font-semibold">

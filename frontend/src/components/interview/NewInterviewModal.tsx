@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Zap, BarChart2, Target } from 'lucide-react';
+import { X, Zap, BarChart2, Target, Building2 } from 'lucide-react';
 import type { CreateInterviewFormData } from '../../types';
 
 interface NewInterviewModalProps {
@@ -13,6 +13,20 @@ const interviewTypes = [
   { value: 'technical', label: 'Technical', description: 'Programming and problem-solving questions' },
   { value: 'system_design', label: 'System Design', description: 'Architecture and design discussions' },
   { value: 'mixed', label: 'Mixed', description: 'Combination of all question types' },
+] as const;
+
+const targetCompanies = [
+  { value: '', label: 'Any Company' },
+  { value: 'google', label: 'Google' },
+  { value: 'amazon', label: 'Amazon' },
+  { value: 'meta', label: 'Meta' },
+  { value: 'microsoft', label: 'Microsoft' },
+  { value: 'apple', label: 'Apple' },
+  { value: 'netflix', label: 'Netflix' },
+  { value: 'stripe', label: 'Stripe' },
+  { value: 'uber', label: 'Uber' },
+  { value: 'airbnb', label: 'Airbnb' },
+  { value: 'linkedin', label: 'LinkedIn' },
 ] as const;
 
 const difficultyLevels = [
@@ -98,6 +112,28 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* Target Company Selection */}
+          <div>
+            <label className="label mb-3 block">Target Company <span className="text-text-tertiary font-normal">(optional)</span></label>
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
+              <select
+                value={formData.target_company || ''}
+                onChange={(e) => setFormData({ ...formData, target_company: e.target.value || undefined })}
+                className="input w-full pl-10 appearance-none cursor-pointer"
+              >
+                {targetCompanies.map((company) => (
+                  <option key={company.value} value={company.value}>
+                    {company.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="body-small text-text-tertiary mt-2">
+              Questions will be tailored to the selected company's interview style
+            </p>
           </div>
 
           {/* Difficulty Selection */}

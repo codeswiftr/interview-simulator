@@ -40,6 +40,7 @@ export interface InterviewSession {
   id: string;
   interview_type: 'behavioral' | 'technical' | 'system_design' | 'mixed';
   company_style?: string;
+  target_company?: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'analyzed' | 'cancelled';
   question_count: number;
   overall_score?: number;
@@ -149,6 +150,7 @@ export interface RegisterFormData {
 export interface CreateInterviewFormData {
   interview_type: 'behavioral' | 'technical' | 'system_design' | 'mixed';
   company_style?: string;
+  target_company?: string;
   question_count: number;
   difficulty?: 'easy' | 'medium' | 'hard' | 'mixed';
 }
