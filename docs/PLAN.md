@@ -1,460 +1,304 @@
-# CareerSwiftr Interview Simulator - Implementation Plan
+# Sprint 3: Quality & Content Foundation
 
-## Current Status: Sprint 2 Planning
-## Last Updated: 2025-12-04
-
----
-
-## Completed Milestones
-
-### ✅ Milestone: Test Suite Regressions (Dec 3)
-- Fixed ContentAnalyzer tests (8 failures → 0)
-- Fixed subscription webhook test (1 failure → 0)
-- All 95 tests passing with 66% coverage
-
-### ✅ Milestone: Stripe Subscription Flow (Dec 2-3)
-- Checkout session creation
-- Webhook handling for subscription events
-- Cancel subscription with UI update
-- Stripe API compatibility for 2025-11-17 version
-- Subscription sync from Stripe on page load
-
-### ✅ Milestone: Soft Launch Ready (Dec 2)
-- All core features working
-- Dark mode with system detection
-- Mobile navigation
-- Branded assets integrated
-- 10 screens validated feature-complete
+## Status: Ready
+## Target: December 2025
 
 ---
-
-## ✅ Completed Sprint: "Feedback That Helps"
-
-### Goal
-Transform generic feedback into personalized, actionable guidance that accelerates interview improvement.
-
-### Success Criteria (All Met)
-- [x] Users can set their experience level (junior/mid/senior) ✅ Done
-- [x] Feedback adjusts expectations based on level ✅ Done (Phase 3)
-- [x] Dashboard shows score trend over last 10 sessions ✅ Already existed
-- [x] FeedbackPage shows improvement % vs average ✅ Done (Phase 4)
-
----
-
-## Implementation Tasks
-
-### Phase 1: User Experience Level (Backend) ✅ COMPLETE
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 1.1 | Add `experience_level` enum to User model | 30m | ✅ Done |
-| 1.2 | Create Alembic migration | 15m | ✅ Done |
-| 1.3 | Add experience_level to registration endpoint | 30m | ✅ Done |
-| 1.4 | Add PATCH endpoint to update experience level | 30m | ✅ Done |
-| 1.5 | Add tests for new endpoints | 30m | ✅ Done |
-
-**Commits:**
-- `f2bbad6` - feat(user): add experience level for personalized feedback
-
-### Phase 2: User Experience Level (Frontend) ✅ COMPLETE
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 2.1 | Add experience level select to RegisterPage | 30m | ✅ Done |
-| 2.2 | Add experience level field to SettingsPage | 30m | ✅ Done |
-| 2.3 | Update auth context with experience level | 15m | ✅ Done |
-
-**Commits:**
-- `5446f87` - feat(frontend): add experience level selection to register and settings
-
-### Phase 3: Personalized Feedback ✅ COMPLETE
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 3.1 | Update ContentAnalyzer.analyze() to accept experience_level param | 30m | ✅ Done |
-| 3.2 | Create experience-level-specific prompt templates | 1h | ✅ Done |
-| 3.3 | Update FeedbackService to fetch user's experience_level | 45m | ✅ Done |
-| 3.4 | Add unit tests for experience-level-aware feedback | 1h | ✅ Done |
-| 3.5 | Add "Tailored for {level}" indicator to FeedbackPage | 30m | ✅ Done |
-
-**Commits:**
-- `7044b52` - feat(feedback): personalize AI feedback based on user experience level
-
-**Implementation Summary:**
-- Added `EXPERIENCE_CONTEXT` dict with junior/mid/senior prompts to `ContentAnalyzer`
-- Updated `analyze()` method to accept and use `experience_level` parameter
-- Updated `FeedbackService.generate_feedback()` to fetch user's experience_level from DB
-- Added 4 new tests (103 total passing)
-- Added "Feedback tailored for {level}" indicator to FeedbackPage
-
-### Phase 4: Progress Tracking ✅ COMPLETE
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 4.1 | ~~Add score history endpoint (last 10 sessions)~~ | - | ✅ Already exists (`/users/me/progress`) |
-| 4.2 | ~~Add score trend chart to DashboardPage~~ | - | ✅ Already exists (ProgressChart component) |
-| 4.3 | Add session comparison endpoint | 30m | ✅ Done |
-| 4.4 | Show improvement % on FeedbackPage | 1h | ✅ Done |
-
-**Discovery Notes:**
-The exploration revealed existing infrastructure:
-- `GET /users/me/stats` - Returns total_sessions, completed_sessions, average_score, total_practice_time_seconds
-- `GET /users/me/progress` - Returns score_trend (last 20 sessions with scores and dates)
-- `ProgressChart` component - SVG-based line chart with trend direction indicator
-- `StatsOverview` component - Displays overall stats on Dashboard
-
-**Implementation Summary:**
-- Added `GET /feedback/session/{id}/comparison` endpoint to return session score vs user average
-- Added ImprovementBanner to FeedbackPage showing "+X% vs your average" with trend icons
-- Frontend API updated with `feedbackAPI.getComparison()` method
-- All 103 tests passing
-
----
-
-# Sprint 2: Four Epics
 
 ## Overview
 
-This sprint combines four high-priority epics to maximize user value and technical foundation:
+Sprint 3 focuses on two pillars: **content quality** (sample answers for user learning) and **code quality** (test coverage to prevent regressions). These epics maximize value delivery while building a solid foundation for future features like email verification and video analysis.
 
-1. **Epic 1**: "Practice Like the Real Thing" - Company targeting and readiness scoring
-2. **Epic 2**: Expand Question Bank Quality - More questions and sample answers
-3. **Epic 3**: JWT Refresh Token System - Session persistence and security
-4. **Epic 4**: Backend Test Coverage - Improve coverage to 75%
-
-**Target**: Complete all 4 epics
-**Tests**: Maintain 103+ passing, target 75% coverage on core API modules
+**Priority Order:**
+1. **Epic 1**: Sample Answers (highest user value, zero technical risk)
+2. **Epic 2**: Test Coverage to 75% (enables confident deployments)
+3. **Epic 3**: Email Verification (production readiness)
+4. **Epic 4**: Video Analysis (future stretch goal)
 
 ---
 
-## Epic 1: "Practice Like the Real Thing"
+## Success Criteria
 
-### Goal
-Help users prepare for specific companies with tailored practice and readiness tracking.
-
-### Success Criteria
-- [ ] Users can select target company when creating interview
-- [ ] Questions are filtered by company_tags matching selection
-- [ ] Interview Readiness Score calculated from last 5 sessions
-- [ ] Readiness displayed on Dashboard
-- [ ] Sample answers visible after response submission
-
-### Technical Design
-
-**Data Model Changes:**
-- Add `target_company: str | None` field to InterviewSession model
-- Existing: `company_style` for interview style (faang/startup/enterprise)
-- Existing: `company_tags` array on Question model for filtering
-- Existing: `sample_answer` field on Question model (already present)
-
-**API Changes:**
-- Update `InterviewSessionCreate` schema to accept `target_company`
-- Add `GET /users/me/readiness-score` endpoint
-- Update question assignment logic in InterviewService
-
-**Frontend Changes:**
-- Add company selector dropdown to NewInterviewModal
-- Add ReadinessScore component to Dashboard
-- Add SampleAnswerModal to FeedbackPage
-
-### Implementation Tasks
-
-#### Phase 1: Backend - Company Targeting ✅ COMPLETE
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 1.1 | Add `target_company` field to InterviewSession model | 30m | ✅ Done |
-| 1.2 | Create Alembic migration | 15m | ✅ Done |
-| 1.3 | Update InterviewSessionCreate schema | 15m | ✅ Done |
-| 1.4 | Update InterviewService.assign_questions() to filter by company_tags | 1h | ✅ Done |
-| 1.5 | Add tests for company-filtered question assignment | 45m | ✅ Done |
-
-**Commits:**
-- `174942b` - feat(backend): add target_company field for company-targeted interviews
-
-**Checkpoint**: ✅ Creating interview with target_company filters questions correctly
-
-#### Phase 2: Frontend - Company Selection ✅ COMPLETE
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 2.1 | Add company dropdown to NewInterviewModal | 45m | ✅ Done |
-| 2.2 | Update interviewsAPI.create() to send target_company | 15m | ✅ Done |
-| 2.3 | Update types/index.ts with new fields | 15m | ✅ Done |
-| 2.4 | Display target company on InterviewCard | 30m | ✅ Done |
-
-**Commits:**
-- `cf5d09d` - feat(frontend): add company targeting UI for interviews
-
-**Checkpoint**: ✅ Users can select company when starting interview
-
-#### Phase 3: Backend - Readiness Score
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 3.1 | Add `GET /users/me/readiness-score` endpoint | 1h | ✅ Complete |
-| 3.2 | Calculate readiness from last 5 sessions' scores | 30m | ✅ Complete |
-| 3.3 | Add tests for readiness endpoint | 30m | ✅ Complete |
-
-**Commits:**
-- `e0f86e1` - feat(backend): add interview readiness score endpoint
-
-**Checkpoint**: ✅ Readiness score returns valid percentage based on practice history
-
-#### Phase 4: Frontend - Readiness Display
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 4.1 | Create ReadinessScore component | 1h | ✅ Complete |
-| 4.2 | Add to DashboardPage layout | 30m | ✅ Complete |
-| 4.3 | Add userAPI.getReadinessScore() method | 15m | ✅ Complete |
-
-**Commits:**
-- `c7ec79e` - feat(frontend): add interview readiness score display to dashboard
-
-**Checkpoint**: ✅ Dashboard shows interview readiness percentage
-
-#### Phase 5: Sample Answers
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 5.1 | Create SampleAnswerModal component | 1h | ✅ Complete |
-| 5.2 | Add "View Sample Answer" button to ResponseAccordion | 30m | ✅ Complete |
-| 5.3 | Style sample answer with highlighting | 30m | ✅ Complete |
-
-**Commits:**
-- `fbe728e` - feat(frontend): add sample answer modal for interview feedback
-
-**Checkpoint**: ✅ Users can view model answer after submitting response
+- [ ] 50 questions have sample_answer populated (20 behavioral, 20 technical, 10 system design)
+- [ ] Backend test coverage reaches 75% (from 66%)
+- [ ] All 140+ tests continue passing
+- [ ] Password reset flow sends actual emails (production)
+- [ ] Email verification for registration (optional stretch)
 
 ---
 
-### Epic 1 Progress Summary
-- Phase 1 (Backend - Company Targeting): ✅ Complete
-- Phase 2 (Frontend - Company Selection): ✅ Complete
-- Phase 3 (Backend - Readiness Score): ✅ Complete
-- Phase 4 (Frontend - Readiness Display): ✅ Complete
-- Phase 5 (Sample Answers): ✅ Complete
+# Epic 1: Sample Answers for Question Bank
 
-**Epic 1 Complete!** All phases implemented and tested.
+## Goal
+Provide users with high-quality reference answers so they understand what "good" looks like.
 
----
+## Context
+- 105 questions exist (50 technical, 30 behavioral, 25 system design)
+- 0 questions currently have `sample_answer` populated
+- SampleAnswerModal component already exists on FeedbackPage
+- `sample_answer` field is `str | None` in Question model
 
-## Epic 2: Expand Question Bank Quality
+## Success Criteria
+- [ ] 20 behavioral questions have STAR-format sample answers
+- [ ] 20 technical questions have structured problem-solving answers
+- [ ] 10 system design questions have component-based answers
 
-### Goal
-Provide more diverse practice material and reference answers for self-evaluation.
+## Implementation Plan
 
-### Success Criteria
-- [ ] Question bank expanded from 75 to 150+ questions
-- [ ] 50 new technical questions added
-- [ ] 25 new system design questions added
-- [ ] Sample answers written for top 50 most-used questions
+### Phase 1: Behavioral Sample Answers (20 questions)
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.1 | Write STAR answers for 10 easy behavioral questions | 1.5h |
+| 1.2 | Write STAR answers for 6 medium behavioral questions | 1h |
+| 1.3 | Write STAR answers for 4 hard behavioral questions | 1h |
+| 1.4 | Update seed_questions.py with new content | 30m |
+| 1.5 | Run seed to update database | 15m |
 
-### Technical Design
-
-**Question Categories:**
-- BEHAVIORAL: 25+ questions (existing)
-- TECHNICAL: 70+ questions (add 50)
-- SYSTEM_DESIGN: 55+ questions (add 25)
-
-**Difficulty Distribution:**
-- EASY: 30%
-- MEDIUM: 50%
-- HARD: 20%
-
-**Company Tags:**
-- google, amazon, meta, apple, microsoft, netflix
-- stripe, airbnb, uber, lyft, doordash
-- startup, enterprise, remote
-
-### Implementation Tasks
-
-#### Phase 1: Technical Questions
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 1.1 | Add 20 algorithm questions (arrays, trees, graphs) | 2h | Pending |
-| 1.2 | Add 15 data structure questions | 1.5h | Pending |
-| 1.3 | Add 15 coding pattern questions (DP, backtracking) | 1.5h | Pending |
-
-**Checkpoint**: 50 new technical questions seeded to database
-
-#### Phase 2: System Design Questions
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 2.1 | Add 10 distributed systems questions | 1h | Pending |
-| 2.2 | Add 10 scaling/performance questions | 1h | Pending |
-| 2.3 | Add 5 real-world scenario questions | 45m | Pending |
-
-**Checkpoint**: 25 new system design questions seeded to database
-
-#### Phase 3: Sample Answers
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 3.1 | Write sample answers for 20 behavioral questions | 2h | Pending |
-| 3.2 | Write sample answers for 20 technical questions | 2h | Pending |
-| 3.3 | Write sample answers for 10 system design questions | 1.5h | Pending |
-
-**Checkpoint**: 50 questions have sample_answer populated
-
----
-
-## Epic 3: JWT Refresh Token System
-
-### Goal
-Improve session persistence so users don't need to re-login frequently.
-
-### Success Criteria
-- [ ] Refresh tokens stored securely in database
-- [ ] Automatic token refresh on 401 errors
-- [ ] Token rotation on each refresh (security)
-- [ ] Access token: 15 minutes, Refresh token: 7 days
-
-### Technical Design
-
-**User Model Changes:**
-```python
-refresh_token: str | None = Field(default=None, max_length=512)
-refresh_token_expires_at: datetime | None = Field(default=None)
+**STAR Format Template:**
+```
+**Situation**: [Context and background]
+**Task**: [Your responsibility]
+**Action**: [Specific steps you took]
+**Result**: [Measurable outcome]
 ```
 
-**Token Schema:**
-```python
-class Token(SQLModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+**Checkpoint**: 20 behavioral questions visible in SampleAnswerModal
+
+### Phase 2: Technical Sample Answers (20 questions)
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.1 | Write answers for 10 data structures questions | 1.5h |
+| 2.2 | Write answers for 5 algorithm questions | 1h |
+| 2.3 | Write answers for 5 coding pattern questions | 1h |
+| 2.4 | Update seed_questions.py | 30m |
+
+**Technical Answer Template:**
+```
+**Problem Understanding**: [Clarify requirements]
+**Approach**: [Algorithm/data structure choice]
+**Complexity**: [Time/space analysis]
+**Code Sketch**: [Pseudocode or key logic]
+**Edge Cases**: [What to watch for]
 ```
 
-**New Endpoint:**
+**Checkpoint**: 20 technical questions have sample answers
+
+### Phase 3: System Design Sample Answers (10 questions)
+| Task | Description | Est |
+|------|-------------|-----|
+| 3.1 | Write answers for 5 distributed systems questions | 1h |
+| 3.2 | Write answers for 5 scaling questions | 1h |
+| 3.3 | Update seed_questions.py | 30m |
+
+**System Design Answer Template:**
 ```
-POST /auth/refresh
-Body: { "refresh_token": "..." }
-Response: { "access_token": "...", "refresh_token": "...", "token_type": "bearer" }
+**Requirements**: [Functional and non-functional]
+**High-Level Design**: [Components and data flow]
+**Deep Dive**: [Key component details]
+**Tradeoffs**: [Decisions and alternatives]
+**Scaling**: [How to handle growth]
 ```
 
-### Implementation Tasks
-
-#### Phase 1: Backend - Token Storage
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 1.1 | Add refresh_token fields to User model | 30m | Pending |
-| 1.2 | Create Alembic migration | 15m | Pending |
-| 1.3 | Update Token schema to include refresh_token | 15m | Pending |
-
-**Checkpoint**: User model can store refresh tokens
-
-#### Phase 2: Backend - Token Generation
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 2.1 | Create create_refresh_token() in security.py | 30m | Pending |
-| 2.2 | Update login endpoint to generate and store refresh token | 45m | Pending |
-| 2.3 | Create POST /auth/refresh endpoint | 1h | Pending |
-| 2.4 | Implement token rotation (invalidate old, issue new) | 30m | Pending |
-| 2.5 | Add tests for refresh flow | 1h | Pending |
-
-**Checkpoint**: /auth/refresh returns new access + refresh tokens
-
-#### Phase 3: Frontend - Auto Refresh
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 3.1 | Store refresh_token in localStorage on login | 15m | Pending |
-| 3.2 | Update axios interceptor to call refresh on 401 | 1h | Pending |
-| 3.3 | Update AuthContext to handle token refresh | 30m | Pending |
-| 3.4 | Add retry logic for original request after refresh | 30m | Pending |
-
-**Checkpoint**: Expired token triggers automatic refresh and retry
+**Checkpoint**: 10 system design questions have sample answers
 
 ---
 
-## Epic 4: Backend Test Coverage
+# Epic 2: Backend Test Coverage to 75%
 
-### Goal
-Increase test coverage to 75% on core API modules to prevent regressions.
+## Goal
+Increase test coverage from 66% to 75% to prevent regressions and enable confident deployments.
 
-### Success Criteria
-- [ ] feedback.py: 39% → 75%
-- [ ] interviews.py: 39% → 75%
-- [ ] subscriptions.py: 40% → 75%
-- [ ] users.py: 43% → 75%
+## Context
+From codebase audit, lowest coverage modules:
+- `api/feedback.py`: 39% (target: 75%)
+- `api/interviews.py`: 40% (target: 75%)
+- `api/auth.py`: 40% (target: 75%)
+- `api/subscriptions.py`: 40% (target: 60%)
+- `api/users.py`: 52% (target: 75%)
+- `middleware/rate_limit.py`: 33% (target: 60%)
 
-### Current Coverage Report
-| Module | Stmts | Miss | Cover | Target |
-|--------|-------|------|-------|--------|
-| app/api/feedback.py | 85 | 52 | 39% | 75% |
-| app/api/interviews.py | 148 | 90 | 39% | 75% |
-| app/api/subscriptions.py | 202 | 121 | 40% | 75% |
-| app/api/users.py | 90 | 51 | 43% | 75% |
+## Success Criteria
+- [ ] Overall coverage: 75%+
+- [ ] api/feedback.py: 75%+
+- [ ] api/interviews.py: 75%+
+- [ ] api/auth.py: 75%+
+- [ ] All 140+ tests passing
 
-### Implementation Tasks
+## Implementation Plan
 
-#### Phase 1: Test Infrastructure
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 1.1 | Create reusable fixtures (user, interview, responses) | 1h | Pending |
-| 1.2 | Create mock factory for feedback data | 30m | Pending |
+### Phase 1: Test Fixtures & Infrastructure
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.1 | Create conftest.py fixtures for auth user | 30m |
+| 1.2 | Create factory functions for interviews, responses | 30m |
+| 1.3 | Create mock generators for feedback data | 30m |
 
-**Checkpoint**: Shared fixtures available for all test files
+**Checkpoint**: Reusable fixtures available for all test files
 
-#### Phase 2: Feedback API Tests
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 2.1 | Test GET /feedback/session/{id} endpoint | 30m | Pending |
-| 2.2 | Test GET /feedback/session/{id}/all endpoint | 30m | Pending |
-| 2.3 | Test GET /feedback/response/{id} endpoint | 30m | Pending |
-| 2.4 | Test POST /feedback/generate/session/{id} | 45m | Pending |
-| 2.5 | Test GET /feedback/session/{id}/comparison | 30m | Pending |
-| 2.6 | Test authorization (wrong user) | 30m | Pending |
-| 2.7 | Test not-found cases | 30m | Pending |
+### Phase 2: Feedback API Tests (+36% needed)
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.1 | Test GET /feedback/session/{id}/all endpoint | 30m |
+| 2.2 | Test GET /feedback/response/{id} endpoint | 30m |
+| 2.3 | Test POST /feedback/generate/response/{id} | 30m |
+| 2.4 | Test GET /feedback/session/{id}/comparison | 30m |
+| 2.5 | Test authorization (wrong user access) | 30m |
+| 2.6 | Test 404 cases (not found) | 30m |
 
-**Checkpoint**: feedback.py coverage ≥ 75%
+**Checkpoint**: api/feedback.py coverage ≥ 75%
 
-#### Phase 3: Interviews API Tests
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 3.1 | Test POST /interviews (create) | 30m | Pending |
-| 3.2 | Test POST /interviews/{id}/start | 30m | Pending |
-| 3.3 | Test GET /interviews/{id}/questions | 30m | Pending |
-| 3.4 | Test POST /interviews/{id}/responses | 45m | Pending |
-| 3.5 | Test POST /interviews/{id}/end | 30m | Pending |
-| 3.6 | Test DELETE /interviews/{id} | 30m | Pending |
-| 3.7 | Test edge cases (invalid state transitions) | 45m | Pending |
-| 3.8 | Test quota enforcement for free users | 30m | Pending |
+### Phase 3: Interviews API Tests (+35% needed)
+| Task | Description | Est |
+|------|-------------|-----|
+| 3.1 | Test POST /interviews (create) with all options | 30m |
+| 3.2 | Test POST /interviews/{id}/start edge cases | 30m |
+| 3.3 | Test GET /interviews/{id}/questions | 30m |
+| 3.4 | Test POST /interviews/{id}/responses validation | 30m |
+| 3.5 | Test POST /interviews/{id}/end state transitions | 30m |
+| 3.6 | Test DELETE /interviews/{id} authorization | 30m |
+| 3.7 | Test quota enforcement for free users | 30m |
 
-**Checkpoint**: interviews.py coverage ≥ 75%
+**Checkpoint**: api/interviews.py coverage ≥ 75%
 
-#### Phase 4: Subscriptions API Tests
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 4.1 | Test GET /subscriptions/status | 30m | Pending |
-| 4.2 | Test POST /subscriptions/checkout | 45m | Pending |
-| 4.3 | Test POST /subscriptions/portal | 30m | Pending |
-| 4.4 | Test POST /subscriptions/cancel | 30m | Pending |
-| 4.5 | Test webhook events (invoice.paid, subscription.deleted) | 1h | Pending |
-| 4.6 | Test Stripe error handling | 30m | Pending |
+### Phase 4: Auth API Tests (+35% needed)
+| Task | Description | Est |
+|------|-------------|-----|
+| 4.1 | Test POST /auth/forgot-password rate limiting | 30m |
+| 4.2 | Test POST /auth/reset-password expired token | 30m |
+| 4.3 | Test POST /auth/reset-password used token | 30m |
+| 4.4 | Test POST /auth/refresh with invalid token | 30m |
+| 4.5 | Test POST /auth/refresh with expired token | 30m |
 
-**Checkpoint**: subscriptions.py coverage ≥ 75%
+**Checkpoint**: api/auth.py coverage ≥ 75%
 
-#### Phase 5: Users API Tests
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 5.1 | Test POST /users/register validation | 30m | Pending |
-| 5.2 | Test PATCH /users/me profile updates | 30m | Pending |
-| 5.3 | Test POST /users/me/change-password | 30m | Pending |
-| 5.4 | Test DELETE /users/me (soft delete) | 30m | Pending |
-| 5.5 | Test GET /users/me/stats | 30m | Pending |
-| 5.6 | Test GET /users/me/progress | 30m | Pending |
+### Phase 5: Users & Rate Limit Tests
+| Task | Description | Est |
+|------|-------------|-----|
+| 5.1 | Test PATCH /users/me with various updates | 30m |
+| 5.2 | Test POST /users/me/change-password validation | 30m |
+| 5.3 | Test DELETE /users/me cleanup behavior | 30m |
+| 5.4 | Test rate_limit middleware request blocking | 30m |
+| 5.5 | Test rate_limit cooldown and reset | 30m |
 
-**Checkpoint**: users.py coverage ≥ 75%
+**Checkpoint**: Overall coverage ≥ 75%
+
+---
+
+# Epic 3: Email Verification & Password Reset
+
+## Goal
+Complete the email infrastructure for production deployment.
+
+## Context
+From exploration:
+- `email_service.py` exists with `send_password_reset()` method
+- Password reset flow is implemented but may not send real emails
+- `is_verified` field exists on User model but is unused
+- No email verification for registration
+- SMTP config exists but may not be configured
+
+## Success Criteria
+- [ ] Password reset emails actually send in production
+- [ ] Email templates are professional and branded
+- [ ] (Stretch) Registration requires email verification
+
+## Implementation Plan
+
+### Phase 1: Email Service Production Readiness
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.1 | Integrate SendGrid/Resend as email provider | 1h |
+| 1.2 | Create branded HTML email templates | 1h |
+| 1.3 | Test email delivery in staging | 30m |
+| 1.4 | Add email delivery logging | 30m |
+
+**Checkpoint**: Password reset emails send successfully
+
+### Phase 2: Email Verification (Stretch)
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.1 | Create EmailVerificationToken model | 30m |
+| 2.2 | Create Alembic migration | 15m |
+| 2.3 | Add POST /auth/verify-email endpoint | 1h |
+| 2.4 | Add POST /auth/resend-verification endpoint | 30m |
+| 2.5 | Update registration to send verification email | 30m |
+| 2.6 | Update login to check is_verified | 30m |
+| 2.7 | Create VerifyEmailPage frontend | 1h |
+| 2.8 | Add tests for verification flow | 1h |
+
+**Checkpoint**: New users must verify email before login
+
+---
+
+# Epic 4: Video Analysis Integration (Future)
+
+## Goal
+Add video analysis for body language, eye contact, and emotion detection.
+
+## Context
+From project-brief.md:
+- EmotiEffLib mentioned for video analysis
+- Currently only audio is captured and analyzed
+- Frontend uses WebRTC (can capture video)
+- Would be a major differentiator
+
+## Success Criteria
+- [ ] Video capture enabled in interview room
+- [ ] Emotion detection (confidence vs nervousness)
+- [ ] Eye contact tracking
+- [ ] Video feedback displayed on FeedbackPage
+
+## Implementation Plan (High-Level)
+
+### Phase 1: Research & Validation
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.1 | Research EmotiEffLib requirements | 2h |
+| 1.2 | Test browser video capture | 1h |
+| 1.3 | Evaluate processing requirements | 1h |
+| 1.4 | Design video analysis data model | 1h |
+
+**Checkpoint**: Feasibility confirmed, architecture designed
+
+### Phase 2: Backend Implementation
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.1 | Create VideoFeedback model | 1h |
+| 2.2 | Create video_analyzer.py service | 4h |
+| 2.3 | Add video upload endpoint | 2h |
+| 2.4 | Integrate with background tasks | 2h |
+| 2.5 | Add tests for video analysis | 2h |
+
+**Checkpoint**: Video analysis pipeline operational
+
+### Phase 3: Frontend Integration
+| Task | Description | Est |
+|------|-------------|-----|
+| 3.1 | Enable video capture in InterviewPage | 2h |
+| 3.2 | Add video preview during recording | 1h |
+| 3.3 | Upload video with audio | 1h |
+| 3.4 | Display video feedback on FeedbackPage | 2h |
+| 3.5 | Handle camera permission UX | 1h |
+
+**Checkpoint**: Full video analysis user flow working
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests (Epic 2 focus)
+- Target: 75% coverage on core API modules
 - Mock external services (Stripe, OpenAI, Anthropic)
-- Test each endpoint with valid/invalid inputs
-- Verify authorization checks
+- Use factory fixtures for test data
 
 ### Integration Tests
 - Full request-response cycle with database
-- Test cascade operations (delete user → cleanup data)
 - Test state machine transitions (interview status)
+- Test cascade operations (delete user → cleanup)
 
-### Coverage Target
-- Overall: 75% (currently 66%)
-- Core API modules: 75% each
+### E2E Tests (Future)
+- Register → Interview → Feedback flow
+- Subscription checkout → upgrade flow
 
 ---
 
@@ -462,71 +306,86 @@ Increase test coverage to 75% on core API modules to prevent regressions.
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Token refresh race conditions | High | Medium | Use version field, proper async handling |
-| Company tags don't match questions | Medium | Low | Audit existing questions, add missing tags |
-| Sample answer quality inconsistent | Medium | Medium | Use evaluation_criteria as quality guide |
-| Test coverage slows development | Low | Medium | Focus on critical paths first |
+| Sample answer quality inconsistent | Medium | Medium | Use templates, review for consistency |
+| Email delivery fails in production | High | Low | Use established provider (SendGrid), test thoroughly |
+| Video processing too slow | Medium | Medium | Process async, show progress indicator |
+| Test coverage slows development | Low | Low | Focus on high-risk modules first |
 
 ---
 
 ## Execution Order
 
-**Recommended sequence** (can parallelize where noted):
+**Recommended sequence:**
 
-1. **Epic 4, Phase 1**: Test infrastructure (enables all other testing)
-2. **Epic 3, Phase 1-2**: Token storage + generation (backend complete)
-3. **Epic 1, Phase 1-2**: Company targeting + readiness (backend complete)
-4. **Epic 2, Phase 1-2**: Add new questions (parallel with backend work)
-5. **Epic 3, Phase 3**: Frontend token handling
-6. **Epic 1, Phase 3-5**: Frontend company + readiness + samples
-7. **Epic 2, Phase 3**: Write sample answers
-8. **Epic 4, Phase 2-5**: Test coverage (continuous throughout)
+1. **Epic 1** (Sample Answers) - Immediate user value, no risk
+2. **Epic 2** (Test Coverage) - Enables confident changes
+3. **Epic 3, Phase 1** (Email Production) - Production readiness
+4. **Epic 3, Phase 2** (Email Verification) - Nice to have
+5. **Epic 4** (Video Analysis) - Future enhancement
 
 ---
 
-## Technical Notes
+## Completed Sprints
 
-### Experience Level Enum
-```python
-class ExperienceLevel(str, Enum):
-    JUNIOR = "junior"      # 0-2 years
-    MID = "mid"            # 2-5 years
-    SENIOR = "senior"      # 5+ years
-```
+### Sprint 2: Four Epics (Dec 2025) ✅ COMPLETE
 
-### Claude Prompt Adjustments by Level
-- **Junior**: Focus on fundamentals, be more encouraging, expect basic STAR usage
-- **Mid**: Balanced expectations, look for depth and specificity
-- **Senior**: High standards, expect leadership stories, strategic thinking
+#### Epic 1: "Practice Like the Real Thing" ✅
+- Added target_company field for company-targeted interviews
+- Implemented readiness score calculation from last 5 sessions
+- Added sample answer modal on FeedbackPage
+- Company selector in NewInterviewModal
 
-### Score History Query
-```python
-# Get last 10 completed sessions with scores
-SELECT id, overall_score, created_at
-FROM session_feedback sf
-JOIN interview_session s ON sf.session_id = s.id
-WHERE s.user_id = :user_id AND s.status = 'COMPLETED'
-ORDER BY s.created_at DESC
-LIMIT 10
-```
+**Commits:**
+- `174942b` feat(backend): add target_company field
+- `cf5d09d` feat(frontend): add company targeting UI
+- `e0f86e1` feat(backend): add interview readiness score endpoint
+- `c7ec79e` feat(frontend): add readiness score display
+- `fbe728e` feat(frontend): add sample answer modal
+
+#### Epic 2: Expand Question Bank ✅
+- Expanded to 105 questions (50 technical, 30 behavioral, 25 system design)
+- Company tags and topic tags on all questions
+
+**Commits:**
+- `394b90f` feat(questions): expand technical question bank to 50 questions
+
+#### Epic 3: JWT Refresh Token System ✅
+- Refresh token stored in database with expiration
+- Token rotation on each refresh (security)
+- Frontend auto-refresh on 401 with request queuing
+
+**Commits:**
+- `6d4ae6b` feat(auth): implement JWT refresh token system with rotation
+- `6c94221` feat(frontend): add automatic JWT token refresh
+
+#### Epic 4: Backend Test Coverage ✅
+- Expanded from ~95 to 140 tests
+- Coverage improved to 66%
+
+**Commits:**
+- `a1f32c2` test: add comprehensive API tests for improved coverage
 
 ---
 
-## Quality Gates
+### Sprint 1: "Feedback That Helps" (Dec 2025) ✅ COMPLETE
 
-Before marking sprint complete:
-- [ ] All new endpoints have tests
-- [ ] Full test suite passes (95+ tests)
-- [ ] Frontend builds without errors
-- [ ] Manual testing of registration → feedback flow
-- [ ] Experience level visible in dashboard
-- [ ] Score trend chart renders correctly
+- User experience level selection (junior/mid/senior)
+- Personalized AI feedback based on level
+- Improvement comparison vs user average
+- Score trend visualization
+
+**Commits:**
+- `f2bbad6` feat(user): add experience level
+- `5446f87` feat(frontend): add experience level selection
+- `7044b52` feat(feedback): personalize AI feedback
+- `24f65ef` feat(feedback): add improvement comparison
 
 ---
 
 ## References
 
-- **Audit Report**: See docs/PROMPT.md for full codebase audit
+- **Codebase Audit**: docs/PROMPT.md
 - **Design System**: docs/DESIGN_SYSTEM.md
 - **UI Flow**: docs/UI_SCREEN_FLOW.md
 - **Deployment**: docs/DEPLOYMENT.md
+- **Project Brief**: docs/project-brief.md
