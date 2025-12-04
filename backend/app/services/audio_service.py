@@ -8,7 +8,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.audio_analyzer import AudioAnalyzer, AudioMetrics
-from app.ai.transcriber import TranscriptionResult, Transcriber
+from app.ai.transcriber import Transcriber, TranscriptionResult
 from app.models.feedback import AudioFeedback
 from app.models.interview import InterviewResponse
 
@@ -201,4 +201,3 @@ class AudioService:
         await session.refresh(feedback)
 
         return feedback
-

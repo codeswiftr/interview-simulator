@@ -60,7 +60,11 @@ class InterviewService:
         category = self._get_category_for_type(interview.interview_type)
 
         # Get difficulty value
-        difficulty_value = interview.difficulty.value if hasattr(interview.difficulty, 'value') else interview.difficulty
+        difficulty_value = (
+            interview.difficulty.value
+            if hasattr(interview.difficulty, "value")
+            else interview.difficulty
+        )
 
         questions: list[Question] = []
 

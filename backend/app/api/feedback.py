@@ -220,9 +220,7 @@ async def generate_response_feedback(
         feedback = await feedback_service.generate_feedback(session, response_id)
         return feedback
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.post(
@@ -260,9 +258,7 @@ async def generate_session_feedback(
         feedback = await feedback_service.generate_session_feedback(session, session_id)
         return feedback
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.get("/session/{session_id}/status")

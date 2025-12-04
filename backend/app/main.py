@@ -49,7 +49,9 @@ def configure_logging() -> None:
 
     # Set specific loggers
     logging.getLogger("uvicorn").setLevel(log_level)
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING if not settings.debug else logging.INFO)
+    logging.getLogger("uvicorn.access").setLevel(
+        logging.WARNING if not settings.debug else logging.INFO
+    )
 
 
 class CorrelationIDMiddleware(BaseHTTPMiddleware):
@@ -100,7 +102,9 @@ def init_error_monitoring() -> None:
             )
             logging.getLogger(__name__).info("Sentry error monitoring initialized")
         except ImportError:
-            logging.getLogger(__name__).warning("Sentry SDK not installed, skipping error monitoring")
+            logging.getLogger(__name__).warning(
+                "Sentry SDK not installed, skipping error monitoring"
+            )
 
 
 @asynccontextmanager
@@ -136,6 +140,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Verify Redis connection (optional)
     try:
         import redis.asyncio as redis
+
         redis_client = redis.from_url(settings.redis_url, socket_timeout=5.0)
         await redis_client.ping()
         await redis_client.aclose()
@@ -149,24 +154,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Transcription provider check
     if settings.transcription_provider == "groq":
         if settings.groq_api_key:
-            logger.info(f"Transcription configured: Groq (whisper-large-v3)")
+            logger.info("Transcription configured: Groq (whisper-large-v3)")
         else:
             logger.warning("Groq API key not configured - transcription will fail")
     else:
         if settings.openai_api_key:
-            logger.info(f"Transcription configured: OpenAI (whisper-1)")
+            logger.info("Transcription configured: OpenAI (whisper-1)")
         else:
             logger.warning("OpenAI API key not configured - transcription will fail")
 
     # Content analysis provider check
     if settings.content_analysis_provider == "openrouter":
         if settings.openrouter_api_key:
-            logger.info(f"Content analysis configured: OpenRouter (Claude)")
+            logger.info("Content analysis configured: OpenRouter (Claude)")
         else:
             logger.warning("OpenRouter API key not configured - feedback generation will fail")
     else:
         if settings.anthropic_api_key:
-            logger.info(f"Content analysis configured: Anthropic (Claude)")
+            logger.info("Content analysis configured: Anthropic (Claude)")
         else:
             logger.warning("Anthropic API key not configured - feedback generation will fail")
 

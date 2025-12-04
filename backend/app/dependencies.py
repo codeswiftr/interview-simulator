@@ -1,5 +1,7 @@
 """Common FastAPI dependencies."""
 
+from datetime import UTC
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
@@ -28,7 +30,7 @@ async def get_current_user(
         if user_id is None:
             raise credentials_exception
     except (JWTError, ValueError):
-        raise credentials_exception
+        raise credentials_exception from None
 
     result = await session.exec(select(User).where(User.id == user_id))
     user = result.first()
@@ -57,27 +59,30 @@ async def check_interview_quota(
         HTTPException: 402 Payment Required if quota exceeded
     """
     # Reset monthly counter if needed (simple check: if created_at is in different month)
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Simple reset: if user was created in a different month, reset counter
     # In production, you'd want a last_reset_at field
-    if current_user.created_at:
-        if (
+    if (
+        current_user.created_at
+        and (
             current_user.created_at.month != now.month
             or current_user.created_at.year != now.year
-        ):
-            # Only reset if counter is non-zero (avoid unnecessary updates)
-            if current_user.interviews_this_month > 0:
-                current_user.interviews_this_month = 0
-                await session.commit()
+        )
+        and current_user.interviews_this_month > 0
+    ):
+        current_user.interviews_this_month = 0
+        await session.commit()
 
     # Check quota based on tier
-    if current_user.subscription_tier == SubscriptionTier.FREE:
-        if current_user.interviews_this_month >= 3:
-            raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail="Free tier limit reached. Upgrade to Pro for unlimited interviews.",
-            )
+    if (
+        current_user.subscription_tier == SubscriptionTier.FREE
+        and current_user.interviews_this_month >= 3
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Free tier limit reached. Upgrade to Pro for unlimited interviews.",
+        )
 
     return current_user

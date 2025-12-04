@@ -1,6 +1,6 @@
 """User model for Interview Simulator."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -19,9 +19,9 @@ class SubscriptionTier(str, Enum):
 class ExperienceLevel(str, Enum):
     """User experience level for personalized feedback."""
 
-    JUNIOR = "junior"      # 0-2 years experience
-    MID = "mid"            # 2-5 years experience
-    SENIOR = "senior"      # 5+ years experience
+    JUNIOR = "junior"  # 0-2 years experience
+    MID = "mid"  # 2-5 years experience
+    SENIOR = "senior"  # 5+ years experience
 
 
 class User(SQLModel, table=True):
@@ -31,7 +31,7 @@ class User(SQLModel, table=True):
 
     @staticmethod
     def now_utc() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     email: str = Field(unique=True, index=True)
@@ -40,16 +40,16 @@ class User(SQLModel, table=True):
 
     # Experience level for personalized feedback
     experience_level: ExperienceLevel = Field(
-        default=ExperienceLevel.MID,
-        sa_column=Column(String, nullable=False, default="mid")
+        default=ExperienceLevel.MID, sa_column=Column(String, nullable=False, default="mid")
     )
 
     # Subscription - use sa_column to force String type (avoid PostgreSQL enum)
     subscription_tier: SubscriptionTier = Field(
-        default=SubscriptionTier.FREE,
-        sa_column=Column(String, nullable=False, default="free")
+        default=SubscriptionTier.FREE, sa_column=Column(String, nullable=False, default="free")
     )
-    subscription_status: str | None = Field(default=None)  # active, canceled, past_due, trialing, incomplete
+    subscription_status: str | None = Field(
+        default=None
+    )  # active, canceled, past_due, trialing, incomplete
     subscription_expires_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
     )
@@ -73,12 +73,8 @@ class User(SQLModel, table=True):
     )
 
     # Timestamps
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
-    updated_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
     last_login_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
     )

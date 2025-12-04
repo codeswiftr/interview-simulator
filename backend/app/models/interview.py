@@ -1,12 +1,12 @@
 """Interview session models."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy.types import JSON, String
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, SQLModel
 
 
 class InterviewType(str, Enum):
@@ -54,7 +54,7 @@ class InterviewSession(SQLModel, table=True):
 
     @staticmethod
     def now_utc() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="users.id", index=True)
@@ -95,12 +95,8 @@ class InterviewSession(SQLModel, table=True):
     content_score: float | None = None
 
     # Timestamps
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
-    updated_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class InterviewQuestion(SQLModel, table=True):
@@ -134,9 +130,7 @@ class InterviewResponse(SQLModel, table=True):
 
     # Transcription
     transcript: str | None = None
-    transcript_with_timestamps: dict | None = Field(
-        default=None, sa_column=Column(JSON)
-    )
+    transcript_with_timestamps: dict | None = Field(default=None, sa_column=Column(JSON))
 
     # Metrics
     duration_seconds: int = 0

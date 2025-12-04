@@ -243,10 +243,7 @@ class AudioAnalyzer:
             # Also consider volume consistency
             rms = librosa.feature.rms(y=y)[0]
             mean_rms = np.mean(rms)
-            if mean_rms > 0:
-                volume_cv = np.std(rms) / mean_rms
-            else:
-                volume_cv = 1.0
+            volume_cv = np.std(rms) / mean_rms if mean_rms > 0 else 1.0
 
             # Lower variation in both pitch and volume = higher confidence
             # Combine both metrics (weighted average)
@@ -254,7 +251,7 @@ class AudioAnalyzer:
             volume_score = max(0, 100 - (volume_cv * 50))  # Volume variation penalty
 
             # Combined confidence score
-            confidence = (pitch_score * 0.6 + volume_score * 0.4)
+            confidence = pitch_score * 0.6 + volume_score * 0.4
             return round(confidence, 1)
 
         except Exception as e:

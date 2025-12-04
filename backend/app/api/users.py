@@ -4,9 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.dependencies import get_current_user
 from app.db import get_session
-from app.models.user import ExperienceLevel, PasswordChange, Token, User, UserCreate, UserLogin, UserRead, UserUpdate
+from app.dependencies import get_current_user
+from app.models.user import (
+    ExperienceLevel,
+    PasswordChange,
+    Token,
+    User,
+    UserCreate,
+    UserLogin,
+    UserRead,
+    UserUpdate,
+)
 from app.security import create_access_token, create_refresh_token, hash_password, verify_password
 from app.services.feedback_service import FeedbackService
 
@@ -18,7 +27,9 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
     """Register a new user."""
     existing = await session.exec(select(User).where(User.email == payload.email))
     if existing.first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        )
 
     user = User(
         email=payload.email.lower(),
@@ -79,13 +90,10 @@ async def update_profile(
     # Update email if provided and different
     if updates.email is not None and updates.email.lower() != current_user.email:
         # Check if email is already taken
-        existing = await session.exec(
-            select(User).where(User.email == updates.email.lower())
-        )
+        existing = await session.exec(select(User).where(User.email == updates.email.lower()))
         if existing.first():
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
             )
         current_user.email = updates.email.lower()
 
@@ -107,8 +115,7 @@ async def change_password(
     # Verify current password
     if not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect"
         )
 
     # Hash and set new password
@@ -148,33 +155,37 @@ async def get_my_stats(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Get user statistics: total sessions, completed sessions, average score, practice time.
-    
+
     Args:
         current_user: Authenticated user
         session: Database session
-        
+
     Returns:
         Dictionary with user statistics
     """
     from app.models.interview import InterviewSession, InterviewStatus
-    
+
     # Get all sessions for user
     sessions_result = await session.exec(
         select(InterviewSession).where(InterviewSession.user_id == current_user.id)
     )
     all_sessions = list(sessions_result.all())
-    
+
     total_sessions = len(all_sessions)
-    completed_sessions = [s for s in all_sessions if s.status == InterviewStatus.COMPLETED or s.status == InterviewStatus.ANALYZED]
+    completed_sessions = [
+        s
+        for s in all_sessions
+        if s.status == InterviewStatus.COMPLETED or s.status == InterviewStatus.ANALYZED
+    ]
     completed_count = len(completed_sessions)
-    
+
     # Calculate average score from completed sessions
     scores = [s.overall_score for s in completed_sessions if s.overall_score is not None]
     average_score = sum(scores) / len(scores) if scores else None
-    
+
     # Calculate total practice time (sum of duration_seconds)
     total_practice_time = sum(s.duration_seconds or 0 for s in completed_sessions)
-    
+
     return {
         "total_sessions": total_sessions,
         "completed_sessions": completed_count,
@@ -189,52 +200,54 @@ async def get_my_progress(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Get user progress: time-series of session scores and practice recommendations.
-    
+
     Args:
         current_user: Authenticated user
         session: Database session
-        
+
     Returns:
         Dictionary with progress data and recommendations
     """
-    from app.models.interview import InterviewSession, InterviewStatus
     from app.models.feedback import SessionFeedback
-    
+    from app.models.interview import InterviewSession, InterviewStatus
+
     # Get completed sessions with feedback
     sessions_result = await session.exec(
         select(InterviewSession)
         .where(
             InterviewSession.user_id == current_user.id,
-            InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED])
+            InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED]),
         )
         .order_by(InterviewSession.created_at.desc())
         .limit(20)  # Last 20 sessions
     )
     sessions = list(sessions_result.all())
-    
+
     # Get session feedbacks
     session_ids = [s.id for s in sessions]
     feedbacks_result = await session.exec(
         select(SessionFeedback).where(SessionFeedback.session_id.in_(session_ids))
     )
     feedbacks = {f.session_id: f for f in feedbacks_result.all()}
-    
+
     # Build time-series data
     score_trend = []
     for s in reversed(sessions):  # Oldest first for trend
         feedback = feedbacks.get(s.id)
         if feedback:
-            score_trend.append({
-                "date": s.created_at.isoformat(),
-                "score": feedback.overall_score,
-                "content_score": feedback.content_score,
-                "audio_score": feedback.audio_score,
-            })
-    
+            score_trend.append(
+                {
+                    "date": s.created_at.isoformat(),
+                    "score": feedback.overall_score,
+                    "content_score": feedback.content_score,
+                    "audio_score": feedback.audio_score,
+                }
+            )
+
     # Get practice recommendations from FeedbackService
     feedback_service = FeedbackService()
     progress_data = await feedback_service.get_user_progress(session, current_user.id)
-    
+
     return {
         "score_trend": score_trend,
         "recommended_practice_areas": progress_data.get("recommended_practice_areas", []),

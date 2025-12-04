@@ -427,7 +427,6 @@ SEED_QUESTIONS = [
 
 **Result**: Leadership chose the phased migration approach. We added 2 weeks to the timeline but avoided what would have been a catastrophic 6-hour production outage affecting thousands of customers. The project ultimately succeeded, and my manager credited early risk identification with saving the project. I now schedule "risk review" checkpoints in every major project, and this has become a team practice.""",
     ),
-
     # ========== TECHNICAL QUESTIONS (20 total) ==========
     Question(
         content="Implement a function to detect cycles in a linked list.",
@@ -1441,7 +1440,6 @@ def dijkstra(graph, start):
         company_tags=["Google", "Amazon", "Netflix"],
         topic_tags=["distributed_systems", "cap_theorem", "consistency"],
     ),
-
     # ========== SYSTEM DESIGN QUESTIONS (25 total: 5 easy, 8 medium, 12 hard) ==========
     # EASY system design questions
     Question(

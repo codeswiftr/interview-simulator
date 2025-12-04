@@ -1,6 +1,6 @@
 """Feedback models for interview analysis."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
@@ -16,7 +16,7 @@ class AudioFeedback(SQLModel, table=True):
 
     @staticmethod
     def now_utc() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     response_id: UUID = Field(foreign_key="interview_responses.id", unique=True)
@@ -40,9 +40,7 @@ class AudioFeedback(SQLModel, table=True):
     # Overall
     overall_audio_score: float = Field(description="0-100 weighted average")
 
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class ContentFeedback(SQLModel, table=True):
@@ -66,17 +64,11 @@ class ContentFeedback(SQLModel, table=True):
     overall_content_score: float = Field(description="0-100 weighted average")
 
     # Qualitative feedback
-    strengths: list[str] = Field(
-        default_factory=list, sa_column=Column(ARRAY(String))
-    )
-    improvements: list[str] = Field(
-        default_factory=list, sa_column=Column(ARRAY(String))
-    )
+    strengths: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    improvements: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     detailed_feedback: str = Field(default="", description="Paragraph of feedback")
 
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class SessionFeedback(SQLModel, table=True):
@@ -95,12 +87,8 @@ class SessionFeedback(SQLModel, table=True):
     content_score: float = Field(description="Average content score across responses")
 
     # Qualitative summary
-    top_strengths: list[str] = Field(
-        default_factory=list, sa_column=Column(ARRAY(String))
-    )
-    top_improvements: list[str] = Field(
-        default_factory=list, sa_column=Column(ARRAY(String))
-    )
+    top_strengths: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    top_improvements: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
 
     # Recommendations
     recommended_practice_areas: list[str] = Field(
@@ -112,9 +100,7 @@ class SessionFeedback(SQLModel, table=True):
         description="Suggested questions for next session",
     )
 
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class AudioFeedbackRead(SQLModel):

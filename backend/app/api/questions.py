@@ -7,8 +7,8 @@ from sqlalchemy import func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.dependencies import get_current_user
 from app.db import get_session
+from app.dependencies import get_current_user
 from app.models.question import Difficulty, Question, QuestionCategory, QuestionCreate, QuestionRead
 from app.models.user import User
 
@@ -61,14 +61,18 @@ async def get_random_question(
     result = await session.exec(stmt)
     question = result.first()
     if not question:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching question found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No matching question found"
+        )
     return question
 
 
 @router.get("/{question_id}", response_model=QuestionRead)
 async def get_question(question_id: UUID, session: AsyncSession = Depends(get_session)) -> Question:
     """Get a specific question by ID."""
-    result = await session.exec(select(Question).where(Question.id == question_id, Question.is_active.is_(True)))
+    result = await session.exec(
+        select(Question).where(Question.id == question_id, Question.is_active.is_(True))
+    )
     question = result.first()
     if not question:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")

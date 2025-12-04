@@ -43,7 +43,7 @@ class BackgroundTaskService:
         **kwargs,
     ) -> None:
         """Log message with correlation fields for background tasks.
-        
+
         Args:
             level: Logging level (logging.INFO, logging.ERROR, etc.)
             message: Log message
@@ -59,7 +59,7 @@ class BackgroundTaskService:
             extra["session_id"] = str(session_id)
         if task_name:
             extra["task_name"] = task_name
-        
+
         extra.update(kwargs)
         logger.log(level, message, extra=extra)
 
@@ -365,4 +365,3 @@ class BackgroundTaskService:
 
 # Global instance
 background_tasks = BackgroundTaskService()
-

@@ -1,6 +1,6 @@
 """Interview question models."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -33,7 +33,7 @@ class Question(SQLModel, table=True):
 
     @staticmethod
     def now_utc() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     content: str = Field(description="The question text")
@@ -63,12 +63,8 @@ class Question(SQLModel, table=True):
 
     # Metadata
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
-    updated_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class QuestionCreate(SQLModel):

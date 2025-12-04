@@ -2,17 +2,16 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.dependencies import check_interview_quota, get_current_user
 from app.db import get_session
+from app.dependencies import check_interview_quota, get_current_user
 from app.models.interview import (
-    DifficultyLevel,
     InterviewQuestion,
     InterviewResponse,
     InterviewResponseCreate,
@@ -35,9 +34,7 @@ interview_service = InterviewService()
 
 
 def _get_time() -> datetime:
-    return datetime.now(timezone.utc)
-
-
+    return datetime.now(UTC)
 
 
 async def _get_interview_for_user(
@@ -131,7 +128,9 @@ async def start_interview(
     """
     interview = await _get_interview_for_user(session, interview_id, current_user.id)
     if interview.status not in {InterviewStatus.SCHEDULED, InterviewStatus.IN_PROGRESS}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot start interview")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot start interview"
+        )
 
     # Assign questions if not already assigned (idempotent for re-starting)
     has_questions = await interview_service.has_assigned_questions(session, interview_id)
@@ -142,7 +141,7 @@ async def start_interview(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
-            )
+            ) from None
 
     interview.status = InterviewStatus.IN_PROGRESS
     interview.started_at = interview.started_at or _get_time()
@@ -220,12 +219,19 @@ async def cancel_interview(
     """Cancel a scheduled interview."""
     interview = await _get_interview_for_user(session, interview_id, current_user.id)
     if interview.status != InterviewStatus.SCHEDULED:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only scheduled interviews can be cancelled")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only scheduled interviews can be cancelled",
+        )
     interview.status = InterviewStatus.CANCELLED
     await session.commit()
 
 
-@router.post("/{interview_id}/responses", response_model=InterviewResponseRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{interview_id}/responses",
+    response_model=InterviewResponseRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def submit_response(
     interview_id: UUID,
     payload: InterviewResponseCreate,
@@ -240,21 +246,21 @@ async def submit_response(
     if interview.status != InterviewStatus.IN_PROGRESS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only submit responses to interviews in progress"
+            detail="Can only submit responses to interviews in progress",
         )
 
     # Verify question belongs to this interview session
     question_link_result = await session.exec(
         select(InterviewQuestion).where(
             InterviewQuestion.session_id == interview_id,
-            InterviewQuestion.question_id == payload.question_id
+            InterviewQuestion.question_id == payload.question_id,
         )
     )
     question_link = question_link_result.first()
     if not question_link:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Question does not belong to this interview session"
+            detail="Question does not belong to this interview session",
         )
 
     # Create the response
@@ -306,9 +312,7 @@ async def get_responses(
     # Fetch questions for all responses
     question_ids = [r.question_id for r in responses]
     if question_ids:
-        question_result = await session.exec(
-            select(Question).where(Question.id.in_(question_ids))
-        )
+        question_result = await session.exec(select(Question).where(Question.id.in_(question_ids)))
         questions_map = {q.id: q for q in question_result.all()}
     else:
         questions_map = {}
@@ -335,7 +339,9 @@ async def get_responses(
                 "content": question.content,
                 "category": question.category,
                 "difficulty": question.difficulty,
-            } if question else None,
+            }
+            if question
+            else None,
         }
         response_data.append(response_dict)
 
@@ -405,7 +411,7 @@ async def create_quick_practice(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from None
 
     # Increment interview counter
     current_user.interviews_this_month += 1

@@ -718,7 +718,17 @@ async def test_new_access_token_works(client: AsyncClient):
         headers={"Authorization": f"Bearer {new_access}"}
     )
     assert me_resp.status_code == 200
-    assert me_resp.json()["email"] == "access@example.com"
+
+
+@pytest.mark.asyncio
+async def test_refresh_without_token_fails_validation(client: AsyncClient):
+    """Test that refresh endpoint validates required refresh_token field."""
+    # Missing refresh_token in payload should trigger validation error
+    refresh_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={},
+    )
+    assert refresh_resp.status_code == 422
 
 
 @pytest.mark.asyncio

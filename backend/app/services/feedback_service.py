@@ -8,7 +8,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.content_analyzer import ContentAnalyzer
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, ProcessingStatus
+from app.models.interview import (
+    InterviewResponse,
+    InterviewSession,
+    InterviewStatus,
+    ProcessingStatus,
+)
 from app.models.question import Question
 from app.models.user import User
 
@@ -26,9 +31,7 @@ class FeedbackService:
         """Initialize feedback service with content analyzer."""
         self.content_analyzer = ContentAnalyzer()
 
-    async def generate_feedback(
-        self, session: AsyncSession, response_id: UUID
-    ) -> ContentFeedback:
+    async def generate_feedback(self, session: AsyncSession, response_id: UUID) -> ContentFeedback:
         """Generate feedback for a single interview response.
 
         Args:
@@ -77,17 +80,21 @@ class FeedbackService:
         # Fetch the user's experience level
         experience_level = "mid"  # Default
         if interview:
-            user_result = await session.exec(
-                select(User).where(User.id == interview.user_id)
-            )
+            user_result = await session.exec(select(User).where(User.id == interview.user_id))
             user = user_result.first()
             if user and user.experience_level:
                 # Handle both enum and string values
-                experience_level = user.experience_level.value if hasattr(user.experience_level, 'value') else user.experience_level
+                experience_level = (
+                    user.experience_level.value
+                    if hasattr(user.experience_level, "value")
+                    else user.experience_level
+                )
 
         # Analyze content using Claude
         # Note: question.category is already a string, not an enum
-        question_type = question.category.value if hasattr(question.category, 'value') else question.category
+        question_type = (
+            question.category.value if hasattr(question.category, "value") else question.category
+        )
         metrics = await self.content_analyzer.analyze(
             question=question.content,
             transcript=response.transcript,
@@ -96,9 +103,7 @@ class FeedbackService:
         )
 
         # Calculate overall score
-        overall_score = self.content_analyzer.calculate_overall_score(
-            metrics, question_type
-        )
+        overall_score = self.content_analyzer.calculate_overall_score(metrics, question_type)
 
         # Create feedback record
         feedback = ContentFeedback(
@@ -314,9 +319,7 @@ class FeedbackService:
         )
         return list(result.all())
 
-    async def get_processing_summary(
-        self, session: AsyncSession, session_id: UUID
-    ) -> dict:
+    async def get_processing_summary(self, session: AsyncSession, session_id: UUID) -> dict:
         """Get processing status summary for a session.
 
         Returns counts of responses by processing_status, whether session feedback exists,
@@ -357,7 +360,9 @@ class FeedbackService:
 
         # Determine if all responses are fully processed
         total_responses = len(responses)
-        completed_or_failed = status_counts[ProcessingStatus.COMPLETED] + status_counts[ProcessingStatus.FAILED]
+        completed_or_failed = (
+            status_counts[ProcessingStatus.COMPLETED] + status_counts[ProcessingStatus.FAILED]
+        )
         all_processed = total_responses > 0 and completed_or_failed == total_responses
 
         # Determine current step
@@ -387,71 +392,69 @@ class FeedbackService:
             "current_step": current_step,
         }
 
-    async def get_user_progress(
-        self, session: AsyncSession, user_id: UUID
-    ) -> dict:
+    async def get_user_progress(self, session: AsyncSession, user_id: UUID) -> dict:
         """Get aggregate progress metrics for a user.
-        
+
         Returns last N sessions' scores, average audio/content scores,
         and top recurring recommended practice areas.
-        
+
         Args:
             session: Database session
             user_id: UUID of the user
-            
+
         Returns:
             Dictionary with progress metrics
         """
         from app.models.interview import InterviewSession, InterviewStatus
-        
+
         # Get last 10 completed sessions
         sessions_result = await session.exec(
             select(InterviewSession)
             .where(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED])
+                InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED]),
             )
             .order_by(InterviewSession.created_at.desc())
             .limit(10)
         )
         sessions = list(sessions_result.all())
-        
+
         if not sessions:
             return {
                 "recommended_practice_areas": [],
                 "average_audio_score": None,
                 "average_content_score": None,
             }
-        
+
         # Get session feedbacks
         session_ids = [s.id for s in sessions]
         feedbacks_result = await session.exec(
             select(SessionFeedback).where(SessionFeedback.session_id.in_(session_ids))
         )
         feedbacks = list(feedbacks_result.all())
-        
+
         if not feedbacks:
             return {
                 "recommended_practice_areas": [],
                 "average_audio_score": None,
                 "average_content_score": None,
             }
-        
+
         # Calculate averages
         audio_scores = [f.audio_score for f in feedbacks if f.audio_score is not None]
         content_scores = [f.content_score for f in feedbacks if f.content_score is not None]
-        
+
         avg_audio = sum(audio_scores) / len(audio_scores) if audio_scores else None
         avg_content = sum(content_scores) / len(content_scores) if content_scores else None
-        
+
         # Aggregate recommended practice areas (most common across sessions)
         all_practice_areas = []
         for f in feedbacks:
             all_practice_areas.extend(f.recommended_practice_areas)
-        
+
         practice_area_counter = Counter(all_practice_areas)
         top_practice_areas = [area for area, _ in practice_area_counter.most_common(3)]
-        
+
         return {
             "recommended_practice_areas": top_practice_areas,
             "average_audio_score": round(avg_audio, 1) if avg_audio else None,

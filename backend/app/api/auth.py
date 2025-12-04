@@ -1,9 +1,10 @@
 """Authentication endpoints for password reset and token refresh."""
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -18,7 +19,6 @@ from app.security import (
     verify_refresh_token,
 )
 from app.services.email_service import EmailService
-from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -70,7 +70,7 @@ async def forgot_password(
     token = secrets.token_urlsafe(32)
 
     # Token expires in 1 hour
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    expires_at = datetime.now(UTC) + timedelta(hours=1)
 
     # Create password reset token
     reset_token = PasswordResetToken(
@@ -119,36 +119,28 @@ async def reset_password(
 
     if not reset_token:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token"
         )
 
     # Check if token is already used
     if reset_token.used:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has already been used"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Reset token has already been used"
         )
 
     # Check if token is expired
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if reset_token.expires_at < now:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Reset token has expired"
         )
 
     # Get the user
-    user_result = await session.exec(
-        select(User).where(User.id == reset_token.user_id)
-    )
+    user_result = await session.exec(select(User).where(User.id == reset_token.user_id))
     user = user_result.first()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid reset token"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token")
 
     # Update user's password
     user.hashed_password = hash_password(payload.new_password)
@@ -181,15 +173,12 @@ async def refresh_token(
         HTTPException: If refresh token is invalid or expired
     """
     # Find user with this refresh token
-    result = await session.exec(
-        select(User).where(User.refresh_token == payload.refresh_token)
-    )
+    result = await session.exec(select(User).where(User.refresh_token == payload.refresh_token))
     user = result.first()
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
     # Verify token is not expired
@@ -201,8 +190,7 @@ async def refresh_token(
         user.refresh_token_expires_at = None
         await session.commit()
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token expired"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired"
         )
 
     # Generate new tokens (token rotation)

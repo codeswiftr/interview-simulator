@@ -5,8 +5,8 @@ For production with multiple instances, use Redis-based rate limiting.
 
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware

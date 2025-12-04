@@ -603,6 +603,69 @@ async def test_generate_response_feedback_endpoint(client, session_override, moc
 
 
 @pytest.mark.asyncio
+async def test_generate_response_feedback_ai_failure(client, session_override):
+    """Test POST /feedback/generate/response/{id} returns 400 when analysis fails."""
+    token = await register_and_login(client, email="ai_failure@example.com")
+
+    question = Question(
+        content="Explain CAP theorem",
+        category=QuestionCategory.SYSTEM_DESIGN,
+        difficulty=Difficulty.HARD,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "system_design"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Some answer that will cause AI failure",
+            "duration_seconds": 30,
+        },
+        headers={"Authorization": token},
+    )
+    response_id = submit_resp.json()["id"]
+
+    # Patch FeedbackService.generate_feedback to simulate analysis failure
+    with patch("app.api.feedback.FeedbackService") as MockService:
+        instance = MockService.return_value
+        instance.generate_feedback = AsyncMock(
+            side_effect=ValueError("AI analysis failed")
+        )
+
+        gen_resp = await client.post(
+            f"/api/v1/feedback/generate/response/{response_id}",
+            headers={"Authorization": token},
+        )
+
+    assert gen_resp.status_code == 400
+    assert "failed" in gen_resp.json()["detail"].lower() or "ai" in gen_resp.json()[
+        "detail"
+    ].lower()
+
+
+@pytest.mark.asyncio
 async def test_feedback_authorization(client, session_override):
     """Test that users can only access their own feedback."""
     # User 1
@@ -655,6 +718,13 @@ async def test_feedback_authorization(client, session_override):
         headers={"Authorization": token2},
     )
     assert get_resp.status_code == 404  # Not found (unauthorized)
+
+    # User 2 also cannot generate feedback for User 1's response
+    gen_resp = await client.post(
+        f"/api/v1/feedback/generate/response/{response_id}",
+        headers={"Authorization": token2},
+    )
+    assert gen_resp.status_code == 404  # Not found (unauthorized)
 
 
 @pytest.mark.asyncio
@@ -904,6 +974,127 @@ async def test_get_all_session_feedbacks_empty(client, session_override):
     data = get_resp.json()
     assert isinstance(data, list)
     assert len(data) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_session_processing_status_with_feedback(client, session_override):
+    """Test GET /api/v1/feedback/session/{id}/status returns correct counts."""
+    token = await register_and_login(client, email="status@example.com")
+
+    # Create interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Create question and link to interview
+    question = Question(
+        content="Status question",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    # Start interview and submit two responses
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # First response fully processed
+    resp1 = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "First answer",
+            "duration_seconds": 30,
+        },
+        headers={"Authorization": token},
+    )
+    r1_id = resp1.json()["id"]
+
+    # Second response pending
+    resp2 = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Second answer",
+            "duration_seconds": 40,
+        },
+        headers={"Authorization": token},
+    )
+    r2_id = resp2.json()["id"]
+
+    # Manually create feedback for first response and session
+    content_fb = ContentFeedback(
+        response_id=r1_id,
+        technical_accuracy=80.0,
+        star_adherence=0.0,
+        answer_structure=75.0,
+        completeness=70.0,
+        relevance=82.0,
+        overall_content_score=76.0,
+        strengths=["Good content"],
+        improvements=["More detail"],
+        detailed_feedback="Good answer overall.",
+    )
+    session_fb = SessionFeedback(
+        session_id=interview_id,
+        overall_score=78.0,
+        content_score=76.0,
+        audio_score=80.0,
+        top_strengths=["Clear communication"],
+        top_improvements=["Add examples"],
+        summary="Solid session.",
+    )
+    session_override.add(content_fb)
+    session_override.add(session_fb)
+    await session_override.commit()
+
+    status_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/status",
+        headers={"Authorization": token},
+    )
+    assert status_resp.status_code == 200
+    data = status_resp.json()
+    assert data["total_responses"] == 2
+    assert isinstance(data["status_counts"], dict)
+    # Both responses should initially be pending
+    assert data["status_counts"].get("pending", 0) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_session_processing_status_empty(client, session_override):
+    """Test status endpoint when there are no responses yet."""
+    token = await register_and_login(client, email="status_empty@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    status_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/status",
+        headers={"Authorization": token},
+    )
+    assert status_resp.status_code == 200
+    data = status_resp.json()
+    assert data["total_responses"] == 0
+    assert isinstance(data["status_counts"], dict)
 
 
 @pytest.mark.asyncio

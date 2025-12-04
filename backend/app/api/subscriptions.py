@@ -1,7 +1,7 @@
 """Subscription management endpoints for Stripe integration."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import stripe
@@ -148,17 +148,15 @@ async def stripe_webhook(request: Request) -> dict:
     sig_header = request.headers.get("stripe-signature")
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.stripe_webhook_secret
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload"
-        )
+        ) from None
     except stripe.error.SignatureVerificationError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature"
-        )
+        ) from None
 
     # Get database session
     async for db_session in get_session():
@@ -198,9 +196,7 @@ async def _handle_checkout_completed(session_obj: dict, db_session: AsyncSession
         return
 
     # Find user
-    result = await db_session.exec(
-        select(User).where(User.id == UUID(user_id))
-    )
+    result = await db_session.exec(select(User).where(User.id == UUID(user_id)))
     user = result.first()
     if not user:
         logger.warning(f"User not found: {user_id}")
@@ -218,7 +214,7 @@ async def _handle_checkout_completed(session_obj: dict, db_session: AsyncSession
         user.subscription_status = subscription["status"]
         # current_period_end is now on the subscription item in new Stripe API
         user.subscription_expires_at = datetime.fromtimestamp(
-            sub_item["current_period_end"], tz=timezone.utc
+            sub_item["current_period_end"], tz=UTC
         )
 
         await db_session.commit()
@@ -234,9 +230,7 @@ async def _handle_subscription_updated(subscription_obj: dict, db_session: Async
         return
 
     # Find user by customer ID
-    result = await db_session.exec(
-        select(User).where(User.stripe_customer_id == customer_id)
-    )
+    result = await db_session.exec(select(User).where(User.stripe_customer_id == customer_id))
     user = result.first()
     if not user:
         return
@@ -249,7 +243,7 @@ async def _handle_subscription_updated(subscription_obj: dict, db_session: Async
     user.subscription_status = subscription_obj.get("status")
     # current_period_end is now on the subscription item in new Stripe API
     user.subscription_expires_at = datetime.fromtimestamp(
-        sub_item.get("current_period_end", 0), tz=timezone.utc
+        sub_item.get("current_period_end", 0), tz=UTC
     )
 
     await db_session.commit()
@@ -263,9 +257,7 @@ async def _handle_subscription_deleted(subscription_obj: dict, db_session: Async
         return
 
     # Find user by customer ID
-    result = await db_session.exec(
-        select(User).where(User.stripe_customer_id == customer_id)
-    )
+    result = await db_session.exec(select(User).where(User.stripe_customer_id == customer_id))
     user = result.first()
     if not user:
         return
@@ -375,7 +367,7 @@ async def _sync_subscription_from_stripe(user: User, session: AsyncSession) -> N
         user.subscription_status = status
         # current_period_end is now on the subscription item in new Stripe API
         user.subscription_expires_at = datetime.fromtimestamp(
-            sub_item["current_period_end"], tz=timezone.utc
+            sub_item["current_period_end"], tz=UTC
         )
 
         await session.commit()
@@ -496,4 +488,3 @@ async def cancel_subscription(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to cancel subscription: {str(e)}",
         ) from e
-

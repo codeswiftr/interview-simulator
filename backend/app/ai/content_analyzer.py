@@ -156,7 +156,9 @@ When providing feedback, please:
         star_instruction = self.STAR_INSTRUCTION if question_type == "behavioral" else ""
 
         # Get experience-level-specific context
-        experience_context = self.EXPERIENCE_CONTEXT.get(experience_level, self.EXPERIENCE_CONTEXT["mid"])
+        experience_context = self.EXPERIENCE_CONTEXT.get(
+            experience_level, self.EXPERIENCE_CONTEXT["mid"]
+        )
 
         prompt = self.ANALYSIS_PROMPT.format(
             question=question,

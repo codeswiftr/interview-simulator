@@ -93,7 +93,7 @@ async def transcribe_audio(
     if len(content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is 25MB, got {len(content) / (1024*1024):.1f}MB",
+            detail=f"File too large. Maximum size is 25MB, got {len(content) / (1024 * 1024):.1f}MB",
         )
 
     # Write to temp file
@@ -128,24 +128,24 @@ async def transcribe_audio(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
-        )
+        ) from None
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from None
     except Exception as e:
         logger.error(f"Transcription failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transcription failed: {str(e)}",
-        )
+            detail=f"Transcription failed: {e!s}",
+        ) from None
     finally:
         # Clean up temp file
-        try:
+        import contextlib
+
+        with contextlib.suppress(Exception):
             Path(tmp_path).unlink(missing_ok=True)
-        except Exception:
-            pass
 
 
 @router.get("/supported-formats")

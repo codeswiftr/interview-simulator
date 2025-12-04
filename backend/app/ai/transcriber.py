@@ -92,8 +92,7 @@ class Transcriber:
         file_size_mb = audio_path.stat().st_size / (1024 * 1024)
         if file_size_mb > self.MAX_FILE_SIZE_MB:
             raise ValueError(
-                f"File too large: {file_size_mb:.1f}MB. "
-                f"Maximum size: {self.MAX_FILE_SIZE_MB}MB"
+                f"File too large: {file_size_mb:.1f}MB. Maximum size: {self.MAX_FILE_SIZE_MB}MB"
             )
 
         try:

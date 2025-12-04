@@ -1,6 +1,7 @@
 """Tests for password reset functionality."""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -92,6 +93,23 @@ async def test_forgot_password_unknown_email_returns_success(client: AsyncClient
     result = await session_override.exec(select(PasswordResetToken))
     tokens = list(result.all())
     assert len(tokens) == 0
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_email_service_failure(client: AsyncClient, session_override):
+    """Test that email service failures surface as server errors."""
+    email = await create_test_user(client, email="email_failure@example.com")
+
+    # Patch EmailService in auth module to raise on send
+    with patch("app.api.auth.EmailService") as MockEmailService:
+        instance = MockEmailService.return_value
+        instance.send_password_reset = AsyncMock(side_effect=Exception("Email provider failure"))
+
+        with pytest.raises(Exception) as exc_info:
+            await client.post("/api/v1/auth/forgot-password", json={"email": email})
+
+    # Document current behavior: exception from email provider is not swallowed.
+    assert "Email provider failure" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -190,6 +208,8 @@ async def test_reset_password_invalid_token(client: AsyncClient):
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
+
+
 
 
 @pytest.mark.asyncio

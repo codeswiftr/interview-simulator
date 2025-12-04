@@ -21,6 +21,7 @@ async def check_redis() -> bool:
         return False
     try:
         import redis.asyncio as redis
+
         redis_client = redis.from_url(settings.redis_url, socket_timeout=5.0)
         await redis_client.ping()
         await redis_client.aclose()

@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from app.config import settings
 
@@ -41,6 +40,7 @@ class EmailService:
             # Extract plain text from HTML (simple version)
             # Remove HTML tags for plain text fallback
             import re
+
             plain_text = re.sub(r"<[^>]+>", "", html_content)
             plain_text = re.sub(r"\s+", " ", plain_text).strip()
 
@@ -83,7 +83,9 @@ CareerSwiftr Team
         subject = "Reset Your CareerSwiftr Password"
 
         # Load HTML template
-        html_content, plain_text = self._load_html_template("password_reset.html", reset_url=reset_url)
+        html_content, plain_text = self._load_html_template(
+            "password_reset.html", reset_url=reset_url
+        )
 
         if settings.debug:
             # In debug mode, just log the email
@@ -112,9 +114,11 @@ CareerSwiftr Team
                 )
 
                 email_response = resend.Emails.send(params)
-                email_id = getattr(email_response, 'id', None)
+                email_id = getattr(email_response, "id", None)
                 if email_id:
-                    logger.info(f"Password reset email sent via Resend to {email} (email_id: {email_id})")
+                    logger.info(
+                        f"Password reset email sent via Resend to {email} (email_id: {email_id})"
+                    )
                 else:
                     logger.info(f"Password reset email sent via Resend to {email}")
                 return True
@@ -128,8 +132,9 @@ CareerSwiftr Team
         # Fallback to SMTP if configured
         if self.smtp_host and self.smtp_user and self.smtp_password:
             try:
-                import aiosmtplib
                 from email.message import EmailMessage
+
+                import aiosmtplib
 
                 message = EmailMessage()
                 message["From"] = self.from_email
@@ -146,7 +151,9 @@ CareerSwiftr Team
                     password=self.smtp_password,
                     start_tls=True,
                 )
-                logger.info(f"Password reset email sent via SMTP to {email} (host: {self.smtp_host})")
+                logger.info(
+                    f"Password reset email sent via SMTP to {email} (host: {self.smtp_host})"
+                )
                 return True
             except ImportError:
                 logger.warning("aiosmtplib not installed. Install with: pip install aiosmtplib")

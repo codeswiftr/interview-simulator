@@ -38,6 +38,7 @@ async def check_db_connection() -> bool:
     """
     try:
         from sqlalchemy import text
+
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
         return True

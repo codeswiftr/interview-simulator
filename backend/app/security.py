@@ -1,7 +1,7 @@
 """Security utilities for password hashing and JWT handling."""
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
@@ -27,7 +27,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
     """Create a signed JWT access token."""
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         minutes=expires_minutes or settings.access_token_expire_minutes
     )
     to_encode.update({"exp": expire})
@@ -49,11 +49,13 @@ def create_refresh_token() -> tuple[str, datetime]:
         Tuple of (token_string, expiration_datetime)
     """
     token = secrets.token_urlsafe(64)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_at = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return token, expires_at
 
 
-def verify_refresh_token(stored_token: str | None, provided_token: str, expires_at: datetime | None) -> bool:
+def verify_refresh_token(
+    stored_token: str | None, provided_token: str, expires_at: datetime | None
+) -> bool:
     """Verify a refresh token is valid and not expired.
 
     Args:
@@ -68,6 +70,4 @@ def verify_refresh_token(stored_token: str | None, provided_token: str, expires_
         return False
     if stored_token != provided_token:
         return False
-    if datetime.now(timezone.utc) > expires_at:
-        return False
-    return True
+    return not datetime.now(UTC) > expires_at
