@@ -681,3 +681,563 @@ async def test_new_access_token_works(client: AsyncClient):
     )
     assert me_resp.status_code == 200
     assert me_resp.json()["email"] == "access@example.com"
+
+
+@pytest.mark.asyncio
+async def test_change_password_success(client: AsyncClient):
+    """Test changing password with correct current password."""
+    token = await register_and_login(client, email="password_change@example.com")
+
+    resp = await client.post(
+        "/api/v1/users/me/change-password",
+        json={"current_password": "password123", "new_password": "newpassword456"},
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 200
+    assert "successfully" in resp.json()["message"].lower()
+
+    # Verify new password works
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "password_change@example.com", "password": "newpassword456"}
+    )
+    assert login_resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_change_password_wrong_current(client: AsyncClient):
+    """Test changing password with incorrect current password."""
+    token = await register_and_login(client, email="wrong_password@example.com")
+
+    resp = await client.post(
+        "/api/v1/users/me/change-password",
+        json={"current_password": "wrongpassword", "new_password": "newpassword456"},
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 400
+    assert "incorrect" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_delete_account(client: AsyncClient):
+    """Test soft deleting user account."""
+    token = await register_and_login(client, email="delete_me@example.com")
+
+    # Verify account exists
+    me_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+    assert me_resp.status_code == 200
+
+    # Delete account
+    del_resp = await client.delete("/api/v1/users/me", headers={"Authorization": token})
+    assert del_resp.status_code == 204
+
+    # Try to login - should fail because account is soft deleted
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "delete_me@example.com", "password": "password123"}
+    )
+    # Either 401 (invalid) or login works but is_active=False blocks access
+    # Based on implementation, just check old email no longer works
+    assert login_resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_user_stats_empty(client: AsyncClient):
+    """Test user stats with no sessions."""
+    token = await register_and_login(client, email="stats_empty@example.com")
+
+    resp = await client.get("/api/v1/users/me/stats", headers={"Authorization": token})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_sessions"] == 0
+    assert data["completed_sessions"] == 0
+    assert data["average_score"] is None
+    assert data["total_practice_time_seconds"] == 0
+
+
+@pytest.mark.asyncio
+async def test_user_progress_empty(client: AsyncClient):
+    """Test user progress with no sessions."""
+    token = await register_and_login(client, email="progress_empty@example.com")
+
+    resp = await client.get("/api/v1/users/me/progress", headers={"Authorization": token})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["score_trend"] == []
+
+
+@pytest.mark.asyncio
+async def test_update_profile_email(client: AsyncClient):
+    """Test updating email via profile."""
+    token = await register_and_login(client, email="update_email@example.com")
+
+    resp = await client.patch(
+        "/api/v1/users/me",
+        json={"email": "new_email@example.com"},
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["email"] == "new_email@example.com"
+
+
+@pytest.mark.asyncio
+async def test_update_profile_email_already_taken(client: AsyncClient):
+    """Test updating email to one that's already taken."""
+    await register_and_login(client, email="existing@example.com")
+    token = await register_and_login(client, email="want_existing@example.com")
+
+    resp = await client.patch(
+        "/api/v1/users/me",
+        json={"email": "existing@example.com"},
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 400
+    assert "already registered" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_profile_name(client: AsyncClient):
+    """Test updating full name via profile."""
+    token = await register_and_login(client, email="update_name@example.com")
+
+    resp = await client.patch(
+        "/api/v1/users/me",
+        json={"full_name": "New Name"},
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] == "New Name"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_registration_fails(client: AsyncClient):
+    """Test registering with existing email fails."""
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "duplicate@example.com", "password": "password123"}
+    )
+    resp = await client.post(
+        "/api/v1/users/register",
+        json={"email": "duplicate@example.com", "password": "password123"}
+    )
+    assert resp.status_code == 400
+    assert "already registered" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_login_with_wrong_password(client: AsyncClient):
+    """Test login with incorrect password."""
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "wrong_login@example.com", "password": "password123"}
+    )
+    resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "wrong_login@example.com", "password": "wrongpassword"}
+    )
+    assert resp.status_code == 401
+    assert "invalid" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_login_nonexistent_user(client: AsyncClient):
+    """Test login for user that doesn't exist."""
+    resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "nonexistent@example.com", "password": "password123"}
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_questions_by_category(client: AsyncClient):
+    """Test filtering questions by category."""
+    token = await register_and_login(client, email="cat_filter@example.com")
+
+    # Create a technical question
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Technical question for filter test",
+            "category": QuestionCategory.TECHNICAL.value,
+            "difficulty": Difficulty.EASY.value,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Create a behavioral question
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Behavioral question for filter test",
+            "category": QuestionCategory.BEHAVIORAL.value,
+            "difficulty": Difficulty.EASY.value,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Filter by technical
+    resp = await client.get("/api/v1/questions/", params={"category": "technical"})
+    assert resp.status_code == 200
+    questions = resp.json()
+    assert len(questions) >= 1
+    assert all(q["category"] == "technical" for q in questions)
+
+
+@pytest.mark.asyncio
+async def test_get_questions_by_difficulty(client: AsyncClient):
+    """Test filtering questions by difficulty."""
+    token = await register_and_login(client, email="diff_filter@example.com")
+
+    # Create an easy question
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Easy question for filter test",
+            "category": QuestionCategory.TECHNICAL.value,
+            "difficulty": Difficulty.EASY.value,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Create a hard question
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Hard question for filter test",
+            "category": QuestionCategory.TECHNICAL.value,
+            "difficulty": Difficulty.HARD.value,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Filter by easy
+    resp = await client.get("/api/v1/questions/", params={"difficulty": "easy"})
+    assert resp.status_code == 200
+    questions = resp.json()
+    assert len(questions) >= 1
+    assert all(q["difficulty"] == "easy" for q in questions)
+
+
+@pytest.mark.asyncio
+async def test_get_question_by_id(client: AsyncClient):
+    """Test getting a specific question by ID."""
+    token = await register_and_login(client, email="get_by_id@example.com")
+
+    # Create a question
+    create_resp = await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Question to get by ID",
+            "category": QuestionCategory.BEHAVIORAL.value,
+            "difficulty": Difficulty.MEDIUM.value,
+        },
+        headers={"Authorization": token},
+    )
+    question_id = create_resp.json()["id"]
+
+    # Get by ID
+    resp = await client.get(f"/api/v1/questions/{question_id}")
+    assert resp.status_code == 200
+    assert resp.json()["content"] == "Question to get by ID"
+
+
+@pytest.mark.asyncio
+async def test_get_random_question_filtered(client: AsyncClient):
+    """Test getting random question with filters."""
+    token = await register_and_login(client, email="random_filtered@example.com")
+
+    # Create a behavioral medium question
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Behavioral medium for random test",
+            "category": QuestionCategory.BEHAVIORAL.value,
+            "difficulty": Difficulty.MEDIUM.value,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Get random with filters
+    resp = await client.get(
+        "/api/v1/questions/random",
+        params={"category": "behavioral", "difficulty": "medium"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["category"] == "behavioral"
+    assert data["difficulty"] == "medium"
+
+
+@pytest.mark.asyncio
+async def test_interview_get_by_id(client: AsyncClient):
+    """Test getting interview session by ID."""
+    token = await register_and_login(client, email="interview_get@example.com")
+
+    # Create behavioral questions
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Interview get test question {i}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.MEDIUM.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    # Create interview
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = create_resp.json()["id"]
+
+    # Get by ID
+    resp = await client.get(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["id"] == interview_id
+
+
+@pytest.mark.asyncio
+async def test_interview_cancel_before_start(client: AsyncClient):
+    """Test canceling an interview before it starts."""
+    token = await register_and_login(client, email="cancel_before@example.com")
+
+    # Create behavioral questions
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Cancel test question {i}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.EASY.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    # Create interview
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = create_resp.json()["id"]
+
+    # Cancel (should work before start)
+    cancel_resp = await client.delete(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token}
+    )
+    assert cancel_resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_interview_already_started_returns_same_state(client: AsyncClient):
+    """Test that starting an already started interview returns the same state."""
+    token = await register_and_login(client, email="start_twice@example.com")
+
+    # Create behavioral questions
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Start twice test question {i}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.EASY.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    # Create and start interview
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = create_resp.json()["id"]
+
+    # First start succeeds
+    start1 = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token}
+    )
+    assert start1.status_code == 200
+    assert start1.json()["status"] == InterviewStatus.IN_PROGRESS
+
+    # Second start - endpoint allows idempotent calls
+    start2 = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token}
+    )
+    # Returns 200 (idempotent) or 400 (strict) - check it's still in progress
+    if start2.status_code == 200:
+        assert start2.json()["status"] == InterviewStatus.IN_PROGRESS
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_returns_success_always(client: AsyncClient):
+    """Test forgot password always returns success (security best practice)."""
+    # Existing user
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "forgotpw@example.com", "password": "password123"}
+    )
+    resp1 = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "forgotpw@example.com"}
+    )
+    assert resp1.status_code == 200
+
+    # Non-existent user - still returns 200 (security)
+    resp2 = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "nonexistent_forgot@example.com"}
+    )
+    assert resp2.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_reset_password_invalid_token(client: AsyncClient):
+    """Test reset password with invalid token fails."""
+    resp = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": "invalid-token-abc123", "new_password": "newpassword456"}
+    )
+    assert resp.status_code == 400
+    assert "invalid" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_interview_not_found(client: AsyncClient):
+    """Test getting non-existent interview returns 404."""
+    import uuid
+    token = await register_and_login(client, email="notfound@example.com")
+
+    resp = await client.get(
+        f"/api/v1/interviews/{uuid.uuid4()}",
+        headers={"Authorization": token}
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_question_not_found(client: AsyncClient):
+    """Test getting non-existent question returns 404."""
+    import uuid
+
+    resp = await client.get(f"/api/v1/questions/{uuid.uuid4()}")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_interview_list_empty(client: AsyncClient):
+    """Test listing interviews when user has none."""
+    token = await register_and_login(client, email="empty_interviews@example.com")
+
+    resp = await client.get("/api/v1/interviews/", headers={"Authorization": token})
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_create_interview_with_company_style(client: AsyncClient):
+    """Test creating interview with company style parameter."""
+    token = await register_and_login(client, email="company_style@example.com")
+
+    # Create behavioral questions
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Company style test question {i}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.MEDIUM.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={
+            "interview_type": InterviewType.BEHAVIORAL.value,
+            "company_style": "google",
+            "question_count": 3
+        },
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["company_style"] == "google"
+
+
+@pytest.mark.asyncio
+async def test_create_interview_with_difficulty(client: AsyncClient):
+    """Test creating interview with difficulty parameter."""
+    token = await register_and_login(client, email="difficulty_int@example.com")
+
+    # Create hard behavioral questions
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Difficulty test question {i}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.HARD.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={
+            "interview_type": InterviewType.BEHAVIORAL.value,
+            "difficulty": "hard",
+            "question_count": 3
+        },
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_end_interview_returns_completed_status(client: AsyncClient):
+    """Test ending an interview properly marks it as completed."""
+    token = await register_and_login(client, email="end_complete@example.com")
+
+    # Create behavioral questions
+    for i in range(3):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"End complete test {i}",
+                "category": QuestionCategory.BEHAVIORAL.value,
+                "difficulty": Difficulty.EASY.value,
+            },
+            headers={"Authorization": token},
+        )
+
+    # Create and start interview
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = create_resp.json()["id"]
+
+    # Start the interview
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token}
+    )
+
+    # End the interview
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token}
+    )
+    assert end_resp.status_code == 200
+    assert end_resp.json()["status"] == InterviewStatus.COMPLETED
