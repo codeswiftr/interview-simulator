@@ -66,6 +66,12 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)
 
+    # Refresh Token
+    refresh_token: str | None = Field(default=None, max_length=512)
+    refresh_token_expires_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
     # Timestamps
     created_at: datetime = Field(
         default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
@@ -108,10 +114,17 @@ class UserRead(SQLModel):
 
 
 class Token(SQLModel):
-    """JWT token response."""
+    """JWT token response with refresh token."""
 
     access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
+
+
+class RefreshTokenRequest(SQLModel):
+    """Request schema for token refresh."""
+
+    refresh_token: str
 
 
 class UserUpdate(SQLModel):

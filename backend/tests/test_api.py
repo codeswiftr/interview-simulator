@@ -570,3 +570,114 @@ async def test_experience_level_returned_in_me(client: AsyncClient):
     me_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
     assert me_resp.status_code == 200
     assert me_resp.json()["experience_level"] == "junior"
+
+
+@pytest.mark.asyncio
+async def test_login_returns_refresh_token(client: AsyncClient):
+    """Test that login returns both access and refresh tokens."""
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "refresh@example.com", "password": "password123"}
+    )
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "refresh@example.com", "password": "password123"}
+    )
+    assert login_resp.status_code == 200
+    data = login_resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
+    assert len(data["refresh_token"]) > 50  # Secure tokens are long
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_returns_new_tokens(client: AsyncClient):
+    """Test that refreshing tokens returns a new access and refresh token."""
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "refresh2@example.com", "password": "password123"}
+    )
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "refresh2@example.com", "password": "password123"}
+    )
+    old_refresh = login_resp.json()["refresh_token"]
+
+    refresh_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": old_refresh}
+    )
+    assert refresh_resp.status_code == 200
+    data = refresh_resp.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    # Token rotation: new refresh token should be different
+    assert data["refresh_token"] != old_refresh
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_rotation_invalidates_old(client: AsyncClient):
+    """Test that using a refresh token invalidates it (token rotation)."""
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "rotation@example.com", "password": "password123"}
+    )
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "rotation@example.com", "password": "password123"}
+    )
+    old_refresh = login_resp.json()["refresh_token"]
+
+    # First refresh succeeds
+    refresh_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": old_refresh}
+    )
+    assert refresh_resp.status_code == 200
+
+    # Second use of old token fails
+    refresh_resp2 = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": old_refresh}
+    )
+    assert refresh_resp2.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_refresh_with_invalid_token_fails(client: AsyncClient):
+    """Test that an invalid refresh token is rejected."""
+    refresh_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "invalid-token-that-does-not-exist"}
+    )
+    assert refresh_resp.status_code == 401
+    assert "invalid" in refresh_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_new_access_token_works(client: AsyncClient):
+    """Test that the new access token from refresh can access protected endpoints."""
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "access@example.com", "password": "password123"}
+    )
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "access@example.com", "password": "password123"}
+    )
+    refresh_token = login_resp.json()["refresh_token"]
+
+    refresh_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
+    )
+    new_access = refresh_resp.json()["access_token"]
+
+    # Use new access token
+    me_resp = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {new_access}"}
+    )
+    assert me_resp.status_code == 200
+    assert me_resp.json()["email"] == "access@example.com"

@@ -1,4 +1,4 @@
-"""Authentication endpoints for password reset."""
+"""Authentication endpoints for password reset and token refresh."""
 
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -10,8 +10,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.config import settings
 from app.db import get_session
 from app.models.password_reset import PasswordResetToken
-from app.models.user import User
-from app.security import hash_password
+from app.models.user import RefreshTokenRequest, Token, User
+from app.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_refresh_token,
+)
 from app.services.email_service import EmailService
 from pydantic import BaseModel
 
@@ -154,3 +159,59 @@ async def reset_password(
     await session.commit()
 
     return {"message": "Password successfully reset"}
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(
+    payload: RefreshTokenRequest,
+    session: AsyncSession = Depends(get_session),
+) -> Token:
+    """Refresh access token using a valid refresh token.
+
+    Implements token rotation: invalidates old refresh token and issues new pair.
+
+    Args:
+        payload: Refresh token from client
+        session: Database session
+
+    Returns:
+        New access and refresh tokens
+
+    Raises:
+        HTTPException: If refresh token is invalid or expired
+    """
+    # Find user with this refresh token
+    result = await session.exec(
+        select(User).where(User.refresh_token == payload.refresh_token)
+    )
+    user = result.first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
+    # Verify token is not expired
+    if not verify_refresh_token(
+        user.refresh_token, payload.refresh_token, user.refresh_token_expires_at
+    ):
+        # Clear invalid token
+        user.refresh_token = None
+        user.refresh_token_expires_at = None
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token expired"
+        )
+
+    # Generate new tokens (token rotation)
+    new_access_token = create_access_token({"sub": str(user.id)})
+    new_refresh_token, new_expires = create_refresh_token()
+
+    # Store new refresh token (invalidates old one)
+    user.refresh_token = new_refresh_token
+    user.refresh_token_expires_at = new_expires
+    await session.commit()
+
+    return Token(access_token=new_access_token, refresh_token=new_refresh_token)

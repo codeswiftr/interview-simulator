@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.dependencies import get_current_user
 from app.db import get_session
 from app.models.user import ExperienceLevel, PasswordChange, Token, User, UserCreate, UserLogin, UserRead, UserUpdate
-from app.security import create_access_token, hash_password, verify_password
+from app.security import create_access_token, create_refresh_token, hash_password, verify_password
 from app.services.feedback_service import FeedbackService
 
 router = APIRouter()
@@ -34,14 +34,22 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
 
 @router.post("/login", response_model=Token)
 async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)) -> Token:
-    """Authenticate user and return access token."""
+    """Authenticate user and return access and refresh tokens."""
     result = await session.exec(select(User).where(User.email == payload.email.lower()))
     user = result.first()
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=token)
+    # Generate access token
+    access_token = create_access_token({"sub": str(user.id)})
+
+    # Generate and store refresh token
+    refresh_token, refresh_expires = create_refresh_token()
+    user.refresh_token = refresh_token
+    user.refresh_token_expires_at = refresh_expires
+    await session.commit()
+
+    return Token(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.get("/me", response_model=UserRead)

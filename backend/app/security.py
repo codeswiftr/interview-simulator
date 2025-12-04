@@ -1,5 +1,6 @@
 """Security utilities for password hashing and JWT handling."""
 
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -10,6 +11,7 @@ from app.config import settings
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 ALGORITHM = "HS256"
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 
 def hash_password(password: str) -> str:
@@ -38,3 +40,34 @@ def decode_token(token: str) -> dict[str, Any]:
         return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
     except JWTError as exc:
         raise ValueError("Invalid token") from exc
+
+
+def create_refresh_token() -> tuple[str, datetime]:
+    """Create a secure refresh token with expiration.
+
+    Returns:
+        Tuple of (token_string, expiration_datetime)
+    """
+    token = secrets.token_urlsafe(64)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    return token, expires_at
+
+
+def verify_refresh_token(stored_token: str | None, provided_token: str, expires_at: datetime | None) -> bool:
+    """Verify a refresh token is valid and not expired.
+
+    Args:
+        stored_token: Token stored in database
+        provided_token: Token provided by client
+        expires_at: Expiration timestamp from database
+
+    Returns:
+        True if token is valid and not expired
+    """
+    if not stored_token or not expires_at:
+        return False
+    if stored_token != provided_token:
+        return False
+    if datetime.now(timezone.utc) > expires_at:
+        return False
+    return True
