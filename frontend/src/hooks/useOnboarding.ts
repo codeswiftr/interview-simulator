@@ -13,7 +13,7 @@ const defaultState: OnboardingState = {
   completedSteps: [],
 };
 
-export function useOnboarding(_userId?: string) {
+export function useOnboarding() {
   const [state, setState] = useState<OnboardingState>(() => {
     try {
       const stored = localStorage.getItem(ONBOARDING_KEY);

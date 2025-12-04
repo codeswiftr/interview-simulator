@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
 import { X, Check, Crown, Loader2 } from 'lucide-react';
 import { subscriptionsAPI } from '../../lib/api';
+import type { AxiosError } from 'axios';
 
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentTier: 'free' | 'pro' | 'team';
+  currentTier?: 'free' | 'pro' | 'team';
   onSuccess?: () => void;
 }
 
 export default function UpgradeModal({
   isOpen,
   onClose,
-  currentTier: _currentTier,
-  onSuccess: _onSuccess,
 }: UpgradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +49,9 @@ export default function UpgradeModal({
 
       // Redirect to Stripe checkout
       window.location.href = checkoutUrl;
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.response?.data?.message || 'Failed to create checkout session');
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string; message?: string }>;
+      setError(axiosError.response?.data?.detail || axiosError.response?.data?.message || 'Failed to create checkout session');
       setLoading(false);
     }
   };

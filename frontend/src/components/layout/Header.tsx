@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { User, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,10 +8,16 @@ export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const prevPathname = useRef(location.pathname);
 
-  // Close mobile menu on route change
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
+  // Close mobile menu on route change - use layout effect to avoid flash
+  // This is intentional: we want to close the menu when navigating
+  useLayoutEffect(() => {
+    if (prevPathname.current !== location.pathname) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsMobileMenuOpen(false);
+      prevPathname.current = location.pathname;
+    }
   }, [location.pathname]);
 
   // Prevent body scroll when mobile menu is open

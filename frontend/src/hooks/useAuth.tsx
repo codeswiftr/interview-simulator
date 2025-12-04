@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const response = await authAPI.getCurrentUser();
           setUser(response.data);
-        } catch (error) {
+        } catch {
           // Token is invalid, clear it
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
@@ -44,48 +45,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string, redirectTo?: string) => {
-    try {
-      const response = await authAPI.login(email, password);
-      const { access_token, refresh_token } = response.data;
+    const response = await authAPI.login(email, password);
+    const { access_token, refresh_token } = response.data;
 
-      localStorage.setItem('access_token', access_token);
-      if (refresh_token) {
-        localStorage.setItem('refresh_token', refresh_token);
-      }
-
-      // Fetch user data after storing token
-      const userResponse = await authAPI.getCurrentUser();
-      setUser(userResponse.data);
-
-      // Navigate to intended destination or default to dashboard
-      navigate(redirectTo || '/dashboard');
-    } catch (error) {
-      throw error;
+    localStorage.setItem('access_token', access_token);
+    if (refresh_token) {
+      localStorage.setItem('refresh_token', refresh_token);
     }
+
+    // Fetch user data after storing token
+    const userResponse = await authAPI.getCurrentUser();
+    setUser(userResponse.data);
+
+    // Navigate to intended destination or default to dashboard
+    navigate(redirectTo || '/dashboard');
   };
 
   const register = async (email: string, password: string, full_name: string, experience_level?: ExperienceLevel) => {
-    try {
-      // Register creates the user but doesn't return a token
-      await authAPI.register(email, password, full_name, experience_level);
+    // Register creates the user but doesn't return a token
+    await authAPI.register(email, password, full_name, experience_level);
 
-      // Login to get the token
-      const loginResponse = await authAPI.login(email, password);
-      const { access_token, refresh_token } = loginResponse.data;
+    // Login to get the token
+    const loginResponse = await authAPI.login(email, password);
+    const { access_token, refresh_token } = loginResponse.data;
 
-      localStorage.setItem('access_token', access_token);
-      if (refresh_token) {
-        localStorage.setItem('refresh_token', refresh_token);
-      }
-
-      // Fetch user data
-      const userResponse = await authAPI.getCurrentUser();
-      setUser(userResponse.data);
-
-      navigate('/dashboard');
-    } catch (error) {
-      throw error;
+    localStorage.setItem('access_token', access_token);
+    if (refresh_token) {
+      localStorage.setItem('refresh_token', refresh_token);
     }
+
+    // Fetch user data
+    const userResponse = await authAPI.getCurrentUser();
+    setUser(userResponse.data);
+
+    navigate('/dashboard');
   };
 
   const logout = () => {

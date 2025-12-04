@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
 import type { ExperienceLevel } from '../types';
+import type { AxiosError } from 'axios';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -34,8 +35,9 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, fullName, experienceLevel);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>;
+      setError(axiosError.response?.data?.detail || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

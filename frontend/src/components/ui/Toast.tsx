@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -37,6 +37,13 @@ export function Toast({ toast, onDismiss }: ToastProps) {
 
   const Icon = toastIcons[toast.type];
 
+  const handleDismiss = useCallback(() => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      onDismiss(toast.id);
+    }, 200);
+  }, [onDismiss, toast.id]);
+
   useEffect(() => {
     // Animate in
     requestAnimationFrame(() => setIsVisible(true));
@@ -48,14 +55,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [toast.id, toast.duration]);
-
-  const handleDismiss = () => {
-    setIsLeaving(true);
-    setTimeout(() => {
-      onDismiss(toast.id);
-    }, 200);
-  };
+  }, [toast.id, toast.duration, handleDismiss]);
 
   return (
     <div

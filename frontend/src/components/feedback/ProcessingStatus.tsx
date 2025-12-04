@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { feedbackAPI } from '../../lib/api';
+import type { AxiosError } from 'axios';
 
 interface ProcessingStatusData {
   status_counts: {
@@ -60,9 +61,10 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
             }
           }
         }
-      } catch (err: any) {
+      } catch (err) {
         if (isMounted) {
-          setError(err.response?.data?.message || 'Failed to load processing status');
+          const axiosError = err as AxiosError<{ message?: string }>;
+          setError(axiosError.response?.data?.message || 'Failed to load processing status');
           setLoading(false);
           if (pollInterval) {
             clearInterval(pollInterval);

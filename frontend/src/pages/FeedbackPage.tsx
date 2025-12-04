@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -66,7 +66,7 @@ export default function FeedbackPage() {
   });
   const [comparison, setComparison] = useState<ComparisonData | null>(null);
 
-  const loadFeedback = async () => {
+  const loadFeedback = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -123,11 +123,11 @@ export default function FeedbackPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     loadFeedback();
-  }, [id]);
+  }, [loadFeedback]);
 
   const handleGenerateFeedback = async () => {
     if (!id) return;

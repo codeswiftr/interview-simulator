@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, AlertCircle, Lightbulb } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -12,6 +12,7 @@ import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
+import type { AxiosError } from 'axios';
 
 interface UserStats {
   total_sessions: number;
@@ -37,7 +38,7 @@ interface ReadinessScore {
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { shouldShowWelcome, markWelcomeSeen } = useOnboarding(user?.id);
+  const { shouldShowWelcome, markWelcomeSeen } = useOnboarding();
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
@@ -66,26 +67,27 @@ export default function DashboardPage() {
     setIsModalOpen(true);
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore()]);
-  };
-
-  const loadInterviews = async () => {
+  const loadInterviews = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await interviewsAPI.getAll();
       setSessions(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load interviews');
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to load interviews');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const loadData = useCallback(async () => {
+    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore()]);
+  }, [loadInterviews]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const loadStats = async () => {
     try {
@@ -124,13 +126,14 @@ export default function DashboardPage() {
 
       // Navigate to the interview session
       navigate(`/interview/${newSession.id}`);
-    } catch (err: any) {
-      if (err.response?.status === 402) {
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      if (axiosError.response?.status === 402) {
         // Quota exceeded - show upgrade modal
         setShowUpgradeModal(true);
         setError('Free tier limit reached. Upgrade to Pro for unlimited interviews.');
       } else {
-        setError(err.response?.data?.message || 'Failed to create interview');
+        setError(axiosError.response?.data?.message || 'Failed to create interview');
       }
     }
   };

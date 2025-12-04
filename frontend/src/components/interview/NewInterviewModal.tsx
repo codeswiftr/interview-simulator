@@ -102,7 +102,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                     name="interview_type"
                     value={type.value}
                     checked={formData.interview_type === type.value}
-                    onChange={(e) => setFormData({ ...formData, interview_type: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, interview_type: e.target.value as CreateInterviewFormData['interview_type'] })}
                     className="mt-1"
                   />
                   <div className="flex-1">
