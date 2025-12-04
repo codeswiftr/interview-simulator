@@ -27,6 +27,13 @@ interface UserProgress {
   average_content_score: number | null;
 }
 
+interface ReadinessScore {
+  readiness_score: number | null;
+  sessions_used: number;
+  improvement_trend: number | null;
+  message?: string;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +41,7 @@ export default function DashboardPage() {
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+  const [readinessScore, setReadinessScore] = useState<ReadinessScore | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,7 +71,7 @@ export default function DashboardPage() {
   }, []);
 
   const loadData = async () => {
-    await Promise.all([loadInterviews(), loadStats(), loadProgress()]);
+    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore()]);
   };
 
   const loadInterviews = async () => {
@@ -96,6 +104,16 @@ export default function DashboardPage() {
     } catch (err) {
       // Silently fail - progress is nice to have
       console.warn('Failed to load user progress:', err);
+    }
+  };
+
+  const loadReadinessScore = async () => {
+    try {
+      const response = await userAPI.getReadinessScore();
+      setReadinessScore(response.data);
+    } catch (err) {
+      // Silently fail - readiness score is nice to have
+      console.warn('Failed to load readiness score:', err);
     }
   };
 
@@ -172,6 +190,7 @@ export default function DashboardPage() {
             completedSessions={stats.completedInterviews}
             averageScore={stats.averageScore && stats.averageScore > 0 ? stats.averageScore : null}
             totalPracticeTimeSeconds={userStats?.total_practice_time_seconds ?? 0}
+            readinessScore={readinessScore}
           />
         </div>
 

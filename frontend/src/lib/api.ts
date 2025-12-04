@@ -219,6 +219,8 @@ export const userAPI = {
 
   getProgress: () => api.get('/users/me/progress'),
 
+  getReadinessScore: () => api.get('/users/me/readiness-score'),
+
   updateProfile: (data: { full_name?: string; email?: string; experience_level?: string }) =>
     api.patch('/users/me', data),
 

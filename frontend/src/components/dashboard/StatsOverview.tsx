@@ -1,11 +1,19 @@
-import { Clock, Target, TrendingUp, Award } from 'lucide-react';
+import { Clock, Target, Award, Gauge } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+interface ReadinessScore {
+  readiness_score: number | null;
+  sessions_used: number;
+  improvement_trend: number | null;
+  message?: string;
+}
 
 interface StatsOverviewProps {
   totalSessions: number;
   completedSessions: number;
   averageScore: number | null;
   totalPracticeTimeSeconds: number;
+  readinessScore?: ReadinessScore | null;
 }
 
 export default function StatsOverview({
@@ -13,6 +21,7 @@ export default function StatsOverview({
   completedSessions,
   averageScore,
   totalPracticeTimeSeconds,
+  readinessScore,
 }: StatsOverviewProps) {
   // Format practice time
   const formatTime = (seconds: number) => {
@@ -41,6 +50,19 @@ export default function StatsOverview({
     if (score >= 70) return 'Good';
     if (score >= 60) return 'Fair';
     return 'Needs Work';
+  };
+
+  // Get readiness subtitle with trend
+  const getReadinessSubtitle = () => {
+    if (!readinessScore || readinessScore.readiness_score === null) {
+      return 'Complete interviews to unlock';
+    }
+    if (readinessScore.improvement_trend !== null) {
+      const trend = readinessScore.improvement_trend;
+      if (trend > 0) return `+${trend.toFixed(0)} from last sessions`;
+      if (trend < 0) return `${trend.toFixed(0)} from last sessions`;
+    }
+    return `Based on ${readinessScore.sessions_used} sessions`;
   };
 
   const stats = [
@@ -72,14 +94,24 @@ export default function StatsOverview({
       subtitle: 'Total time invested',
     },
     {
-      label: 'Completion Rate',
+      label: 'Interview Readiness',
       value:
-        totalSessions > 0
-          ? `${((completedSessions / totalSessions) * 100).toFixed(0)}%`
+        readinessScore?.readiness_score !== null && readinessScore?.readiness_score !== undefined
+          ? `${readinessScore.readiness_score.toFixed(0)}%`
           : '--',
-      icon: TrendingUp,
-      color: 'text-orange-500 bg-orange-500/10',
-      subtitle: `${completedSessions} of ${totalSessions}`,
+      icon: Gauge,
+      color: cn(
+        'bg-opacity-10',
+        readinessScore?.readiness_score !== null && readinessScore?.readiness_score !== undefined
+          ? readinessScore.readiness_score >= 70
+            ? 'text-status-success bg-status-success/10'
+            : readinessScore.readiness_score >= 50
+              ? 'text-yellow-500 bg-yellow-500/10'
+              : 'text-orange-500 bg-orange-500/10'
+          : 'text-text-tertiary bg-surface-secondary'
+      ),
+      subtitle: getReadinessSubtitle(),
+      valueColor: getScoreColor(readinessScore?.readiness_score ?? null),
     },
   ];
 
