@@ -1450,6 +1450,35 @@ def dijkstra(graph, start):
         difficulty=Difficulty.EASY,
         company_tags=["startup", "enterprise", "Google"],
         topic_tags=["system_design", "data_structures", "storage"],
+        sample_answer="""**Requirements**:
+- Functional: GET, PUT, DELETE operations; persistence across restarts
+- Non-functional: Low latency (<10ms), handle ~10K requests/second
+
+**High-Level Design**:
+- In-memory hash table for fast lookups
+- Write-ahead log (WAL) for durability
+- Periodic snapshots for faster recovery
+
+**Components**:
+1. **Hash Table**: Core data structure for O(1) get/put
+2. **WAL**: Append-only log for every write operation
+3. **Snapshot Engine**: Periodic full dump to disk
+
+**Deep Dive - Write Path**:
+1. Append to WAL (fsync for durability)
+2. Update in-memory hash table
+3. Return success to client
+
+**Deep Dive - Read Path**:
+1. Check in-memory hash table
+2. Return value or "not found"
+
+**Tradeoffs**:
+- Memory-limited capacity (vs disk-based)
+- WAL size grows (need compaction)
+- Simple design (vs complex distributed store)
+
+**Scaling**: This design works for single machine. For distributed, consider consistent hashing, replication, and partitioning.""",
     ),
     Question(
         content="Design a basic user authentication system.",
@@ -1457,6 +1486,46 @@ def dijkstra(graph, start):
         difficulty=Difficulty.EASY,
         company_tags=["startup", "Amazon", "Microsoft"],
         topic_tags=["system_design", "security", "authentication"],
+        sample_answer="""**Requirements**:
+- Functional: Register, login, logout, password reset, session management
+- Non-functional: Secure password storage, prevent common attacks, <100ms auth latency
+
+**High-Level Design**:
+- User service for registration/profile management
+- Auth service for login/token management
+- Database for user credentials
+- Token store (Redis) for session management
+
+**Components**:
+1. **User Database**: Store user profiles and hashed passwords
+2. **Password Hasher**: bcrypt with salt (cost factor 12)
+3. **Token Service**: JWT for stateless auth or session tokens
+4. **Rate Limiter**: Prevent brute force attacks
+
+**Deep Dive - Login Flow**:
+1. User submits email + password
+2. Fetch user by email from database
+3. Verify password against stored hash (bcrypt.compare)
+4. If valid, generate JWT with user_id, expiry
+5. Return token to client (stored in httpOnly cookie or localStorage)
+
+**Deep Dive - Password Storage**:
+- NEVER store plaintext passwords
+- Use bcrypt/scrypt/Argon2 with unique salt per user
+- Hash: bcrypt(password + salt, cost=12)
+
+**Security Considerations**:
+- HTTPS only for all auth endpoints
+- HttpOnly cookies to prevent XSS
+- CSRF tokens for form submissions
+- Account lockout after N failed attempts
+- Password complexity requirements
+
+**Tradeoffs**:
+- JWT (stateless, scalable) vs Session tokens (revocable, server storage)
+- Cookie auth (CSRF risk) vs Bearer tokens (XSS risk)
+
+**Scaling**: For distributed systems, use Redis for session storage or stick with JWTs for stateless scaling.""",
     ),
     Question(
         content="Design a simple task queue system.",
@@ -1464,6 +1533,46 @@ def dijkstra(graph, start):
         difficulty=Difficulty.EASY,
         company_tags=["startup", "enterprise", "Uber"],
         topic_tags=["system_design", "queues", "async_processing"],
+        sample_answer="""**Requirements**:
+- Functional: Submit tasks, process asynchronously, retry failed tasks, status tracking
+- Non-functional: At-least-once delivery, handle 1000 tasks/second, persistence
+
+**High-Level Design**:
+- Producer API for task submission
+- Message queue (Redis, RabbitMQ) for task storage
+- Worker pool for task processing
+- Database for task status and results
+
+**Components**:
+1. **Task API**: REST endpoint to submit tasks with payload
+2. **Queue**: FIFO queue with persistence (Redis lists or dedicated MQ)
+3. **Workers**: Consumer processes polling the queue
+4. **Status Store**: Track task state (pending/processing/completed/failed)
+
+**Deep Dive - Task Submission**:
+1. Client POSTs task with payload and optional priority
+2. Generate unique task_id
+3. Store task metadata in database (status: pending)
+4. Push task_id to queue
+5. Return task_id to client
+
+**Deep Dive - Task Processing**:
+1. Worker pops task_id from queue (blocking pop)
+2. Update status to "processing"
+3. Execute task logic
+4. On success: update status to "completed", store result
+5. On failure: increment retry count, re-queue if < max retries
+
+**Reliability Features**:
+- Visibility timeout: task invisible while processing
+- Dead letter queue: failed tasks after max retries
+- Heartbeat: workers report liveness
+
+**Tradeoffs**:
+- In-memory queue (fast, data loss risk) vs Persistent queue (slower, durable)
+- Push model (immediate) vs Poll model (simpler, batching)
+
+**Scaling**: Add more workers horizontally. Partition queues by task type or priority.""",
     ),
     Question(
         content="Design a basic caching layer for a web application.",
@@ -1471,6 +1580,50 @@ def dijkstra(graph, start):
         difficulty=Difficulty.EASY,
         company_tags=["startup", "Google", "Meta"],
         topic_tags=["system_design", "caching", "performance"],
+        sample_answer="""**Requirements**:
+- Functional: Cache database queries, API responses, computed values
+- Non-functional: <5ms cache reads, 90%+ hit rate, automatic expiration
+
+**High-Level Design**:
+- Cache-aside pattern (application manages cache)
+- Redis/Memcached as cache store
+- TTL-based expiration
+- Consistent key generation
+
+**Components**:
+1. **Cache Store**: Redis (persistence) or Memcached (pure memory)
+2. **Cache Client**: Application library for get/set operations
+3. **Key Generator**: Consistent hashing of query params
+4. **Invalidation Service**: Clear cache on data updates
+
+**Deep Dive - Read Path (Cache-Aside)**:
+1. Generate cache key from request params
+2. Check cache: if hit, return cached value
+3. If miss: query database
+4. Store result in cache with TTL
+5. Return result
+
+**Deep Dive - Write Path**:
+1. Update database
+2. Invalidate related cache keys (delete, not update)
+3. Next read will populate fresh data
+
+**Caching Strategies**:
+- Cache-aside: App manages, simple but cache misses hit DB
+- Write-through: Write to cache and DB together
+- Write-behind: Write to cache, async DB update (risky)
+
+**Eviction Policies**:
+- LRU (Least Recently Used): Best general-purpose
+- LFU (Least Frequently Used): For stable popularity
+- TTL: Time-based expiration
+
+**Tradeoffs**:
+- Memory cost vs performance gain
+- Stale data risk vs consistency
+- Cache stampede on cold start (use locking or warm-up)
+
+**Scaling**: Cluster Redis with sharding. Use local in-memory cache (L1) + Redis (L2) for hot data.""",
     ),
     Question(
         content="Design a simple blog platform with posts and comments.",
@@ -1478,6 +1631,51 @@ def dijkstra(graph, start):
         difficulty=Difficulty.EASY,
         company_tags=["startup", "Medium", "WordPress"],
         topic_tags=["system_design", "databases", "crud"],
+        sample_answer="""**Requirements**:
+- Functional: Create/read/update/delete posts, add comments, user profiles
+- Non-functional: Fast page loads (<500ms), handle 10K daily active users, SEO-friendly
+
+**High-Level Design**:
+- Web server (Node.js, Django, Rails)
+- Relational database (PostgreSQL)
+- CDN for static assets
+- Optional: Search service for post discovery
+
+**Database Schema**:
+```
+Users: id, username, email, password_hash, created_at
+Posts: id, user_id (FK), title, content, slug, status, created_at, updated_at
+Comments: id, post_id (FK), user_id (FK), content, created_at
+Tags: id, name
+PostTags: post_id (FK), tag_id (FK)
+```
+
+**Components**:
+1. **API Layer**: REST endpoints for CRUD operations
+2. **Database**: PostgreSQL with proper indexes
+3. **Auth Service**: JWT-based authentication
+4. **CDN**: Serve images and static files
+
+**Deep Dive - Create Post Flow**:
+1. Authenticated user submits title + content + tags
+2. Generate URL-friendly slug from title
+3. Validate content (length, format)
+4. Insert into Posts table with user_id
+5. Insert tag associations
+6. Return created post
+
+**Deep Dive - View Post Page**:
+1. Fetch post by slug (indexed column)
+2. Fetch author info (JOIN or separate query)
+3. Fetch comments (paginated, newest first)
+4. Render with caching headers
+
+**Tradeoffs**:
+- Markdown vs WYSIWYG editor
+- Comments: nested (complex) vs flat (simple)
+- Real-time comments vs page refresh
+
+**Scaling**: Add read replicas for high traffic. Cache popular posts in Redis. Use full-text search (Elasticsearch) for large catalogs.""",
     ),
     # MEDIUM system design questions
     Question(
@@ -1486,6 +1684,56 @@ def dijkstra(graph, start):
         difficulty=Difficulty.MEDIUM,
         company_tags=["Google", "Amazon", "enterprise"],
         topic_tags=["system_design", "scalability", "distributed_systems"],
+        sample_answer="""**Requirements**:
+- Functional: Shorten URLs, redirect to original, optional custom aliases, analytics
+- Non-functional: 100M URLs/day, <50ms redirect latency, 99.9% availability, 5-year retention
+
+**Capacity Estimation**:
+- 100M new URLs/day = 36.5B URLs/year
+- Storage: 500 bytes/URL × 36.5B × 5 years = ~90TB
+- Read:Write ratio = 100:1 (mostly redirects)
+
+**High-Level Design**:
+- Application servers behind load balancer
+- Database for URL mappings
+- Cache layer (Redis) for hot URLs
+- Analytics service for tracking
+
+**Short URL Generation**:
+Option 1: **Base62 encoding** of auto-increment ID
+- Pros: Simple, guaranteed unique
+- Cons: Predictable, single point of failure (ID generator)
+
+Option 2: **MD5/SHA256 hash** (first 7 chars)
+- Pros: Distributed generation
+- Cons: Collision handling needed
+
+**Database Schema**:
+```
+urls: short_code (PK), original_url, created_at, expires_at, user_id
+analytics: short_code, timestamp, ip, user_agent, referrer
+```
+
+**Deep Dive - Shorten Flow**:
+1. Validate URL format
+2. Generate short code (base62 of distributed ID)
+3. Check for collision, retry if needed
+4. Store mapping in database
+5. Return short URL
+
+**Deep Dive - Redirect Flow**:
+1. Parse short code from URL
+2. Check cache first (hot URLs)
+3. If miss, query database
+4. Log analytics async
+5. Return 301/302 redirect
+
+**Tradeoffs**:
+- 301 (permanent) vs 302 (temporary) redirect
+- Hash-based (distributed) vs counter-based (simple)
+- Analytics sync (slower) vs async (eventual consistency)
+
+**Scaling**: Partition database by short_code hash. Replicate cache across regions. Use CDN for geographic distribution.""",
     ),
     Question(
         content="Design a real-time chat application like WhatsApp or Slack.",
@@ -1500,6 +1748,65 @@ def dijkstra(graph, start):
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Google", "Stripe"],
         topic_tags=["rate_limiting", "distributed_systems", "algorithms"],
+        sample_answer="""**Requirements**:
+- Functional: Limit requests per user/IP/API key, configurable limits, return 429 when exceeded
+- Non-functional: <1ms overhead, distributed (multi-server), accurate counting
+
+**Rate Limiting Algorithms**:
+
+1. **Token Bucket**: Tokens added at fixed rate, request consumes token
+   - Pros: Allows bursts, smooth rate limiting
+   - Cons: Memory per user
+
+2. **Sliding Window Log**: Store timestamp of each request
+   - Pros: Most accurate
+   - Cons: Memory intensive
+
+3. **Sliding Window Counter**: Combine fixed window counts with weighted average
+   - Pros: Low memory, reasonably accurate
+   - Cons: Approximation
+
+4. **Fixed Window Counter**: Count requests in time windows
+   - Pros: Simple, low memory
+   - Cons: Burst at window boundary
+
+**High-Level Design**:
+- Rate limiter middleware in API gateway
+- Redis for distributed counting
+- Rules engine for configurable limits
+
+**Components**:
+1. **Rules Store**: Rate limits by API, user tier, endpoint
+2. **Counter Store**: Redis with atomic INCR and TTL
+3. **Decision Engine**: Check count against limit
+
+**Deep Dive - Token Bucket Implementation**:
+```
+key = "rate:{user_id}"
+tokens, last_refill = redis.get(key) or (max_tokens, now)
+
+# Refill tokens
+elapsed = now - last_refill
+new_tokens = min(max_tokens, tokens + elapsed * refill_rate)
+
+if new_tokens >= 1:
+    redis.set(key, (new_tokens - 1, now), ttl=window)
+    return ALLOW
+else:
+    return DENY (429)
+```
+
+**Distributed Considerations**:
+- Use Redis Lua scripts for atomic operations
+- Accept some inaccuracy for performance (eventual consistency)
+- Sticky sessions can simplify but reduce availability
+
+**Tradeoffs**:
+- Accuracy vs Performance (exact counting is expensive)
+- Hard limit vs Soft limit (allow some burst)
+- Per-user vs Per-IP (authenticated vs anonymous)
+
+**Scaling**: Redis Cluster for sharding. Local cache for hot limits. Async logging of rate limit events.""",
     ),
     Question(
         content="Design a distributed cache system like Redis or Memcached.",
@@ -1514,6 +1821,53 @@ def dijkstra(graph, start):
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Uber", "Airbnb"],
         topic_tags=["messaging", "scalability", "queues", "reliability"],
+        sample_answer="""**Requirements**:
+- Functional: Send push, email, SMS; templates; scheduling; user preferences
+- Non-functional: 10M notifications/day, <30s delivery, at-least-once delivery, 99.9% availability
+
+**High-Level Design**:
+- API service for notification requests
+- Message queue for async processing
+- Channel-specific workers (push, email, SMS)
+- Template service for message formatting
+- User preference service
+
+**Components**:
+1. **Notification API**: Accepts notification requests
+2. **Message Queue**: Kafka/RabbitMQ for reliable delivery
+3. **Channel Workers**: Dedicated workers per channel type
+4. **Template Engine**: Handlebars/Jinja for message templates
+5. **Preference Store**: User notification settings
+6. **Provider Integrations**: FCM, APNS, SendGrid, Twilio
+
+**Database Schema**:
+```
+notifications: id, user_id, type, channel, template_id, status, created_at
+templates: id, name, channel, subject, body, variables
+user_preferences: user_id, channel, enabled, quiet_hours
+delivery_logs: notification_id, provider, status, error, delivered_at
+```
+
+**Deep Dive - Send Flow**:
+1. API receives notification request
+2. Validate user exists, check preferences
+3. Resolve template with variables
+4. Enqueue to channel-specific queue
+5. Worker picks up, calls provider API
+6. Log result, retry on failure
+
+**Deep Dive - Reliability**:
+- Idempotency keys prevent duplicates
+- Exponential backoff for retries (1s, 2s, 4s, 8s...)
+- Dead letter queue for failed notifications
+- Circuit breaker for provider outages
+
+**Tradeoffs**:
+- Push vs Pull model for workers
+- Sync (simple) vs Async (scalable) delivery
+- Single queue (simple) vs Per-channel queues (isolation)
+
+**Scaling**: Horizontal worker scaling based on queue depth. Partition queues by user_id hash. Use multiple providers for redundancy.""",
     ),
     Question(
         content="Design a payment processing system like Stripe or PayPal.",
@@ -1556,6 +1910,57 @@ def dijkstra(graph, start):
         difficulty=Difficulty.MEDIUM,
         company_tags=["Google", "Amazon", "Microsoft"],
         topic_tags=["trie", "caching", "scalability", "search"],
+        sample_answer="""**Requirements**:
+- Functional: Return top suggestions as user types, support prefix matching, personalization
+- Non-functional: <100ms latency, handle 100K QPS, real-time updates
+
+**Capacity Estimation**:
+- 100M users, 10 searches/day = 1B queries/day
+- 5 chars typed per search = 5B prefix lookups/day
+- ~60K QPS average, 180K QPS peak
+
+**High-Level Design**:
+- Trie data structure for prefix matching
+- Distributed cache for hot prefixes
+- Aggregation service for popularity tracking
+- Personalization layer
+
+**Data Structures**:
+1. **Trie**: Each node stores char and list of top suggestions
+2. **Prefix Cache**: Redis with prefix → top-N suggestions
+3. **Frequency Counter**: Track query popularity
+
+**Components**:
+1. **Query Service**: Handle autocomplete requests
+2. **Trie Store**: Distributed trie across servers
+3. **Aggregator**: Collect and rank query frequencies
+4. **Updater**: Refresh suggestions periodically
+
+**Deep Dive - Query Flow**:
+1. User types "prog"
+2. Check cache for prefix "prog"
+3. If miss, traverse trie to node "prog"
+4. Return pre-computed top-5 suggestions from node
+5. Cache result with TTL
+
+**Deep Dive - Building Suggestions**:
+1. Collect query logs (hourly batch)
+2. Count frequencies per prefix
+3. Build/update trie with top suggestions per node
+4. Replicate to query servers
+
+**Ranking Factors**:
+- Historical popularity (most common)
+- Recency (trending queries)
+- Personalization (user history)
+- Context (location, time)
+
+**Tradeoffs**:
+- Pre-computed (fast, stale) vs Real-time (slow, fresh)
+- Memory (full trie in RAM) vs I/O (disk-based)
+- Global suggestions vs Personalized (complexity)
+
+**Scaling**: Shard trie by prefix (a-m server 1, n-z server 2). CDN caching for top prefixes. Async trie updates.""",
     ),
     Question(
         content="Design a ride-sharing service like Uber or Lyft.",
@@ -1577,6 +1982,54 @@ def dijkstra(graph, start):
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Airbnb", "Uber"],
         topic_tags=["scheduling", "queues", "distributed_systems", "reliability"],
+        sample_answer="""**Requirements**:
+- Functional: Schedule one-time and recurring tasks, execute at specified time, retry failed tasks
+- Non-functional: Handle 1M scheduled tasks, <1s execution accuracy, high availability
+
+**High-Level Design**:
+- Scheduler service for task management
+- Time-partitioned storage for scheduled tasks
+- Worker pool for task execution
+- Coordination service (ZooKeeper/etcd) for leader election
+
+**Components**:
+1. **Task API**: CRUD for scheduled tasks
+2. **Task Store**: Database partitioned by execution time
+3. **Scheduler**: Polls for due tasks, enqueues to workers
+4. **Workers**: Execute tasks, report results
+5. **Coordinator**: Leader election, worker registration
+
+**Database Schema**:
+```
+tasks: id, type, payload, scheduled_at, status, retry_count, created_at
+task_results: task_id, status, result, executed_at, duration_ms
+recurring_tasks: id, cron_expression, task_template, next_run, enabled
+```
+
+**Deep Dive - Scheduling Flow**:
+1. Client creates task with scheduled_at timestamp
+2. Store task partitioned by time bucket (hourly/daily)
+3. Scheduler leader polls current time bucket every second
+4. Due tasks enqueued to execution queue
+5. Workers process, update status, handle retries
+
+**Deep Dive - Time Wheel**:
+- Hierarchical time wheel for efficient scheduling
+- Buckets for seconds, minutes, hours
+- O(1) insert and expiration
+
+**Reliability**:
+- Leader election ensures single scheduler
+- Task locking prevents duplicate execution
+- Idempotency keys for retry safety
+- Dead letter queue for failed tasks
+
+**Tradeoffs**:
+- Poll-based (simple) vs Push-based (complex, efficient)
+- Single scheduler (simple) vs Distributed (complex, scalable)
+- Accuracy vs Throughput (batch vs individual)
+
+**Scaling**: Partition tasks by time range. Multiple scheduler instances with leader election. Horizontal worker scaling.""",
     ),
     Question(
         content="Design a file storage system like Dropbox or Google Drive.",
