@@ -46,9 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string, redirectTo?: string) => {
     try {
       const response = await authAPI.login(email, password);
-      const { access_token } = response.data;
+      const { access_token, refresh_token } = response.data;
 
       localStorage.setItem('access_token', access_token);
+      if (refresh_token) {
+        localStorage.setItem('refresh_token', refresh_token);
+      }
 
       // Fetch user data after storing token
       const userResponse = await authAPI.getCurrentUser();
@@ -68,9 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Login to get the token
       const loginResponse = await authAPI.login(email, password);
-      const { access_token } = loginResponse.data;
+      const { access_token, refresh_token } = loginResponse.data;
 
       localStorage.setItem('access_token', access_token);
+      if (refresh_token) {
+        localStorage.setItem('refresh_token', refresh_token);
+      }
 
       // Fetch user data
       const userResponse = await authAPI.getCurrentUser();

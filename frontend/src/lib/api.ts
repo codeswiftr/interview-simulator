@@ -29,6 +29,24 @@ api.interceptors.request.use(
   }
 );
 
+// Flag to prevent multiple refresh attempts
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+};
+
 // Response interceptor to handle errors and token refresh
 api.interceptors.response.use(
   (response) => {
@@ -52,16 +70,73 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle 401 Unauthorized errors
+    // Handle 401 Unauthorized errors - try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't retry the refresh endpoint itself
+      if (originalRequest.url?.includes('/auth/refresh')) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Queue this request until refresh completes
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
-      // Clear tokens and redirect to login
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      const refreshToken = localStorage.getItem('refresh_token');
 
-      // Redirect to login page
-      window.location.href = '/login';
+      if (!refreshToken) {
+        // No refresh token, redirect to login
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        // Try to refresh the token
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        const { access_token, refresh_token: newRefreshToken } = response.data;
+
+        // Store new tokens
+        localStorage.setItem('access_token', access_token);
+        if (newRefreshToken) {
+          localStorage.setItem('refresh_token', newRefreshToken);
+        }
+
+        // Update header for retry
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        }
+
+        processQueue(null, access_token);
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        // Refresh failed, clear tokens and redirect
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
     // Handle 402 Payment Required (quota exceeded)
