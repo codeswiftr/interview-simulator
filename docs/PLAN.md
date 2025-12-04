@@ -1,30 +1,43 @@
-# Sprint 3: Quality & Content Foundation
+# Sprint 4: Technical Debt Payback
 
-## Status: ✅ In Progress (Audit Complete)
+## Status: Planning
 ## Target: December 2025
-## Audit Date: 2025-01-02
+## Audit Date: 2025-12-04
 
 ---
 
 ## Overview
 
-Sprint 3 focuses on two pillars: **content quality** (sample answers for user learning) and **code quality** (test coverage to prevent regressions). These epics maximize value delivery while building a solid foundation for future features like email verification and video analysis.
+Sprint 4 focuses on **technical debt payback** to establish a maintainable codebase foundation. The audit revealed 158 backend linting errors, 28 frontend linting issues, and test coverage gaps (67% backend, 0% frontend). Addressing this debt now prevents compounding issues and enables confident feature development.
 
 **Priority Order:**
-1. **Epic 1**: Sample Answers (highest user value, zero technical risk)
-2. **Epic 2**: Test Coverage to 75% (enables confident deployments)
-3. **Epic 3**: Email Verification (production readiness)
-4. **Epic 4**: Video Analysis (future stretch goal)
+1. **Epic 1**: Fix Linting Errors (clean codebase, prevent bugs)
+2. **Epic 2**: Backend Test Coverage to 75% (confidence for deployments)
+3. **Epic 3**: Frontend Test Infrastructure (regression protection)
+4. **Epic 4**: E2E Test Suite (user journey validation)
 
 ---
 
 ## Success Criteria
 
-- [ ] 50 questions have sample_answer populated (20 behavioral, 20 technical, 10 system design)
-- [ ] Backend test coverage reaches 75% (from 66%)
-- [ ] All 140+ tests continue passing
-- [ ] Password reset flow sends actual emails (production)
-- [ ] Email verification for registration (optional stretch)
+- [x] 60 questions have sample_answer populated ✅ (completed Sprint 3)
+- [x] Email service sends real emails via Resend ✅ (completed Sprint 3)
+- [ ] Backend linting: 0 errors (from 158)
+- [ ] Frontend linting: 0 errors (from 28)
+- [ ] Backend test coverage: 75% (from 67%)
+- [ ] Frontend test coverage: 30% (from 0%)
+- [ ] All 188+ tests continue passing
+
+---
+
+# Sprint 3 Completion Summary ✅
+
+| Epic | Status | Outcome |
+|------|--------|---------|
+| Sample Answers | ✅ Complete | 60 questions with answers (30 behavioral, 20 technical, 10 system design) |
+| Email Service | ✅ Complete | Resend integration working |
+| Test Coverage | 🟡 Partial | 67% (target was 75%) |
+| Video Analysis | ⏸️ Deferred | Moved to future sprint |
 
 ---
 
@@ -314,15 +327,247 @@ From project-brief.md:
 
 ---
 
+# Sprint 4: Technical Debt Payback (NEW)
+
+---
+
+# Epic 1: Fix Linting Errors
+
+## Goal
+Eliminate all linting errors to establish clean code standards and prevent potential bugs.
+
+## Context
+- Backend: 158 Ruff errors (61 auto-fixable)
+- Frontend: 28 ESLint issues (19 errors, 9 warnings)
+- Key issues: trailing whitespace, unused imports, React hook dependencies
+
+## Success Criteria
+- [ ] Backend: 0 Ruff errors
+- [ ] Frontend: 0 ESLint errors
+- [ ] Pre-commit hooks passing
+
+## Implementation Plan
+
+### Phase 1: Backend Auto-Fixes (30 min)
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.1 | Run `ruff check --fix app/` to auto-fix 61 errors | 15m |
+| 1.2 | Run `ruff format app/` for consistent formatting | 15m |
+
+**Checkpoint**: ~97 errors remaining (manual fixes needed)
+
+### Phase 2: Backend Manual Fixes (2h)
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.1 | Fix trailing whitespace in feedback_service.py | 15m |
+| 2.2 | Refactor late imports in email_service.py, dependencies.py | 30m |
+| 2.3 | Fix late import in api/feedback.py (line 321) | 15m |
+| 2.4 | Update Optional[X] to X \| None syntax (Python 3.12+) | 30m |
+| 2.5 | Remove unused imports across modules | 30m |
+
+**Checkpoint**: 0 backend linting errors
+
+### Phase 3: Frontend Fixes (2h)
+| Task | Description | Est |
+|------|-------------|-----|
+| 3.1 | Fix useAuth.tsx: remove unused 'error', fix try/catch wrappers | 30m |
+| 3.2 | Fix useOnboarding.ts: remove unused '_userId' param | 15m |
+| 3.3 | Fix DashboardPage.tsx: add loadData to useEffect deps | 30m |
+| 3.4 | Fix FeedbackPage.tsx: add loadFeedback to useEffect deps | 15m |
+| 3.5 | Fix RegisterPage.tsx: type 'any' to specific type | 15m |
+| 3.6 | Fix react-refresh warnings in hooks (export refactor) | 15m |
+
+**Checkpoint**: 0 frontend linting errors
+
+---
+
+# Epic 2: Backend Test Coverage to 75%
+
+## Goal
+Increase backend test coverage from 67% to 75% for deployment confidence.
+
+## Context
+Current coverage gaps (from audit):
+- `api/feedback.py`: 44% (target 75%)
+- `api/interviews.py`: 40% (target 75%)
+- `api/auth.py`: 40% (target 75%)
+- `middleware/rate_limit.py`: 33% (target 60%)
+- `services/interview_service.py`: 58% (target 75%)
+
+## Success Criteria
+- [ ] Overall coverage: 75%+
+- [ ] api/feedback.py: 75%+
+- [ ] api/interviews.py: 75%+
+- [ ] api/auth.py: 75%+
+- [ ] All 188+ tests passing
+
+## Implementation Plan
+
+### Phase 1: Feedback API Tests (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Test GET /feedback/session/{id}/all endpoint | qa-test-guardian | 30m |
+| 1.2 | Test GET /feedback/response/{id} endpoint | qa-test-guardian | 30m |
+| 1.3 | Test POST /feedback/generate/response/{id} | qa-test-guardian | 30m |
+| 1.4 | Test authorization (wrong user access 403) | qa-test-guardian | 30m |
+
+**Checkpoint**: api/feedback.py coverage ≥ 75%
+
+### Phase 2: Interviews API Tests (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Test POST /interviews with all options | qa-test-guardian | 30m |
+| 2.2 | Test interview state transitions (start, end) | qa-test-guardian | 30m |
+| 2.3 | Test GET /interviews/{id}/questions ordering | qa-test-guardian | 30m |
+| 2.4 | Test quota enforcement edge cases | qa-test-guardian | 30m |
+
+**Checkpoint**: api/interviews.py coverage ≥ 75%
+
+### Phase 3: Auth API Tests (1.5h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Test token validation edge cases | qa-test-guardian | 30m |
+| 3.2 | Test malformed token handling | qa-test-guardian | 30m |
+| 3.3 | Test concurrent token refresh | qa-test-guardian | 30m |
+
+**Checkpoint**: api/auth.py coverage ≥ 75%
+
+### Phase 4: Rate Limiting Tests (1h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 4.1 | Test request blocking when limit exceeded | qa-test-guardian | 30m |
+| 4.2 | Test limit reset after window | qa-test-guardian | 30m |
+
+**Checkpoint**: middleware/rate_limit.py coverage ≥ 60%
+
+### Phase 5: Service Layer Tests (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 5.1 | Test interview_service state transitions | qa-test-guardian | 1h |
+| 5.2 | Test feedback_service aggregation logic | qa-test-guardian | 1h |
+
+**Checkpoint**: Overall backend coverage ≥ 75%
+
+---
+
+# Epic 3: Frontend Test Infrastructure
+
+## Goal
+Establish frontend test infrastructure and achieve 30% coverage.
+
+## Context
+- Current: 0% coverage (6 tests in 2 files)
+- Infrastructure exists: Vitest, RTL, MSW configured
+- Missing: Hook tests, component tests, MSW handlers
+
+## Success Criteria
+- [ ] Frontend coverage: 30%+
+- [ ] All 4 hooks tested
+- [ ] Critical pages tested (Dashboard, Interview, Feedback)
+- [ ] MSW handlers for all API endpoints
+
+## Implementation Plan
+
+### Phase 1: Test Infrastructure Setup (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Create test utilities with AuthProvider wrapper | frontend-builder | 30m |
+| 1.2 | Add MSW handlers for 15+ missing endpoints | frontend-builder | 1h |
+| 1.3 | Create mock data factories | frontend-builder | 30m |
+
+**Checkpoint**: Test infrastructure complete
+
+### Phase 2: Hook Tests (4h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Test useAuth: login, logout, register, token refresh | qa-test-guardian | 1.5h |
+| 2.2 | Test useAudioRecording: start, stop, permission handling | qa-test-guardian | 1.5h |
+| 2.3 | Test useToast: show, dismiss, auto-dismiss | qa-test-guardian | 30m |
+| 2.4 | Test useOnboarding: state persistence | qa-test-guardian | 30m |
+
+**Checkpoint**: All hooks tested, ~15% coverage
+
+### Phase 3: Critical Page Tests (6h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Test LoginPage: form validation, submission, errors | qa-test-guardian | 1h |
+| 3.2 | Test RegisterPage: form validation, experience selection | qa-test-guardian | 1h |
+| 3.3 | Test DashboardPage: stats loading, session list, modals | qa-test-guardian | 2h |
+| 3.4 | Test FeedbackPage: feedback display, sample answer modal | qa-test-guardian | 2h |
+
+**Checkpoint**: Critical pages tested, ~30% coverage
+
+---
+
+# Epic 4: E2E Test Suite (Future)
+
+## Goal
+Add Playwright E2E tests for critical user journeys.
+
+## Success Criteria
+- [ ] 5-10 E2E tests covering critical flows
+- [ ] Tests run in CI pipeline
+
+## Implementation Plan (Deferred)
+
+### Phase 1: Setup (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Install and configure Playwright | devops-deployer | 1h |
+| 1.2 | Create test fixtures and helpers | qa-test-guardian | 1h |
+
+### Phase 2: Critical Journeys (8h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Test: Register → Dashboard | qa-test-guardian | 2h |
+| 2.2 | Test: Login → Create Interview → Record → Feedback | qa-test-guardian | 3h |
+| 2.3 | Test: Password Reset Flow | qa-test-guardian | 1.5h |
+| 2.4 | Test: Subscription Checkout | qa-test-guardian | 1.5h |
+
+**Checkpoint**: Critical user journeys validated
+
+---
+
+## Testing Strategy
+
+### Unit Tests (Epics 2-3)
+- **Backend**: pytest with asyncio, 75% coverage target
+- **Frontend**: Vitest + RTL, 30% coverage target
+- **Focus**: Hooks, services, API endpoints
+
+### Integration Tests (Existing)
+- Database operations: ✅ Covered
+- External API mocks: ✅ Configured (Stripe, OpenAI, Claude)
+- Auth flow: ✅ Partial coverage
+
+### E2E Tests (Epic 4)
+- Tool: Playwright
+- Focus: Critical user journeys
+- Target: 5-10 tests
+
+---
+
+## Risks & Mitigations
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|--------|------------|------------|
+| Linting fixes break code | Medium | Low | Run tests after each fix batch |
+| Test coverage slows dev | Low | Low | Focus on high-risk modules only |
+| Frontend tests flaky | Medium | Medium | Use proper async handling, stable selectors |
+| MSW handlers incomplete | Low | Medium | Add handlers incrementally as needed |
+
+---
+
 ## Execution Order
 
 **Recommended sequence:**
 
-1. **Epic 1** (Sample Answers) - Immediate user value, no risk
-2. **Epic 2** (Test Coverage) - Enables confident changes
-3. **Epic 3, Phase 1** (Email Production) - Production readiness
-4. **Epic 3, Phase 2** (Email Verification) - Nice to have
-5. **Epic 4** (Video Analysis) - Future enhancement
+1. **Epic 1** (Linting) - Quick wins, clean foundation
+2. **Epic 2** (Backend Tests) - Deployment confidence
+3. **Epic 3** (Frontend Tests) - Regression protection
+4. **Epic 4** (E2E Tests) - Future enhancement
+
+**Estimated Total Effort**: ~25 hours
 
 ---
 
@@ -385,7 +630,7 @@ From project-brief.md:
 
 ## References
 
-- **Codebase Audit**: docs/PROMPT.md
+- **Codebase Audit**: docs/CODEBASE_AUDIT.md
 - **Design System**: docs/DESIGN_SYSTEM.md
 - **UI Flow**: docs/UI_SCREEN_FLOW.md
 - **Deployment**: docs/DEPLOYMENT.md
