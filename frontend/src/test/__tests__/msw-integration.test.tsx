@@ -14,9 +14,10 @@ describe('MSW Integration', () => {
     const data = await response.json();
 
     expect(data).toEqual({
-      id: 'mock-id',
+      id: 'mock-user-id',
       email: 'test@example.com',
       full_name: 'Test User',
+      experience_level: 'mid',
       subscription_tier: 'free',
       interviews_this_month: 0,
       total_interviews: 0,
@@ -56,7 +57,8 @@ describe('MSW Integration', () => {
     const data = await response.json();
 
     expect(data).toEqual({
-      access_token: 'mock-token',
+      access_token: 'mock-access-token',
+      refresh_token: 'mock-refresh-token',
       token_type: 'bearer',
     });
   });
