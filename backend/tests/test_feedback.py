@@ -783,3 +783,533 @@ async def test_get_session_processing_status_handles_no_responses(client, sessio
     assert data["all_processed"] is False
     assert data["has_session_feedback"] is False
     assert data["current_step"] == "idle"
+
+
+# Additional API Endpoint Tests for Coverage
+
+
+@pytest.mark.asyncio
+async def test_get_session_feedback_not_found(client, session_override):
+    """Test GET /api/v1/feedback/session/{session_id} returns 404 when no feedback exists."""
+    token = await register_and_login(client, email="session_no_feedback@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # No session feedback created yet
+    get_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}",
+        headers={"Authorization": token},
+    )
+    assert get_resp.status_code == 404
+    assert "not yet generated" in get_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_all_session_feedbacks_endpoint(client, session_override):
+    """Test GET /api/v1/feedback/session/{session_id}/all endpoint."""
+    token = await register_and_login(client, email="all_feedbacks@example.com")
+
+    question = Question(
+        content="Test question for all feedbacks",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+            "duration_seconds": 30,
+        },
+        headers={"Authorization": token},
+    )
+    response_id = submit_resp.json()["id"]
+
+    # Create feedback for the response
+    feedback = ContentFeedback(
+        response_id=response_id,
+        technical_accuracy=85.0,
+        star_adherence=0.0,
+        answer_structure=80.0,
+        completeness=82.0,
+        relevance=88.0,
+        overall_content_score=83.0,
+        strengths=["Good clarity"],
+        improvements=["Add more detail"],
+        detailed_feedback="Solid answer.",
+    )
+    session_override.add(feedback)
+    await session_override.commit()
+
+    # Get all feedbacks
+    get_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/all",
+        headers={"Authorization": token},
+    )
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["technical_accuracy"] == 85.0
+
+
+@pytest.mark.asyncio
+async def test_get_all_session_feedbacks_empty(client, session_override):
+    """Test GET /api/v1/feedback/session/{session_id}/all returns empty list when no feedbacks."""
+    token = await register_and_login(client, email="empty_feedbacks@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Get all feedbacks (should be empty)
+    get_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/all",
+        headers={"Authorization": token},
+    )
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert isinstance(data, list)
+    assert len(data) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_session_comparison_endpoint(client, session_override):
+    """Test GET /api/v1/feedback/session/{session_id}/comparison endpoint."""
+    token = await register_and_login(client, email="comparison@example.com")
+
+    # Create first interview with feedback (for baseline)
+    interview_resp1 = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id1 = interview_resp1.json()["id"]
+
+    # Manually set the interview status and overall_score for baseline
+    from sqlmodel import select
+    result = await session_override.exec(
+        select(InterviewSession).where(InterviewSession.id == interview_id1)
+    )
+    interview1 = result.first()
+    interview1.status = InterviewStatus.ANALYZED
+    interview1.overall_score = 75.0
+    await session_override.commit()
+
+    # Create second interview (the one we'll compare)
+    interview_resp2 = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id2 = interview_resp2.json()["id"]
+
+    # Create session feedback for the second interview
+    session_feedback = SessionFeedback(
+        session_id=interview_id2,
+        overall_score=85.0,
+        audio_score=0.0,
+        content_score=85.0,
+        top_strengths=["Great communication"],
+        top_improvements=["Add metrics"],
+        recommended_practice_areas=["Technical depth"],
+        next_question_ids=[],
+    )
+    session_override.add(session_feedback)
+    await session_override.commit()
+
+    # Get comparison
+    comp_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id2}/comparison",
+        headers={"Authorization": token},
+    )
+    assert comp_resp.status_code == 200
+    data = comp_resp.json()
+    assert data["session_score"] == 85.0
+    assert data["average_score"] == 75.0
+    assert data["improvement_percent"] is not None
+    assert data["sessions_compared"] == 1
+
+
+@pytest.mark.asyncio
+async def test_get_session_comparison_no_feedback(client, session_override):
+    """Test GET /api/v1/feedback/session/{session_id}/comparison returns 404 when no feedback."""
+    token = await register_and_login(client, email="no_comparison@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # No session feedback - should get 404
+    comp_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/comparison",
+        headers={"Authorization": token},
+    )
+    assert comp_resp.status_code == 404
+    assert "not yet generated" in comp_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_session_comparison_no_previous_sessions(client, session_override):
+    """Test comparison when user has no previous sessions for baseline."""
+    token = await register_and_login(client, email="first_session@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Create session feedback
+    session_feedback = SessionFeedback(
+        session_id=interview_id,
+        overall_score=80.0,
+        audio_score=0.0,
+        content_score=80.0,
+        top_strengths=["Good"],
+        top_improvements=["Better"],
+        recommended_practice_areas=["Technical"],
+        next_question_ids=[],
+    )
+    session_override.add(session_feedback)
+    await session_override.commit()
+
+    # Get comparison (no previous sessions)
+    comp_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/comparison",
+        headers={"Authorization": token},
+    )
+    assert comp_resp.status_code == 200
+    data = comp_resp.json()
+    assert data["session_score"] == 80.0
+    assert data["average_score"] is None
+    assert data["improvement_percent"] is None
+    assert data["sessions_compared"] == 0
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_endpoint(client, session_override, mock_content_metrics):
+    """Test POST /api/v1/feedback/generate/session/{session_id} endpoint."""
+    token = await register_and_login(client, email="gen_session@example.com")
+
+    question = Question(
+        content="Test session feedback generation",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "I led a team of engineers to deliver a critical project.",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Mock the content analyzer
+    with patch("app.services.feedback_service.ContentAnalyzer") as mock_analyzer_class:
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze = AsyncMock(return_value=mock_content_metrics)
+        mock_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
+        mock_analyzer_class.return_value = mock_analyzer
+
+        # Generate session feedback via API
+        gen_resp = await client.post(
+            f"/api/v1/feedback/generate/session/{interview_id}",
+            headers={"Authorization": token},
+        )
+        assert gen_resp.status_code == 201
+        data = gen_resp.json()
+        assert data["overall_score"] > 0
+        assert data["content_score"] > 0
+        assert len(data["top_strengths"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_no_responses(client, session_override):
+    """Test generate session feedback returns 400 when no responses exist."""
+    token = await register_and_login(client, email="gen_no_resp@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Try to generate session feedback without any responses
+    gen_resp = await client.post(
+        f"/api/v1/feedback/generate/session/{interview_id}",
+        headers={"Authorization": token},
+    )
+    assert gen_resp.status_code == 400
+    assert "no responses" in gen_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_generate_response_feedback_no_transcript(client, session_override):
+    """Test generate response feedback returns 400 when no transcript exists."""
+    token = await register_and_login(client, email="gen_no_trans@example.com")
+
+    question = Question(
+        content="Test no transcript",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response without transcript
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "duration_seconds": 30,
+        },
+        headers={"Authorization": token},
+    )
+    response_id = submit_resp.json()["id"]
+
+    # Try to generate feedback without transcript
+    gen_resp = await client.post(
+        f"/api/v1/feedback/generate/response/{response_id}",
+        headers={"Authorization": token},
+    )
+    assert gen_resp.status_code == 400
+    assert "no transcript" in gen_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_session_feedback_unauthorized_access(client, session_override):
+    """Test that users cannot access another user's session feedback."""
+    token1 = await register_and_login(client, email="owner_session@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token1},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # User 2 tries to access User 1's session feedback
+    token2 = await register_and_login(client, email="other_user_session@example.com")
+
+    get_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}",
+        headers={"Authorization": token2},
+    )
+    assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_all_feedbacks_unauthorized_access(client, session_override):
+    """Test that users cannot access another user's all feedbacks."""
+    token1 = await register_and_login(client, email="owner_all@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token1},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # User 2 tries to access User 1's all feedbacks
+    token2 = await register_and_login(client, email="other_user_all@example.com")
+
+    get_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/all",
+        headers={"Authorization": token2},
+    )
+    assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_comparison_unauthorized_access(client, session_override):
+    """Test that users cannot access another user's comparison."""
+    token1 = await register_and_login(client, email="owner_comp@example.com")
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token1},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # User 2 tries to access User 1's comparison
+    token2 = await register_and_login(client, email="other_user_comp@example.com")
+
+    comp_resp = await client.get(
+        f"/api/v1/feedback/session/{interview_id}/comparison",
+        headers={"Authorization": token2},
+    )
+    assert comp_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_already_exists(client, session_override, mock_content_metrics):
+    """Test generate session feedback when feedback already exists."""
+    token = await register_and_login(client, email="gen_already@example.com")
+
+    question = Question(
+        content="Test duplicate feedback generation",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "I successfully led a team project.",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Mock the content analyzer
+    with patch("app.services.feedback_service.ContentAnalyzer") as mock_analyzer_class:
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze = AsyncMock(return_value=mock_content_metrics)
+        mock_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
+        mock_analyzer_class.return_value = mock_analyzer
+
+        # Generate session feedback first time
+        gen_resp1 = await client.post(
+            f"/api/v1/feedback/generate/session/{interview_id}",
+            headers={"Authorization": token},
+        )
+        assert gen_resp1.status_code == 201
+
+        # Try to generate again (should fail or return existing)
+        gen_resp2 = await client.post(
+            f"/api/v1/feedback/generate/session/{interview_id}",
+            headers={"Authorization": token},
+        )
+        # Service may return existing or raise error - check it handles gracefully
+        assert gen_resp2.status_code in [200, 201, 400]
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_invalid_session(client, session_override):
+    """Test generate session feedback with invalid session ID returns 404."""
+    from uuid import uuid4
+
+    token = await register_and_login(client, email="gen_invalid@example.com")
+
+    # Use a non-existent session ID
+    fake_session_id = uuid4()
+
+    gen_resp = await client.post(
+        f"/api/v1/feedback/generate/session/{fake_session_id}",
+        headers={"Authorization": token},
+    )
+    assert gen_resp.status_code == 404
+    assert "not found" in gen_resp.json()["detail"].lower()

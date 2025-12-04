@@ -244,3 +244,309 @@ async def test_webhook_subscription_deleted_downgrades_user(client, session_over
             # In real scenario, would be downgraded to FREE
             # Here we just verify webhook was processed
 
+
+@pytest.mark.asyncio
+async def test_checkout_with_invalid_price_id(client, session_override):
+    """Test checkout fails with invalid price_id."""
+    token = await register_and_login(client)
+
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+        mock_settings.cors_origins = ["http://localhost:3000"]
+
+        # Mock Stripe error for invalid price
+        # Need to create customer first
+        mock_customer = MagicMock()
+        mock_customer.id = "cus_test123"
+        mock_stripe.Customer.create.return_value = mock_customer
+        
+        # Preserve the error module in the mock
+        mock_stripe.error = stripe.error
+        
+        # Then mock checkout error - use real exception class
+        error = stripe.error.InvalidRequestError(
+            message="No such price: price_invalid",
+            param="price",
+        )
+        mock_stripe.checkout.Session.create.side_effect = error
+
+        response = await client.post(
+            "/api/v1/subscriptions/checkout",
+            json={"price_id": "price_invalid"},
+            headers={"Authorization": token},
+        )
+
+        assert response.status_code == 400
+        assert "failed" in response.json()["detail"].lower() or "invalid" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_checkout_with_already_subscribed_user(client, session_override):
+    """Test checkout fails when user already has active subscription."""
+    token = await register_and_login(client)
+
+    # Set user as already subscribed
+    async with SessionLocal() as session:
+        user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+        user_id = user_resp.json()["id"]
+
+        result = await session.exec(select(User).where(User.id == user_id))
+        user = result.first()
+        user.stripe_customer_id = "cus_test123"
+        await session.commit()
+
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+        mock_settings.cors_origins = ["http://localhost:3000"]
+        mock_settings.frontend_url = "http://localhost:3000"
+        
+        # Preserve the error module in the mock
+        mock_stripe.error = stripe.error
+
+        # Mock existing subscription - Subscription.list returns object with .data attribute
+        mock_sub_list = MagicMock()
+        mock_sub_list.data = [MagicMock()]  # Has active subscription
+        mock_stripe.Subscription.list.return_value = mock_sub_list
+
+        response = await client.post(
+            "/api/v1/subscriptions/checkout",
+            json={"price_id": "price_pro_monthly"},
+            headers={"Authorization": token},
+        )
+
+        assert response.status_code == 400
+        assert "already have" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_webhook_invalid_signature(client, session_override):
+    """Test webhook rejects requests with invalid signature."""
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_webhook_secret = "whsec_test"
+        
+        # Preserve the error module in the mock
+        mock_stripe.error = stripe.error
+        
+        # Mock signature verification failure
+        error = stripe.error.SignatureVerificationError(
+            message="Invalid signature",
+            sig_header="test_signature",
+        )
+        mock_stripe.Webhook.construct_event.side_effect = error
+
+        response = await client.post(
+            "/api/v1/subscriptions/webhook",
+            json={"type": "checkout.session.completed", "data": {}},
+            headers={"stripe-signature": "invalid_signature"},
+        )
+
+        assert response.status_code == 400
+        detail = response.json()["detail"].lower()
+        assert "signature" in detail or "invalid" in detail
+
+
+@pytest.mark.asyncio
+async def test_webhook_unknown_event_type(client, session_override):
+    """Test webhook handles unknown event types gracefully."""
+    webhook_payload = {
+        "type": "unknown.event.type",
+        "data": {"object": {}},
+        "id": "evt_test123",
+    }
+
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_webhook_secret = "whsec_test"
+        mock_stripe.Webhook.construct_event.return_value = webhook_payload
+
+        response = await client.post(
+            "/api/v1/subscriptions/webhook",
+            json=webhook_payload,
+            headers={"stripe-signature": "test_signature"},
+        )
+
+        # Should return 200 but not process the event (just logs and returns success)
+        assert response.status_code == 200
+        assert response.json()["status"] == "success"
+
+
+@pytest.mark.asyncio
+async def test_get_subscription_status_expired(client, session_override):
+    """Test subscription status with expired subscription."""
+    token = await register_and_login(client)
+
+    # Set user with expired subscription
+    async with SessionLocal() as session:
+        user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+        user_id = user_resp.json()["id"]
+
+        result = await session.exec(select(User).where(User.id == user_id))
+        user = result.first()
+        user.subscription_tier = SubscriptionTier.PRO
+        from datetime import datetime, timezone, timedelta
+        user.subscription_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        await session.commit()
+
+    response = await client.get(
+        "/api/v1/subscriptions/status",
+        headers={"Authorization": token},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    # Should show as expired or downgraded
+    assert "tier" in data
+
+
+@pytest.mark.asyncio
+async def test_portal_session_creation(client, session_override):
+    """Test portal session creation returns URL."""
+    token = await register_and_login(client)
+
+    # Set user with subscription
+    async with SessionLocal() as session:
+        user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+        user_id = user_resp.json()["id"]
+
+        result = await session.exec(select(User).where(User.id == user_id))
+        user = result.first()
+        user.stripe_customer_id = "cus_test123"
+        await session.commit()
+
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+
+        mock_session = MagicMock()
+        mock_session.url = "https://billing.stripe.com/session/test123"
+        mock_stripe.billing_portal.Session.create.return_value = mock_session
+
+        response = await client.post(
+            "/api/v1/subscriptions/portal",
+            headers={"Authorization": token},
+        )
+
+        assert response.status_code == 200
+        assert "url" in response.json()
+        assert "stripe.com" in response.json()["url"]
+
+
+@pytest.mark.asyncio
+async def test_portal_error_handling(client, session_override):
+    """Test portal session creation handles Stripe errors."""
+    token = await register_and_login(client)
+
+    # Set user with customer_id so we can test Stripe error
+    async with SessionLocal() as session:
+        user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+        user_id = user_resp.json()["id"]
+
+        result = await session.exec(select(User).where(User.id == user_id))
+        user = result.first()
+        user.stripe_customer_id = "cus_test123"
+        await session.commit()
+
+    # Get the real exception class before patching
+    StripeError = stripe.error.InvalidRequestError
+    
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+        
+        # Preserve the error module in the mock
+        mock_stripe.error = stripe.error
+
+        # Create a proper StripeError instance
+        error = StripeError(
+            message="Customer not found",
+            param="customer",
+        )
+        mock_stripe.billing_portal.Session.create.side_effect = error
+
+        response = await client.post(
+            "/api/v1/subscriptions/portal",
+            headers={"Authorization": token},
+        )
+
+        assert response.status_code == 400
+        detail = response.json()["detail"].lower()
+        assert "failed" in detail or "error" in detail or "customer" in detail
+
+
+@pytest.mark.asyncio
+async def test_cancel_subscription(client, session_override):
+    """Test subscription cancellation flow."""
+    token = await register_and_login(client)
+
+    # Set user with active subscription
+    async with SessionLocal() as session:
+        user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+        user_id = user_resp.json()["id"]
+
+        result = await session.exec(select(User).where(User.id == user_id))
+        user = result.first()
+        user.subscription_tier = SubscriptionTier.PRO
+        user.stripe_subscription_id = "sub_test123"
+        user.stripe_customer_id = "cus_test123"
+        await session.commit()
+
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+
+        mock_subscription = MagicMock()
+        mock_subscription.cancel_at_period_end = True
+        mock_stripe.Subscription.modify.return_value = mock_subscription
+
+        response = await client.post(
+            "/api/v1/subscriptions/cancel",
+            headers={"Authorization": token},
+        )
+
+        assert response.status_code == 200
+        assert "canceled" in response.json()["message"].lower() or "scheduled" in response.json()["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_cancel_already_cancelled_subscription(client, session_override):
+    """Test canceling already cancelled subscription."""
+    token = await register_and_login(client)
+
+    # Set user with cancelled subscription
+    async with SessionLocal() as session:
+        user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+        user_id = user_resp.json()["id"]
+
+        result = await session.exec(select(User).where(User.id == user_id))
+        user = result.first()
+        user.subscription_tier = SubscriptionTier.PRO
+        user.stripe_subscription_id = "sub_test123"
+        user.stripe_customer_id = "cus_test123"
+        await session.commit()
+
+    with patch("app.api.subscriptions.settings") as mock_settings, \
+         patch("app.api.subscriptions.stripe") as mock_stripe:
+        mock_settings.stripe_secret_key = "sk_test_xxx"
+
+        # Preserve the error module in the mock
+        mock_stripe.error = stripe.error
+        
+        # Mock subscription already cancelled - use proper exception
+        error = stripe.error.InvalidRequestError(
+            message="Subscription already cancelled",
+            param="subscription",
+        )
+        mock_stripe.Subscription.modify.side_effect = error
+
+        response = await client.post(
+            "/api/v1/subscriptions/cancel",
+            headers={"Authorization": token},
+        )
+
+        # Should handle gracefully - returns 400 with error message
+        assert response.status_code == 400
+        assert "failed" in response.json()["detail"].lower() or "cancel" in response.json()["detail"].lower()
+

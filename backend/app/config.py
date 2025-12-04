@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from_email: str = "noreply@careerswiftr.com"
+    
+    # Resend (preferred email provider)
+    resend_api_key: str = ""
 
     # Frontend URL for email links
     frontend_url: str = "http://localhost:5173"

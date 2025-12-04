@@ -1,6 +1,7 @@
 """Email service for sending password reset and notification emails."""
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 from app.config import settings
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService:
-    """Service for sending emails via SMTP or email service provider."""
+    """Service for sending emails via Resend (preferred) or SMTP fallback."""
 
     def __init__(self):
         self.smtp_host = settings.smtp_host
@@ -17,22 +18,42 @@ class EmailService:
         self.smtp_user = settings.smtp_user
         self.smtp_password = settings.smtp_password
         self.from_email = settings.smtp_from_email
+        self.resend_api_key = settings.resend_api_key
 
-    async def send_password_reset(self, email: str, reset_url: str) -> bool:
-        """Send password reset email with reset link.
-
-        In debug mode, just logs the email content.
-        In production, would use SMTP (aiosmtplib) or email service API.
+    def _load_html_template(self, template_name: str, **kwargs) -> tuple[str, str]:
+        """Load and render HTML email template.
 
         Args:
-            email: Recipient email address
-            reset_url: Password reset URL with token
+            template_name: Name of template file (e.g., 'password_reset.html')
+            **kwargs: Variables to render in template
 
         Returns:
-            bool: True if email sent successfully, False otherwise
+            Tuple of (html_content, plain_text_content)
         """
-        subject = "Reset Your CareerSwiftr Password"
-        body = f"""
+        template_path = Path(__file__).parent.parent / "templates" / "emails" / template_name
+
+        if template_path.exists():
+            html_content = template_path.read_text()
+            # Simple template rendering (replace placeholders)
+            for key, value in kwargs.items():
+                html_content = html_content.replace(f"{{{{{key}}}}}", str(value))
+
+            # Extract plain text from HTML (simple version)
+            # Remove HTML tags for plain text fallback
+            import re
+            plain_text = re.sub(r"<[^>]+>", "", html_content)
+            plain_text = re.sub(r"\s+", " ", plain_text).strip()
+
+            return html_content, plain_text
+        else:
+            # Fallback to simple text template
+            logger.warning(f"Email template not found: {template_path}, using fallback")
+            return self._create_fallback_template(**kwargs)
+
+    def _create_fallback_template(self, **kwargs) -> tuple[str, str]:
+        """Create fallback plain text template."""
+        reset_url = kwargs.get("reset_url", "")
+        plain_text = f"""
 Hello,
 
 You requested to reset your password for CareerSwiftr Interview Simulator.
@@ -45,6 +66,24 @@ If you didn't request this, please ignore this email.
 Best regards,
 CareerSwiftr Team
         """.strip()
+        return plain_text, plain_text
+
+    async def send_password_reset(self, email: str, reset_url: str) -> bool:
+        """Send password reset email with reset link.
+
+        Uses Resend API if configured, otherwise falls back to debug logging.
+
+        Args:
+            email: Recipient email address
+            reset_url: Password reset URL with token
+
+        Returns:
+            bool: True if email sent successfully, False otherwise
+        """
+        subject = "Reset Your CareerSwiftr Password"
+
+        # Load HTML template
+        html_content, plain_text = self._load_html_template("password_reset.html", reset_url=reset_url)
 
         if settings.debug:
             # In debug mode, just log the email
@@ -53,37 +92,71 @@ CareerSwiftr Team
                 f"To: {email}\n"
                 f"Subject: {subject}\n"
                 f"Reset URL: {reset_url}\n"
-                f"Body:\n{body}"
+                f"Body:\n{plain_text}"
             )
             return True
 
-        # In production, use SMTP or email service
-        # Example with aiosmtplib (not implemented yet):
-        # try:
-        #     import aiosmtplib
-        #     from email.message import EmailMessage
-        #
-        #     message = EmailMessage()
-        #     message["From"] = self.from_email
-        #     message["To"] = email
-        #     message["Subject"] = subject
-        #     message.set_content(body)
-        #
-        #     await aiosmtplib.send(
-        #         message,
-        #         hostname=self.smtp_host,
-        #         port=self.smtp_port,
-        #         username=self.smtp_user,
-        #         password=self.smtp_password,
-        #         start_tls=True,
-        #     )
-        #     return True
-        # except Exception as e:
-        #     logger.error(f"Failed to send email to {email}: {e}")
-        #     return False
+        # Try Resend first (preferred)
+        if self.resend_api_key:
+            try:
+                import resend
 
+                resend.api_key = self.resend_api_key
+
+                params = resend.Emails.Params(
+                    from_="CareerSwiftr <noreply@careerswiftr.com>",
+                    to=[email],
+                    subject=subject,
+                    html=html_content,
+                    text=plain_text,
+                )
+
+                email_response = resend.Emails.send(params)
+                email_id = getattr(email_response, 'id', None)
+                if email_id:
+                    logger.info(f"Password reset email sent via Resend to {email} (email_id: {email_id})")
+                else:
+                    logger.info(f"Password reset email sent via Resend to {email}")
+                return True
+
+            except ImportError:
+                logger.warning("Resend package not installed. Install with: pip install resend")
+            except Exception as e:
+                logger.error(f"Failed to send email via Resend to {email}: {e}", exc_info=True)
+                # Fall through to SMTP fallback
+
+        # Fallback to SMTP if configured
+        if self.smtp_host and self.smtp_user and self.smtp_password:
+            try:
+                import aiosmtplib
+                from email.message import EmailMessage
+
+                message = EmailMessage()
+                message["From"] = self.from_email
+                message["To"] = email
+                message["Subject"] = subject
+                message.set_content(plain_text)
+                message.add_alternative(html_content, subtype="html")
+
+                await aiosmtplib.send(
+                    message,
+                    hostname=self.smtp_host,
+                    port=self.smtp_port,
+                    username=self.smtp_user,
+                    password=self.smtp_password,
+                    start_tls=True,
+                )
+                logger.info(f"Password reset email sent via SMTP to {email} (host: {self.smtp_host})")
+                return True
+            except ImportError:
+                logger.warning("aiosmtplib not installed. Install with: pip install aiosmtplib")
+            except Exception as e:
+                logger.error(f"Failed to send email via SMTP to {email}: {e}", exc_info=True)
+
+        # No email service configured
         logger.warning(
             f"Email service not configured for production. "
-            f"Would send password reset to {email}"
+            f"Set RESEND_API_KEY or SMTP settings to enable email sending. "
+            f"Would send password reset to {email} (reset_url: {reset_url})"
         )
-        return True
+        return False
