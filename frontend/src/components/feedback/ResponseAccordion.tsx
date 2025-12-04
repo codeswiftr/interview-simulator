@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, CheckCircle, AlertTriangle, Play } from 'lucide-react';
+import { ChevronDown, CheckCircle, AlertTriangle, Play, Lightbulb } from 'lucide-react';
 import AudioPlayer from './AudioPlayer';
+import SampleAnswerModal from './SampleAnswerModal';
 
 interface ResponseAccordionProps {
   question: string;
@@ -10,6 +11,7 @@ interface ResponseAccordionProps {
   suggestions: string[];
   questionNumber: number;
   audioUrl?: string;
+  sampleAnswer?: string;
 }
 
 export default function ResponseAccordion({
@@ -20,8 +22,10 @@ export default function ResponseAccordion({
   suggestions,
   questionNumber,
   audioUrl,
+  sampleAnswer,
 }: ResponseAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showSampleModal, setShowSampleModal] = useState(false);
 
   const getScoreColor = (s: number): string => {
     if (s >= 80) return 'text-score-excellent';
@@ -121,8 +125,32 @@ export default function ResponseAccordion({
               </ul>
             </div>
           )}
+
+          {/* Sample Answer Button */}
+          {sampleAnswer && (
+            <div className="pt-4 border-t border-border-light dark:border-dark-border">
+              <button
+                onClick={() => setShowSampleModal(true)}
+                className="btn-secondary w-full flex items-center justify-center gap-2"
+              >
+                <Lightbulb size={18} />
+                View Sample Answer
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Sample Answer Modal */}
+      {sampleAnswer && (
+        <SampleAnswerModal
+          isOpen={showSampleModal}
+          onClose={() => setShowSampleModal(false)}
+          question={question}
+          sampleAnswer={sampleAnswer}
+          questionNumber={questionNumber}
+        />
+      )}
     </div>
   );
 }

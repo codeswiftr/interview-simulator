@@ -436,6 +436,7 @@ export default function FeedbackPage() {
                     feedback={contentFeedback?.detailed_feedback || 'Feedback analysis pending...'}
                     score={contentFeedback?.overall_content_score}
                     suggestions={contentFeedback?.improvements || []}
+                    sampleAnswer={response.question?.sample_answer}
                   />
                 );
               })}
