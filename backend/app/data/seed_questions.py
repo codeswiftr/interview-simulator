@@ -435,6 +435,28 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.EASY,
         company_tags=["Google", "Amazon", "Microsoft"],
         topic_tags=["linked_list", "algorithms", "two_pointers"],
+        sample_answer="""**Problem Understanding**: Detect if a linked list contains a cycle where a node's next pointer points back to a previous node.
+
+**Approach**: Use Floyd's Cycle Detection (Tortoise and Hare) algorithm with two pointers moving at different speeds.
+
+**Complexity**: Time O(n), Space O(1) - no extra data structures needed.
+
+**Code Sketch**:
+```python
+def has_cycle(head):
+    if not head or not head.next:
+        return False
+    slow = head
+    fast = head.next
+    while slow != fast:
+        if not fast or not fast.next:
+            return False
+        slow = slow.next
+        fast = fast.next.next
+    return True
+```
+
+**Edge Cases**: Empty list, single node, cycle at head, cycle at tail, no cycle.""",
     ),
     Question(
         content="Explain the difference between optimistic and pessimistic locking.",
@@ -442,6 +464,21 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["enterprise", "Oracle", "Microsoft"],
         topic_tags=["databases", "transactions", "concurrency"],
+        sample_answer="""**Problem Understanding**: Both are concurrency control strategies to handle simultaneous data access.
+
+**Pessimistic Locking**: Assumes conflicts are likely. Locks the resource before reading/writing, blocking other transactions until complete. Uses `SELECT FOR UPDATE` in SQL. Best for high-contention scenarios with frequent conflicts.
+
+**Optimistic Locking**: Assumes conflicts are rare. Reads without locking, then checks if data changed before committing (using version numbers or timestamps). Fails if conflict detected, transaction must retry. Best for read-heavy workloads with rare conflicts.
+
+**Complexity**: Pessimistic has lock overhead; Optimistic has retry overhead.
+
+**When to Use**:
+- Pessimistic: Banking transactions, inventory management, high-write scenarios
+- Optimistic: Read-heavy APIs, user profile updates, CMS systems
+
+**Trade-offs**:
+- Pessimistic: Can cause deadlocks, reduces throughput, but guarantees consistency
+- Optimistic: Better throughput, no deadlocks, but may need retries under contention""",
     ),
     Question(
         content="Write a function to find the longest palindromic substring in a given string.",
@@ -449,6 +486,30 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Meta", "Google"],
         topic_tags=["strings", "dynamic_programming", "algorithms"],
+        sample_answer="""**Problem Understanding**: Find the longest substring that reads the same forwards and backwards.
+
+**Approach**: Expand around center - for each character, expand outward while characters match. Check both odd-length (single center) and even-length (two centers) palindromes.
+
+**Complexity**: Time O(n²), Space O(1) - better than DP which uses O(n²) space.
+
+**Code Sketch**:
+```python
+def longest_palindrome(s):
+    def expand(left, right):
+        while left >= 0 and right < len(s) and s[left] == s[right]:
+            left -= 1
+            right += 1
+        return s[left + 1:right]
+
+    result = ""
+    for i in range(len(s)):
+        odd = expand(i, i)        # Odd length
+        even = expand(i, i + 1)   # Even length
+        result = max(result, odd, even, key=len)
+    return result
+```
+
+**Edge Cases**: Empty string, single character, all same characters, no palindrome longer than 1.""",
     ),
     Question(
         content="Implement a LRU (Least Recently Used) cache with O(1) operations.",
@@ -456,6 +517,44 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Google", "Amazon", "Microsoft"],
         topic_tags=["data_structures", "hashmap", "linked_list", "caching"],
+        sample_answer="""**Problem Understanding**: Design a cache that evicts least recently used items when at capacity, with O(1) get and put operations.
+
+**Approach**: Combine a HashMap (for O(1) lookup) with a Doubly Linked List (for O(1) removal and insertion). HashMap stores key → node pointer, DLL maintains usage order (most recent at head).
+
+**Complexity**: Time O(1) for both get and put, Space O(capacity).
+
+**Code Sketch**:
+```python
+class LRUCache:
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.cache = {}  # key -> node
+        self.head = Node(0, 0)  # dummy head
+        self.tail = Node(0, 0)  # dummy tail
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def get(self, key):
+        if key in self.cache:
+            node = self.cache[key]
+            self._remove(node)
+            self._add_to_head(node)
+            return node.value
+        return -1
+
+    def put(self, key, value):
+        if key in self.cache:
+            self._remove(self.cache[key])
+        node = Node(key, value)
+        self._add_to_head(node)
+        self.cache[key] = node
+        if len(self.cache) > self.capacity:
+            lru = self.tail.prev
+            self._remove(lru)
+            del self.cache[lru.key]
+```
+
+**Edge Cases**: Capacity of 1, updating existing key, accessing same key repeatedly.""",
     ),
     Question(
         content="Given a binary tree, write a function to serialize and deserialize it.",
@@ -463,6 +562,36 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Google", "Meta", "Amazon"],
         topic_tags=["trees", "recursion", "serialization", "dfs"],
+        sample_answer="""**Problem Understanding**: Convert a binary tree to a string (serialize) and reconstruct the tree from that string (deserialize). The serialization must preserve the tree structure.
+
+**Approach**: Use preorder DFS traversal with a marker for null nodes. This captures the structure unambiguously.
+
+**Complexity**: Time O(n), Space O(n) for both operations.
+
+**Code Sketch**:
+```python
+class Codec:
+    def serialize(self, root):
+        if not root:
+            return "null"
+        return f"{root.val},{self.serialize(root.left)},{self.serialize(root.right)}"
+
+    def deserialize(self, data):
+        values = iter(data.split(","))
+
+        def build():
+            val = next(values)
+            if val == "null":
+                return None
+            node = TreeNode(int(val))
+            node.left = build()
+            node.right = build()
+            return node
+
+        return build()
+```
+
+**Edge Cases**: Empty tree, single node, skewed tree (all left or all right children), negative values.""",
     ),
     Question(
         content="Find the kth largest element in an unsorted array.",
@@ -470,6 +599,32 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Microsoft", "Apple"],
         topic_tags=["arrays", "heap", "quickselect", "sorting"],
+        sample_answer="""**Problem Understanding**: Find the kth largest element without fully sorting the array.
+
+**Approach Options**:
+1. Min-heap of size k: Maintain k largest elements, root is answer - O(n log k)
+2. QuickSelect: Partition-based selection, average O(n) but worst O(n²)
+3. Sort and index: Simple but O(n log n)
+
+**Best Approach**: Min-heap for guaranteed O(n log k) or QuickSelect for average O(n).
+
+**Complexity**: Heap: Time O(n log k), Space O(k). QuickSelect: Time O(n) avg, Space O(1).
+
+**Code Sketch** (Heap approach):
+```python
+import heapq
+
+def find_kth_largest(nums, k):
+    # Use min-heap of size k
+    heap = []
+    for num in nums:
+        heapq.heappush(heap, num)
+        if len(heap) > k:
+            heapq.heappop(heap)  # Remove smallest
+    return heap[0]  # Kth largest is smallest in heap
+```
+
+**Edge Cases**: k equals array length (find min), k=1 (find max), array with duplicates, negative numbers.""",
     ),
     Question(
         content="Implement a function to reverse a linked list iteratively and recursively.",
@@ -477,6 +632,37 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.EASY,
         company_tags=["Google", "Amazon", "startup"],
         topic_tags=["linked_list", "recursion", "iteration"],
+        sample_answer="""**Problem Understanding**: Reverse the direction of all next pointers in a singly linked list.
+
+**Approach**: Both iterative (preferred for O(1) space) and recursive (cleaner but O(n) stack space).
+
+**Complexity**: Time O(n) for both. Iterative Space O(1), Recursive Space O(n).
+
+**Code Sketch - Iterative**:
+```python
+def reverse_iterative(head):
+    prev = None
+    current = head
+    while current:
+        next_temp = current.next  # Save next
+        current.next = prev       # Reverse pointer
+        prev = current            # Move prev forward
+        current = next_temp       # Move current forward
+    return prev  # New head
+```
+
+**Code Sketch - Recursive**:
+```python
+def reverse_recursive(head):
+    if not head or not head.next:
+        return head
+    new_head = reverse_recursive(head.next)
+    head.next.next = head  # Reverse pointer
+    head.next = None       # Break old pointer
+    return new_head
+```
+
+**Edge Cases**: Empty list, single node, two nodes. Recursive approach can stack overflow on very long lists.""",
     ),
     Question(
         content="Given an array of integers, find all triplets that sum to zero.",
@@ -484,6 +670,39 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Meta", "Amazon", "Bloomberg"],
         topic_tags=["arrays", "two_pointers", "sorting", "algorithms"],
+        sample_answer="""**Problem Understanding**: Find all unique triplets (a, b, c) where a + b + c = 0.
+
+**Approach**: Sort array first, then for each element use two-pointer technique to find pairs that sum to its negative. Skip duplicates to ensure uniqueness.
+
+**Complexity**: Time O(n²) - sorting O(n log n) + n iterations with O(n) two-pointer each. Space O(1) excluding output.
+
+**Code Sketch**:
+```python
+def three_sum(nums):
+    nums.sort()
+    result = []
+    for i in range(len(nums) - 2):
+        if i > 0 and nums[i] == nums[i-1]:  # Skip duplicate
+            continue
+        left, right = i + 1, len(nums) - 1
+        while left < right:
+            total = nums[i] + nums[left] + nums[right]
+            if total == 0:
+                result.append([nums[i], nums[left], nums[right]])
+                while left < right and nums[left] == nums[left+1]:
+                    left += 1  # Skip duplicates
+                while left < right and nums[right] == nums[right-1]:
+                    right -= 1
+                left += 1
+                right -= 1
+            elif total < 0:
+                left += 1
+            else:
+                right -= 1
+    return result
+```
+
+**Edge Cases**: All zeros, no solution exists, all positive/negative numbers, array with duplicates.""",
     ),
     Question(
         content="Implement a function to validate if a binary tree is a valid binary search tree.",
@@ -491,6 +710,26 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Google", "Microsoft", "Amazon"],
         topic_tags=["trees", "bst", "recursion", "validation"],
+        sample_answer="""**Problem Understanding**: Verify that for every node, all values in left subtree are less than node, and all values in right subtree are greater. Note: checking only immediate children is insufficient.
+
+**Approach**: Pass valid range (min, max) down the tree. Each node must be within its range, and children have narrower ranges.
+
+**Complexity**: Time O(n) - visit each node once. Space O(h) - recursion stack where h is height.
+
+**Code Sketch**:
+```python
+def is_valid_bst(root, min_val=float('-inf'), max_val=float('inf')):
+    if not root:
+        return True
+    if root.val <= min_val or root.val >= max_val:
+        return False
+    return (is_valid_bst(root.left, min_val, root.val) and
+            is_valid_bst(root.right, root.val, max_val))
+```
+
+**Alternative**: Inorder traversal should produce sorted sequence - track previous value.
+
+**Edge Cases**: Empty tree (valid), single node, duplicates (typically invalid in BST), negative values, tree with only left or right children.""",
     ),
     Question(
         content="Write a function to merge k sorted linked lists into one sorted list.",
@@ -498,6 +737,42 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Google", "Amazon", "Uber"],
         topic_tags=["linked_list", "heap", "merge_sort", "divide_conquer"],
+        sample_answer="""**Problem Understanding**: Combine k sorted linked lists into a single sorted linked list.
+
+**Approach Options**:
+1. Min-heap: Keep smallest node from each list in heap, extract min and add its next - O(n log k)
+2. Divide and conquer: Pairwise merge, reducing k lists to k/2 each round - O(n log k)
+3. Brute force merge one by one - O(nk), not recommended
+
+**Best Approach**: Min-heap for simplicity and optimal time complexity.
+
+**Complexity**: Time O(n log k) where n is total nodes. Space O(k) for heap.
+
+**Code Sketch**:
+```python
+import heapq
+
+def merge_k_lists(lists):
+    heap = []
+    dummy = ListNode(0)
+    current = dummy
+
+    # Add first node of each list to heap
+    for i, lst in enumerate(lists):
+        if lst:
+            heapq.heappush(heap, (lst.val, i, lst))
+
+    while heap:
+        val, i, node = heapq.heappop(heap)
+        current.next = node
+        current = current.next
+        if node.next:
+            heapq.heappush(heap, (node.next.val, i, node.next))
+
+    return dummy.next
+```
+
+**Edge Cases**: Empty lists array, some lists empty, all single-node lists, lists of varying lengths.""",
     ),
     Question(
         content="Implement a function to find the minimum window substring containing all characters of a pattern.",
@@ -505,6 +780,44 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Google", "Amazon", "Meta"],
         topic_tags=["strings", "sliding_window", "hashmap", "two_pointers"],
+        sample_answer="""**Problem Understanding**: Find shortest substring of s that contains all characters of pattern t (including duplicates).
+
+**Approach**: Sliding window with two pointers. Expand right to include characters, contract left when window is valid to minimize.
+
+**Complexity**: Time O(|s| + |t|), Space O(|s| + |t|) for hashmaps.
+
+**Code Sketch**:
+```python
+from collections import Counter
+
+def min_window(s, t):
+    if not t or not s:
+        return ""
+    need = Counter(t)
+    have = {}
+    required = len(need)
+    formed = 0
+    left = 0
+    result = (float('inf'), None, None)
+
+    for right, char in enumerate(s):
+        have[char] = have.get(char, 0) + 1
+        if char in need and have[char] == need[char]:
+            formed += 1
+
+        while formed == required:
+            if right - left + 1 < result[0]:
+                result = (right - left + 1, left, right)
+            left_char = s[left]
+            have[left_char] -= 1
+            if left_char in need and have[left_char] < need[left_char]:
+                formed -= 1
+            left += 1
+
+    return "" if result[0] == float('inf') else s[result[1]:result[2]+1]
+```
+
+**Edge Cases**: Pattern longer than string, no valid window, multiple valid windows of same size, pattern with duplicates.""",
     ),
     Question(
         content="Given a 2D matrix, find the maximum path sum from top-left to bottom-right.",
@@ -512,6 +825,38 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Microsoft", "Apple"],
         topic_tags=["dynamic_programming", "matrix", "path_finding"],
+        sample_answer="""**Problem Understanding**: Find path from top-left to bottom-right with maximum sum, moving only right or down.
+
+**Approach**: Dynamic programming. dp[i][j] = maximum sum to reach cell (i,j). Each cell can only be reached from top or left.
+
+**Complexity**: Time O(m*n), Space O(m*n) or O(n) with optimization.
+
+**Code Sketch**:
+```python
+def max_path_sum(matrix):
+    if not matrix:
+        return 0
+    m, n = len(matrix), len(matrix[0])
+    dp = [[0] * n for _ in range(m)]
+
+    # Initialize first cell
+    dp[0][0] = matrix[0][0]
+
+    # Initialize first row and column
+    for i in range(1, m):
+        dp[i][0] = dp[i-1][0] + matrix[i][0]
+    for j in range(1, n):
+        dp[0][j] = dp[0][j-1] + matrix[0][j]
+
+    # Fill rest of dp table
+    for i in range(1, m):
+        for j in range(1, n):
+            dp[i][j] = matrix[i][j] + max(dp[i-1][j], dp[i][j-1])
+
+    return dp[m-1][n-1]
+```
+
+**Edge Cases**: Single cell, single row/column, negative values (if allowed), empty matrix.""",
     ),
     Question(
         content="Implement a function to detect if two strings are anagrams of each other.",
@@ -519,6 +864,41 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.EASY,
         company_tags=["Amazon", "startup", "Meta"],
         topic_tags=["strings", "hashmap", "sorting"],
+        sample_answer="""**Problem Understanding**: Two strings are anagrams if they contain the same characters with the same frequencies.
+
+**Approach Options**:
+1. Sort both strings and compare - O(n log n)
+2. Count character frequencies using hashmap - O(n)
+3. Use fixed-size array for ASCII characters - O(n)
+
+**Best Approach**: Character counting with hashmap for optimal time and handles Unicode.
+
+**Complexity**: Time O(n), Space O(1) - at most 26 letters for lowercase English.
+
+**Code Sketch**:
+```python
+from collections import Counter
+
+def is_anagram(s, t):
+    if len(s) != len(t):
+        return False
+    return Counter(s) == Counter(t)
+
+# Alternative without Counter:
+def is_anagram_manual(s, t):
+    if len(s) != len(t):
+        return False
+    count = {}
+    for c in s:
+        count[c] = count.get(c, 0) + 1
+    for c in t:
+        count[c] = count.get(c, 0) - 1
+        if count[c] < 0:
+            return False
+    return True
+```
+
+**Edge Cases**: Different lengths, empty strings, single characters, case sensitivity, Unicode characters, strings with spaces.""",
     ),
     Question(
         content="Write a function to find the longest increasing subsequence in an array.",
@@ -526,6 +906,46 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Google", "Microsoft", "Netflix"],
         topic_tags=["dynamic_programming", "arrays", "algorithms"],
+        sample_answer="""**Problem Understanding**: Find length of longest subsequence where elements are in strictly increasing order. Subsequence elements need not be contiguous.
+
+**Approach Options**:
+1. DP: dp[i] = length of LIS ending at index i - O(n²)
+2. Binary search + patience sorting - O(n log n)
+
+**Complexity**: DP: Time O(n²), Space O(n). Binary search: Time O(n log n), Space O(n).
+
+**Code Sketch** (DP approach):
+```python
+def length_of_lis(nums):
+    if not nums:
+        return 0
+    n = len(nums)
+    dp = [1] * n  # Each element is LIS of length 1
+
+    for i in range(1, n):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] = max(dp[i], dp[j] + 1)
+
+    return max(dp)
+```
+
+**Code Sketch** (Binary search - optimal):
+```python
+import bisect
+
+def length_of_lis_optimal(nums):
+    tails = []
+    for num in nums:
+        pos = bisect.bisect_left(tails, num)
+        if pos == len(tails):
+            tails.append(num)
+        else:
+            tails[pos] = num
+    return len(tails)
+```
+
+**Edge Cases**: Empty array, all decreasing, all same values, single element.""",
     ),
     Question(
         content="Implement a trie (prefix tree) with insert, search, and startsWith operations.",
@@ -533,6 +953,48 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Google", "Amazon", "Microsoft"],
         topic_tags=["trees", "trie", "data_structures", "strings"],
+        sample_answer="""**Problem Understanding**: A Trie is a tree-like data structure for efficient string prefix operations. Each node represents a character, and paths from root represent strings.
+
+**Approach**: Use nested dictionaries or TrieNode objects with children map and end-of-word flag.
+
+**Complexity**: All operations O(m) where m is word length. Space O(total characters across all words).
+
+**Code Sketch**:
+```python
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+
+class Trie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, word):
+        node = self.root
+        for char in word:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.is_end = True
+
+    def search(self, word):
+        node = self._find_node(word)
+        return node is not None and node.is_end
+
+    def startsWith(self, prefix):
+        return self._find_node(prefix) is not None
+
+    def _find_node(self, prefix):
+        node = self.root
+        for char in prefix:
+            if char not in node.children:
+                return None
+            node = node.children[char]
+        return node
+```
+
+**Edge Cases**: Empty string, single character, overlapping prefixes, case sensitivity.""",
     ),
     Question(
         content="Given a graph, implement depth-first search (DFS) and breadth-first search (BFS).",
@@ -540,6 +1002,43 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.EASY,
         company_tags=["Meta", "Google", "Amazon"],
         topic_tags=["graphs", "dfs", "bfs", "traversal"],
+        sample_answer="""**Problem Understanding**: Two fundamental graph traversal algorithms. DFS explores as deep as possible before backtracking. BFS explores all neighbors before going deeper.
+
+**Use Cases**:
+- DFS: Cycle detection, topological sort, path finding, connected components
+- BFS: Shortest path (unweighted), level-order traversal, finding minimum steps
+
+**Complexity**: Both O(V + E) time and O(V) space where V = vertices, E = edges.
+
+**Code Sketch - DFS** (recursive):
+```python
+def dfs(graph, start, visited=None):
+    if visited is None:
+        visited = set()
+    visited.add(start)
+    print(start)  # Process node
+    for neighbor in graph[start]:
+        if neighbor not in visited:
+            dfs(graph, neighbor, visited)
+```
+
+**Code Sketch - BFS**:
+```python
+from collections import deque
+
+def bfs(graph, start):
+    visited = {start}
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        print(node)  # Process node
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+```
+
+**Edge Cases**: Disconnected graph, single node, cycles (need visited set), directed vs undirected.""",
     ),
     Question(
         content="Find the median of two sorted arrays in O(log(m+n)) time complexity.",
@@ -547,6 +1046,41 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Google", "Amazon", "Microsoft"],
         topic_tags=["arrays", "binary_search", "divide_conquer", "algorithms"],
+        sample_answer="""**Problem Understanding**: Find median of two sorted arrays without merging. O(log) constraint rules out linear merge.
+
+**Approach**: Binary search on the smaller array. Find partition point where all elements on left are less than all elements on right.
+
+**Key Insight**: If we partition both arrays such that left sides have (m+n+1)/2 elements total, median is the middle element(s).
+
+**Complexity**: Time O(log(min(m,n))), Space O(1).
+
+**Code Sketch**:
+```python
+def find_median(nums1, nums2):
+    if len(nums1) > len(nums2):
+        nums1, nums2 = nums2, nums1
+    m, n = len(nums1), len(nums2)
+    low, high = 0, m
+    while low <= high:
+        partition1 = (low + high) // 2
+        partition2 = (m + n + 1) // 2 - partition1
+
+        max_left1 = float('-inf') if partition1 == 0 else nums1[partition1 - 1]
+        min_right1 = float('inf') if partition1 == m else nums1[partition1]
+        max_left2 = float('-inf') if partition2 == 0 else nums2[partition2 - 1]
+        min_right2 = float('inf') if partition2 == n else nums2[partition2]
+
+        if max_left1 <= min_right2 and max_left2 <= min_right1:
+            if (m + n) % 2 == 0:
+                return (max(max_left1, max_left2) + min(min_right1, min_right2)) / 2
+            return max(max_left1, max_left2)
+        elif max_left1 > min_right2:
+            high = partition1 - 1
+        else:
+            low = partition1 + 1
+```
+
+**Edge Cases**: One empty array, arrays of different lengths, odd vs even total length, duplicates.""",
     ),
     Question(
         content="Implement a function to rotate a matrix 90 degrees clockwise in-place.",
@@ -554,6 +1088,45 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Amazon", "Microsoft", "Apple"],
         topic_tags=["matrix", "arrays", "in_place_algorithms"],
+        sample_answer="""**Problem Understanding**: Rotate an n×n matrix 90° clockwise without using extra space.
+
+**Approach**: Two-step process - (1) Transpose the matrix (swap rows and columns), then (2) Reverse each row.
+
+**Why it works**: Transposing flips along diagonal. Reversing rows then achieves 90° clockwise rotation.
+
+**Complexity**: Time O(n²), Space O(1) - truly in-place.
+
+**Code Sketch**:
+```python
+def rotate(matrix):
+    n = len(matrix)
+
+    # Step 1: Transpose (swap matrix[i][j] with matrix[j][i])
+    for i in range(n):
+        for j in range(i + 1, n):
+            matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+
+    # Step 2: Reverse each row
+    for row in matrix:
+        row.reverse()
+```
+
+**Alternative**: Rotate layer by layer, moving 4 elements at a time in a cycle:
+```python
+def rotate_layer_by_layer(matrix):
+    n = len(matrix)
+    for layer in range(n // 2):
+        first, last = layer, n - layer - 1
+        for i in range(first, last):
+            offset = i - first
+            top = matrix[first][i]
+            matrix[first][i] = matrix[last - offset][first]
+            matrix[last - offset][first] = matrix[last][last - offset]
+            matrix[last][last - offset] = matrix[i][last]
+            matrix[i][last] = top
+```
+
+**Edge Cases**: 1×1 matrix, empty matrix, non-square matrix (requires different approach).""",
     ),
     Question(
         content="Write a function to find all permutations of a given string.",
@@ -561,6 +1134,50 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.MEDIUM,
         company_tags=["Google", "Meta", "startup"],
         topic_tags=["strings", "backtracking", "recursion", "permutations"],
+        sample_answer="""**Problem Understanding**: Generate all possible arrangements of characters in a string. For n unique characters, there are n! permutations.
+
+**Approach**: Backtracking - at each position, try each remaining character, then recurse on remaining positions.
+
+**Complexity**: Time O(n × n!) - n! permutations, each takes O(n) to build. Space O(n) for recursion stack.
+
+**Code Sketch**:
+```python
+def permutations(s):
+    result = []
+
+    def backtrack(path, remaining):
+        if not remaining:
+            result.append(''.join(path))
+            return
+        for i in range(len(remaining)):
+            path.append(remaining[i])
+            backtrack(path, remaining[:i] + remaining[i+1:])
+            path.pop()
+
+    backtrack([], list(s))
+    return result
+```
+
+**Alternative with swapping** (more efficient):
+```python
+def permute(s):
+    result = []
+    chars = list(s)
+
+    def backtrack(start):
+        if start == len(chars):
+            result.append(''.join(chars))
+            return
+        for i in range(start, len(chars)):
+            chars[start], chars[i] = chars[i], chars[start]
+            backtrack(start + 1)
+            chars[start], chars[i] = chars[i], chars[start]
+
+    backtrack(0)
+    return result
+```
+
+**Edge Cases**: Empty string, single character, duplicates (need to skip to avoid duplicates).""",
     ),
     Question(
         content="Implement Dijkstra's algorithm to find the shortest path in a weighted graph.",
@@ -568,6 +1185,45 @@ SEED_QUESTIONS = [
         difficulty=Difficulty.HARD,
         company_tags=["Google", "Amazon", "Uber"],
         topic_tags=["graphs", "algorithms", "shortest_path", "heap"],
+        sample_answer="""**Problem Understanding**: Find shortest paths from a source to all other vertices in a weighted graph with non-negative edges.
+
+**Approach**: Greedy algorithm using a priority queue. Always process the vertex with minimum known distance, updating distances to neighbors if a shorter path is found.
+
+**Complexity**: Time O((V + E) log V) with min-heap. Space O(V) for distances array.
+
+**Code Sketch**:
+```python
+import heapq
+from collections import defaultdict
+
+def dijkstra(graph, start):
+    # graph: dict of {node: [(neighbor, weight), ...]}
+    distances = {node: float('inf') for node in graph}
+    distances[start] = 0
+    pq = [(0, start)]  # (distance, node)
+
+    while pq:
+        curr_dist, node = heapq.heappop(pq)
+
+        # Skip if we've already found a better path
+        if curr_dist > distances[node]:
+            continue
+
+        for neighbor, weight in graph[node]:
+            distance = curr_dist + weight
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                heapq.heappush(pq, (distance, neighbor))
+
+    return distances
+```
+
+**Important Notes**:
+- Only works with non-negative edge weights (use Bellman-Ford for negative edges)
+- Can reconstruct path by tracking predecessors
+- For single-destination, can stop early when destination is processed
+
+**Edge Cases**: Disconnected graph (unreachable vertices), single node, graph with cycles, zero-weight edges.""",
     ),
     # ========== ADDITIONAL TECHNICAL QUESTIONS (30 more to reach 50 total) ==========
     # Concurrency & Multithreading (6 questions)
