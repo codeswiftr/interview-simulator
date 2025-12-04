@@ -1,0 +1,783 @@
+"""Comprehensive tests for interview endpoints to increase coverage."""
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlmodel import SQLModel, select
+
+from app.db import SessionLocal, engine, get_session
+from app.main import app
+from app.models.interview import (
+    InterviewQuestion,
+    InterviewSession,
+    InterviewStatus,
+    InterviewType,
+)
+from app.models.question import Difficulty, Question, QuestionCategory
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def prepare_db():
+    """Create tables once for the test session."""
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    yield
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+
+
+@pytest.fixture(autouse=True)
+async def clean_db(prepare_db):
+    """Truncate tables between tests."""
+    async with engine.begin() as conn:
+        for table in reversed(SQLModel.metadata.sorted_tables):
+            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
+    yield
+
+
+@pytest.fixture
+async def session_override():
+    async with SessionLocal() as session:
+        yield session
+
+
+@pytest.fixture
+async def client(session_override):
+    async def _override():
+        async with SessionLocal() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = _override
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
+    """Register user and return bearer token."""
+    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
+    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
+    token = resp.json()["access_token"]
+    return f"Bearer {token}"
+
+
+async def create_test_question(session_override) -> Question:
+    """Create and return a test question."""
+    question = Question(
+        content="Test interview question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+    return question
+
+
+# Interview List Tests
+
+
+@pytest.mark.asyncio
+async def test_list_interviews_with_status_filter(client, session_override):
+    """Test GET /interviews/ with status filter."""
+    token = await register_and_login(client)
+
+    # Create questions for starting interview
+    for i in range(5):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create interviews with different statuses
+    resp1 = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id1 = resp1.json()["id"]
+
+    resp2 = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id2 = resp2.json()["id"]
+
+    # Start one interview
+    await client.post(
+        f"/api/v1/interviews/{interview_id1}/start",
+        headers={"Authorization": token},
+    )
+
+    # List with status filter
+    list_resp = await client.get(
+        "/api/v1/interviews/?status=in_progress",
+        headers={"Authorization": token},
+    )
+    assert list_resp.status_code == 200
+    data = list_resp.json()
+    assert len(data) == 1
+    assert data[0]["id"] == interview_id1
+    assert data[0]["status"] == "in_progress"
+
+
+@pytest.mark.asyncio
+async def test_list_interviews_with_pagination(client, session_override):
+    """Test GET /interviews/ with limit and offset."""
+    token = await register_and_login(client)
+
+    # Create multiple interviews
+    for i in range(5):
+        await client.post(
+            "/api/v1/interviews/",
+            json={"interview_type": "behavioral"},
+            headers={"Authorization": token},
+        )
+
+    # Test pagination
+    resp = await client.get(
+        "/api/v1/interviews/?limit=2&offset=1",
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+
+
+# Interview Start Tests
+
+
+@pytest.mark.asyncio
+async def test_start_interview_already_completed_fails(client, session_override):
+    """Test that starting a completed interview fails."""
+    token = await register_and_login(client)
+
+    # Create and complete interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Manually set status to completed
+    result = await session_override.exec(
+        select(InterviewSession).where(InterviewSession.id == interview_id)
+    )
+    interview = result.first()
+    interview.status = InterviewStatus.COMPLETED
+    await session_override.commit()
+
+    # Try to start completed interview
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 400
+    assert "cannot start" in start_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_start_interview_assigns_questions(client, session_override):
+    """Test that starting interview assigns questions."""
+    token = await register_and_login(client)
+
+    # Create questions first
+    for i in range(5):
+        question = Question(
+            content=f"Test question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Start interview
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 200
+
+    # Verify questions were assigned
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 3
+
+
+@pytest.mark.asyncio
+async def test_start_interview_insufficient_questions_fails(client, session_override):
+    """Test that starting interview fails if not enough questions available."""
+    token = await register_and_login(client)
+
+    # Create only 1 question
+    question = Question(
+        content="Only question",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # Try to create interview requiring 5 questions
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical", "question_count": 5},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to start - should fail
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 400
+
+
+# Interview Questions Tests
+
+
+@pytest.mark.asyncio
+async def test_get_questions_before_start_fails(client, session_override):
+    """Test that getting questions before start fails."""
+    token = await register_and_login(client)
+
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to get questions before starting
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 400
+    assert "not been started" in questions_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_questions_no_questions_assigned_fails(client, session_override):
+    """Test getting questions when none are assigned fails."""
+    token = await register_and_login(client)
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Manually set status to IN_PROGRESS without assigning questions
+    result = await session_override.exec(
+        select(InterviewSession).where(InterviewSession.id == interview_id)
+    )
+    interview = result.first()
+    interview.status = InterviewStatus.IN_PROGRESS
+    await session_override.commit()
+
+    # Try to get questions
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 404
+    assert "no questions found" in questions_resp.json()["detail"].lower()
+
+
+# Interview End Tests
+
+
+@pytest.mark.asyncio
+async def test_end_interview_sets_duration(client, session_override):
+    """Test that ending interview calculates duration."""
+    token = await register_and_login(client)
+
+    # Create questions
+    for i in range(3):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # End interview
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp.status_code == 200
+    data = end_resp.json()
+    assert data["status"] == "completed"
+    assert data["duration_seconds"] is not None
+    assert data["duration_seconds"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_end_interview_already_ended_fails(client, session_override):
+    """Test that ending an already completed interview fails."""
+    token = await register_and_login(client)
+
+    # Create questions
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # Create, start, and end interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+
+    # Try to end again
+    end_resp2 = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp2.status_code == 400
+    assert "cannot end" in end_resp2.json()["detail"].lower()
+
+
+# Interview Cancel Tests
+
+
+@pytest.mark.asyncio
+async def test_cancel_scheduled_interview(client, session_override):
+    """Test cancelling a scheduled interview."""
+    token = await register_and_login(client)
+
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Cancel interview
+    cancel_resp = await client.delete(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token},
+    )
+    assert cancel_resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_cancel_non_scheduled_interview_fails(client, session_override):
+    """Test that cancelling a non-scheduled interview fails."""
+    token = await register_and_login(client)
+
+    # Create questions
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Try to cancel in-progress interview
+    cancel_resp = await client.delete(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token},
+    )
+    assert cancel_resp.status_code == 400
+    assert "only scheduled" in cancel_resp.json()["detail"].lower()
+
+
+# Response Submission Tests
+
+
+@pytest.mark.asyncio
+async def test_submit_response_not_in_progress_fails(client, session_override):
+    """Test submitting response to non-in-progress interview fails."""
+    token = await register_and_login(client)
+
+    question = await create_test_question(session_override)
+
+    # Create interview (but don't start it)
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to submit response
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "in progress" in submit_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_submit_response_wrong_question_fails(client, session_override):
+    """Test submitting response for question not in interview fails."""
+    token = await register_and_login(client)
+
+    # Create two questions
+    question1 = Question(
+        content="Question 1",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    question2 = Question(
+        content="Question 2",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+    )
+    session_override.add(question1)
+    session_override.add(question2)
+    await session_override.commit()
+    await session_override.refresh(question1)
+    await session_override.refresh(question2)
+
+    # Create and start behavioral interview (will use question1)
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Try to submit response for question2 (not in this interview)
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question2.id),
+            "transcript": "Test answer",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "does not belong" in submit_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_submit_response_calculates_word_count(client, session_override):
+    """Test that submitting response calculates word count."""
+    token = await register_and_login(client)
+
+    question = await create_test_question(session_override)
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Link question to interview
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response with transcript
+    transcript = "This is a test answer with exactly ten words here."
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": transcript,
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 201
+    data = submit_resp.json()
+    assert data["word_count"] == len(transcript.split())
+
+
+@pytest.mark.asyncio
+async def test_submit_response_with_audio_url(client, session_override):
+    """Test submitting response with audio URL (no transcript)."""
+    token = await register_and_login(client)
+
+    question = await create_test_question(session_override)
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response with audio URL but no transcript
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "audio_url": "https://example.com/audio.mp3",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 201
+    data = submit_resp.json()
+    assert data["audio_url"] == "https://example.com/audio.mp3"
+    assert data["transcript"] is None
+
+
+# Get Responses Tests
+
+
+@pytest.mark.asyncio
+async def test_get_responses_includes_question_data(client, session_override):
+    """Test that getting responses includes question data."""
+    token = await register_and_login(client)
+
+    question = await create_test_question(session_override)
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    interview_question = InterviewQuestion(
+        session_id=interview_id,
+        question_id=question.id,
+        order=1,
+    )
+    session_override.add(interview_question)
+    await session_override.commit()
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit response
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+
+    # Get responses
+    responses_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/responses",
+        headers={"Authorization": token},
+    )
+    assert responses_resp.status_code == 200
+    data = responses_resp.json()
+    assert len(data) == 1
+    assert data[0]["question"] is not None
+    assert data[0]["question"]["content"] == question.content
+
+
+@pytest.mark.asyncio
+async def test_get_responses_empty_list(client, session_override):
+    """Test getting responses for interview with no responses."""
+    token = await register_and_login(client)
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Get responses (should be empty)
+    responses_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/responses",
+        headers={"Authorization": token},
+    )
+    assert responses_resp.status_code == 200
+    assert responses_resp.json() == []
+
+
+# Quick Practice Tests
+
+
+@pytest.mark.asyncio
+async def test_quick_practice_with_specific_question(client, session_override):
+    """Test creating quick practice session with specific question."""
+    token = await register_and_login(client)
+
+    question = await create_test_question(session_override)
+
+    # Create quick practice
+    resp = await client.post(
+        f"/api/v1/interviews/quick-practice?question_id={question.id}",
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["question_count"] == 1
+    assert data["status"] == "scheduled"
+
+
+@pytest.mark.asyncio
+async def test_quick_practice_inactive_question_fails(client, session_override):
+    """Test quick practice with inactive question fails."""
+    token = await register_and_login(client)
+
+    # Create inactive question
+    question = Question(
+        content="Inactive question",
+        category=QuestionCategory.TECHNICAL,
+        difficulty=Difficulty.EASY,
+        is_active=False,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Try to create quick practice with inactive question
+    resp = await client.post(
+        f"/api/v1/interviews/quick-practice?question_id={question.id}",
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_quick_practice_nonexistent_question_fails(client, session_override):
+    """Test quick practice with non-existent question fails."""
+    from uuid import uuid4
+
+    token = await register_and_login(client)
+
+    fake_id = uuid4()
+    resp = await client.post(
+        f"/api/v1/interviews/quick-practice?question_id={fake_id}",
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 404
+
+
+# Authorization Tests
+
+
+@pytest.mark.asyncio
+async def test_get_interview_unauthorized_fails(client, session_override):
+    """Test that users cannot access other users' interviews."""
+    token1 = await register_and_login(client, "user1@example.com")
+    token2 = await register_and_login(client, "user2@example.com")
+
+    # User 1 creates interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token1},
+    )
+    interview_id = resp.json()["id"]
+
+    # User 2 tries to access User 1's interview
+    get_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token2},
+    )
+    assert get_resp.status_code == 404

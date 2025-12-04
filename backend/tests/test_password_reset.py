@@ -311,3 +311,101 @@ async def test_reset_password_with_latest_token(client: AsyncClient, session_ove
     # First token should still be valid (not used)
     await session_override.refresh(first_token)
     assert first_token.used is False
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_success(client: AsyncClient, session_override):
+    """Test successful token refresh with valid refresh token."""
+    email = await create_test_user(client, email="refresh@example.com")
+
+    # Login to get tokens
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": email, "password": "password123"}
+    )
+    assert login_resp.status_code == 200
+    tokens = login_resp.json()
+    refresh_token = tokens["refresh_token"]
+
+    # Use refresh token to get new tokens
+    refresh_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
+    )
+    assert refresh_resp.status_code == 200
+    new_tokens = refresh_resp.json()
+    assert "access_token" in new_tokens
+    assert "refresh_token" in new_tokens
+    assert new_tokens["refresh_token"] != refresh_token  # Token rotation
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_invalid_token(client: AsyncClient):
+    """Test refresh endpoint rejects invalid refresh token."""
+    resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "invalid-token-xyz"}
+    )
+    assert resp.status_code == 401
+    assert "invalid" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_expired_token(client: AsyncClient, session_override):
+    """Test refresh endpoint rejects expired refresh token."""
+    email = await create_test_user(client, email="expired_refresh@example.com")
+
+    # Login to get tokens
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": email, "password": "password123"}
+    )
+    tokens = login_resp.json()
+    refresh_token = tokens["refresh_token"]
+
+    # Manually expire the refresh token
+    user_result = await session_override.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    user.refresh_token_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    await session_override.commit()
+
+    # Try to refresh with expired token
+    resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
+    )
+    assert resp.status_code == 401
+    assert "expired" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_clears_expired_token(client: AsyncClient, session_override):
+    """Test that expired refresh tokens are cleared from database."""
+    email = await create_test_user(client, email="clear_expired@example.com")
+
+    # Login to get tokens
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": email, "password": "password123"}
+    )
+    tokens = login_resp.json()
+    refresh_token = tokens["refresh_token"]
+
+    # Manually expire the refresh token
+    user_result = await session_override.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    user.refresh_token_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    await session_override.commit()
+
+    # Try to refresh with expired token
+    await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
+    )
+
+    # Verify token was cleared
+    await session_override.refresh(user)
+    assert user.refresh_token is None
+    assert user.refresh_token_expires_at is None
+
+
