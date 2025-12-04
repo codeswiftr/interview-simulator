@@ -240,3 +240,209 @@ async def test_audio_processing_integration(client, session_override, tmp_path):
     # Note: Actual transcription/analysis happens in background
     # In a real test, we'd wait and verify the results
 
+
+@pytest.mark.asyncio
+async def test_company_targeted_interview(client, session_override):
+    """Test that target_company filters questions by company_tags."""
+    token = await register_and_login(client)
+
+    # Seed questions: 2 for Google, 1 for Amazon, 2 general (no company tags)
+    google_questions = []
+    for i in range(2):
+        resp = await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"Google behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+                "company_tags": ["google"],
+            },
+            headers={"Authorization": token},
+        )
+        google_questions.append(resp.json()["id"])
+
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Amazon behavioral question",
+            "category": "behavioral",
+            "difficulty": "medium",
+            "company_tags": ["amazon"],
+        },
+        headers={"Authorization": token},
+    )
+
+    general_questions = []
+    for i in range(2):
+        resp = await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"General behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+                "company_tags": [],
+            },
+            headers={"Authorization": token},
+        )
+        general_questions.append(resp.json()["id"])
+
+    # Create interview targeting Google
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        headers={"Authorization": token},
+        json={
+            "interview_type": "behavioral",
+            "question_count": 2,
+            "target_company": "google",
+        },
+    )
+    assert create_resp.status_code == 201
+    interview_id = create_resp.json()["id"]
+    assert create_resp.json()["target_company"] == "google"
+
+    # Start interview (assigns questions)
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 200
+
+    # Get questions - should be the 2 Google questions
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 2
+
+    # All questions should be from Google
+    question_ids = [q["id"] for q in questions]
+    for qid in question_ids:
+        assert qid in google_questions
+
+
+@pytest.mark.asyncio
+async def test_company_targeted_interview_fallback(client, session_override):
+    """Test fallback to general pool when not enough company-specific questions."""
+    token = await register_and_login(client)
+
+    # Seed questions: 1 for Google, 2 general
+    google_resp = await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Google behavioral question",
+            "category": "behavioral",
+            "difficulty": "medium",
+            "company_tags": ["google"],
+        },
+        headers={"Authorization": token},
+    )
+    google_question_id = google_resp.json()["id"]
+
+    general_questions = []
+    for i in range(2):
+        resp = await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"General behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+                "company_tags": [],
+            },
+            headers={"Authorization": token},
+        )
+        general_questions.append(resp.json()["id"])
+
+    # Request 3 questions targeting Google (only 1 exists)
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        headers={"Authorization": token},
+        json={
+            "interview_type": "behavioral",
+            "question_count": 3,
+            "target_company": "google",
+        },
+    )
+    assert create_resp.status_code == 201
+    interview_id = create_resp.json()["id"]
+
+    # Start interview (assigns questions)
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 200
+
+    # Get questions - should be 3 (1 Google + 2 general)
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 3
+
+    # Verify mix of company-specific and general questions
+    question_ids = [q["id"] for q in questions]
+    assert google_question_id in question_ids
+
+
+@pytest.mark.asyncio
+async def test_interview_without_target_company(client, session_override):
+    """Test interview without target_company uses general question pool."""
+    token = await register_and_login(client)
+
+    # Seed questions: 1 for Google, 2 general
+    await client.post(
+        "/api/v1/questions/",
+        json={
+            "content": "Google behavioral question",
+            "category": "behavioral",
+            "difficulty": "medium",
+            "company_tags": ["google"],
+        },
+        headers={"Authorization": token},
+    )
+
+    for i in range(2):
+        await client.post(
+            "/api/v1/questions/",
+            json={
+                "content": f"General behavioral question {i+1}",
+                "category": "behavioral",
+                "difficulty": "medium",
+                "company_tags": [],
+            },
+            headers={"Authorization": token},
+        )
+
+    # Create interview without target_company
+    create_resp = await client.post(
+        "/api/v1/interviews/",
+        headers={"Authorization": token},
+        json={
+            "interview_type": "behavioral",
+            "question_count": 2,
+        },
+    )
+    assert create_resp.status_code == 201
+    interview_id = create_resp.json()["id"]
+    assert create_resp.json().get("target_company") is None
+
+    # Start interview (assigns questions)
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 200
+
+    # Get questions - should be 2 from general pool (any questions)
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 2
+

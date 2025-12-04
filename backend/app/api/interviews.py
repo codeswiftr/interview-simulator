@@ -73,6 +73,7 @@ async def create_interview(
         user_id=current_user.id,
         interview_type=payload.interview_type,
         company_style=payload.company_style,
+        target_company=payload.target_company,
         question_count=payload.question_count,
         difficulty=payload.difficulty,
         status=InterviewStatus.SCHEDULED,

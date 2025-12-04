@@ -64,6 +64,9 @@ class InterviewSession(SQLModel, table=True):
     company_style: str | None = Field(
         default=None, description="e.g., 'faang', 'startup', 'enterprise'"
     )
+    target_company: str | None = Field(
+        default=None, description="Target company for interview prep (e.g., 'google', 'amazon')"
+    )
     question_count: int = Field(default=5)
     difficulty: DifficultyLevel | None = Field(
         default=None, sa_column=Column(String), description="Preferred difficulty level"
@@ -161,6 +164,7 @@ class InterviewSessionCreate(SQLModel):
 
     interview_type: InterviewType = InterviewType.BEHAVIORAL
     company_style: str | None = None
+    target_company: str | None = None
     question_count: int = 5
     difficulty: DifficultyLevel | None = None
     scheduled_at: datetime | None = None
@@ -172,6 +176,7 @@ class InterviewSessionRead(SQLModel):
     id: UUID
     interview_type: InterviewType
     company_style: str | None
+    target_company: str | None
     status: InterviewStatus
     question_count: int
     overall_score: float | None

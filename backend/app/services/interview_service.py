@@ -42,8 +42,9 @@ class InterviewService:
     ) -> list[InterviewQuestion]:
         """Select random questions and assign them to the interview session.
 
-        Selects questions matching the interview type (category) and difficulty,
-        then creates InterviewQuestion records to link them to the session.
+        Selects questions matching the interview type (category), difficulty, and
+        optionally target company. When target_company is specified, prioritizes
+        company-specific questions but falls back to general questions if needed.
 
         Args:
             session: Database session
@@ -58,23 +59,51 @@ class InterviewService:
         # Determine category filter
         category = self._get_category_for_type(interview.interview_type)
 
-        # Build query for random question selection
-        stmt = select(Question).where(Question.is_active == True)  # noqa: E712
-
-        if category:
-            stmt = stmt.where(Question.category == category.value)
-
-        # Filter by difficulty if specified (and not 'mixed')
-        # Note: difficulty is stored as a string in the database
+        # Get difficulty value
         difficulty_value = interview.difficulty.value if hasattr(interview.difficulty, 'value') else interview.difficulty
-        if difficulty_value and difficulty_value != "mixed":
-            stmt = stmt.where(Question.difficulty == difficulty_value)
 
-        # Get random questions using ORDER BY RANDOM()
-        stmt = stmt.order_by(func.random()).limit(interview.question_count)
+        questions: list[Question] = []
 
-        result = await session.exec(stmt)
-        questions = list(result.all())
+        # If target_company is specified, prioritize company-specific questions
+        if interview.target_company:
+            company_stmt = select(Question).where(Question.is_active == True)  # noqa: E712
+
+            if category:
+                company_stmt = company_stmt.where(Question.category == category.value)
+
+            if difficulty_value and difficulty_value != "mixed":
+                company_stmt = company_stmt.where(Question.difficulty == difficulty_value)
+
+            # Filter for questions with matching company tag
+            company_stmt = company_stmt.where(
+                Question.company_tags.any(interview.target_company.lower())
+            )
+            company_stmt = company_stmt.order_by(func.random()).limit(interview.question_count)
+
+            result = await session.exec(company_stmt)
+            questions = list(result.all())
+
+        # If we don't have enough company-specific questions, get remaining from general pool
+        remaining_count = interview.question_count - len(questions)
+        if remaining_count > 0:
+            existing_ids = [q.id for q in questions]
+
+            general_stmt = select(Question).where(Question.is_active == True)  # noqa: E712
+
+            if category:
+                general_stmt = general_stmt.where(Question.category == category.value)
+
+            if difficulty_value and difficulty_value != "mixed":
+                general_stmt = general_stmt.where(Question.difficulty == difficulty_value)
+
+            # Exclude already selected questions
+            if existing_ids:
+                general_stmt = general_stmt.where(~Question.id.in_(existing_ids))
+
+            general_stmt = general_stmt.order_by(func.random()).limit(remaining_count)
+
+            result = await session.exec(general_stmt)
+            questions.extend(list(result.all()))
 
         if len(questions) < interview.question_count:
             available = len(questions)
