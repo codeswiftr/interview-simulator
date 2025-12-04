@@ -155,34 +155,41 @@ Help users prepare for specific companies with tailored practice and readiness t
 
 ### Implementation Tasks
 
-#### Phase 1: Backend - Company Targeting
+#### Phase 1: Backend - Company Targeting ✅ COMPLETE
 | Task | Description | Est | Status |
 |------|-------------|-----|--------|
-| 1.1 | Add `target_company` field to InterviewSession model | 30m | Pending |
-| 1.2 | Create Alembic migration | 15m | Pending |
-| 1.3 | Update InterviewSessionCreate schema | 15m | Pending |
-| 1.4 | Update InterviewService.assign_questions() to filter by company_tags | 1h | Pending |
-| 1.5 | Add tests for company-filtered question assignment | 45m | Pending |
+| 1.1 | Add `target_company` field to InterviewSession model | 30m | ✅ Done |
+| 1.2 | Create Alembic migration | 15m | ✅ Done |
+| 1.3 | Update InterviewSessionCreate schema | 15m | ✅ Done |
+| 1.4 | Update InterviewService.assign_questions() to filter by company_tags | 1h | ✅ Done |
+| 1.5 | Add tests for company-filtered question assignment | 45m | ✅ Done |
 
-**Checkpoint**: Creating interview with target_company filters questions correctly
+**Commits:**
+- `174942b` - feat(backend): add target_company field for company-targeted interviews
 
-#### Phase 2: Backend - Readiness Score
+**Checkpoint**: ✅ Creating interview with target_company filters questions correctly
+
+#### Phase 2: Frontend - Company Selection ✅ COMPLETE
 | Task | Description | Est | Status |
 |------|-------------|-----|--------|
-| 2.1 | Add `GET /users/me/readiness-score` endpoint | 1h | Pending |
-| 2.2 | Calculate readiness from last 5 sessions' scores | 30m | Pending |
-| 2.3 | Add tests for readiness endpoint | 30m | Pending |
+| 2.1 | Add company dropdown to NewInterviewModal | 45m | ✅ Done |
+| 2.2 | Update interviewsAPI.create() to send target_company | 15m | ✅ Done |
+| 2.3 | Update types/index.ts with new fields | 15m | ✅ Done |
+| 2.4 | Display target company on InterviewCard | 30m | ✅ Done |
+
+**Commits:**
+- `cf5d09d` - feat(frontend): add company targeting UI for interviews
+
+**Checkpoint**: ✅ Users can select company when starting interview
+
+#### Phase 3: Backend - Readiness Score
+| Task | Description | Est | Status |
+|------|-------------|-----|--------|
+| 3.1 | Add `GET /users/me/readiness-score` endpoint | 1h | Pending |
+| 3.2 | Calculate readiness from last 5 sessions' scores | 30m | Pending |
+| 3.3 | Add tests for readiness endpoint | 30m | Pending |
 
 **Checkpoint**: Readiness score returns valid percentage based on practice history
-
-#### Phase 3: Frontend - Company Selection
-| Task | Description | Est | Status |
-|------|-------------|-----|--------|
-| 3.1 | Add company dropdown to NewInterviewModal | 45m | Pending |
-| 3.2 | Update interviewsAPI.create() to send target_company | 15m | Pending |
-| 3.3 | Update types/index.ts with new fields | 15m | Pending |
-
-**Checkpoint**: Users can select company when starting interview
 
 #### Phase 4: Frontend - Readiness Display
 | Task | Description | Est | Status |
@@ -201,6 +208,15 @@ Help users prepare for specific companies with tailored practice and readiness t
 | 5.3 | Style sample answer with highlighting | 30m | Pending |
 
 **Checkpoint**: Users can view model answer after submitting response
+
+---
+
+### Epic 1 Progress Summary
+- Phase 1 (Backend - Company Targeting): ✅ Complete
+- Phase 2 (Frontend - Company Selection): ✅ Complete
+- Phase 3 (Backend - Readiness Score): Pending
+- Phase 4 (Frontend - Readiness Display): Pending
+- Phase 5 (Sample Answers): Pending
 
 ---
 

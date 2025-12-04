@@ -181,7 +181,97 @@ async def test_progress_endpoints_require_auth(client):
     """Test that progress endpoints require authentication."""
     stats_resp = await client.get("/api/v1/users/me/stats")
     assert stats_resp.status_code == 401
-    
+
     progress_resp = await client.get("/api/v1/users/me/progress")
     assert progress_resp.status_code == 401
+
+    readiness_resp = await client.get("/api/v1/users/me/readiness-score")
+    assert readiness_resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_readiness_score_returns_null_when_no_sessions(client, session_override):
+    """Test that readiness score returns null when user has no completed sessions."""
+    token = await register_and_login(client, email="readiness_empty@example.com")
+
+    resp = await client.get("/api/v1/users/me/readiness-score", headers={"Authorization": token})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["readiness_score"] is None
+    assert data["sessions_used"] == 0
+    assert data["improvement_trend"] is None
+    assert "message" in data
+
+
+@pytest.mark.asyncio
+async def test_readiness_score_calculates_from_last_5_sessions(client, session_override):
+    """Test that readiness score calculates average from last 5 completed sessions."""
+    token = await register_and_login(client, email="readiness_calc@example.com")
+
+    # Get user ID
+    user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+    user_id = user_resp.json()["id"]
+
+    from sqlmodel import select
+    result = await session_override.exec(select(User).where(User.id == user_id))
+    user = result.first()
+
+    # Create 7 sessions (only last 5 should be used)
+    scores = [60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 90.0]  # Will use 70, 75, 80, 85, 90
+    for i, score in enumerate(scores):
+        session = InterviewSession(
+            user_id=user.id,
+            interview_type=InterviewType.BEHAVIORAL,
+            status=InterviewStatus.COMPLETED,
+            overall_score=score,
+        )
+        session_override.add(session)
+    await session_override.commit()
+
+    resp = await client.get("/api/v1/users/me/readiness-score", headers={"Authorization": token})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    # Last 5 sessions: 70, 75, 80, 85, 90 -> average = 80
+    assert data["readiness_score"] == 80.0
+    assert data["sessions_used"] == 5
+
+
+@pytest.mark.asyncio
+async def test_readiness_score_improvement_trend(client, session_override):
+    """Test that improvement trend shows difference between newer and older sessions."""
+    token = await register_and_login(client, email="readiness_trend@example.com")
+
+    # Get user ID
+    user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
+    user_id = user_resp.json()["id"]
+
+    from sqlmodel import select
+    result = await session_override.exec(select(User).where(User.id == user_id))
+    user = result.first()
+
+    # Create 4 sessions with improving trend (oldest to newest)
+    # Sessions created in order: 70, 70, 90, 90
+    # When ordered by created_at desc: [90, 90, 70, 70]
+    # Newer sessions (first 2): avg = 90
+    # Older sessions (last 2): avg = 70
+    # Trend should be 90 - 70 = 20
+    scores = [70.0, 70.0, 90.0, 90.0]  # Created in this order (oldest to newest)
+    for score in scores:
+        session = InterviewSession(
+            user_id=user.id,
+            interview_type=InterviewType.BEHAVIORAL,
+            status=InterviewStatus.COMPLETED,
+            overall_score=score,
+        )
+        session_override.add(session)
+        await session_override.commit()  # Commit each to ensure different created_at
+
+    resp = await client.get("/api/v1/users/me/readiness-score", headers={"Authorization": token})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sessions_used"] == 4
+    assert data["improvement_trend"] == 20.0  # 90 - 70
 

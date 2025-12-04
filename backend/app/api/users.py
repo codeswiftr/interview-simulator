@@ -233,3 +233,67 @@ async def get_my_progress(
         "average_audio_score": progress_data.get("average_audio_score"),
         "average_content_score": progress_data.get("average_content_score"),
     }
+
+
+@router.get("/me/readiness-score")
+async def get_readiness_score(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get interview readiness score based on last 5 completed sessions.
+
+    The readiness score is a percentage (0-100) representing how prepared
+    the user is for interviews based on recent practice performance.
+
+    Scoring logic:
+    - Based on average score of last 5 completed sessions
+    - Requires at least 1 session to calculate
+    - Returns null if no completed sessions with scores
+
+    Args:
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        Dictionary with readiness_score, sessions_used, and improvement_trend
+    """
+    from app.models.interview import InterviewSession, InterviewStatus
+
+    # Get last 5 completed sessions with scores
+    sessions_result = await session.exec(
+        select(InterviewSession)
+        .where(
+            InterviewSession.user_id == current_user.id,
+            InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED]),
+            InterviewSession.overall_score.isnot(None),
+        )
+        .order_by(InterviewSession.created_at.desc())
+        .limit(5)
+    )
+    recent_sessions = list(sessions_result.all())
+
+    if not recent_sessions:
+        return {
+            "readiness_score": None,
+            "sessions_used": 0,
+            "improvement_trend": None,
+            "message": "Complete at least one interview to get your readiness score",
+        }
+
+    # Calculate readiness score (average of last 5 sessions)
+    scores = [s.overall_score for s in recent_sessions if s.overall_score is not None]
+    readiness_score = sum(scores) / len(scores) if scores else None
+
+    # Calculate improvement trend (compare first half vs second half of sessions)
+    improvement_trend = None
+    if len(scores) >= 2:
+        mid = len(scores) // 2
+        older_avg = sum(scores[mid:]) / len(scores[mid:]) if scores[mid:] else 0
+        newer_avg = sum(scores[:mid]) / len(scores[:mid]) if scores[:mid] else 0
+        improvement_trend = round(newer_avg - older_avg, 1)
+
+    return {
+        "readiness_score": round(readiness_score, 1) if readiness_score else None,
+        "sessions_used": len(scores),
+        "improvement_trend": improvement_trend,
+    }
