@@ -189,9 +189,26 @@
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Gemini CLI API errors (404) | Low | External service issue |
+| Frontend test coverage 0% | High | 🔴 Critical - See CODEBASE_AUDIT.md |
+| API endpoint coverage gaps (40-60%) | Medium | 🟡 In progress - Sprint 3 |
+| Email service debug-only | Medium | 🟡 Planned - Sprint 3 |
 | Large chunk size warning on frontend build | Low | Consider code splitting |
 | Audio processing requires local file access | Medium | Works with upload endpoint |
+
+## Codebase Audit (2025-01-02)
+
+**Overall Health**: ✅ Good (Ready for Soft Launch)  
+**Test Coverage**: Backend 66% | Frontend 0%  
+**Documentation**: ✅ Complete (14 documents)
+
+**Key Findings**:
+- ✅ 140 backend tests passing
+- ✅ Strong architecture and type safety
+- 🔴 Frontend has 0% test coverage (critical gap)
+- 🟡 API endpoint coverage gaps (40-60% on key modules)
+- 🟡 Missing E2E tests for critical user journeys
+
+**See**: `docs/CODEBASE_AUDIT.md` for full audit report
 
 ## Risks
 
