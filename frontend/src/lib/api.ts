@@ -1,42 +1,37 @@
-import axios, { AxiosError } from 'axios';
-import type { InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-// Get API base URL from environment or use default
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
-// Create axios instance with base configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add JWT token
+// Request interceptor to add auth token
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  (config) => {
     const token = localStorage.getItem('access_token');
-
-    if (token && config.headers) {
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
+    
+    // Add correlation ID for tracing
+    if (!config.headers['X-Correlation-ID']) {
+      config.headers['X-Correlation-ID'] = crypto.randomUUID();
+    }
+    
     return config;
   },
-  (error: AxiosError) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Flag to prevent multiple refresh attempts
+// Response interceptor to handle token refresh
 let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
+let failedQueue: { resolve: (token: string) => void; reject: (error: any) => void }[] = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -44,10 +39,10 @@ const processQueue = (error: unknown, token: string | null = null) => {
       prom.resolve(token!);
     }
   });
+
   failedQueue = [];
 };
 
-// Response interceptor to handle errors and token refresh
 api.interceptors.response.use(
   (response) => {
     // Minimal debug logging in development builds
@@ -72,11 +67,13 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized errors - try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Don't retry the refresh endpoint itself
-      if (originalRequest.url?.includes('/auth/refresh')) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+      // Don't retry the refresh endpoint itself OR the login endpoint
+      if (originalRequest.url?.includes('/auth/refresh') || originalRequest.url?.includes('/users/login')) {
+        if (originalRequest.url?.includes('/auth/refresh')) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -265,10 +262,10 @@ export const uploadAPI = {
     formData.append('question_id', questionId);
 
     return api.post('/upload/audio', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       timeout: 60000, // 60 seconds for large audio files
+      headers: {
+        'Content-Type': undefined, // Remove default JSON content type, let browser set multipart/form-data with boundary
+      },
     });
   },
 };
