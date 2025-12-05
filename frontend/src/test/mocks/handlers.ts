@@ -245,9 +245,41 @@ export const handlers = [
   }),
 
   // Upload handlers
-  http.post(`${API_URL}/upload/audio`, () => {
+  http.post(`${API_URL}/upload/audio`, async ({ request }) => {
+    const contentType = request.headers.get('content-type') || '';
+
+    // REGRESSION TEST: Ensure Content-Type is multipart/form-data, not application/json
+    // This prevents the 422 Unprocessable Content error that occurs when FormData
+    // is sent with JSON content type instead of multipart/form-data
+    if (contentType.includes('application/json')) {
+      return HttpResponse.json(
+        { detail: 'Content-Type must be multipart/form-data for file uploads, not application/json' },
+        { status: 422 }
+      );
+    }
+
+    if (!contentType.includes('multipart/form-data')) {
+      return HttpResponse.json(
+        { detail: 'Content-Type must be multipart/form-data for file uploads' },
+        { status: 422 }
+      );
+    }
+
+    // Validate FormData fields
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const sessionId = formData.get('session_id');
+    const questionId = formData.get('question_id');
+
+    if (!file || !sessionId || !questionId) {
+      return HttpResponse.json(
+        { detail: 'Missing required fields: file, session_id, question_id' },
+        { status: 422 }
+      );
+    }
+
     return HttpResponse.json({
-      url: 'https://example.com/uploaded-audio.mp3',
+      audio_url: 'https://example.com/uploaded-audio.mp3',
       duration_seconds: 120,
     });
   }),
