@@ -1,16 +1,19 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, AlertCircle, Lightbulb } from 'lucide-react';
+import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { interviewsAPI, userAPI } from '../lib/api';
 import StatsOverview from '../components/dashboard/StatsOverview';
 import ProgressChart from '../components/dashboard/ProgressChart';
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown';
+import ActivityHeatmap from '../components/dashboard/ActivityHeatmap';
+import SkillsRadar from '../components/dashboard/SkillsRadar';
 import InterviewCard from '../components/interview/InterviewCard';
 import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
+import ComingSoonBadge from '../components/ui/ComingSoonBadge';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
 import type { AxiosError } from 'axios';
 
@@ -94,7 +97,6 @@ export default function DashboardPage() {
       const response = await userAPI.getStats();
       setUserStats(response.data);
     } catch (err) {
-      // Silently fail - stats are nice to have
       console.warn('Failed to load user stats:', err);
     }
   };
@@ -104,7 +106,6 @@ export default function DashboardPage() {
       const response = await userAPI.getProgress();
       setUserProgress(response.data);
     } catch (err) {
-      // Silently fail - progress is nice to have
       console.warn('Failed to load user progress:', err);
     }
   };
@@ -114,7 +115,6 @@ export default function DashboardPage() {
       const response = await userAPI.getReadinessScore();
       setReadinessScore(response.data);
     } catch (err) {
-      // Silently fail - readiness score is nice to have
       console.warn('Failed to load readiness score:', err);
     }
   };
@@ -123,13 +123,10 @@ export default function DashboardPage() {
     try {
       const response = await interviewsAPI.create(data);
       const newSession = response.data;
-
-      // Navigate to the interview session
       navigate(`/interview/${newSession.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
       if (axiosError.response?.status === 402) {
-        // Quota exceeded - show upgrade modal
         setShowUpgradeModal(true);
         setError('Free tier limit reached. Upgrade to Pro for unlimited interviews.');
       } else {
@@ -139,10 +136,13 @@ export default function DashboardPage() {
   };
 
   const handleSessionClick = (session: InterviewSession) => {
-    navigate(`/interview/${session.id}`);
+    if (session.status === 'completed' || session.status === 'analyzed') {
+      navigate(`/interview/${session.id}/feedback`);
+    } else {
+      navigate(`/interview/${session.id}`);
+    }
   };
 
-  // Use API stats if available, fallback to calculated
   const stats = {
     totalInterviews: userStats?.total_sessions ?? sessions.length,
     completedInterviews: userStats?.completed_sessions ?? sessions.filter((s) => s.status === 'completed' || s.status === 'analyzed').length,
@@ -153,7 +153,6 @@ export default function DashboardPage() {
     inProgress: sessions.filter((s) => s.status === 'in_progress').length,
   };
 
-  // Calculate category breakdown from sessions
   const categoryBreakdown = useMemo(() => {
     const breakdown: Record<string, { count: number; scores: number[] }> = {};
 
@@ -177,17 +176,83 @@ export default function DashboardPage() {
     }));
   }, [sessions]);
 
+  // Generate heatmap data from sessions
+  const heatmapData = useMemo(() => {
+    const activityMap: Record<string, { count: number; totalScore: number; scoredSessions: number }> = {};
+    
+    sessions.forEach(session => {
+      const date = new Date(session.created_at).toISOString().split('T')[0];
+      if (!activityMap[date]) {
+        activityMap[date] = { count: 0, totalScore: 0, scoredSessions: 0 };
+      }
+      activityMap[date].count++;
+      if (session.overall_score) {
+        activityMap[date].totalScore += session.overall_score;
+        activityMap[date].scoredSessions++;
+      }
+    });
+
+    return Object.entries(activityMap).map(([date, data]) => {
+      const avgScore = data.scoredSessions > 0 ? Math.round(data.totalScore / data.scoredSessions) : undefined;
+      // Mock trend logic for demo purposes
+      let trend: 'improvement' | 'regression' | 'neutral' = 'neutral';
+      if (avgScore) {
+        if (avgScore >= 80) trend = 'improvement';
+        else if (avgScore < 60) trend = 'regression';
+      }
+      
+      return {
+        date,
+        count: data.count,
+        score: avgScore,
+        trend
+      };
+    });
+  }, [sessions]);
+
+  // Generate radar data from progress
+  const radarData = useMemo(() => {
+    if (!userProgress) return undefined;
+    
+    return [
+      { subject: 'Content', current: Math.round(userProgress.average_content_score || 0), target: 90 },
+      { subject: 'Delivery', current: Math.round(userProgress.average_audio_score || 0), target: 85 },
+      // Mock other dimensions for now as they aren't in the API yet
+      { subject: 'Behavioral', current: 75, target: 90 },
+      { subject: 'Technical', current: 60, target: 85 },
+      { subject: 'System Design', current: 40, target: 80 },
+    ];
+  }, [userProgress]);
+
   return (
-    <div className="min-h-screen bg-surface-primary">
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+    <div className="min-h-screen bg-surface-primary pb-12">
+      {/* Background decoration */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-electric-blue/5 blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-500/5 blur-[100px]" />
+      </div>
+
+      <div className="container mx-auto px-6 py-8 max-w-7xl relative z-10">
         {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="heading-page mb-2">Welcome back{user?.full_name ? `, ${user.full_name}` : ''}!</h1>
-          <p className="text-text-secondary">Track your progress and continue practicing your interview skills.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="heading-page mb-2">Welcome back{user?.full_name ? `, ${user.full_name}` : ''}!</h1>
+            <p className="text-text-secondary">Track your progress and continue practicing your interview skills.</p>
+          </div>
+          
+          {!isLoading && sessions.length > 0 && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary flex items-center justify-center gap-2 shadow-lg hover:shadow-electric-blue/25"
+            >
+              <Plus size={20} />
+              Start New Interview
+            </button>
+          )}
         </div>
 
         {/* Stats Overview */}
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <StatsOverview
             totalSessions={stats.totalInterviews}
             completedSessions={stats.completedInterviews}
@@ -197,128 +262,206 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Progress Charts - Only show when user has sessions */}
+        {/* Activity Heatmap */}
         {sessions.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ProgressChart
-              data={userProgress?.score_trend || []}
-              height={220}
-            />
+          <div className="card-glass p-6 mb-8 animate-slide-up">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <Activity className="w-5 h-5 text-emerald-500" />
+              </div>
+              <h3 className="heading-card">Practice Activity</h3>
+            </div>
+            <ActivityHeatmap data={heatmapData} />
+          </div>
+        )}
+
+        {/* Skills & Progress Grid */}
+        {sessions.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-slide-up">
+            {/* Skills Radar */}
+            <div className="card-glass p-6 lg:col-span-1 relative">
+              <ComingSoonBadge text="Preview" />
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-indigo-500/10">
+                  <Target className="w-5 h-5 text-indigo-500" />
+                </div>
+                <h3 className="heading-card">Skills Gap Analysis</h3>
+              </div>
+              <SkillsRadar data={radarData} />
+            </div>
+
+            {/* Progress Chart */}
+            <div className="card-glass p-6 lg:col-span-2">
+              <h3 className="heading-card mb-6">Performance Trend</h3>
+              <ProgressChart
+                data={userProgress?.score_trend || []}
+                height={260}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Improvements by Criteria (New Section) */}
+        {sessions.length > 0 && (
+          <div className="card-glass p-6 mb-8 animate-slide-up relative">
+            <ComingSoonBadge text="Preview" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <TrendingUp className="w-5 h-5 text-amber-500" />
+              </div>
+              <h3 className="heading-card">Improvements by Criteria</h3>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Delivery Improvements */}
+              <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
+                <h4 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-electric-blue"></span>
+                  Delivery
+                </h4>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                    <span>Pacing improved by 15%</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <XCircle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                    <span>Reduce filler words ("um", "like")</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Behavioral Improvements */}
+              <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
+                <h4 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  Behavioral
+                </h4>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                    <span>STAR method usage detected</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <XCircle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                    <span>Elaborate more on "Results"</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Technical Improvements */}
+              <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
+                <h4 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Technical
+                </h4>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                    <span>Key terminology used correctly</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <XCircle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                    <span>Deepen system design explanations</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Category Breakdown */}
+        {sessions.length > 0 && (
+          <div className="card-glass p-6 mb-8 animate-slide-up">
+            <h3 className="heading-card mb-6">Category Breakdown</h3>
             <CategoryBreakdown data={categoryBreakdown} />
           </div>
         )}
 
         {/* Progress Section - Practice Recommendations */}
         {userProgress && userProgress.recommended_practice_areas.length > 0 && (
-          <div className="card p-6 mb-8">
+          <div className="card-glass p-6 mb-8 border-l-4 border-l-electric-blue animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center gap-3 mb-4">
-              <Lightbulb className="w-6 h-6 text-electric-blue" />
+              <div className="p-2 rounded-lg bg-electric-blue/10">
+                <Lightbulb className="w-5 h-5 text-electric-blue" />
+              </div>
               <h2 className="heading-section">Focus Areas</h2>
             </div>
             <p className="body-default text-text-secondary mb-4">
-              Based on your recent interviews, here are areas to focus on:
+              Based on your recent interviews, we recommend focusing on these areas:
             </p>
             <div className="flex flex-wrap gap-2">
               {userProgress.recommended_practice_areas.map((area, idx) => (
-                <span key={idx} className="badge badge-in-progress">
+                <span key={idx} className="badge badge-in-progress bg-white border border-electric-blue/20">
                   {area}
                 </span>
               ))}
             </div>
-            {userProgress.average_audio_score !== null && userProgress.average_content_score !== null && (
-              <div className="mt-4 pt-4 border-t border-border-light">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-text-tertiary">Avg Content Score: </span>
-                    <span className="font-medium">{Math.round(userProgress.average_content_score)}/100</span>
-                  </div>
-                  <div>
-                    <span className="text-text-tertiary">Avg Audio Score: </span>
-                    <span className="font-medium">{Math.round(userProgress.average_audio_score)}/100</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* Onboarding Panel - Show for new users */}
         {!isLoading && sessions.length === 0 && (
-          <div className="card p-8 mb-8 border-2 border-electric-blue bg-electric-blue/5">
-            <h2 className="heading-section mb-4">Get Started</h2>
-            <p className="body-default text-text-secondary mb-6">
-              Complete these steps to start improving your interview skills:
+          <div className="card-glass p-8 mb-8 border-2 border-electric-blue/20 bg-gradient-to-br from-white to-electric-blue/5 dark:from-surface-dark dark:to-electric-blue/10 animate-scale-in">
+            <div className="flex items-center gap-3 mb-4">
+              <Sparkles className="w-6 h-6 text-electric-blue" />
+              <h2 className="heading-section">Get Started</h2>
+            </div>
+            <p className="body-default text-text-secondary mb-8 max-w-2xl">
+              Complete these steps to start improving your interview skills. Our AI coach will guide you through your first session.
             </p>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-electric-blue text-white flex items-center justify-center font-semibold flex-shrink-0">
-                  1
-                </div>
-                <div>
-                  <h3 className="heading-card mb-1">Create your first interview</h3>
-                  <p className="body-small text-text-secondary">
-                    Choose from behavioral, technical, or system design questions
-                  </p>
-                </div>
+            
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
+              <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-electric-blue text-white flex items-center justify-center font-bold shadow-lg">1</div>
+                <h3 className="heading-card mb-2">Create Interview</h3>
+                <p className="body-small text-text-secondary">Choose your topic and difficulty level to customize your practice.</p>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-border-light text-text-tertiary flex items-center justify-center font-semibold flex-shrink-0">
-                  2
-                </div>
-                <div>
-                  <h3 className="heading-card mb-1">Complete one session</h3>
-                  <p className="body-small text-text-secondary">
-                    Record your answers and submit them for analysis
-                  </p>
-                </div>
+              
+              <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">2</div>
+                <h3 className="heading-card mb-2">Record Answers</h3>
+                <p className="body-small text-text-secondary">Speak naturally. We'll record and transcribe your responses.</p>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-border-light text-text-tertiary flex items-center justify-center font-semibold flex-shrink-0">
-                  3
-                </div>
-                <div>
-                  <h3 className="heading-card mb-1">Review AI feedback</h3>
-                  <p className="body-small text-text-secondary">
-                    Get detailed insights on your performance and areas to improve
-                  </p>
-                </div>
+              
+              <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
+                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">3</div>
+                <h3 className="heading-card mb-2">Get Feedback</h3>
+                <p className="body-small text-text-secondary">Receive instant AI analysis on your content and delivery.</p>
               </div>
             </div>
-            <div className="mt-6">
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="btn-primary inline-flex items-center justify-center gap-2"
-              >
-                <Plus size={20} />
-                Create Your First Interview
-              </button>
-            </div>
-          </div>
-        )}
 
-        {/* Start New Interview CTA - Show when user has sessions */}
-        {!isLoading && sessions.length > 0 && (
-          <div className="mb-8">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="btn-primary w-full md:w-auto flex items-center justify-center gap-2"
+              className="btn-primary inline-flex items-center justify-center gap-2 px-8 py-3 text-lg"
             >
-              <Plus size={20} />
-              Start New Interview
+              <Plus size={24} />
+              Create Your First Interview
             </button>
           </div>
         )}
 
         {/* Interview History */}
-        <div className="mb-4">
-          <h2 className="heading-section mb-4">Recent Interviews</h2>
-        </div>
+        {!isLoading && sessions.length > 0 && (
+          <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <h2 className="heading-section mb-6">Recent Interviews</h2>
+            <div className="grid gap-4">
+              {sessions.map((session) => (
+                <InterviewCard
+                  key={session.id}
+                  session={session}
+                  onClick={() => handleSessionClick(session)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Loading State */}
         {isLoading && (
-          <div className="card p-12 text-center">
+          <div className="card-glass p-12 text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-electric-blue border-t-transparent mb-4"></div>
-            <p className="text-text-secondary">Loading your interviews...</p>
+            <p className="text-text-secondary font-medium">Loading your dashboard...</p>
           </div>
         )}
 
@@ -338,43 +481,6 @@ export default function DashboardPage() {
             >
               Try Again
             </button>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && sessions.length === 0 && (
-          <div className="card p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <img
-                src="/images/empty-state.png"
-                alt="No interviews yet"
-                className="w-48 h-48 mx-auto mb-6 opacity-80"
-              />
-              <h3 className="heading-card mb-2">No interviews yet</h3>
-              <p className="text-text-secondary mb-6">
-                Get started by creating your first interview session. Practice makes perfect!
-              </p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="btn-primary"
-              >
-                <Plus size={20} className="inline mr-2" />
-                Start Your First Interview
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Interview List */}
-        {!isLoading && !error && sessions.length > 0 && (
-          <div className="grid gap-4">
-            {sessions.map((session) => (
-              <InterviewCard
-                key={session.id}
-                session={session}
-                onClick={() => handleSessionClick(session)}
-              />
-            ))}
           </div>
         )}
       </div>
