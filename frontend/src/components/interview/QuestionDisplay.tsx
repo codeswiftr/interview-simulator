@@ -1,4 +1,5 @@
 import type { Question } from '../../types';
+import { Clock, Tag, BarChart } from 'lucide-react';
 
 interface QuestionDisplayProps {
   question: Question;
@@ -18,38 +19,49 @@ export default function QuestionDisplay({
   };
 
   const difficultyColors = {
-    easy: 'bg-status-success/10 text-status-success border-status-success/20',
-    medium: 'bg-status-warning/10 text-status-warning border-status-warning/20',
-    hard: 'bg-status-error/10 text-status-error border-status-error/20'
+    easy: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    hard: 'bg-rose-500/20 text-rose-300 border-rose-500/30'
   };
 
   return (
-    <div className="question-card animate-[slide-up_0.3s_ease-out]">
-      {/* Header with question number and badges */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <span className="label text-white/70">
-            Question {questionNumber} of {totalQuestions}
-          </span>
-          <span className={`badge ${difficultyColors[question.difficulty]}`}>
-            {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
-          </span>
-          <span className="badge bg-electric-blue/10 text-electric-blue border-electric-blue/20">
-            {categoryLabels[question.category]}
-          </span>
+    <div className="question-card animate-slide-up relative group">
+      {/* Background Glow Effect */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-electric-blue/20 to-indigo-500/20 rounded-[1.6rem] blur opacity-0 group-hover:opacity-100 transition duration-1000"></div>
+      
+      <div className="relative z-10">
+        {/* Header with question number and badges */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-sm font-medium text-white/80 backdrop-blur-sm">
+              Question {questionNumber} <span className="text-white/40 mx-1">/</span> {totalQuestions}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className={`badge border backdrop-blur-sm ${difficultyColors[question.difficulty]}`}>
+              <BarChart className="w-3 h-3 mr-1" />
+              {question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
+            </span>
+            <span className="badge bg-electric-blue/10 text-electric-blue border border-electric-blue/20 backdrop-blur-sm">
+              <Tag className="w-3 h-3 mr-1" />
+              {categoryLabels[question.category]}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Question Text */}
-      <h2 className="text-3xl font-bold leading-relaxed mb-4">
-        {question.content}
-      </h2>
+        {/* Question Text */}
+        <div className="mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold leading-tight text-white tracking-tight">
+            {question.content}
+          </h2>
+        </div>
 
-      {/* Expected duration hint */}
-      <div className="mt-4">
-        <p className="text-sm text-white/50">
-          Suggested duration: {Math.ceil(question.expected_duration_seconds / 60)} minutes
-        </p>
+        {/* Footer info */}
+        <div className="flex items-center gap-2 text-white/50 text-sm font-medium border-t border-white/10 pt-6">
+          <Clock className="w-4 h-4" />
+          <span>Suggested duration: <span className="text-white/80">{Math.ceil(question.expected_duration_seconds / 60)} minutes</span></span>
+        </div>
       </div>
     </div>
   );

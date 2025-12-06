@@ -23,6 +23,8 @@ export interface UseAudioRecordingReturn {
   clearPreview: () => void;
   confirmRecording: () => Blob | null;
   error: string | null;
+  mediaStream: MediaStream | null;
+  mimeType: string | null;
 }
 
 export function useAudioRecording(): UseAudioRecordingReturn {
@@ -34,6 +36,8 @@ export function useAudioRecording(): UseAudioRecordingReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [mimeType, setMimeType] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -78,10 +82,12 @@ export function useAudioRecording(): UseAudioRecordingReturn {
         return;
       }
       streamRef.current = stream;
+      setMediaStream(stream);
 
       // Get supported MIME type for cross-browser compatibility (Safari needs MP4/WAV)
       const mimeType = getSupportedMimeType();
       mimeTypeRef.current = mimeType;
+      setMimeType(mimeType);
 
       // Create MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -113,6 +119,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+        setMediaStream(null);
 
         // Enter preview mode instead of stopped
         setRecordingState('preview');
@@ -195,6 +202,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+      setMediaStream(null);
     }
 
     if (audioElementRef.current) {
@@ -322,6 +330,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+        setMediaStream(null);
       }
 
       // Clean up audio element
@@ -358,5 +367,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
     clearPreview,
     confirmRecording,
     error,
+    mediaStream,
+    mimeType,
   };
 }

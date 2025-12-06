@@ -1,3 +1,4 @@
+import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle, Loader2, Upload, Send } from 'lucide-react';
 
 interface AudioPreviewProps {
@@ -32,6 +33,61 @@ export default function AudioPreview({
   submitProgress = null
 }: AudioPreviewProps) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number>();
+
+  // Simulated visualizer for preview mode (since we don't have the raw stream stream anymore easily)
+  // We'll generate a pleasing "playback" animation when playing
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const draw = () => {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const bars = 40;
+      const barWidth = canvas.width / bars;
+      
+      for (let i = 0; i < bars; i++) {
+        // Create a wave effect based on time and index
+        const heightMultiplier = isPlaying 
+          ? Math.max(0.2, (Math.sin((Date.now() / 100) + i * 0.5) + 1) / 2)
+          : 0.2; // Static low bars when paused
+          
+        const barHeight = (canvas.height * 0.8) * heightMultiplier;
+        const x = i * barWidth;
+        const y = (canvas.height - barHeight) / 2;
+        
+        // Gradient based on playing state
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        if (isPlaying) {
+          gradient.addColorStop(0, '#38bdf8'); // sky-400
+          gradient.addColorStop(1, '#6366f1'); // indigo-500
+        } else {
+           gradient.addColorStop(0, '#94a3b8'); // slate-400
+           gradient.addColorStop(1, '#64748b'); // slate-500
+        }
+
+        ctx.fillStyle = gradient;
+        
+        // Rounded caps manually or just rects
+        ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
+      }
+
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [isPlaying]);
+
 
   const getSubmitButtonContent = () => {
     if (isSubmitting) {
@@ -69,57 +125,61 @@ export default function AudioPreview({
   return (
     <div className="w-full space-y-6">
       {/* Preview Header */}
-      <div className="flex items-center justify-center gap-2 text-status-success">
+      <div className="flex items-center justify-center gap-2 text-status-success animate-fade-in">
         <CheckCircle size={20} />
-        <span className="body-small font-medium">Recording Complete - Preview Your Answer</span>
+        <span className="body-small font-medium">Recording Complete</span>
       </div>
 
-      {/* Audio Player */}
-      <div className="bg-surface-secondary rounded-lg p-6 space-y-4">
-        {/* Recording Duration Summary */}
-        <div className="text-center mb-2">
-          <span className="text-text-secondary text-sm">Recording Length: </span>
-          <span className="font-mono font-semibold text-text-primary">{formatTime(duration)}</span>
+      {/* Audio Player Card - Premium Glassmorphism */}
+      <div className="bg-white/80 dark:bg-surface-secondary/80 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group">
+        
+        {/* Background Glow Effect */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1/2 bg-electric-blue/10 blur-[50px] rounded-full pointer-events-none"></div>
+
+        {/* Visualizer Canvas */}
+        <div className="h-32 w-full mb-6 relative flex items-center justify-center">
+            <canvas 
+              ref={canvasRef} 
+              width={600} 
+              height={128}
+              className="w-full h-full opacity-90"
+            />
+             
+             {/* Play/Pause Overlay Button */}
+             <div className="absolute inset-0 flex items-center justify-center">
+                <button
+                    onClick={isPlaying ? onPause : onPlay}
+                    disabled={disabled || isSubmitting}
+                    className={`
+                    flex items-center justify-center
+                    w-16 h-16 rounded-full
+                    bg-electric-blue text-white
+                    hover:bg-sky-500 hover:scale-110 active:scale-95
+                    transition-all duration-300
+                    shadow-lg hover:shadow-blue-glow z-10
+                    ${(disabled || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                >
+                    {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" className="ml-1" />}
+                </button>
+             </div>
         </div>
 
-        {/* Time Display */}
-        <div className="flex items-center justify-between text-sm text-text-secondary">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
+        {/* Metadata & Progress */}
+        <div className="space-y-3 relative z-10">
+            <div className="flex items-center justify-between text-xs font-mono font-medium text-text-tertiary uppercase tracking-wider">
+               <span>{isPlaying ? 'Playing' : 'Paused'}</span>
+               <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+            </div>
 
-        {/* Progress Bar */}
-        <div className="relative w-full h-2 bg-surface-tertiary rounded-full overflow-hidden">
-          <div
-            className="absolute left-0 top-0 h-full bg-electric-blue transition-all duration-100"
-            style={{ width: `${progress}%` }}
-          />
+            {/* Custom Progress Bar */}
+            <div className="relative w-full h-1.5 bg-surface-tertiary rounded-full overflow-hidden cursor-pointer group-hover:h-2 transition-all">
+                <div
+                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-electric-blue to-indigo-500 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+                    style={{ width: `${progress}%` }}
+                />
+            </div>
         </div>
-
-        {/* Play/Pause Button */}
-        <div className="flex justify-center">
-          <button
-            onClick={isPlaying ? onPause : onPlay}
-            disabled={disabled || isSubmitting}
-            className={`
-              flex items-center justify-center
-              w-16 h-16 rounded-full
-              bg-electric-blue text-white
-              hover:bg-sky-600 hover:scale-105
-              transition-all duration-200
-              shadow-lg hover:shadow-blue-glow
-              ${(disabled || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}
-              focus:outline-none focus:ring-4 focus:ring-electric-blue/50
-            `}
-          >
-            {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" />}
-          </button>
-        </div>
-
-        {/* Playback hint */}
-        <p className="text-center text-sm text-text-tertiary">
-          {isPlaying ? 'Click to pause' : 'Click to preview your recording'}
-        </p>
       </div>
 
       {/* Action Buttons */}
@@ -127,16 +187,16 @@ export default function AudioPreview({
         <button
           onClick={onReRecord}
           disabled={disabled || isSubmitting}
-          className="btn-secondary flex-1 flex items-center justify-center gap-2"
+          className="btn-secondary flex-1 flex items-center justify-center gap-2 group border-transparent hover:border-gray-200 dark:hover:border-gray-700"
         >
-          <RotateCcw size={20} />
+          <RotateCcw size={18} className="group-hover:-rotate-90 transition-transform duration-300" />
           Re-record
         </button>
 
         <button
           onClick={onConfirm}
           disabled={disabled || isSubmitting}
-          className={`btn-primary flex-1 flex items-center justify-center gap-2 ${
+          className={`btn-primary flex-1 flex items-center justify-center gap-2 shadow-lg shadow-electric-blue/20 hover:shadow-electric-blue/40 ${
             isSubmitting ? 'bg-electric-blue/70' : ''
           }`}
         >
@@ -146,10 +206,10 @@ export default function AudioPreview({
 
       {/* Submission progress message */}
       {isSubmitting && (
-        <div className="text-center text-sm text-text-secondary bg-surface-secondary rounded-lg p-3">
+        <div className="text-center text-sm font-medium text-electric-blue bg-electric-blue/5 rounded-lg p-3 animate-pulse">
           {submitProgress === 'uploading' && 'Uploading your audio recording...'}
-          {submitProgress === 'processing' && 'Your answer is being processed. This may take a moment.'}
-          {!submitProgress && 'Submitting your answer...'}
+          {submitProgress === 'processing' && 'Your answer is being processed...'}
+          {!submitProgress && 'Submitting...'}
         </div>
       )}
     </div>

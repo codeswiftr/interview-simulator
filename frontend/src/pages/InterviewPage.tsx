@@ -1,23 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X, AlertCircle, SkipForward, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, AlertCircle, SkipForward, RefreshCw, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useToast } from '../hooks/useToast';
+import { getExtensionForMimeType } from '../lib/audio-utils';
 import Timer from '../components/interview/Timer';
-import RecordingIndicator from '../components/interview/RecordingIndicator';
-import RecordButton from '../components/interview/RecordButton';
 import QuestionDisplay from '../components/interview/QuestionDisplay';
 import AudioPreview from '../components/interview/AudioPreview';
+import RecordingDeck from '../components/interview/RecordingDeck';
 import TranscriptionDisplay from '../components/interview/TranscriptionDisplay';
+import CoachOverlay from '../components/interview/CoachOverlay';
 import type { InterviewSession, Question, InterviewResponse, ProcessingStatus } from '../types';
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
-const TRANSCRIPTION_POLL_INTERVAL = 3000; // Poll every 3 seconds
+const TRANSCRIPTION_POLL_INTERVAL = 3000;
 
-// Simplified response for transcription tracking
 interface SubmittedResponse {
   id: string;
   questionIndex: number;
@@ -49,12 +49,13 @@ export default function InterviewPage() {
   const [submitProgress, setSubmitProgress] = useState<'uploading' | 'processing' | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
   const [lastFailedUpload, setLastFailedUpload] = useState<{ blob: Blob; questionId: string } | null>(null);
+  const [showCoach, setShowCoach] = useState(true);
 
   // Audio recording hook
   const {
-    recordingState,
     duration,
     isRecording,
+    recordingState,
     isPreviewMode,
     isPlaying,
     currentTime,
@@ -65,8 +66,12 @@ export default function InterviewPage() {
     playPreview,
     pausePreview,
     clearPreview,
+    pauseRecording,
+    resumeRecording,
     confirmRecording,
     error: recordingError,
+    mediaStream,
+    mimeType
   } = useAudioRecording();
 
   // Warn user before leaving with unsaved progress
@@ -76,17 +81,13 @@ export default function InterviewPage() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedProgress) {
         e.preventDefault();
-        // Modern browsers ignore custom messages, but we still need to set returnValue
         e.returnValue = '';
         return '';
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isRecording, isPreviewMode, currentQuestionIndex]);
 
   // Load interview session and questions
@@ -98,21 +99,17 @@ export default function InterviewPage() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch session details
         const sessionResponse = await interviewsAPI.getById(id);
         const sessionData = sessionResponse.data;
         setSession(sessionData);
 
-        // Start the session if it's scheduled (this assigns questions on backend)
         if (sessionData.status === 'scheduled') {
           const startResponse = await interviewsAPI.start(id);
           setSession(startResponse.data);
         }
 
-        // Set session start time
         setSessionStartTime(Date.now());
 
-        // Fetch assigned questions from the backend
         const questionsResponse = await interviewsAPI.getQuestions(id);
         setQuestions(questionsResponse.data);
       } catch (err) {
@@ -127,7 +124,6 @@ export default function InterviewPage() {
   }, [id]);
 
   // Poll for transcription status updates
-  // Use a ref to track submitted responses to avoid re-triggering the effect
   const submittedResponsesRef = useRef<SubmittedResponse[]>([]);
   submittedResponsesRef.current = submittedResponses;
 
@@ -136,29 +132,29 @@ export default function InterviewPage() {
 
     const pollTranscriptions = async () => {
       const currentResponses = submittedResponsesRef.current;
-
-      // Skip polling if no responses yet or all are done
       if (currentResponses.length === 0) return;
 
       const processingResponses = currentResponses.filter(
         r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed'
       );
 
-      // Skip API call if nothing to poll, but keep interval running for future submissions
       if (processingResponses.length === 0) return;
 
       try {
-        // Fetch all responses for the session
         const { data: responses } = await interviewsAPI.getResponses(session.id);
+        
+        let newCompletions = false;
+        let completedIndex = -1;
 
-        // Update our tracked responses with new data
-        setSubmittedResponses(prev => prev.map(tracked => {
+        // Calculate updates first
+        const nextResponses = currentResponses.map(tracked => {
           const updated = responses.find((r: InterviewResponse) => r.id === tracked.id);
+          if (updated && tracked.processingStatus !== 'completed' && updated.processing_status === 'completed') {
+             newCompletions = true;
+             completedIndex = tracked.questionIndex;
+          }
+          
           if (updated) {
-            // Notify user when transcription completes
-            if (tracked.processingStatus !== 'completed' && updated.processing_status === 'completed') {
-              toast.success('Transcription ready', `Answer ${tracked.questionIndex + 1} has been transcribed`);
-            }
             return {
               ...tracked,
               processingStatus: updated.processing_status,
@@ -167,16 +163,23 @@ export default function InterviewPage() {
             };
           }
           return tracked;
-        }));
+        });
+
+        // Effect THEN Update
+        if (newCompletions) {
+           toast.success('Transcription ready', `Answer ${completedIndex + 1} has been transcribed`);
+        }
+        
+        // Only update state if something changed (JSON comparison is cheap enough here for deep check, or just rely on map identity if strictly immutable)
+        // For simplicity, we just set it as we built a new array
+        setSubmittedResponses(nextResponses);
+
       } catch (err) {
-        // Silently handle polling errors
         console.error('Failed to poll transcription status:', err);
       }
     };
 
-    // Start polling interval when session is available - runs for the duration of the interview
     pollingIntervalRef.current = setInterval(pollTranscriptions, TRANSCRIPTION_POLL_INTERVAL);
-
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -185,7 +188,6 @@ export default function InterviewPage() {
     };
   }, [session, toast]);
 
-  // Handle recording start
   const handleStartRecording = async () => {
     try {
       await startRecording();
@@ -195,19 +197,15 @@ export default function InterviewPage() {
     }
   };
 
-  // Handle recording stop (enters preview mode)
   const handleStopRecording = () => {
     stopRecording();
-    // Note: preview mode is now handled by the hook
   };
 
-  // Handle re-record
   const handleReRecord = () => {
     clearPreview();
     setError(null);
   };
 
-  // Upload with retry logic
   const uploadWithRetry = useCallback(async (
     blob: Blob,
     sessionId: string,
@@ -215,8 +213,11 @@ export default function InterviewPage() {
     attempt: number = 1
   ): Promise<string> => {
     try {
-      const audioFile = new File([blob], `answer-${currentQuestionIndex + 1}.webm`, {
-        type: 'audio/webm',
+      const extension = mimeType ? getExtensionForMimeType(mimeType) : 'webm';
+      const type = mimeType || 'audio/webm';
+      
+      const audioFile = new File([blob], `answer-${currentQuestionIndex + 1}.${extension}`, {
+        type: type,
       });
 
       const uploadResponse = await uploadAPI.uploadAudio(audioFile, sessionId, questionId);
@@ -229,9 +230,8 @@ export default function InterviewPage() {
       }
       throw err;
     }
-  }, [currentQuestionIndex, toast]);
+  }, [currentQuestionIndex, toast, mimeType]);
 
-  // Handle retry failed upload
   const handleRetryUpload = async () => {
     if (!lastFailedUpload || !session) return;
 
@@ -269,13 +269,9 @@ export default function InterviewPage() {
     }
   };
 
-  // Handle submit answer
   const handleSubmitAnswer = async () => {
-    if (!session || !questions[currentQuestionIndex]) {
-      return;
-    }
+    if (!session || !questions[currentQuestionIndex]) return;
 
-    // Confirm recording and get the blob
     const blob = confirmRecording();
     if (!blob) {
       setError('No recording available to submit');
@@ -289,11 +285,8 @@ export default function InterviewPage() {
       setLastFailedUpload(null);
 
       const currentQuestion = questions[currentQuestionIndex];
-
-      // Upload audio file with retry
       const audioUrl = await uploadWithRetry(blob, session.id, currentQuestion.id);
 
-      // Submit response
       setSubmitProgress('processing');
       const submitResponse = await responsesAPI.submit(session.id, {
         question_id: currentQuestion.id,
@@ -301,7 +294,6 @@ export default function InterviewPage() {
         duration_seconds: duration,
       });
 
-      // Track this response for transcription polling
       const responseData = submitResponse.data;
       setSubmittedResponses(prev => [...prev, {
         id: responseData.id,
@@ -311,19 +303,16 @@ export default function InterviewPage() {
         processingError: responseData.processing_error,
       }]);
 
-      // Auto-expand transcription panel when first answer is submitted
       if (submittedResponses.length === 0) {
         setShowTranscriptionPanel(true);
       }
 
       toast.success('Answer submitted', 'Your answer is being transcribed...');
 
-      // Move to next question or finish
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         resetRecording();
       } else {
-        // All questions answered, end the session
         await handleEndInterview();
       }
     } catch (err) {
@@ -337,31 +326,24 @@ export default function InterviewPage() {
     }
   };
 
-  // Handle skip question
   const handleSkipQuestion = async () => {
-    if (!session || !questions[currentQuestionIndex]) {
-      return;
-    }
+    if (!session || !questions[currentQuestionIndex]) return;
 
     try {
       setIsSubmitting(true);
       setError(null);
 
       const currentQuestion = questions[currentQuestionIndex];
-
-      // Submit empty response
       await responsesAPI.submit(session.id, {
         question_id: currentQuestion.id,
         audio_url: '',
         duration_seconds: 0,
       });
 
-      // Move to next question or finish
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         resetRecording();
       } else {
-        // All questions answered, end the session
         await handleEndInterview();
       }
     } catch (err) {
@@ -372,10 +354,8 @@ export default function InterviewPage() {
     }
   };
 
-  // Handle end interview
   const handleEndInterview = async () => {
     if (!id) return;
-
     try {
       await interviewsAPI.end(id);
       navigate(`/interview/${id}/feedback`);
@@ -385,28 +365,18 @@ export default function InterviewPage() {
     }
   };
 
-  // Handle exit interview
-  const handleExit = () => {
-    setShowExitModal(true);
-  };
-
+  const handleExit = () => setShowExitModal(true);
+  const cancelExit = () => setShowExitModal(false);
   const confirmExit = async () => {
     if (!id) return;
-
     try {
       await interviewsAPI.end(id);
       navigate('/dashboard');
     } catch {
-      // Navigate to dashboard even if ending the interview fails
       navigate('/dashboard');
     }
   };
 
-  const cancelExit = () => {
-    setShowExitModal(false);
-  };
-
-  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
@@ -418,7 +388,6 @@ export default function InterviewPage() {
     );
   }
 
-  // Error state
   if (error && !session) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center p-6">
@@ -441,110 +410,131 @@ export default function InterviewPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-surface-primary">
-      {/* Header */}
-      <div className="bg-white border-b border-border-light">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Timer */}
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-text-secondary">Elapsed Time</div>
-              <Timer startTime={sessionStartTime || undefined} className="text-2xl" />
-            </div>
-
-            {/* Progress */}
-            <div className="text-center">
-              <div className="label text-text-tertiary mb-2">
-                Question {currentQuestionIndex + 1} of {questions.length}
+      <div className="min-h-screen bg-surface-primary flex flex-col">
+        {/* Header */}
+        <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-border-light dark:border-border-light/10 sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              {/* Timer */}
+              <div className="flex items-center gap-4">
+                <div className="text-sm font-medium text-text-secondary uppercase tracking-wider">Elapsed Time</div>
+                <Timer startTime={sessionStartTime || undefined} className="text-2xl font-mono font-bold text-text-primary" />
               </div>
-              <div className="progress-bar w-48">
-                <div
-                  className="progress-bar-fill"
-                  style={{ width: `${progress}%` }}
-                />
+
+              {/* Progress */}
+              <div className="hidden md:block text-center flex-1 max-w-md mx-8">
+                <div className="flex justify-between text-xs font-medium text-text-tertiary mb-2 uppercase tracking-wider">
+                  <span>Progress</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="h-2 bg-surface-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-electric-blue to-indigo-500 transition-all duration-500 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center gap-4">
+                {/* Coach Toggle */}
+                <button
+                  onClick={() => setShowCoach(!showCoach)}
+                  className={`p-2 rounded-lg transition-colors ${showCoach ? 'bg-electric-blue/10 text-electric-blue' : 'text-text-tertiary hover:text-text-secondary'}`}
+                  title="Toggle AI Coach"
+                >
+                  <Lightbulb size={20} />
+                </button>
+
+                {/* Exit Button */}
+                <button
+                  onClick={handleExit}
+                  className="btn-ghost flex items-center gap-2 text-text-secondary hover:text-status-error hover:bg-status-error/10"
+                >
+                  <X size={20} />
+                  <span className="hidden sm:inline">Exit</span>
+                </button>
               </div>
             </div>
-
-            {/* Exit Button */}
-            <button
-              onClick={handleExit}
-              className="btn-ghost flex items-center gap-2 text-text-secondary hover:text-status-error"
-            >
-              <X size={20} />
-              Exit Interview
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        {/* Error Alert */}
-        {error && (
-          <div className="card p-4 mb-6 border-status-error/20 bg-status-error/5">
-            <div className="flex items-center gap-3 text-status-error">
-              <AlertCircle size={20} />
-              <p className="body-small">{error}</p>
+        {/* Main Content */}
+        <div className="flex-1 container mx-auto px-6 py-8 max-w-4xl flex flex-col justify-center min-h-[calc(100vh-80px)] relative">
+          {/* Coach Overlay */}
+          {currentQuestion && (
+            <CoachOverlay
+              isVisible={showCoach}
+              onClose={() => setShowCoach(false)}
+              questionType={currentQuestion.category}
+              elapsedTime={duration}
+              expectedDuration={currentQuestion.expected_duration_seconds}
+            />
+          )}
+
+          {/* Error Alert */}
+          {(error || recordingError) && (
+            <div className="card p-4 mb-6 border-status-error/20 bg-status-error/5 animate-fade-in">
+              <div className="flex items-center gap-3 text-status-error">
+                <AlertCircle size={20} />
+                <p className="body-small">{error || recordingError}</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Recording Error Alert */}
-        {recordingError && (
-          <div className="card p-4 mb-6 border-status-error/20 bg-status-error/5">
-            <div className="flex items-center gap-3 text-status-error">
-              <AlertCircle size={20} />
-              <p className="body-small">{recordingError}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Question Display */}
-        {currentQuestion && (
-          <QuestionDisplay
-            question={currentQuestion}
-            questionNumber={currentQuestionIndex + 1}
-            totalQuestions={questions.length}
-          />
-        )}
-
-        {/* Recording Section */}
-        <div className="mt-8">
-          <div className="card p-8">
-            {isPreviewMode ? (
-              /* Preview Mode */
-              <AudioPreview
-                isPlaying={isPlaying}
-                currentTime={currentTime}
-                duration={audioDuration}
-                onPlay={playPreview}
-                onPause={pausePreview}
-                onReRecord={handleReRecord}
-                onConfirm={handleSubmitAnswer}
-                disabled={isSubmitting}
-                isSubmitting={isSubmitting}
-                submitProgress={submitProgress}
+          {/* Question Display */}
+          {currentQuestion && (
+            <div className="mb-12">
+              <QuestionDisplay
+                question={currentQuestion}
+                questionNumber={currentQuestionIndex + 1}
+                totalQuestions={questions.length}
               />
-            ) : (
-              /* Recording Mode */
-              <div className="flex flex-col items-center gap-6">
-                {/* Recording Indicator */}
-                <RecordingIndicator isRecording={isRecording} duration={duration} />
+            </div>
+          )}
 
-                {/* Record Button */}
-                <RecordButton
+          {/* Recording Section */}
+          <div className="relative z-20">
+            <div className="card-glass p-8 shadow-xl border-white/50 bg-white/80 backdrop-blur-xl">
+              {isPreviewMode ? (
+                /* Preview Mode */
+                <AudioPreview
+                  isPlaying={isPlaying}
+                  currentTime={currentTime}
+                  duration={audioDuration}
+                  onPlay={playPreview}
+                  onPause={pausePreview}
+                  onReRecord={handleReRecord}
+                  onConfirm={handleSubmitAnswer}
+                  disabled={isSubmitting}
+                  isSubmitting={isSubmitting}
+                  submitProgress={submitProgress}
+                />
+              ) : (
+                /* Recording Mode */
+                <RecordingDeck
+                  isRecording={isRecording}
                   recordingState={recordingState}
+                  duration={duration}
+                  mediaStream={mediaStream}
                   onStart={handleStartRecording}
                   onStop={handleStopRecording}
+                  onPause={pauseRecording}
+                  onResume={resumeRecording}
+                  onCancel={handleExit} /* Using exit as cancel for now, or could be a specific reset */
+                  onConfirm={handleSubmitAnswer}
                   disabled={isSubmitting}
                 />
-
-                {/* Action Buttons */}
-                <div className="flex gap-4 w-full max-w-md mt-4">
+              )}
+            </div>
+            
+             {/* Secondary Actions - Outside the deck for cleaner UI */}
+             {!isPreviewMode && (
+                <div className="mt-6 flex justify-center gap-4">
                   <button
                     onClick={handleSkipQuestion}
                     disabled={isSubmitting || isRecording}
-                    className="btn-ghost flex-1 flex items-center justify-center gap-2"
+                    className="btn-ghost flex items-center justify-center gap-2 text-text-tertiary hover:text-text-secondary"
                   >
                     <SkipForward size={20} />
                     Skip Question
@@ -554,74 +544,73 @@ export default function InterviewPage() {
                     <button
                       onClick={handleRetryUpload}
                       disabled={isSubmitting}
-                      className="btn-primary flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600"
+                      className="btn-primary flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 border-none"
                     >
                       <RefreshCw size={20} className={isSubmitting ? 'animate-spin' : ''} />
                       {isSubmitting ? 'Retrying...' : 'Retry Upload'}
                     </button>
                   )}
                 </div>
-              </div>
-            )}
+             )}
           </div>
+
+          {/* Transcription Panel */}
+          {submittedResponses.length > 0 && (
+            <div className="mt-8 mb-12">
+              <button
+                onClick={() => setShowTranscriptionPanel(!showTranscriptionPanel)}
+                className="w-full flex items-center justify-between p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-white/50 hover:bg-white/80 transition-all shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-text-primary">
+                    Your Transcriptions ({submittedResponses.length})
+                  </span>
+                  {submittedResponses.some(r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed') && (
+                    <span className="flex items-center gap-1.5 text-xs bg-electric-blue/10 text-electric-blue px-2.5 py-1 rounded-full font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-electric-blue animate-pulse"></span>
+                      Processing
+                    </span>
+                  )}
+                </div>
+                {showTranscriptionPanel ? <ChevronUp size={20} className="text-text-tertiary" /> : <ChevronDown size={20} className="text-text-tertiary" />}
+              </button>
+
+              {showTranscriptionPanel && (
+                <div className="mt-4 space-y-4 animate-slide-up">
+                  {submittedResponses.map((response) => (
+                    <TranscriptionDisplay
+                      key={response.id}
+                      processingStatus={response.processingStatus}
+                      transcript={response.transcript}
+                      processingError={response.processingError}
+                      questionNumber={response.questionIndex + 1}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Transcription Panel - shows submitted answers being processed */}
-        {submittedResponses.length > 0 && (
-          <div className="mt-6">
-            <button
-              onClick={() => setShowTranscriptionPanel(!showTranscriptionPanel)}
-              className="w-full flex items-center justify-between p-4 bg-surface-secondary rounded-lg hover:bg-surface-tertiary transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-text-primary">
-                  Your Transcriptions ({submittedResponses.length})
-                </span>
-                {submittedResponses.some(r => r.processingStatus !== 'completed' && r.processingStatus !== 'failed') && (
-                  <span className="text-xs bg-electric-blue/10 text-electric-blue px-2 py-0.5 rounded-full">
-                    Processing...
-                  </span>
-                )}
+        {/* Exit Confirmation Modal */}
+        {showExitModal && (
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-sm flex items-center justify-center p-6 z-[100] animate-fade-in">
+            <div className="card p-8 max-w-md w-full shadow-2xl animate-scale-in">
+              <h3 className="heading-card mb-4 text-text-primary">Exit Interview?</h3>
+              <p className="text-text-secondary mb-8 leading-relaxed">
+                Are you sure you want to exit? Your progress will be saved, but you won't be able to resume this session.
+              </p>
+              <div className="flex gap-4">
+                <button onClick={cancelExit} className="btn-secondary flex-1 justify-center">
+                  Continue
+                </button>
+                <button onClick={confirmExit} className="btn-primary flex-1 justify-center bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/20">
+                  Exit
+                </button>
               </div>
-              {showTranscriptionPanel ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </button>
-
-            {showTranscriptionPanel && (
-              <div className="mt-2 space-y-3">
-                {submittedResponses.map((response) => (
-                  <TranscriptionDisplay
-                    key={response.id}
-                    processingStatus={response.processingStatus}
-                    transcript={response.transcript}
-                    processingError={response.processingError}
-                    questionNumber={response.questionIndex + 1}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Exit Confirmation Modal */}
-      {showExitModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
-          <div className="card p-8 max-w-md w-full">
-            <h3 className="heading-card mb-4">Exit Interview?</h3>
-            <p className="text-text-secondary mb-6">
-              Are you sure you want to exit? Your progress will be saved, but you won't be able to resume this session.
-            </p>
-            <div className="flex gap-4">
-              <button onClick={cancelExit} className="btn-secondary flex-1">
-                Continue Interview
-              </button>
-              <button onClick={confirmExit} className="btn-primary flex-1 bg-status-error hover:bg-red-600">
-                Exit
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </ErrorBoundary>
   );

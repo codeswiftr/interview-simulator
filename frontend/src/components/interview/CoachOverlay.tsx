@@ -1,0 +1,177 @@
+import { useState, useEffect } from 'react';
+import { Lightbulb, Clock, X, ChevronRight, ChevronLeft, MessageSquare, Info } from 'lucide-react';
+
+interface CoachOverlayProps {
+  isVisible: boolean;
+  onClose: () => void;
+  questionType: string;
+  elapsedTime: number;
+  expectedDuration: number;
+}
+
+export default function CoachOverlay({
+  isVisible,
+  onClose,
+  questionType,
+  elapsedTime,
+  expectedDuration
+}: CoachOverlayProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [activeHint, setActiveHint] = useState(0);
+
+  // Auto-collapse on mobile after 5 seconds
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      const timer = setTimeout(() => setIsExpanded(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  if (!isVisible) return null;
+
+  const getHints = () => {
+    const commonHints = [
+      { title: 'Speak Clearly', text: 'Maintain a steady pace and clear enunciation.' },
+      { title: 'Be Specific', text: 'Use concrete examples to back up your claims.' },
+    ];
+
+    const behavioralHints = [
+      { title: 'STAR Framework', text: 'Structure your answer: Situation, Task, Action, Result.' },
+      { title: 'Focus on "I"', text: 'Emphasize YOUR contribution, not just the team\'s.' },
+      { title: 'Quantify Results', text: 'Mention numbers and metrics where possible.' },
+    ];
+
+    const technicalHints = [
+      { title: 'Clarify First', text: 'Ask questions to remove ambiguity before solving.' },
+      { title: 'Think Aloud', text: 'Explain your thought process as you go.' },
+      { title: 'Consider Trade-offs', text: 'Discuss pros and cons of your approach.' },
+    ];
+
+    const systemDesignHints = [
+      { title: 'Requirements', text: 'Define functional and non-functional requirements.' },
+      { title: 'High-Level Design', text: 'Draw the big picture before diving deep.' },
+      { title: 'Bottlenecks', text: 'Identify potential single points of failure.' },
+    ];
+
+    switch (questionType) {
+      case 'behavioral': return [...behavioralHints, ...commonHints];
+      case 'technical': return [...technicalHints, ...commonHints];
+      case 'system_design': return [...systemDesignHints, ...commonHints];
+      default: return commonHints;
+    }
+  };
+
+  const hints = getHints();
+  const timeLeft = Math.max(0, expectedDuration - elapsedTime);
+  const isTimeRunningOut = timeLeft < 60 && timeLeft > 0;
+
+  return (
+    <div className={`fixed right-4 top-24 z-40 transition-all duration-300 ease-in-out ${isExpanded ? 'w-80' : 'w-12'}`}>
+      <div className="bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md border border-electric-blue/30 shadow-xl rounded-2xl overflow-hidden">
+        {/* Header / Toggle */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full p-3 flex items-center justify-between bg-electric-blue/10 hover:bg-electric-blue/20 transition-colors"
+        >
+          {isExpanded ? (
+            <div className="flex items-center gap-2 text-electric-blue font-semibold">
+              <Lightbulb size={18} />
+              <span>AI Coach</span>
+            </div>
+          ) : (
+            <Lightbulb size={20} className="text-electric-blue mx-auto" />
+          )}
+          {isExpanded && <ChevronRight size={18} className="text-electric-blue" />}
+        </button>
+
+        {/* Content */}
+        {isExpanded && (
+          <div className="p-4 space-y-4">
+            {/* Timer Warning */}
+            {isTimeRunningOut && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 animate-pulse">
+                <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-amber-600 dark:text-amber-400">Time is running out!</p>
+                  <p className="text-xs text-text-secondary">Wrap up your answer in the next minute.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Hint Carousel */}
+            <div className="relative bg-surface-secondary rounded-xl p-4 min-h-[140px] flex flex-col justify-between border border-border-light">
+              <div>
+                <h4 className="font-bold text-text-primary mb-1 flex items-center gap-2">
+                  <MessageSquare size={14} className="text-electric-blue" />
+                  {hints[activeHint].title}
+                </h4>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  {hints[activeHint].text}
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-light/50">
+                <button 
+                  onClick={() => setActiveHint(prev => (prev - 1 + hints.length) % hints.length)}
+                  className="p-1 hover:bg-white/50 rounded-full transition-colors"
+                >
+                  <ChevronLeft size={16} className="text-text-tertiary" />
+                </button>
+                <div className="flex gap-1">
+                  {hints.map((_, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === activeHint ? 'bg-electric-blue' : 'bg-border-medium'}`}
+                    />
+                  ))}
+                </div>
+                <button 
+                  onClick={() => setActiveHint(prev => (prev + 1) % hints.length)}
+                  className="p-1 hover:bg-white/50 rounded-full transition-colors"
+                >
+                  <ChevronRight size={16} className="text-text-tertiary" />
+                </button>
+              </div>
+            </div>
+
+            {/* STAR Framework Quick Ref (Behavioral only) */}
+            {questionType === 'behavioral' && (
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-800/30">
+                <div className="flex items-center gap-2 mb-2 text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                  <Info size={12} />
+                  STAR Framework
+                </div>
+                <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
+                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                    <div className="font-bold text-blue-600 dark:text-blue-400">S</div>
+                    <div className="text-text-tertiary scale-90">Situation</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                    <div className="font-bold text-blue-600 dark:text-blue-400">T</div>
+                    <div className="text-text-tertiary scale-90">Task</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                    <div className="font-bold text-blue-600 dark:text-blue-400">A</div>
+                    <div className="text-text-tertiary scale-90">Action</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                    <div className="font-bold text-blue-600 dark:text-blue-400">R</div>
+                    <div className="text-text-tertiary scale-90">Result</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={onClose}
+              className="w-full py-2 text-xs text-text-tertiary hover:text-text-secondary flex items-center justify-center gap-1 transition-colors"
+            >
+              <X size={12} />
+              Dismiss Coach
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
