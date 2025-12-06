@@ -23,7 +23,11 @@ Object.defineProperty(globalThis, 'localStorage', {
 
 // Now import everything else
 import '@testing-library/jest-dom';
+import * as matchers from 'vitest-axe/matchers';
+import { expect } from 'vitest';
 import { cleanup } from '@testing-library/react';
+
+expect.extend(matchers);
 import { afterEach, beforeEach } from 'vitest';
 
 beforeEach(() => {
