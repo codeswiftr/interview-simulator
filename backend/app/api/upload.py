@@ -22,7 +22,7 @@ UPLOAD_DIR = Path("uploads/audio")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed audio formats
-ALLOWED_EXTENSIONS = {".webm", ".mp3", ".wav", ".ogg", ".m4a"}
+ALLOWED_EXTENSIONS = {".webm", ".mp3", ".wav", ".ogg", ".m4a", ".mp4"}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
