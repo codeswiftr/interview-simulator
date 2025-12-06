@@ -66,7 +66,7 @@ export default function WelcomeModal({ isOpen, onClose, onStartInterview, userNa
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
+      <div className="bg-white dark:bg-surface-secondary rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
         {/* Header */}
         <div className="bg-gradient-to-br from-electric-blue to-sky-500 p-6 text-white relative">
           <button
@@ -94,7 +94,7 @@ export default function WelcomeModal({ isOpen, onClose, onStartInterview, userNa
         <div className="p-6">
           {/* Highlight Box */}
           <div className="bg-electric-blue/5 border border-electric-blue/20 rounded-lg p-4 mb-6">
-            <p className="text-electric-blue font-medium text-sm flex items-center gap-2">
+            <p className="text-sky-600 dark:text-electric-blue font-medium text-sm flex items-center gap-2">
               <Sparkles size={16} />
               {step.highlight}
             </p>

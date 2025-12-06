@@ -9,19 +9,19 @@ interface MetricCardProps {
 }
 
 const getScoreColor = (score: number): string => {
-  if (score >= 90) return 'text-score-excellent';
-  if (score >= 80) return 'text-score-good';
-  if (score >= 70) return 'text-score-average';
-  if (score >= 60) return 'text-score-needs-work';
-  return 'text-score-poor';
+  if (score >= 90) return 'text-emerald-600 dark:text-emerald-400';
+  if (score >= 80) return 'text-green-600 dark:text-green-400';
+  if (score >= 70) return 'text-yellow-600 dark:text-yellow-400';
+  if (score >= 60) return 'text-orange-600 dark:text-orange-400';
+  return 'text-red-600 dark:text-red-400';
 };
 
 const getScoreBgColor = (score: number): string => {
-  if (score >= 90) return 'bg-score-excellent/10';
-  if (score >= 80) return 'bg-score-good/10';
-  if (score >= 70) return 'bg-score-average/10';
-  if (score >= 60) return 'bg-score-needs-work/10';
-  return 'bg-score-poor/10';
+  if (score >= 90) return 'bg-emerald-100 dark:bg-emerald-500/10';
+  if (score >= 80) return 'bg-green-100 dark:bg-green-500/10';
+  if (score >= 70) return 'bg-yellow-100 dark:bg-yellow-500/10';
+  if (score >= 60) return 'bg-orange-100 dark:bg-orange-500/10';
+  return 'bg-red-100 dark:bg-red-500/10';
 };
 
 const getTrendIcon = (trend?: 'up' | 'down' | 'neutral') => {
@@ -45,7 +45,7 @@ export default function MetricCard({
   const scoreBgColor = getScoreBgColor(score);
 
   return (
-    <div className="card p-6 hover:shadow-lg transition-all">
+    <div className="card p-6 hover:shadow-lg transition-all dark:bg-surface-secondary/40 dark:border-white/5 hover:scale-[1.02] duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className={`p-3 rounded-lg ${scoreBgColor}`}>
           <Icon className={`w-6 h-6 ${scoreColor}`} />
@@ -55,7 +55,7 @@ export default function MetricCard({
         </div>
       </div>
 
-      <h3 className="heading-card mb-2">{title}</h3>
+      <h3 className="heading-card mb-2 text-text-primary dark:text-white">{title}</h3>
 
       <div className="flex items-baseline gap-2 mb-3">
         <span className={`score-display ${scoreColor}`}>{Math.round(score * 10) / 10}</span>

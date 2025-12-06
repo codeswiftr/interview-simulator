@@ -17,15 +17,15 @@ interface ScoreConfig {
 
 const getScoreConfig = (score: number): ScoreConfig => {
   if (score >= 90) {
-    return { label: 'Excellent', color: '#10B981' }; // score-excellent
+    return { label: 'Excellent', color: '#059669' }; // Emerald 600
   } else if (score >= 80) {
-    return { label: 'Good', color: '#22C55E' }; // score-good
+    return { label: 'Good', color: '#16A34A' }; // Green 600
   } else if (score >= 70) {
-    return { label: 'Average', color: '#EAB308' }; // score-average
+    return { label: 'Average', color: '#CA8A04' }; // Yellow 600
   } else if (score >= 60) {
-    return { label: 'Needs Work', color: '#F97316' }; // score-needs-work
+    return { label: 'Needs Work', color: '#EA580C' }; // Orange 600
   } else {
-    return { label: 'Poor', color: '#EF4444' }; // score-poor
+    return { label: 'Poor', color: '#DC2626' }; // Red 600
   }
 };
 
