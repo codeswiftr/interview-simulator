@@ -14,6 +14,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  CheckCircle2,
+  AlertTriangle,
+  BarChart
 } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import ScoreRing from '../components/feedback/ScoreRing';
@@ -170,7 +173,7 @@ export default function FeedbackPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-electric-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="body-large text-text-secondary">Loading feedback...</p>
@@ -181,8 +184,8 @@ export default function FeedbackPage() {
 
   if (error && !feedbackState.session) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="text-center card p-8 border-status-error/20 bg-status-error/5">
           <p className="body-large text-status-error mb-4">{error}</p>
           <button onClick={() => navigate('/dashboard')} className="btn-primary">
             Return to Dashboard
@@ -196,7 +199,7 @@ export default function FeedbackPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
         <div className="text-center">
           <p className="body-large text-text-secondary mb-4">Interview session not found</p>
           <button onClick={() => navigate('/dashboard')} className="btn-primary">
@@ -211,267 +214,298 @@ export default function FeedbackPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 text-electric-blue hover:text-electric-blue/80 transition-colors mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="body-default font-medium">Back to Dashboard</span>
-          </Link>
+      <div className="min-h-screen bg-surface-primary dark:bg-surface-primary pb-12 transition-colors duration-300">
+        {/* Background decoration - Matched to Dashboard */}
+        <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-electric-blue/5 dark:bg-electric-blue/10 blur-[100px]" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-500/5 dark:bg-indigo-500/10 blur-[100px]" />
+        </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="heading-page mb-2">Interview Feedback</h1>
-              <div className="flex items-center gap-4 text-text-secondary">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span className="body-small">{formatDate(session.created_at)}</span>
-                </div>
-                {session.duration_seconds && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+          {/* Header */}
+          <div className="mb-8">
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 text-text-secondary hover:text-electric-blue transition-colors mb-6 group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              <span className="body-default font-medium">Back to Dashboard</span>
+            </Link>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="heading-page mb-2 text-[var(--fg-primary)]">Interview Feedback</h1>
+                <div className="flex items-center gap-4 text-text-secondary dark:text-text-tertiary">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span className="body-small">{formatDuration(session.duration_seconds)}</span>
+                    <Calendar className="w-4 h-4" />
+                    <span className="body-small">{formatDate(session.created_at)}</span>
+                  </div>
+                  {session.duration_seconds && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span className="body-small">{formatDuration(session.duration_seconds)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="badge bg-white dark:bg-white/10 backdrop-blur-sm border border-border-light dark:border-white/10 text-text-secondary dark:text-text-primary shadow-sm font-medium">
+                  {getTypeLabel(session.interview_type)}
+                </span>
+                <span className="badge bg-white dark:bg-white/10 backdrop-blur-sm border border-border-light dark:border-white/10 text-text-secondary dark:text-text-primary shadow-sm font-medium">
+                  {session.question_count} questions
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="card p-4 mb-8 border-status-error bg-status-error/10 animate-fade-in">
+              <p className="text-status-error font-medium flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                {error}
+              </p>
+            </div>
+          )}
+
+          {/* Processing Status */}
+          {session.status === 'completed' && !hasFeedback && id && (
+            <ProcessingStatus
+              sessionId={id}
+              onComplete={() => {
+                loadFeedback();
+              }}
+            />
+          )}
+
+          {/* Generate Feedback Call-to-Action */}
+          {!hasFeedback && (
+            <div className="card-glass p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
+              <div className="w-20 h-20 rounded-full bg-electric-blue/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-electric-blue/5">
+                <Sparkles className="w-10 h-10 text-electric-blue" />
+              </div>
+              <h2 className="heading-section mb-4 text-[var(--fg-primary)]">Ready for Analysis</h2>
+              <p className="body-large text-text-secondary dark:text-text-tertiary mb-8 max-w-2xl mx-auto">
+                Your interview responses have been recorded. Generate AI-powered feedback
+                to get detailed insights on your performance, strengths, and areas for improvement.
+              </p>
+              <button
+                onClick={handleGenerateFeedback}
+                disabled={generating || responses.length === 0}
+                className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-lg shadow-lg hover:shadow-electric-blue/30 transition-all duration-300 transform hover:scale-105"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Generating Feedback...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    Generate Feedback
+                  </>
+                )}
+              </button>
+              {responses.length === 0 && (
+                <p className="body-small text-text-tertiary mt-4">
+                  No responses found for this interview session.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Feedback Content */}
+          {hasFeedback && (
+            <div className="animate-slide-up space-y-8">
+              {/* Overall Score Hero */}
+              <div className="card-glass p-8 sm:p-12 text-center relative overflow-hidden dark:bg-surface-secondary/40 dark:border-white/10">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-electric-blue to-indigo-500"></div>
+                
+                <h2 className="heading-section mb-2 text-[var(--fg-primary)]">Overall Performance</h2>
+                {user?.experience_level && (
+                  <p className="body-small text-electric-blue font-medium mb-8 bg-electric-blue/5 dark:bg-electric-blue/10 inline-block px-4 py-1 rounded-full border border-electric-blue/10">
+                    Feedback tailored for {experienceLevelLabels[user.experience_level] || 'Mid-Level Engineers'}
+                  </p>
+                )}
+                
+                <div className="flex justify-center mb-8 relative z-10">
+                  <div className="bg-white/50 dark:bg-white/5 rounded-full p-6 backdrop-blur-sm border border-white/20 dark:border-white/5 shadow-2xl">
+                    <ScoreRing score={sessionFeedback.overall_score} size="large" />
+                  </div>
+                </div>
+                
+                <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
+                <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
+                  You completed <span className="font-semibold text-[var(--fg-primary)]">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
+                </p>
+                </p>
+
+                {/* Improvement Banner */}
+                {comparison && comparison.sessions_compared > 0 && comparison.improvement_percent !== null && (
+                  <div className={`inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border backdrop-blur-md ${
+                    comparison.improvement_percent > 0
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                      : comparison.improvement_percent < 0
+                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
+                        : 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400'
+                  }`}>
+                    {comparison.improvement_percent > 0 ? (
+                      <TrendingUp className="w-4 h-4" />
+                    ) : comparison.improvement_percent < 0 ? (
+                      <TrendingDown className="w-4 h-4" />
+                    ) : (
+                      <Minus className="w-4 h-4" />
+                    )}
+                    <span className="body-small font-semibold">
+                      {comparison.improvement_percent > 0 ? '+' : ''}
+                      {comparison.improvement_percent}% vs your average ({comparison.average_score})
+                    </span>
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="badge badge-completed">
-                {getTypeLabel(session.interview_type)}
-              </span>
-              <span className="badge badge-scheduled">
-                {session.question_count} questions
-              </span>
-            </div>
-          </div>
-        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="card p-4 mb-8 border-status-error bg-status-error/10">
-            <p className="text-status-error">{error}</p>
-          </div>
-        )}
-
-        {/* Processing Status - Show when session is completed but feedback not ready */}
-        {session.status === 'completed' && !hasFeedback && id && (
-          <ProcessingStatus
-            sessionId={id}
-            onComplete={() => {
-              // Reload feedback when processing completes
-              loadFeedback();
-            }}
-          />
-        )}
-
-        {/* No Feedback Yet - Show Generate Button */}
-        {!hasFeedback && (
-          <div className="card-glass p-8 sm:p-12 mb-8 text-center">
-            <Sparkles className="w-16 h-16 text-electric-blue mx-auto mb-4" />
-            <h2 className="heading-section mb-4">Generate AI Feedback</h2>
-            <p className="body-large text-text-secondary mb-6 max-w-2xl mx-auto">
-              Your interview responses are ready for analysis. Generate AI-powered feedback
-              to get detailed insights on your performance.
-            </p>
-            <button
-              onClick={handleGenerateFeedback}
-              disabled={generating || responses.length === 0}
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Generating Feedback...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Generate Feedback
-                </>
-              )}
-            </button>
-            {responses.length === 0 && (
-              <p className="body-small text-text-tertiary mt-4">
-                No responses found for this interview session.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Feedback Content */}
-        {hasFeedback && (
-          <>
-            {/* Overall Score Hero */}
-            <div className="card-glass p-8 sm:p-12 mb-8 text-center">
-              <h2 className="heading-section mb-2">Overall Performance</h2>
-              {user?.experience_level && (
-                <p className="body-small text-electric-blue mb-4">
-                  Feedback tailored for {experienceLevelLabels[user.experience_level] || 'Mid-Level Engineers'}
-                </p>
-              )}
-              <ScoreRing score={sessionFeedback.overall_score} size="large" />
-              <p className="body-large text-text-secondary mt-6 max-w-2xl mx-auto">
-                You completed {responses.length} of {session.question_count} questions.
-              </p>
-
-              {/* Improvement Banner */}
-              {comparison && comparison.sessions_compared > 0 && comparison.improvement_percent !== null && (
-                <div className={`inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full ${
-                  comparison.improvement_percent > 0
-                    ? 'bg-status-success/10 text-status-success'
-                    : comparison.improvement_percent < 0
-                      ? 'bg-status-error/10 text-status-error'
-                      : 'bg-text-tertiary/10 text-text-secondary'
-                }`}>
-                  {comparison.improvement_percent > 0 ? (
-                    <TrendingUp className="w-4 h-4" />
-                  ) : comparison.improvement_percent < 0 ? (
-                    <TrendingDown className="w-4 h-4" />
-                  ) : (
-                    <Minus className="w-4 h-4" />
-                  )}
-                  <span className="body-small font-medium">
-                    {comparison.improvement_percent > 0 ? '+' : ''}
-                    {comparison.improvement_percent}% vs your average ({comparison.average_score})
-                  </span>
-                </div>
-              )}
-              {comparison && comparison.sessions_compared === 0 && (
-                <p className="body-small text-text-tertiary mt-4">
-                  Complete more sessions to see your improvement trend
-                </p>
-              )}
-            </div>
-
-            {/* Score Breakdown */}
-            <div className="mb-8">
-              <h2 className="heading-section mb-6">Score Breakdown</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <MetricCard
-                  title="Content Score"
-                  score={sessionFeedback.content_score}
-                  description="Technical accuracy and completeness of your responses"
-                  icon={BookOpen}
-                />
-                <MetricCard
-                  title="Audio Score"
-                  score={sessionFeedback.audio_score}
-                  description="Speech clarity, pacing, and delivery quality"
-                  icon={MessageSquare}
-                />
-                <MetricCard
-                  title="Overall"
-                  score={sessionFeedback.overall_score}
-                  description="Combined performance across all metrics"
-                  icon={Smile}
-                />
-              </div>
-            </div>
-
-            {/* Top Strengths & Improvements */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {sessionFeedback.top_strengths.length > 0 && (
-                <div className="card p-6">
-                  <h3 className="heading-card text-status-success mb-4">Top Strengths</h3>
-                  <ul className="space-y-2">
-                    {sessionFeedback.top_strengths.map((strength, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-status-success">+</span>
-                        <span className="body-default text-text-secondary">{strength}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {sessionFeedback.top_improvements.length > 0 && (
-                <div className="card p-6">
-                  <h3 className="heading-card text-status-warning mb-4">Areas for Improvement</h3>
-                  <ul className="space-y-2">
-                    {sessionFeedback.top_improvements.map((improvement, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-status-warning">!</span>
-                        <span className="body-default text-text-secondary">{improvement}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Recommended Practice Areas */}
-            {sessionFeedback.recommended_practice_areas.length > 0 && (
-              <div className="card p-6 mb-8">
-                <h3 className="heading-card mb-4">Recommended Practice Areas</h3>
-                <div className="flex flex-wrap gap-2">
-                  {sessionFeedback.recommended_practice_areas.map((area, idx) => (
-                    <span key={idx} className="badge badge-in-progress">
-                      {area}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Questions & Responses */}
-        {responses.length > 0 && (
-          <div className="mb-8">
-            <h2 className="heading-section mb-6">Question-by-Question Analysis</h2>
-            <div className="space-y-4">
-              {responses.map((response, idx) => {
-                const contentFeedback = contentFeedbacks[idx];
-                return (
-                  <ResponseAccordion
-                    key={response.id}
-                    questionNumber={idx + 1}
-                    question={response.question?.content || 'Question text unavailable'}
-                    transcript={response.transcript}
-                    audioUrl={response.audio_url}
-                    feedback={contentFeedback?.detailed_feedback || 'Feedback analysis pending...'}
-                    score={contentFeedback?.overall_content_score}
-                    suggestions={contentFeedback?.improvements || []}
-                    sampleAnswer={response.question?.sample_answer}
+              {/* Score Breakdown */}
+              <div>
+                <h2 className="heading-section mb-6 flex items-center gap-2 text-[var(--fg-primary)]">
+                  <BarChart className="w-5 h-5 text-electric-blue" />
+                  Score Breakdown
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <MetricCard
+                    title="Content Score"
+                    score={sessionFeedback.content_score}
+                    description="Technical accuracy and completeness of your responses"
+                    icon={BookOpen}
                   />
-                );
-              })}
-            </div>
-          </div>
-        )}
+                  <MetricCard
+                    title="Audio Score"
+                    score={sessionFeedback.audio_score}
+                    description="Speech clarity, pacing, and delivery quality"
+                    icon={MessageSquare}
+                  />
+                  <MetricCard
+                    title="Overall"
+                    score={sessionFeedback.overall_score}
+                    description="Combined performance across all metrics"
+                    icon={Smile}
+                  />
+                </div>
+              </div>
 
-        {/* Action Section */}
-        <div className="card p-8 text-center">
-          <h2 className="heading-section mb-4">What's Next?</h2>
-          <p className="body-default text-text-secondary mb-6">
-            Continue improving your skills with more practice sessions
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="btn-primary inline-flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Practice Again
-            </button>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="btn-secondary inline-flex items-center justify-center gap-2"
-            >
-              Try Different Type
-            </button>
-            <button className="btn-ghost inline-flex items-center justify-center gap-2" disabled>
-              <Share2 className="w-5 h-5" />
-              Share Results
-              <span className="body-small text-text-tertiary">(Coming Soon)</span>
-            </button>
-          </div>
+              {/* Top Strengths & Improvements */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {sessionFeedback.top_strengths.length > 0 && (
+                  <div className="card p-6 border-t-4 border-t-emerald-500 bg-white dark:bg-surface-secondary/40 dark:border-white/5">
+                    <h3 className="heading-card text-emerald-600 dark:text-emerald-400 mb-6 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5" />
+                      Top Strengths
+                    </h3>
+                    <ul className="space-y-4">
+                      {sessionFeedback.top_strengths.map((strength, idx) => (
+                        <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">•</span>
+                          <span className="body-default text-text-secondary dark:text-text-tertiary">{strength}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {sessionFeedback.top_improvements.length > 0 && (
+                  <div className="card p-6 border-t-4 border-t-amber-500 bg-white dark:bg-surface-secondary/40 dark:border-white/5">
+                    <h3 className="heading-card text-amber-600 dark:text-amber-400 mb-6 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      Areas for Improvement
+                    </h3>
+                    <ul className="space-y-4">
+                      {sessionFeedback.top_improvements.map((improvement, idx) => (
+                        <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                          <span className="text-amber-600 dark:text-amber-400 font-bold mt-0.5">•</span>
+                          <span className="body-default text-text-secondary dark:text-text-tertiary">{improvement}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Recommended Practice Areas */}
+              {sessionFeedback.recommended_practice_areas.length > 0 && (
+                <div className="card-glass p-6 dark:bg-surface-secondary/40 dark:border-white/10">
+                  <h3 className="heading-card mb-4 flex items-center gap-2 text-[var(--fg-primary)]">
+                    <Sparkles className="w-5 h-5 text-electric-blue" />
+                    Recommended Practice Areas
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {sessionFeedback.recommended_practice_areas.map((area, idx) => (
+                      <span key={idx} className="badge bg-white dark:bg-white/5 border border-electric-blue/20 dark:border-electric-blue/30 px-4 py-2 text-sm text-text-secondary dark:text-text-tertiary hover:border-electric-blue/50 transition-colors cursor-default">
+                        {area}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Questions & Responses */}
+              {responses.length > 0 && (
+                <div>
+                  <h2 className="heading-section mb-6 text-[var(--fg-primary)]">Question-by-Question Analysis</h2>
+                  <div className="space-y-4">
+                    {responses.map((response, idx) => {
+                      const contentFeedback = contentFeedbacks[idx];
+                      return (
+                        <ResponseAccordion
+                          key={response.id}
+                          questionNumber={idx + 1}
+                          question={response.question?.content || 'Question text unavailable'}
+                          transcript={response.transcript}
+                          audioUrl={response.audio_url}
+                          feedback={contentFeedback?.detailed_feedback || 'Feedback analysis pending...'}
+                          score={contentFeedback?.overall_content_score}
+                          suggestions={contentFeedback?.improvements || []}
+                          sampleAnswer={response.question?.sample_answer}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Section */}
+              <div className="card-glass p-8 text-center bg-gradient-to-br from-white to-surface-secondary dark:from-surface-secondary dark:to-surface-tertiary dark:border-white/10">
+                <h2 className="heading-section mb-4 text-[var(--fg-primary)]">What's Next?</h2>
+                <p className="body-default text-text-secondary dark:text-text-tertiary mb-8">
+                  Continue improving your skills with more practice sessions
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="btn-primary inline-flex items-center justify-center gap-2 shadow-lg hover:shadow-electric-blue/25"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                    Practice Again
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="btn-secondary inline-flex items-center justify-center gap-2 dark:border-white/10 dark:hover:bg-white/5"
+                  >
+                    Try Different Type
+                  </button>
+                  <div className="relative group">
+                    <button className="btn-ghost inline-flex items-center justify-center gap-2 opacity-50 cursor-not-allowed w-full" disabled>
+                      <Share2 className="w-5 h-5" />
+                      Share Results
+                    </button>
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-surface-dark dark:bg-white text-white dark:text-surface-dark text-xs font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-surface-dark dark:after:border-t-white">
+                      Coming Soon
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
       </div>
     </ErrorBoundary>
   );
