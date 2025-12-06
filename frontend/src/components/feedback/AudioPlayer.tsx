@@ -124,8 +124,9 @@ export default function AudioPlayer({ audioUrl, onTimeUpdate }: AudioPlayerProps
 
   if (error) {
     return (
-      <div className="card p-4 bg-status-error/5 border-status-error/20">
-        <p className="text-sm text-status-error">{error}</p>
+      <div className="card p-4 bg-surface-secondary/50 border-border-light dark:border-white/5 flex items-center gap-3 text-text-secondary dark:text-text-tertiary">
+        <VolumeX className="w-5 h-5 opacity-50" />
+        <p className="text-sm font-medium">Audio recording unavailable</p>
       </div>
     );
   }
