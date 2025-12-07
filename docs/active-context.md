@@ -2,8 +2,8 @@
 
 ## Current Status
 
-**Phase**: Soft Launch Ready
-**Last Updated**: 2025-12-02
+**Phase**: Soft Launch Ready + Epic 4 Complete
+**Last Updated**: 2025-12-20
 
 ## What We're Working On
 
@@ -32,9 +32,11 @@
 - [x] Custom branded assets (logo, hero, favicons)
 - [x] OpenGraph meta tags
 - [x] Complete UI screen flow documentation
+- [x] Epic 4: Real-Time AI Coaching Hints (Complete 2025-12-20)
 
 ### Active Tasks
 - None - Ready for soft launch!
+- Epic 4 complete: Real-time AI coaching hints with streaming support
 
 ## Recent Decisions
 
@@ -49,6 +51,7 @@
 - **Primary**: Claude API (content analysis via OpenRouter/Groq)
 - **Transcription**: OpenAI Whisper
 - **Audio Analysis**: Librosa (local processing)
+- **Real-Time Coaching**: Gemini 2.0 Flash (via OpenRouter) - Epic 4 ✅
 
 ## Current Blockers
 
@@ -81,7 +84,10 @@ None - application is launch-ready.
 - `frontend/src/pages/` - All 10 UI screens
 - `backend/app/main.py` - FastAPI application entry
 - `backend/app/ai/` - AI pipeline implementations
+- `backend/app/api/coaching.py` - Real-time coaching hints (Epic 4)
+- `frontend/src/hooks/useCoachingHint.ts` - Coaching hint hook (Epic 4)
 - `docs/UI_SCREEN_FLOW.md` - Complete screen validation
+- `docs/EPIC4_COMPLETION_SUMMARY.md` - Epic 4 completion details
 
 ## Launch Checklist
 

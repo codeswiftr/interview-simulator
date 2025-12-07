@@ -141,7 +141,7 @@ Hint (max 100 words):"""
         client = get_coaching_client()
         response = await client.chat.completions.create(
             model="google/gemini-2.0-flash-exp:free",  # Gemini 2.0 Flash via OpenRouter
-            max_tokens=150,  # Keep hints concise
+            max_tokens=100,  # Keep hints concise (1-2 sentences)
             temperature=0.7,  # Slightly creative but focused
             messages=[{"role": "user", "content": prompt}],
         )
@@ -203,7 +203,7 @@ Hint (max 100 words):"""
         client = get_coaching_client()
         stream = await client.chat.completions.create(
             model="google/gemini-2.0-flash-exp:free",  # Gemini 2.0 Flash via OpenRouter
-            max_tokens=150,  # Keep hints concise
+            max_tokens=100,  # Keep hints concise (1-2 sentences)
             temperature=0.7,  # Slightly creative but focused
             messages=[{"role": "user", "content": prompt}],
             stream=True,  # Enable streaming

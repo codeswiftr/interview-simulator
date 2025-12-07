@@ -5,6 +5,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { interviewsAPI, responsesAPI, uploadAPI } from '../lib/api';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useToast } from '../hooks/useToast';
+import { useCoachingHint } from '../hooks/useCoachingHint';
 import { getExtensionForMimeType } from '../lib/audio-utils';
 import Timer from '../components/interview/Timer';
 import QuestionDisplay from '../components/interview/QuestionDisplay';
@@ -50,6 +51,7 @@ export default function InterviewPage() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [lastFailedUpload, setLastFailedUpload] = useState<{ blob: Blob; questionId: string } | null>(null);
   const [showCoach, setShowCoach] = useState(true);
+  const [liveTranscript, setLiveTranscript] = useState('');
 
   // Audio recording hook
   const {
@@ -142,7 +144,7 @@ export default function InterviewPage() {
 
       try {
         const { data: responses } = await interviewsAPI.getResponses(session.id);
-        
+
         let newCompletions = false;
         let completedIndex = -1;
 
@@ -150,10 +152,10 @@ export default function InterviewPage() {
         const nextResponses = currentResponses.map(tracked => {
           const updated = responses.find((r: InterviewResponse) => r.id === tracked.id);
           if (updated && tracked.processingStatus !== 'completed' && updated.processing_status === 'completed') {
-             newCompletions = true;
-             completedIndex = tracked.questionIndex;
+            newCompletions = true;
+            completedIndex = tracked.questionIndex;
           }
-          
+
           if (updated) {
             return {
               ...tracked,
@@ -167,9 +169,9 @@ export default function InterviewPage() {
 
         // Effect THEN Update
         if (newCompletions) {
-           toast.success('Transcription ready', `Answer ${completedIndex + 1} has been transcribed`);
+          toast.success('Transcription ready', `Answer ${completedIndex + 1} has been transcribed`);
         }
-        
+
         // Only update state if something changed (JSON comparison is cheap enough here for deep check, or just rely on map identity if strictly immutable)
         // For simplicity, we just set it as we built a new array
         setSubmittedResponses(nextResponses);
@@ -215,7 +217,7 @@ export default function InterviewPage() {
     try {
       const extension = mimeType ? getExtensionForMimeType(mimeType) : 'webm';
       const type = mimeType || 'audio/webm';
-      
+
       const audioFile = new File([blob], `answer-${currentQuestionIndex + 1}.${extension}`, {
         type: type,
       });
@@ -408,6 +410,25 @@ export default function InterviewPage() {
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
+  // AI Coaching Hint hook
+  const {
+    hint: coachingHint,
+    isLoading: isHintLoading,
+    isStreaming: isHintStreaming,
+    error: hintError,
+    triggerHint
+  } = useCoachingHint({
+    question: currentQuestion?.content || '',
+    questionType: (currentQuestion?.category as 'behavioral' | 'technical' | 'system_design') || 'behavioral',
+    transcript: liveTranscript,
+    enabled: isRecording && showCoach && !!currentQuestion
+  });
+
+  // Handle transcript updates from RecordingDeck
+  const handleTranscriptChange = useCallback((transcript: string) => {
+    setLiveTranscript(transcript);
+  }, []);
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-surface-primary flex flex-col">
@@ -469,6 +490,10 @@ export default function InterviewPage() {
               questionType={currentQuestion.category}
               elapsedTime={duration}
               expectedDuration={currentQuestion.expected_duration_seconds}
+              dynamicHint={coachingHint}
+              isHintLoading={isHintLoading}
+              isHintStreaming={isHintStreaming}
+              hintError={hintError}
             />
           )}
 
@@ -524,34 +549,35 @@ export default function InterviewPage() {
                   onCancel={handleExit} /* Using exit as cancel for now, or could be a specific reset */
                   onConfirm={handleSubmitAnswer}
                   disabled={isSubmitting}
+                  onTranscriptChange={handleTranscriptChange}
                 />
               )}
             </div>
-            
-             {/* Secondary Actions - Outside the deck for cleaner UI */}
-             {!isPreviewMode && (
-                <div className="mt-6 flex justify-center gap-4">
-                  <button
-                    onClick={handleSkipQuestion}
-                    disabled={isSubmitting || isRecording}
-                    className="btn-ghost flex items-center justify-center gap-2 text-text-tertiary hover:text-text-secondary"
-                  >
-                    <SkipForward size={20} />
-                    Skip Question
-                  </button>
 
-                  {lastFailedUpload && (
-                    <button
-                      onClick={handleRetryUpload}
-                      disabled={isSubmitting}
-                      className="btn-primary flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 border-none"
-                    >
-                      <RefreshCw size={20} className={isSubmitting ? 'animate-spin' : ''} />
-                      {isSubmitting ? 'Retrying...' : 'Retry Upload'}
-                    </button>
-                  )}
-                </div>
-             )}
+            {/* Secondary Actions - Outside the deck for cleaner UI */}
+            {!isPreviewMode && (
+              <div className="mt-6 flex justify-center gap-4">
+                <button
+                  onClick={handleSkipQuestion}
+                  disabled={isSubmitting || isRecording}
+                  className="btn-ghost flex items-center justify-center gap-2 text-text-tertiary hover:text-text-secondary"
+                >
+                  <SkipForward size={20} />
+                  Skip Question
+                </button>
+
+                {lastFailedUpload && (
+                  <button
+                    onClick={handleRetryUpload}
+                    disabled={isSubmitting}
+                    className="btn-primary flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 border-none"
+                  >
+                    <RefreshCw size={20} className={isSubmitting ? 'animate-spin' : ''} />
+                    {isSubmitting ? 'Retrying...' : 'Retry Upload'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Transcription Panel */}

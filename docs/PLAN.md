@@ -500,7 +500,11 @@ Establish frontend test infrastructure and achieve 30% coverage.
 
 ---
 
-# Epic 4: Real-Time AI Coaching Hints
+# Epic 4: Real-Time AI Coaching Hints ✅ COMPLETE
+
+## Status: Complete
+## Completed: 2025-12-20
+## Total Effort: ~11 hours
 
 ## Goal
 Replace static coaching hints with dynamic, contextual AI-generated hints based on live transcript analysis during interviews.
@@ -534,11 +538,11 @@ Replace static coaching hints with dynamic, contextual AI-generated hints based 
 - Cons: More complex, WebSocket management
 
 ## Success Criteria
-- [ ] Dynamic hints generated from live transcript context
-- [ ] Hints update every 2s of silence or 50+ new words
-- [ ] Streaming response for low latency (<500ms)
-- [ ] Cost-effective: <$0.01 per interview session
-- [ ] Fallback to static hints if AI unavailable
+- [x] Dynamic hints generated from live transcript context ✅
+- [x] Hints update every 2s of silence or 50+ new words ✅
+- [x] Streaming response for low latency (<500ms) ✅
+- [x] Cost-effective: <$0.01 per interview session ✅ (actual: $0.00025)
+- [x] Fallback to static hints if AI unavailable ✅
 
 ## Implementation Plan
 
@@ -553,32 +557,32 @@ Replace static coaching hints with dynamic, contextual AI-generated hints based 
 **Checkpoint**: Endpoint returns contextual hints from question + transcript
 
 ### Phase 2: Frontend Integration (4h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Add debounced hint generation hook | frontend-builder | 1h |
-| 2.2 | Connect RecordingDeck transcript to hook | frontend-builder | 30m |
-| 2.3 | Update CoachOverlay to show dynamic hints | frontend-builder | 1.5h |
-| 2.4 | Add loading state and error fallback | frontend-builder | 1h |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 2.1 | Add debounced hint generation hook | frontend-builder | 1h | ✅ Done |
+| 2.2 | Connect RecordingDeck transcript to hook | frontend-builder | 30m | ✅ Done |
+| 2.3 | Update CoachOverlay to show dynamic hints | frontend-builder | 1.5h | ✅ Done |
+| 2.4 | Add loading state and error fallback | frontend-builder | 1h | ✅ Done |
 
-**Checkpoint**: Dynamic hints appear in CoachOverlay during recording
+**Checkpoint**: Dynamic hints appear in CoachOverlay during recording ✅
 
 ### Phase 3: Streaming & UX Polish (2h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 3.1 | Implement streaming hint display | frontend-builder | 1h |
-| 3.2 | Add hint quality indicators (confidence) | frontend-builder | 30m |
-| 3.3 | Test with various question types | qa-test-guardian | 30m |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 3.1 | Implement streaming hint display | frontend-builder | 1h | ✅ Done |
+| 3.2 | Add hint quality indicators (confidence) | frontend-builder | 30m | ✅ Done |
+| 3.3 | Test with various question types | qa-test-guardian | 30m | ✅ Done |
 
-**Checkpoint**: Smooth streaming hints with good UX
+**Checkpoint**: Smooth streaming hints with good UX ✅
 
 ### Phase 4: Testing & Optimization (2h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 4.1 | Add unit tests for hint generation | qa-test-guardian | 1h |
-| 4.2 | Test rate limiting and error handling | qa-test-guardian | 30m |
-| 4.3 | Monitor costs and optimize prompt | backend-builder | 30m |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 4.1 | Add unit tests for hint generation | qa-test-guardian | 1h | ✅ Done |
+| 4.2 | Test rate limiting and error handling | qa-test-guardian | 30m | ✅ Done |
+| 4.3 | Monitor costs and optimize prompt | backend-builder | 30m | ✅ Done |
 
-**Checkpoint**: Tests passing, costs validated
+**Checkpoint**: Tests passing, costs validated ✅
 
 **Total Estimated Effort**: ~11 hours
 
@@ -655,6 +659,333 @@ Add Playwright E2E tests for critical user journeys.
 
 ---
 
+# Epic 6: AI Ghostwriter - Answer Preparation System
+
+## Status: Planning
+## Target: Post-Launch (After Epic 4 Complete + User Feedback)
+## Priority: P1 (High Value) - Defer to Post-Launch
+
+---
+
+## Goal
+Create a multi-stage AI-powered preparation system that helps users learn how to structure interview answers through personalized, experience-grounded coaching.
+
+## Context
+**Current State:**
+- Users can practice interviews and receive post-interview feedback
+- Sample answers exist for reference
+- Real-time coaching hints available during practice (Epic 4)
+- **Gap**: No structured way to prepare answers before practice
+
+**User Problem:**
+- Users don't know how to structure answers (especially STAR method)
+- Generic templates don't work for personal experiences
+- No guided process to prepare personalized answers
+- Users memorize instead of learning patterns
+
+**Solution:**
+Multi-stage AI system that:
+1. **Detective Stage**: Fast model asks clarifying questions to gather context
+2. **Ghostwriter Stage**: Smart model drafts personalized STAR response
+3. **Delivery Practice**: User practices delivering the draft
+4. **Rating Stage**: AI rates delivery and provides improvement feedback
+
+## Success Criteria
+- [ ] Users can start answer preparation for any question
+- [ ] Detective stage asks 3-5 relevant clarifying questions
+- [ ] Ghostwriter generates personalized STAR-formatted draft
+- [ ] Users can practice delivering the draft (multiple takes)
+- [ ] AI rates delivery vs draft and shows comparison
+- [ ] Users can iterate (refine draft or re-record)
+- [ ] Progress tracking shows improvement over time
+- [ ] Cost per preparation session: <$0.05
+- [ ] Feature limited to Pro/Premium tiers
+
+## Technical Design
+
+### Architecture Overview
+```
+┌─────────────────────────────────────────────────────────┐
+│         AI Ghostwriter Multi-Stage Flow                  │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Stage 1: Detective (Fast Model)                       │
+│  ┌────────────────────────────────────┐                 │
+│  │ Gemini 2.0 Flash                  │                 │
+│  │ - Asks 3-5 clarifying questions  │                 │
+│  │ - Chat interface                  │                 │
+│  │ - Cost: ~$0.001 per session       │                 │
+│  └────────────────────────────────────┘                 │
+│                        ↓                                 │
+│  Stage 2: Ghostwriter (Smart Model)                      │
+│  ┌────────────────────────────────────┐                 │
+│  │ Claude Haiku 4.5                  │                 │
+│  │ - Drafts personalized STAR answer  │                 │
+│  │ - Uses Q&A context + user level    │                 │
+│  │ - Cost: ~$0.01-0.02 per draft     │                 │
+│  └────────────────────────────────────┘                 │
+│                        ↓                                 │
+│  Stage 3: Delivery Practice                              │
+│  ┌────────────────────────────────────┐                 │
+│  │ Reuses existing infrastructure    │                 │
+│  │ - RecordingDeck component         │                 │
+│  │ - Audio analysis (Librosa)        │                 │
+│  │ - Cost: $0 (existing)             │                 │
+│  └────────────────────────────────────┘                 │
+│                        ↓                                 │
+│  Stage 4: Rating & Comparison                             │
+│  ┌────────────────────────────────────┐                 │
+│  │ Extends existing feedback service  │                 │
+│  │ - Compares delivery to draft       │                 │
+│  │ - Provides improvement suggestions │                 │
+│  │ - Cost: ~$0.01 per rating         │                 │
+│  └────────────────────────────────────┘                 │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Data Models
+
+**New Models:**
+```python
+class AnswerPreparation(SQLModel, table=True):
+    """Tracks answer preparation sessions."""
+    id: UUID
+    user_id: UUID
+    question_id: UUID
+    stage: str  # 'detective', 'draft', 'practice', 'complete'
+    draft_answer: str | None
+    created_at: datetime
+    updated_at: datetime
+
+class PreparationQnA(SQLModel, table=True):
+    """Stores Q&A from detective stage."""
+    id: UUID
+    preparation_id: UUID
+    question: str
+    answer: str
+    order: int
+    created_at: datetime
+
+class DeliveryAttempt(SQLModel, table=True):
+    """Tracks practice delivery attempts."""
+    id: UUID
+    preparation_id: UUID
+    audio_url: str
+    transcript: str
+    delivery_score: float
+    comparison_feedback: str
+    created_at: datetime
+```
+
+### API Contracts
+
+**Preparation Endpoints:**
+```
+POST   /api/v1/preparation/start
+  Body: { question_id: UUID }
+  Response: { preparation_id: UUID, stage: "detective" }
+
+POST   /api/v1/preparation/{id}/detective/question
+  Response: { question: str, order: int }
+
+POST   /api/v1/preparation/{id}/detective/answer
+  Body: { answer: str }
+  Response: { next_question: str | null, stage: "draft" | "detective" }
+
+POST   /api/v1/preparation/{id}/generate-draft
+  Response: { draft_answer: str, stage: "practice" }
+
+GET    /api/v1/preparation/{id}/draft
+  Response: { draft_answer: str }
+
+POST   /api/v1/preparation/{id}/practice/start
+  Response: { attempt_id: UUID }
+
+POST   /api/v1/preparation/{id}/practice/submit
+  Body: { audio_url: str, transcript: str }
+  Response: { attempt_id: UUID, stage: "rating" }
+
+POST   /api/v1/preparation/{id}/rate-delivery
+  Body: { attempt_id: UUID }
+  Response: { delivery_score: float, comparison_feedback: str, stage: "complete" }
+
+GET    /api/v1/preparation/{id}/comparison
+  Response: { draft: str, delivery: str, score: float, feedback: str }
+```
+
+### Dependencies
+- **Existing**: RecordingDeck component, FeedbackService, ContentAnalyzer
+- **New**: Detective Q&A chat interface, Draft review UI, Comparison view
+- **AI Models**: Gemini 2.0 Flash (detective), Claude Haiku 4.5 (draft + rating)
+- **Database**: New tables for AnswerPreparation, PreparationQnA, DeliveryAttempt
+
+---
+
+## Implementation Plan
+
+### Phase 1: MVP - Detective + Draft (2-3 weeks)
+**Goal**: Validate concept with core functionality
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Create Alembic migration for new models | backend-engineer | 1h |
+| 1.2 | Create AnswerPreparation, PreparationQnA models | backend-engineer | 1h |
+| 1.3 | Create POST /preparation/start endpoint | backend-engineer | 1h |
+| 1.4 | Implement detective Q&A API (Gemini Flash) | backend-engineer | 2h |
+| 1.5 | Implement ghostwriter draft API (Haiku 4.5) | backend-engineer | 2h |
+| 1.6 | Add tier check (Pro/Premium only) | backend-engineer | 30m |
+| 1.7 | Create PreparationPage frontend component | frontend-builder | 2h |
+| 1.8 | Build detective Q&A chat interface | frontend-builder | 2h |
+| 1.9 | Build draft review/editing UI | frontend-builder | 1.5h |
+| 1.10 | Add "Prepare Answer" button to question cards | frontend-builder | 30m |
+| 1.11 | Write tests for preparation API | qa-test-guardian | 2h |
+| 1.12 | Write tests for detective Q&A flow | qa-test-guardian | 1h |
+
+**Checkpoint**: Users can get AI-generated drafts from Q&A
+
+### Phase 2: Delivery Practice (1-2 weeks)
+**Goal**: Enable users to practice delivering drafts
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Create DeliveryAttempt model | backend-engineer | 30m |
+| 2.2 | Create Alembic migration for DeliveryAttempt | backend-engineer | 30m |
+| 2.3 | Integrate RecordingDeck into PreparationPage | frontend-builder | 1h |
+| 2.4 | Add practice session management | backend-engineer | 1h |
+| 2.5 | Create POST /preparation/{id}/practice/submit | backend-engineer | 1h |
+| 2.6 | Add practice attempt tracking UI | frontend-builder | 1h |
+| 2.7 | Allow multiple practice attempts | frontend-builder | 1h |
+| 2.8 | Write tests for practice flow | qa-test-guardian | 1h |
+
+**Checkpoint**: Users can practice delivering drafts
+
+### Phase 3: Rating & Comparison (1-2 weeks)
+**Goal**: Complete feature with delivery rating and feedback
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Extend FeedbackService for draft comparison | backend-engineer | 2h |
+| 3.2 | Create POST /preparation/{id}/rate-delivery | backend-engineer | 2h |
+| 3.3 | Implement delivery vs draft comparison logic | backend-engineer | 2h |
+| 3.4 | Create comparison view UI | frontend-builder | 2h |
+| 3.5 | Add improvement suggestions display | frontend-builder | 1h |
+| 3.6 | Add progress tracking (improvement over time) | backend-engineer | 2h |
+| 3.7 | Create progress visualization | frontend-builder | 1.5h |
+| 3.8 | Write tests for rating/comparison | qa-test-guardian | 2h |
+
+**Checkpoint**: Complete feature with all stages
+
+### Phase 4: Polish & Optimization (1 week)
+**Goal**: Improve UX and optimize costs
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 4.1 | Add draft editing capability | frontend-builder | 2h |
+| 4.2 | Add iteration flow (refine draft or re-record) | frontend-builder | 1.5h |
+| 4.3 | Optimize AI prompts for cost/quality | backend-engineer | 1h |
+| 4.4 | Add caching for common clarifying questions | backend-engineer | 1h |
+| 4.5 | Add loading states and error handling | frontend-builder | 1h |
+| 4.6 | Add analytics tracking | backend-engineer | 1h |
+| 4.7 | Performance testing and optimization | performance-optimizer | 2h |
+
+**Checkpoint**: Polished, optimized feature ready for launch
+
+**Total Estimated Effort**: 4-6 weeks (full implementation)  
+**MVP Effort**: 2-3 weeks (Phases 1-2 only)
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- **Backend**: Preparation service, detective Q&A logic, draft generation
+- **Frontend**: PreparationPage components, chat interface, draft editor
+- **Target**: 75% coverage on new code
+
+### Integration Tests
+- Full preparation flow (start → detective → draft → practice → rating)
+- Tier enforcement (Free users blocked)
+- Multiple practice attempts
+- Draft comparison accuracy
+
+### E2E Tests (Future)
+- Complete preparation journey
+- Iteration flow (refine and re-record)
+- Progress tracking over time
+
+---
+
+## Risks & Mitigations
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|--------|------------|------------|
+| Users just copy AI answers | High | Medium | Require delivery practice, track improvement |
+| Multi-stage UX overwhelming | Medium | Medium | Progressive disclosure, clear progress indicators |
+| Cost exceeds projections | Medium | Low | Tier limits, caching, cost monitoring |
+| Technical complexity delays launch | High | Medium | MVP approach, defer to post-launch |
+| Ethical concerns (cheating) | High | Low | Clear messaging, require practice, no real-time use |
+| AI quality inconsistent | Medium | Medium | Test prompts, add fallback, user feedback loop |
+
+---
+
+## Cost Analysis
+
+### Per Preparation Session
+| Stage | Model | Tokens | Cost |
+|-------|-------|--------|------|
+| Detective (3-5 Qs) | Gemini Flash | 1,500-2,500 | $0.001-0.002 |
+| Ghostwriter (Draft) | Haiku 4.5 | ~3,000 | $0.01-0.02 |
+| Delivery Practice | Existing | 0 | $0 |
+| Rating | Haiku 4.5 | ~2,000 | $0.01 |
+| **Total** | | | **~$0.02-0.04** |
+
+### Monthly Projections
+- **100 users, 10 sessions each**: 1,000 × $0.03 = **$30/month**
+- **500 users, 5 sessions each**: 2,500 × $0.03 = **$75/month**
+- **Manageable** with Pro tier pricing ($29/month covers costs)
+
+### Cost Optimization
+- Cache common clarifying questions
+- Reuse drafts for similar questions
+- Batch processing for ratings
+- Use cheaper models where possible
+
+---
+
+## Alternative: Quick Prep MVP (1-2 weeks)
+
+**Simpler approach for faster validation:**
+
+1. **Single-Stage Draft Generation**
+   - User provides brief context (1-2 sentences)
+   - AI generates STAR-formatted draft
+   - User practices delivery
+   - Basic rating
+
+**Pros**: Much faster (1-2 weeks), lower complexity, validates concept  
+**Cons**: Less personalized, less teaching, lower differentiation
+
+**Recommendation**: Consider as **Phase 0** to validate concept before full implementation
+
+---
+
+## Open Questions
+- [ ] Should users be able to edit AI-generated drafts?
+- [ ] How many practice attempts should be allowed?
+- [ ] Should preparation history be saved for review?
+- [ ] Should we show preparation progress on dashboard?
+- [ ] How to handle preparation for system design questions?
+
+---
+
+## References
+- **Ghostwriter Feature Evaluation**: docs/GHOSTWRITER_FEATURE_EVALUATION.md
+- **Existing Feedback Service**: backend/app/services/feedback_service.py
+- **Coaching API**: backend/app/api/coaching.py (for reference on AI integration)
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests (Epics 2-3)
@@ -701,11 +1032,13 @@ Add Playwright E2E tests for critical user journeys.
 3. **Epic 3** (Frontend Tests) - Regression protection ✅
 4. **Epic 4** (Real-Time AI Coaching) - User experience enhancement
 5. **Epic 5** (E2E Tests) - Future enhancement
+6. **Epic 6** (AI Ghostwriter) - Post-launch feature (after user feedback)
 
 **Estimated Total Effort**: 
 - Sprint 4 (Epics 1-3): ~25 hours ✅
 - Epic 4 (Real-Time Coaching): ~11 hours
 - Epic 5 (E2E Tests): ~10 hours
+- Epic 6 (AI Ghostwriter): ~4-6 weeks (full) or 2-3 weeks (MVP)
 
 ---
 
@@ -773,3 +1106,4 @@ Add Playwright E2E tests for critical user journeys.
 - **UI Flow**: docs/UI_SCREEN_FLOW.md
 - **Deployment**: docs/DEPLOYMENT.md
 - **Project Brief**: docs/project-brief.md
+- **Ghostwriter Feature Evaluation**: docs/GHOSTWRITER_FEATURE_EVALUATION.md

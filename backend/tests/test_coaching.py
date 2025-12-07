@@ -208,3 +208,66 @@ async def test_coaching_hint_stream_validates_question_type(client: AsyncClient)
         },
     )
     assert response.status_code == 422  # Validation error
+
+
+@pytest.mark.asyncio
+async def test_coaching_hint_rate_limiting(client: AsyncClient):
+    """Test that rate limiting is enforced for coaching hints."""
+    token = await register_and_login(client)
+
+    # Make 5 requests (the limit)
+    for i in range(5):
+        response = await client.post(
+            "/api/v1/coaching/hint",
+            headers={"Authorization": token},
+            json={
+                "question": f"Question {i}",
+                "question_type": "behavioral",
+                "transcript": f"Answer {i}",
+            },
+        )
+        assert response.status_code == 200
+
+    # 6th request should be rate limited
+    response = await client.post(
+        "/api/v1/coaching/hint",
+        headers={"Authorization": token},
+        json={
+            "question": "Question 6",
+            "question_type": "behavioral",
+            "transcript": "Answer 6",
+        },
+    )
+    assert response.status_code == 429  # Too Many Requests
+    assert "rate limit" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_coaching_hint_stream_rate_limiting(client: AsyncClient):
+    """Test that rate limiting is enforced for streaming hints."""
+    token = await register_and_login(client)
+
+    # Make 5 requests (the limit)
+    for i in range(5):
+        response = await client.post(
+            "/api/v1/coaching/hint/stream",
+            headers={"Authorization": token},
+            json={
+                "question": f"Question {i}",
+                "question_type": "behavioral",
+                "transcript": f"Answer {i}",
+            },
+        )
+        assert response.status_code == 200
+
+    # 6th request should be rate limited
+    response = await client.post(
+        "/api/v1/coaching/hint/stream",
+        headers={"Authorization": token},
+        json={
+            "question": "Question 6",
+            "question_type": "behavioral",
+            "transcript": "Answer 6",
+        },
+    )
+    assert response.status_code == 429  # Too Many Requests
