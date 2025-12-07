@@ -52,8 +52,17 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border-light">
-      <div className="container mx-auto px-4 sm:px-6 py-4">
+    <>
+      {/* Skip to main content link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only"
+      >
+        Skip to main content
+      </a>
+
+      <header className="sticky top-0 z-50 glass border-b border-border-light">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
@@ -92,12 +101,15 @@ export default function Header() {
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-secondary transition-colors"
+                    aria-label="User menu"
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="true"
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-electric-blue to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
                       {user?.full_name?.charAt(0) || 'U'}
                     </div>
                     <span className="text-sm font-medium text-text-primary">{user?.full_name}</span>
-                    <ChevronDown className={`w-4 h-4 text-text-tertiary transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-text-tertiary transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </button>
 
                   {isUserMenuOpen && (
@@ -239,6 +251,7 @@ export default function Header() {
           </nav>
         )}
       </div>
-    </header>
+      </header>
+    </>
   );
 }

@@ -22,6 +22,7 @@ function App() {
         <ToastProvider>
       <div className="min-h-screen bg-surface-primary">
         <Header />
+        <main id="main-content">
         <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -69,6 +70,7 @@ function App() {
           }
         />
         </Routes>
+        </main>
       </div>
         </ToastProvider>
       </ThemeProvider>
