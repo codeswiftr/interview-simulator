@@ -21,66 +21,66 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-      <div className="min-h-screen bg-surface-primary">
-        <Header />
-        <main id="main-content">
-        <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/questions"
-          element={
-            <ProtectedRoute>
-              <QuestionsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/interview/:id"
-          element={
-            <ProtectedRoute>
-              <InterviewPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/interview/:id/feedback"
-          element={
-            <ProtectedRoute>
-              <FeedbackPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/preparation/:id"
-          element={
-            <ProtectedRoute>
-              <PreparationPage />
-            </ProtectedRoute>
-          }
-        />
-        </Routes>
-        </main>
-      </div>
+          <div className="min-h-screen bg-surface-primary">
+            <Header />
+            <main id="main-content">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/questions"
+                  element={
+                    <ProtectedRoute>
+                      <QuestionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interview/:id"
+                  element={
+                    <ProtectedRoute>
+                      <InterviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/interview/:id/feedback"
+                  element={
+                    <ProtectedRoute>
+                      <FeedbackPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/preparation/:id"
+                  element={
+                    <ProtectedRoute>
+                      <PreparationPage />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </main>
+          </div>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
