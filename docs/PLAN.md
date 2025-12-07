@@ -1111,3 +1111,4 @@ GET    /api/v1/preparation/{id}/comparison
 - **Deployment**: docs/DEPLOYMENT.md
 - **Project Brief**: docs/project-brief.md
 - **Ghostwriter Feature Evaluation**: docs/GHOSTWRITER_FEATURE_EVALUATION.md
+- **Epic 5 & Epic 6 Completion Summary**: docs/EPIC5_EPIC6_COMPLETION_SUMMARY.md
