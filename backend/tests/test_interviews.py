@@ -1105,3 +1105,153 @@ async def test_get_interview_unauthorized_fails(client, session_override):
         headers={"Authorization": token2},
     )
     assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_start_interview_already_started_idempotent(client, session_override):
+    """Test that starting an already started interview is idempotent."""
+    token = await register_and_login(client)
+
+    # Create questions first
+    for i in range(5):
+        question = Question(
+            content=f"Test question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Start interview first time
+    start_resp1 = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp1.status_code == 200
+    assert start_resp1.json()["status"] == "in_progress"
+
+    # Start interview again - should be idempotent
+    start_resp2 = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp2.status_code == 200
+    assert start_resp2.json()["status"] == "in_progress"
+
+    # Verify questions are still assigned
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 3
+
+
+@pytest.mark.asyncio
+async def test_create_interview_with_target_company_standalone(client, session_override):
+    """Test creating interview with target_company field explicitly."""
+    token = await register_and_login(client)
+
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={
+            "interview_type": "behavioral",
+            "target_company": "Microsoft",
+            "question_count": 2,
+        },
+        headers={"Authorization": token},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["target_company"] == "Microsoft"
+    assert data["interview_type"] == "behavioral"
+    assert data["status"] == "scheduled"
+
+
+@pytest.mark.asyncio
+async def test_submit_response_interview_not_started_fails(client, session_override):
+    """Test that submitting response fails if interview hasn't been started."""
+    token = await register_and_login(client)
+
+    # Create question
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create interview (but don't start it - status will be SCHEDULED)
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to submit response - should fail because interview is not IN_PROGRESS
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "My answer",
+            "duration_seconds": 60,
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "in progress" in submit_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_quota_reset_monthly(client, session_override):
+    """Test that interview quota resets monthly based on user creation date."""
+    from datetime import datetime, timedelta, UTC
+    from app.security import hash_password
+
+    # Create user with old created_at date (different month)
+    old_date = datetime.now(UTC) - timedelta(days=35)  # More than a month ago
+    user = User(
+        email="quota-test@example.com",
+        hashed_password=hash_password("password"),
+        subscription_tier=SubscriptionTier.FREE,
+        interviews_this_month=3,  # At limit
+        created_at=old_date,
+    )
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Login
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "quota-test@example.com", "password": "password"},
+    )
+    token = f"Bearer {login_resp.json()['access_token']}"
+
+    # Try to create interview - quota should be reset and allow creation
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+
+    # Should succeed because quota was reset
+    assert resp.status_code == 201
+
+    # Verify counter was reset and incremented
+    await session_override.refresh(user)
+    # Counter should be 1 after creating one interview
+    assert user.interviews_this_month == 1
