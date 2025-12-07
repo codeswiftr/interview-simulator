@@ -1,922 +1,388 @@
-# Sprint 4: Technical Debt Payback
+# Sprint 5: Quality & Feature Completion
 
-## Status: Complete (Epics 1-3 Done)
+## Status: Planning → Ready
 ## Target: December 2025
-## Completed: 2025-12-04
+## Context: Post-Sprint 4 (Technical Debt Payback Complete)
 
 ---
 
 ## Overview
 
-Sprint 4 focuses on **technical debt payback** to establish a maintainable codebase foundation. The audit revealed 158 backend linting errors, 28 frontend linting issues, and test coverage gaps (67% backend, 0% frontend). Addressing this debt now prevents compounding issues and enables confident feature development.
+Sprint 5 focuses on two parallel tracks:
+1. **Quality Track**: Increase test coverage on critical paths to enable confident deployments
+2. **Feature Track**: Complete the AI Ghostwriter feature (Epic 6 Phases 2-4) to deliver full user value
+
+The codebase audit (2025-12-07) identified 223+ backend tests (69% coverage), 55 frontend tests, and 4 E2E suites. Key gaps remain in the `useAudioRecording` hook (0% coverage) and API endpoints for interviews/feedback/auth (40-44% coverage).
 
 **Priority Order:**
-1. **Epic 1**: Fix Linting Errors (clean codebase, prevent bugs)
-2. **Epic 2**: Backend Test Coverage to 75% (confidence for deployments)
-3. **Epic 3**: Frontend Test Infrastructure (regression protection)
-4. **Epic 4**: E2E Test Suite (user journey validation)
+1. **Epic 1**: Test Coverage Sprint (foundation for confident deployments)
+2. **Epic 2**: Epic 6 Phase 2 - Delivery Practice (high user value)
+3. **Epic 3**: Epic 6 Phase 3 - Rating & Comparison (complete feature loop)
+4. **Epic 4**: Epic 6 Phase 4 - Polish & Optimization (production readiness)
 
 ---
 
 ## Success Criteria
 
-- [x] 60 questions have sample_answer populated ✅ (completed Sprint 3)
-- [x] Email service sends real emails via Resend ✅ (completed Sprint 3)
-- [x] Backend linting: 0 errors ✅ (from 158)
-- [x] Frontend linting: 0 errors ✅ (from 28)
-- [x] Backend test coverage: 69% ✅ (from 67%, 219 tests passing)
-- [x] Frontend test coverage: 55 tests ✅ (from 0%, hooks 100% covered)
-- [x] All 219+ backend tests passing ✅
-- [x] All 55 frontend tests passing ✅
+- [x] Production health checks implemented ✅ (already complete in main.py)
+- [ ] `useAudioRecording` hook tested to 80%+ coverage
+- [ ] Backend API coverage to 75% overall (from 69%)
+- [ ] Epic 6 Phase 2: Users can practice delivering drafts
+- [ ] Epic 6 Phase 3: Delivery rated and compared to draft
+- [ ] Epic 6 Phase 4: Draft editing and iteration flow
 
 ---
 
-# Sprint 3 Completion Summary ✅
-
-| Epic | Status | Outcome |
-|------|--------|---------|
-| Sample Answers | ✅ Complete | 60 questions with answers (30 behavioral, 20 technical, 10 system design) |
-| Email Service | ✅ Complete | Resend integration working |
-| Test Coverage | 🟡 Partial | 67% (target was 75%) |
-| Video Analysis | ⏸️ Deferred | Moved to future sprint |
-
----
-
-# Epic 1: Sample Answers for Question Bank
+# Epic 1: Test Coverage Sprint ⭐ Highest Priority
 
 ## Goal
-Provide users with high-quality reference answers so they understand what "good" looks like.
+Increase test coverage on critical paths to enable confident deployments and prevent regressions.
 
 ## Context
-- 105 questions exist (50 technical, 30 behavioral, 25 system design)
-- 0 questions currently have `sample_answer` populated
-- SampleAnswerModal component already exists on FeedbackPage
-- `sample_answer` field is `str | None` in Question model
+From codebase audit (2025-12-07):
+- `useAudioRecording` hook: 0% coverage (core recording functionality)
+- `api/feedback.py`: 44% → target 75%
+- `api/interviews.py`: 40% → target 75%
+- `api/auth.py`: 40% → target 75%
+- `api/transcription.py`: 41% → target 75%
 
 ## Success Criteria
-- [ ] 20 behavioral questions have STAR-format sample answers
-- [ ] 20 technical questions have structured problem-solving answers
-- [ ] 10 system design questions have component-based answers
+- [ ] `useAudioRecording` hook: 80%+ coverage (30+ tests)
+- [ ] `api/feedback.py`: 75%+ coverage
+- [ ] `api/interviews.py`: 75%+ coverage
+- [ ] `api/auth.py`: 75%+ coverage
+- [ ] Overall backend: 73%+ (from 69%)
 
 ## Implementation Plan
 
-### Phase 1: Behavioral Sample Answers (20 questions)
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1 | Write STAR answers for 10 easy behavioral questions | 1.5h |
-| 1.2 | Write STAR answers for 6 medium behavioral questions | 1h |
-| 1.3 | Write STAR answers for 4 hard behavioral questions | 1h |
-| 1.4 | Update seed_questions.py with new content | 30m |
-| 1.5 | Run seed to update database | 15m |
+### Phase 1: useAudioRecording Hook Tests (4h)
 
-**STAR Format Template:**
-```
-**Situation**: [Context and background]
-**Task**: [Your responsibility]
-**Action**: [Specific steps you took]
-**Result**: [Measurable outcome]
-```
-
-**Checkpoint**: 20 behavioral questions visible in SampleAnswerModal
-
-### Phase 2: Technical Sample Answers (20 questions)
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1 | Write answers for 10 data structures questions | 1.5h |
-| 2.2 | Write answers for 5 algorithm questions | 1h |
-| 2.3 | Write answers for 5 coding pattern questions | 1h |
-| 2.4 | Update seed_questions.py | 30m |
-
-**Technical Answer Template:**
-```
-**Problem Understanding**: [Clarify requirements]
-**Approach**: [Algorithm/data structure choice]
-**Complexity**: [Time/space analysis]
-**Code Sketch**: [Pseudocode or key logic]
-**Edge Cases**: [What to watch for]
-```
-
-**Checkpoint**: 20 technical questions have sample answers
-
-### Phase 3: System Design Sample Answers (10 questions)
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.1 | Write answers for 5 distributed systems questions | 1h |
-| 3.2 | Write answers for 5 scaling questions | 1h |
-| 3.3 | Update seed_questions.py | 30m |
-
-**System Design Answer Template:**
-```
-**Requirements**: [Functional and non-functional]
-**High-Level Design**: [Components and data flow]
-**Deep Dive**: [Key component details]
-**Tradeoffs**: [Decisions and alternatives]
-**Scaling**: [How to handle growth]
-```
-
-**Checkpoint**: 10 system design questions have sample answers
-
----
-
-# Epic 2: Backend Test Coverage to 75%
-
-## Goal
-Increase test coverage from 66% to 75% to prevent regressions and enable confident deployments.
-
-## Context
-From codebase audit, lowest coverage modules:
-- `api/feedback.py`: 39% (target: 75%)
-- `api/interviews.py`: 40% (target: 75%)
-- `api/auth.py`: 40% (target: 75%)
-- `api/subscriptions.py`: 40% (target: 60%)
-- `api/users.py`: 52% (target: 75%)
-- `middleware/rate_limit.py`: 33% (target: 60%)
-
-## Success Criteria
-- [ ] Overall coverage: 75%+
-- [ ] api/feedback.py: 75%+
-- [ ] api/interviews.py: 75%+
-- [ ] api/auth.py: 75%+
-- [ ] All 140+ tests passing
-
-## Implementation Plan
-
-### Phase 1: Test Fixtures & Infrastructure
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1 | Create conftest.py fixtures for auth user | 30m |
-| 1.2 | Create factory functions for interviews, responses | 30m |
-| 1.3 | Create mock generators for feedback data | 30m |
-
-**Checkpoint**: Reusable fixtures available for all test files
-
-### Phase 2: Feedback API Tests (+36% needed)
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1 | Test GET /feedback/session/{id}/all endpoint | 30m |
-| 2.2 | Test GET /feedback/response/{id} endpoint | 30m |
-| 2.3 | Test POST /feedback/generate/response/{id} | 30m |
-| 2.4 | Test GET /feedback/session/{id}/comparison | 30m |
-| 2.5 | Test authorization (wrong user access) | 30m |
-| 2.6 | Test 404 cases (not found) | 30m |
-
-**Checkpoint**: api/feedback.py coverage ≥ 75%
-
-### Phase 3: Interviews API Tests (+35% needed)
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.1 | Test POST /interviews (create) with all options | 30m |
-| 3.2 | Test POST /interviews/{id}/start edge cases | 30m |
-| 3.3 | Test GET /interviews/{id}/questions | 30m |
-| 3.4 | Test POST /interviews/{id}/responses validation | 30m |
-| 3.5 | Test POST /interviews/{id}/end state transitions | 30m |
-| 3.6 | Test DELETE /interviews/{id} authorization | 30m |
-| 3.7 | Test quota enforcement for free users | 30m |
-
-**Checkpoint**: api/interviews.py coverage ≥ 75%
-
-### Phase 4: Auth API Tests (+35% needed)
-| Task | Description | Est |
-|------|-------------|-----|
-| 4.1 | Test POST /auth/forgot-password rate limiting | 30m |
-| 4.2 | Test POST /auth/reset-password expired token | 30m |
-| 4.3 | Test POST /auth/reset-password used token | 30m |
-| 4.4 | Test POST /auth/refresh with invalid token | 30m |
-| 4.5 | Test POST /auth/refresh with expired token | 30m |
-
-**Checkpoint**: api/auth.py coverage ≥ 75%
-
-### Phase 5: Users & Rate Limit Tests
-| Task | Description | Est |
-|------|-------------|-----|
-| 5.1 | Test PATCH /users/me with various updates | 30m |
-| 5.2 | Test POST /users/me/change-password validation | 30m |
-| 5.3 | Test DELETE /users/me cleanup behavior | 30m |
-| 5.4 | Test rate_limit middleware request blocking | 30m |
-| 5.5 | Test rate_limit cooldown and reset | 30m |
-
-**Checkpoint**: Overall coverage ≥ 75%
-
----
-
-# Epic 3: Email Verification & Password Reset
-
-## Goal
-Complete the email infrastructure for production deployment.
-
-## Context
-From exploration:
-- `email_service.py` exists with `send_password_reset()` method
-- Password reset flow is implemented but may not send real emails
-- `is_verified` field exists on User model but is unused
-- No email verification for registration
-- SMTP config exists but may not be configured
-
-## Success Criteria
-- [ ] Password reset emails actually send in production
-- [ ] Email templates are professional and branded
-- [ ] (Stretch) Registration requires email verification
-
-## Implementation Plan
-
-### Phase 1: Email Service Production Readiness
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1 | Integrate SendGrid/Resend as email provider | 1h |
-| 1.2 | Create branded HTML email templates | 1h |
-| 1.3 | Test email delivery in staging | 30m |
-| 1.4 | Add email delivery logging | 30m |
-
-**Checkpoint**: Password reset emails send successfully
-
-### Phase 2: Email Verification (Stretch)
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1 | Create EmailVerificationToken model | 30m |
-| 2.2 | Create Alembic migration | 15m |
-| 2.3 | Add POST /auth/verify-email endpoint | 1h |
-| 2.4 | Add POST /auth/resend-verification endpoint | 30m |
-| 2.5 | Update registration to send verification email | 30m |
-| 2.6 | Update login to check is_verified | 30m |
-| 2.7 | Create VerifyEmailPage frontend | 1h |
-| 2.8 | Add tests for verification flow | 1h |
-
-**Checkpoint**: New users must verify email before login
-
----
-
-# Epic 4: Video Analysis Integration (Future)
-
-## Goal
-Add video analysis for body language, eye contact, and emotion detection.
-
-## Context
-From project-brief.md:
-- EmotiEffLib mentioned for video analysis
-- Currently only audio is captured and analyzed
-- Frontend uses WebRTC (can capture video)
-- Would be a major differentiator
-
-## Success Criteria
-- [ ] Video capture enabled in interview room
-- [ ] Emotion detection (confidence vs nervousness)
-- [ ] Eye contact tracking
-- [ ] Video feedback displayed on FeedbackPage
-
-## Implementation Plan (High-Level)
-
-### Phase 1: Research & Validation
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1 | Research EmotiEffLib requirements | 2h |
-| 1.2 | Test browser video capture | 1h |
-| 1.3 | Evaluate processing requirements | 1h |
-| 1.4 | Design video analysis data model | 1h |
-
-**Checkpoint**: Feasibility confirmed, architecture designed
-
-### Phase 2: Backend Implementation
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1 | Create VideoFeedback model | 1h |
-| 2.2 | Create video_analyzer.py service | 4h |
-| 2.3 | Add video upload endpoint | 2h |
-| 2.4 | Integrate with background tasks | 2h |
-| 2.5 | Add tests for video analysis | 2h |
-
-**Checkpoint**: Video analysis pipeline operational
-
-### Phase 3: Frontend Integration
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.1 | Enable video capture in InterviewPage | 2h |
-| 3.2 | Add video preview during recording | 1h |
-| 3.3 | Upload video with audio | 1h |
-| 3.4 | Display video feedback on FeedbackPage | 2h |
-| 3.5 | Handle camera permission UX | 1h |
-
-**Checkpoint**: Full video analysis user flow working
-
----
-
-## Testing Strategy
-
-### Unit Tests (Epic 2 focus)
-- Target: 75% coverage on core API modules
-- Mock external services (Stripe, OpenAI, Anthropic)
-- Use factory fixtures for test data
-
-### Integration Tests
-- Full request-response cycle with database
-- Test state machine transitions (interview status)
-- Test cascade operations (delete user → cleanup)
-
-### E2E Tests (Future)
-- Register → Interview → Feedback flow
-- Subscription checkout → upgrade flow
-
----
-
-## Risks & Mitigations
-
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Sample answer quality inconsistent | Medium | Medium | Use templates, review for consistency |
-| Email delivery fails in production | High | Low | Use established provider (SendGrid), test thoroughly |
-| Video processing too slow | Medium | Medium | Process async, show progress indicator |
-| Test coverage slows development | Low | Low | Focus on high-risk modules first |
-
----
-
-# Sprint 4: Technical Debt Payback (NEW)
-
----
-
-# Epic 1: Fix Linting Errors
-
-## Goal
-Eliminate all linting errors to establish clean code standards and prevent potential bugs.
-
-## Context
-- Backend: 158 Ruff errors (61 auto-fixable)
-- Frontend: 28 ESLint issues (19 errors, 9 warnings)
-- Key issues: trailing whitespace, unused imports, React hook dependencies
-
-## Success Criteria
-- [x] Backend: 0 Ruff errors ✅
-- [x] Frontend: 0 ESLint errors ✅
-- [x] Pre-commit hooks passing ✅
-
-## Implementation Plan
-
-### Phase 1: Backend Auto-Fixes (30 min)
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1 | Run `ruff check --fix app/` to auto-fix 61 errors | 15m |
-| 1.2 | Run `ruff format app/` for consistent formatting | 15m |
-
-**Checkpoint**: ~97 errors remaining (manual fixes needed)
-
-### Phase 2: Backend Manual Fixes (2h)
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1 | Fix trailing whitespace in feedback_service.py | 15m |
-| 2.2 | Refactor late imports in email_service.py, dependencies.py | 30m |
-| 2.3 | Fix late import in api/feedback.py (line 321) | 15m |
-| 2.4 | Update Optional[X] to X \| None syntax (Python 3.12+) | 30m |
-| 2.5 | Remove unused imports across modules | 30m |
-
-**Checkpoint**: 0 backend linting errors
-
-### Phase 3: Frontend Fixes (2h)
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.1 | Fix useAuth.tsx: remove unused 'error', fix try/catch wrappers | 30m |
-| 3.2 | Fix useOnboarding.ts: remove unused '_userId' param | 15m |
-| 3.3 | Fix DashboardPage.tsx: add loadData to useEffect deps | 30m |
-| 3.4 | Fix FeedbackPage.tsx: add loadFeedback to useEffect deps | 15m |
-| 3.5 | Fix RegisterPage.tsx: type 'any' to specific type | 15m |
-| 3.6 | Fix react-refresh warnings in hooks (export refactor) | 15m |
-
-**Checkpoint**: 0 frontend linting errors
-
----
-
-# Epic 2: Backend Test Coverage to 75%
-
-## Goal
-Increase backend test coverage from 67% to 75% for deployment confidence.
-
-## Context
-Current coverage gaps (from audit):
-- `api/feedback.py`: 44% (target 75%)
-- `api/interviews.py`: 40% (target 75%)
-- `api/auth.py`: 40% (target 75%)
-- `middleware/rate_limit.py`: 33% (target 60%)
-- `services/interview_service.py`: 58% (target 75%)
-
-## Success Criteria
-- [ ] Overall coverage: 75%+
-- [ ] api/feedback.py: 75%+
-- [ ] api/interviews.py: 75%+
-- [ ] api/auth.py: 75%+
-- [ ] All 188+ tests passing
-
-## Implementation Plan
-
-### Phase 1: Feedback API Tests (2h)
 | Task | Description | Agent | Est |
 |------|-------------|-------|-----|
-| 1.1 | Test GET /feedback/session/{id}/all endpoint | qa-test-guardian | 30m |
-| 1.2 | Test GET /feedback/response/{id} endpoint | qa-test-guardian | 30m |
-| 1.3 | Test POST /feedback/generate/response/{id} | qa-test-guardian | 30m |
-| 1.4 | Test authorization (wrong user access 403) | qa-test-guardian | 30m |
+| 1.1 | Create mock factories for MediaRecorder, MediaStream, Audio | qa-test-guardian | 1h |
+| 1.2 | Test initial state and state transitions | qa-test-guardian | 1h |
+| 1.3 | Test recording flow (start, pause, resume, stop) | qa-test-guardian | 1h |
+| 1.4 | Test preview flow and cleanup on unmount | qa-test-guardian | 1h |
 
-**Checkpoint**: api/feedback.py coverage ≥ 75%
+**Mocks Required:**
+```typescript
+// Mock MediaRecorder
+class MockMediaRecorder {
+  state = 'inactive';
+  start = vi.fn(() => { this.state = 'recording'; });
+  stop = vi.fn(() => { this.state = 'inactive'; this.onstop?.(); });
+  pause = vi.fn(() => { this.state = 'paused'; });
+  resume = vi.fn(() => { this.state = 'recording'; });
+  ondataavailable: ((e: { data: Blob }) => void) | null = null;
+  onstop: (() => void) | null = null;
+}
 
-### Phase 2: Interviews API Tests (2h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Test POST /interviews with all options | qa-test-guardian | 30m |
-| 2.2 | Test interview state transitions (start, end) | qa-test-guardian | 30m |
-| 2.3 | Test GET /interviews/{id}/questions ordering | qa-test-guardian | 30m |
-| 2.4 | Test quota enforcement edge cases | qa-test-guardian | 30m |
+// Mock navigator.mediaDevices
+const mockMediaStream = {
+  getTracks: () => [{ stop: vi.fn() }],
+};
 
-**Checkpoint**: api/interviews.py coverage ≥ 75%
-
-### Phase 3: Auth API Tests (1.5h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 3.1 | Test token validation edge cases | qa-test-guardian | 30m |
-| 3.2 | Test malformed token handling | qa-test-guardian | 30m |
-| 3.3 | Test concurrent token refresh | qa-test-guardian | 30m |
-
-**Checkpoint**: api/auth.py coverage ≥ 75%
-
-### Phase 4: Rate Limiting Tests (1h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 4.1 | Test request blocking when limit exceeded | qa-test-guardian | 30m |
-| 4.2 | Test limit reset after window | qa-test-guardian | 30m |
-
-**Checkpoint**: middleware/rate_limit.py coverage ≥ 60%
-
-### Phase 5: Service Layer Tests (2h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 5.1 | Test interview_service state transitions | qa-test-guardian | 1h |
-| 5.2 | Test feedback_service aggregation logic | qa-test-guardian | 1h |
-
-**Checkpoint**: Overall backend coverage ≥ 75%
-
----
-
-# Epic 3: Frontend Test Infrastructure
-
-## Goal
-Establish frontend test infrastructure and achieve 30% coverage.
-
-## Context
-- Current: 0% coverage (6 tests in 2 files)
-- Infrastructure exists: Vitest, RTL, MSW configured
-- Missing: Hook tests, component tests, MSW handlers
-
-## Success Criteria
-- [ ] Frontend coverage: 30%+
-- [ ] All 4 hooks tested
-- [ ] Critical pages tested (Dashboard, Interview, Feedback)
-- [ ] MSW handlers for all API endpoints
-
-## Implementation Plan
-
-### Phase 1: Test Infrastructure Setup (2h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 1.1 | Create test utilities with AuthProvider wrapper | frontend-builder | 30m |
-| 1.2 | Add MSW handlers for 15+ missing endpoints | frontend-builder | 1h |
-| 1.3 | Create mock data factories | frontend-builder | 30m |
-
-**Checkpoint**: Test infrastructure complete
-
-### Phase 2: Hook Tests (4h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Test useAuth: login, logout, register, token refresh | qa-test-guardian | 1.5h |
-| 2.2 | Test useAudioRecording: start, stop, permission handling | qa-test-guardian | 1.5h |
-| 2.3 | Test useToast: show, dismiss, auto-dismiss | qa-test-guardian | 30m |
-| 2.4 | Test useOnboarding: state persistence | qa-test-guardian | 30m |
-
-**Checkpoint**: All hooks tested, ~15% coverage
-
-### Phase 3: Critical Page Tests (6h)
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 3.1 | Test LoginPage: form validation, submission, errors | qa-test-guardian | 1h |
-| 3.2 | Test RegisterPage: form validation, experience selection | qa-test-guardian | 1h |
-| 3.3 | Test DashboardPage: stats loading, session list, modals | qa-test-guardian | 2h |
-| 3.4 | Test FeedbackPage: feedback display, sample answer modal | qa-test-guardian | 2h |
-
-**Checkpoint**: Critical pages tested, ~30% coverage
-
----
-
-# Epic 4: Real-Time AI Coaching Hints ✅ COMPLETE
-
-## Status: Complete
-## Completed: 2025-12-20
-## Total Effort: ~11 hours
-
-## Goal
-Replace static coaching hints with dynamic, contextual AI-generated hints based on live transcript analysis during interviews.
-
-## Context
-**Current State:**
-- `CoachOverlay`: Shows static hints based on question type (behavioral → STAR, technical → approach, etc.)
-- `RecordingDeck`: Has live transcript via browser Speech Recognition API (stored in `transcript` state)
-- Backend: Uses Claude Haiku 4.5 for post-interview analysis (not real-time)
-- OpenRouter integration already exists in backend for content analysis
-
-**Research Findings:**
-- **Fast Model Options:**
-  - Gemini 2.0 Flash: $0.10/M input, $0.40/M output, ~200ms latency (cheapest)
-  - GPT-4o mini: $0.15/M input, $0.60/M output, ~300ms latency (good balance)
-  - Claude Haiku 4.5: $1.00/M input, $5.00/M output, ~400ms latency (current, too expensive)
-  - Groq (Llama 3): Free tier, ~100ms latency (ultra-fast, but quality concerns)
-
-- **Cost Estimate:** ~500 tokens/hint × 5 hints = 2,500 tokens per session
-  - Gemini Flash: ~$0.001 per session
-  - GPT-4o mini: ~$0.002 per session
-
-**Recommended Architecture: Option A (Frontend Streaming)**
-- RecordingDeck (transcript) → Debounce (2s) → Frontend API call → Streaming response → CoachOverlay
-- Pros: Low latency, no backend changes needed
-- Cons: API key exposure (use proxy or edge function)
-
-**Alternative: Option B (Backend WebSocket)**
-- Frontend → WebSocket → Backend → LLM → Streaming back → CoachOverlay
-- Pros: Secure API keys, server-side rate limiting
-- Cons: More complex, WebSocket management
-
-## Success Criteria
-- [x] Dynamic hints generated from live transcript context ✅
-- [x] Hints update every 2s of silence or 50+ new words ✅
-- [x] Streaming response for low latency (<500ms) ✅
-- [x] Cost-effective: <$0.01 per interview session ✅ (actual: $0.00025)
-- [x] Fallback to static hints if AI unavailable ✅
-
-## Implementation Plan
-
-### Phase 1: Backend Coaching Endpoint (3h)
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 1.1 | Create `/api/v1/coaching/hint` endpoint | backend-builder | 1h | ✅ Done |
-| 1.2 | Integrate Gemini 2.0 Flash via OpenRouter | backend-builder | 1h | ✅ Done |
-| 1.3 | Add streaming response support | backend-builder | 1h | ✅ Done |
-| 1.4 | Add rate limiting (5 hints/min per user) | backend-builder | 30m | ✅ Done |
-
-**Checkpoint**: Endpoint returns contextual hints from question + transcript
-
-### Phase 2: Frontend Integration (4h)
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 2.1 | Add debounced hint generation hook | frontend-builder | 1h | ✅ Done |
-| 2.2 | Connect RecordingDeck transcript to hook | frontend-builder | 30m | ✅ Done |
-| 2.3 | Update CoachOverlay to show dynamic hints | frontend-builder | 1.5h | ✅ Done |
-| 2.4 | Add loading state and error fallback | frontend-builder | 1h | ✅ Done |
-
-**Checkpoint**: Dynamic hints appear in CoachOverlay during recording ✅
-
-### Phase 3: Streaming & UX Polish (2h)
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 3.1 | Implement streaming hint display | frontend-builder | 1h | ✅ Done |
-| 3.2 | Add hint quality indicators (confidence) | frontend-builder | 30m | ✅ Done |
-| 3.3 | Test with various question types | qa-test-guardian | 30m | ✅ Done |
-
-**Checkpoint**: Smooth streaming hints with good UX ✅
-
-### Phase 4: Testing & Optimization (2h)
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 4.1 | Add unit tests for hint generation | qa-test-guardian | 1h | ✅ Done |
-| 4.2 | Test rate limiting and error handling | qa-test-guardian | 30m | ✅ Done |
-| 4.3 | Monitor costs and optimize prompt | backend-builder | 30m | ✅ Done |
-
-**Checkpoint**: Tests passing, costs validated ✅
-
-**Total Estimated Effort**: ~11 hours
-
----
-
-## Technical Details
-
-### Hint Generation Prompt Template
-```
-You are an interview coach. Based on the question and the candidate's current answer transcript, provide a brief, actionable hint (1-2 sentences) to help them improve their answer.
-
-Question: {question_text}
-Question Type: {question_type}
-Current Transcript: {transcript}
-
-Provide a specific, contextual hint. Focus on:
-- For behavioral: STAR structure, quantifying results, personal contribution
-- For technical: Problem clarification, approach explanation, edge cases
-- For system design: Requirements, scalability, trade-offs
-
-Hint (max 100 words):
+// Mock Audio element
+const mockAudio = {
+  play: vi.fn().mockResolvedValue(undefined),
+  pause: vi.fn(),
+  currentTime: 0,
+  duration: 60,
+  onloadedmetadata: null,
+  ontimeupdate: null,
+  onended: null,
+};
 ```
 
-### Debounce Strategy
-- Trigger hint generation after:
-  - 2 seconds of silence (no new transcript words)
-  - OR 50+ new words added to transcript
-- Cancel pending requests if new transcript arrives
+**Test Cases:**
+1. Initial state is 'idle' with null values
+2. `startRecording()` requests microphone permission
+3. `startRecording()` handles permission denied error
+4. `startRecording()` creates MediaRecorder and starts timer
+5. `stopRecording()` creates blob and enters preview mode
+6. `pauseRecording()` pauses recorder and timer
+7. `resumeRecording()` resumes recorder and timer
+8. `resetRecording()` clears all state and resources
+9. Preview mode creates Audio element
+10. `playPreview()` plays audio
+11. `pausePreview()` pauses audio
+12. `clearPreview()` returns to idle state
+13. `confirmRecording()` returns audioBlob
+14. Cleanup on unmount revokes object URLs
+15. Error handling for unsupported browsers
 
-### Error Handling
-- If AI service unavailable: Fall back to static hints
-- If rate limit exceeded: Show cached hint or static hint
-- If streaming fails: Show full hint when complete
+**Checkpoint**: `useAudioRecording` hook fully tested
+
+### Phase 2: API Endpoint Tests (6h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Add feedback.py tests (generate, get, list) | qa-test-guardian | 2h |
+| 2.2 | Add interviews.py tests (lifecycle, responses) | qa-test-guardian | 2h |
+| 2.3 | Add auth.py tests (refresh, password reset edge cases) | qa-test-guardian | 1.5h |
+| 2.4 | Run coverage report and fill gaps | qa-test-guardian | 30m |
+
+**Feedback API Tests to Add:**
+- `test_get_session_feedback_returns_all_responses`
+- `test_get_session_feedback_not_found`
+- `test_get_response_feedback_not_found`
+- `test_generate_feedback_requires_transcript`
+- `test_feedback_unauthorized_access`
+
+**Interviews API Tests to Add:**
+- `test_create_interview_with_target_company`
+- `test_start_interview_already_started`
+- `test_end_interview_already_ended`
+- `test_submit_response_interview_not_started`
+- `test_quota_enforcement_free_tier`
+- `test_quota_reset_monthly`
+
+**Auth API Tests to Add:**
+- `test_refresh_token_expired`
+- `test_refresh_token_reused`
+- `test_password_reset_token_expired`
+- `test_password_reset_token_already_used`
+- `test_login_user_not_found`
+
+**Checkpoint**: Backend coverage at 73%+
 
 ---
 
-## Risks & Mitigations
-
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| API costs exceed budget | Medium | Low | Use Gemini Flash, rate limit strictly |
-| Latency too high | Medium | Medium | Use streaming, debounce intelligently |
-| API key exposure (frontend) | High | Medium | Use backend proxy or edge function |
-| Quality of hints poor | Medium | Low | Test prompts, add fallback to static |
-
----
-
-# Epic 5: E2E Test Suite ✅ COMPLETE
-
-## Status: Complete
-## Completed: 2025-12-20
-## Total Effort: ~10 hours
+# Epic 2: Delivery Practice (Epic 6 Phase 2)
 
 ## Goal
-Add Playwright E2E tests for critical user journeys.
-
-## Success Criteria
-- [x] 5-10 E2E tests covering critical flows ✅
-- [x] Tests run in CI pipeline ✅
-
-## Implementation Plan
-
-### Phase 1: Setup (2h)
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 1.1 | Install and configure Playwright | devops-deployer | 1h | ✅ Done |
-| 1.2 | Create test fixtures and helpers | qa-test-guardian | 1h | ✅ Done |
-
-### Phase 2: Critical Journeys (8h)
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 2.1 | Test: Register → Dashboard | qa-test-guardian | 2h | ✅ Done |
-| 2.2 | Test: Login → Create Interview → Record → Feedback | qa-test-guardian | 3h | ✅ Done |
-| 2.3 | Test: Password Reset Flow | qa-test-guardian | 1.5h | ✅ Done |
-| 2.4 | Test: Subscription Checkout | qa-test-guardian | 1.5h | ✅ Done |
-
-**Checkpoint**: Critical user journeys validated ✅
-
----
-
-# Epic 6: AI Ghostwriter - Answer Preparation System
-
-## Status: Phase 1 Complete
-## Completed: 2025-12-20
-## Priority: P1 (High Value)
-
----
-
-## Goal
-Create a multi-stage AI-powered preparation system that helps users learn how to structure interview answers through personalized, experience-grounded coaching.
+Enable users to practice delivering their AI-generated drafts with audio recording.
 
 ## Context
-**Current State:**
-- Users can practice interviews and receive post-interview feedback
-- Sample answers exist for reference
-- Real-time coaching hints available during practice (Epic 4)
-- **Gap**: No structured way to prepare answers before practice
-
-**User Problem:**
-- Users don't know how to structure answers (especially STAR method)
-- Generic templates don't work for personal experiences
-- No guided process to prepare personalized answers
-- Users memorize instead of learning patterns
-
-**Solution:**
-Multi-stage AI system that:
-1. **Detective Stage**: Fast model asks clarifying questions to gather context
-2. **Ghostwriter Stage**: Smart model drafts personalized STAR response
-3. **Delivery Practice**: User practices delivering the draft
-4. **Rating Stage**: AI rates delivery and provides improvement feedback
+- PreparationPage already has draft generation (Phase 1 complete)
+- RecordingDeck component exists for audio recording
+- Need to integrate practice session with preparation flow
 
 ## Success Criteria
-- [x] Users can start answer preparation for any question ✅
-- [x] Detective stage asks 3-5 relevant clarifying questions ✅
-- [x] Ghostwriter generates personalized STAR-formatted draft ✅
-- [ ] Users can practice delivering the draft (multiple takes) - Phase 2
-- [ ] AI rates delivery vs draft and shows comparison - Phase 3
-- [ ] Users can iterate (refine draft or re-record) - Phase 4
-- [ ] Progress tracking shows improvement over time - Phase 3
-- [x] Cost per preparation session: <$0.05 ✅ (actual: ~$0.01-0.02)
-- [x] Feature limited to Pro/Premium tiers ✅
+- [ ] Users can start practice from PreparationPage
+- [ ] Recording integrates with existing RecordingDeck
+- [ ] Practice attempts saved to database
+- [ ] Multiple attempts allowed with history
 
 ## Technical Design
 
-### Architecture Overview
-```
-┌─────────────────────────────────────────────────────────┐
-│         AI Ghostwriter Multi-Stage Flow                  │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  Stage 1: Detective (Fast Model)                       │
-│  ┌────────────────────────────────────┐                 │
-│  │ Gemini 2.0 Flash                  │                 │
-│  │ - Asks 3-5 clarifying questions  │                 │
-│  │ - Chat interface                  │                 │
-│  │ - Cost: ~$0.001 per session       │                 │
-│  └────────────────────────────────────┘                 │
-│                        ↓                                 │
-│  Stage 2: Ghostwriter (Smart Model)                      │
-│  ┌────────────────────────────────────┐                 │
-│  │ Claude Haiku 4.5                  │                 │
-│  │ - Drafts personalized STAR answer  │                 │
-│  │ - Uses Q&A context + user level    │                 │
-│  │ - Cost: ~$0.01-0.02 per draft     │                 │
-│  └────────────────────────────────────┘                 │
-│                        ↓                                 │
-│  Stage 3: Delivery Practice                              │
-│  ┌────────────────────────────────────┐                 │
-│  │ Reuses existing infrastructure    │                 │
-│  │ - RecordingDeck component         │                 │
-│  │ - Audio analysis (Librosa)        │                 │
-│  │ - Cost: $0 (existing)             │                 │
-│  └────────────────────────────────────┘                 │
-│                        ↓                                 │
-│  Stage 4: Rating & Comparison                             │
-│  ┌────────────────────────────────────┐                 │
-│  │ Extends existing feedback service  │                 │
-│  │ - Compares delivery to draft       │                 │
-│  │ - Provides improvement suggestions │                 │
-│  │ - Cost: ~$0.01 per rating         │                 │
-│  └────────────────────────────────────┘                 │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
-
 ### Data Models
 
-**New Models:**
 ```python
-class AnswerPreparation(SQLModel, table=True):
-    """Tracks answer preparation sessions."""
-    id: UUID
-    user_id: UUID
-    question_id: UUID
-    stage: str  # 'detective', 'draft', 'practice', 'complete'
-    draft_answer: str | None
-    created_at: datetime
-    updated_at: datetime
-
-class PreparationQnA(SQLModel, table=True):
-    """Stores Q&A from detective stage."""
-    id: UUID
-    preparation_id: UUID
-    question: str
-    answer: str
-    order: int
-    created_at: datetime
-
+# Already exists in models/preparation.py
 class DeliveryAttempt(SQLModel, table=True):
-    """Tracks practice delivery attempts."""
-    id: UUID
-    preparation_id: UUID
-    audio_url: str
-    transcript: str
-    delivery_score: float
-    comparison_feedback: str
-    created_at: datetime
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    preparation_id: UUID = Field(foreign_key="answerpreparation.id")
+    audio_url: str | None = None
+    transcript: str | None = None
+    delivery_score: float | None = None
+    comparison_feedback: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 ```
 
 ### API Contracts
 
-**Preparation Endpoints:**
 ```
-POST   /api/v1/preparation/start
-  Body: { question_id: UUID }
-  Response: { preparation_id: UUID, stage: "detective" }
+POST /api/v1/preparation/{id}/practice/start
+  Response: { attempt_id: UUID, stage: "practice" }
 
-POST   /api/v1/preparation/{id}/detective/question
-  Response: { question: str, order: int }
+POST /api/v1/preparation/{id}/practice/submit
+  Body: { audio_url: str }
+  Response: { attempt_id: UUID, transcript: str, stage: "rating" }
 
-POST   /api/v1/preparation/{id}/detective/answer
-  Body: { answer: str }
-  Response: { next_question: str | null, stage: "draft" | "detective" }
-
-POST   /api/v1/preparation/{id}/generate-draft
-  Response: { draft_answer: str, stage: "practice" }
-
-GET    /api/v1/preparation/{id}/draft
-  Response: { draft_answer: str }
-
-POST   /api/v1/preparation/{id}/practice/start
-  Response: { attempt_id: UUID }
-
-POST   /api/v1/preparation/{id}/practice/submit
-  Body: { audio_url: str, transcript: str }
-  Response: { attempt_id: UUID, stage: "rating" }
-
-POST   /api/v1/preparation/{id}/rate-delivery
-  Body: { attempt_id: UUID }
-  Response: { delivery_score: float, comparison_feedback: str, stage: "complete" }
-
-GET    /api/v1/preparation/{id}/comparison
-  Response: { draft: str, delivery: str, score: float, feedback: str }
+GET /api/v1/preparation/{id}/attempts
+  Response: { attempts: DeliveryAttempt[] }
 ```
-
-### Dependencies
-- **Existing**: RecordingDeck component, FeedbackService, ContentAnalyzer
-- **New**: Detective Q&A chat interface, Draft review UI, Comparison view
-- **AI Models**: Gemini 2.0 Flash (detective), Claude Haiku 4.5 (draft + rating)
-- **Database**: New tables for AnswerPreparation, PreparationQnA, DeliveryAttempt
-
----
 
 ## Implementation Plan
 
-### Phase 1: MVP - Detective + Draft (2-3 weeks)
-**Goal**: Validate concept with core functionality
-
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 1.1 | Create Alembic migration for new models | backend-engineer | 1h | ✅ Done |
-| 1.2 | Create AnswerPreparation, PreparationQnA models | backend-engineer | 1h | ✅ Done |
-| 1.3 | Create POST /preparation/start endpoint | backend-engineer | 1h | ✅ Done |
-| 1.4 | Implement detective Q&A API (Gemini Flash) | backend-engineer | 2h | ✅ Done |
-| 1.5 | Implement ghostwriter draft API (Haiku 4.5) | backend-engineer | 2h | ✅ Done |
-| 1.6 | Add tier check (Pro/Premium only) | backend-engineer | 30m | ✅ Done |
-| 1.7 | Create PreparationPage frontend component | frontend-builder | 2h | ✅ Done |
-| 1.8 | Build detective Q&A chat interface | frontend-builder | 2h | ✅ Done |
-| 1.9 | Build draft review/editing UI | frontend-builder | 1.5h | ✅ Done |
-| 1.10 | Add "Prepare Answer" button to question cards | frontend-builder | 30m | ✅ Done |
-| 1.11 | Write tests for preparation API | qa-test-guardian | 2h | ✅ Done |
-| 1.12 | Write tests for detective Q&A flow | qa-test-guardian | 1h | ✅ Done |
-
-**Checkpoint**: Users can get AI-generated drafts from Q&A ✅
-
-### Phase 2: Delivery Practice (1-2 weeks)
-**Goal**: Enable users to practice delivering drafts
+### Phase 1: Backend Practice API (4h)
 
 | Task | Description | Agent | Est |
 |------|-------------|-------|-----|
-| 2.1 | Create DeliveryAttempt model | backend-engineer | 30m |
-| 2.2 | Create Alembic migration for DeliveryAttempt | backend-engineer | 30m |
-| 2.3 | Integrate RecordingDeck into PreparationPage | frontend-builder | 1h |
-| 2.4 | Add practice session management | backend-engineer | 1h |
-| 2.5 | Create POST /preparation/{id}/practice/submit | backend-engineer | 1h |
-| 2.6 | Add practice attempt tracking UI | frontend-builder | 1h |
-| 2.7 | Allow multiple practice attempts | frontend-builder | 1h |
-| 2.8 | Write tests for practice flow | qa-test-guardian | 1h |
+| 1.1 | Create Alembic migration for DeliveryAttempt (if needed) | backend-engineer | 30m |
+| 1.2 | Add POST /preparation/{id}/practice/start endpoint | backend-engineer | 1h |
+| 1.3 | Add POST /preparation/{id}/practice/submit endpoint | backend-engineer | 1.5h |
+| 1.4 | Add GET /preparation/{id}/attempts endpoint | backend-engineer | 30m |
+| 1.5 | Add tests for practice endpoints | qa-test-guardian | 30m |
+
+**Checkpoint**: Practice API endpoints available
+
+### Phase 2: Frontend Integration (6h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Add practice stage UI to PreparationPage | frontend-builder | 2h |
+| 2.2 | Integrate RecordingDeck for practice recording | frontend-builder | 2h |
+| 2.3 | Add attempt history display | frontend-builder | 1h |
+| 2.4 | Wire submit to transcription and storage | frontend-builder | 1h |
 
 **Checkpoint**: Users can practice delivering drafts
 
-### Phase 3: Rating & Comparison (1-2 weeks)
-**Goal**: Complete feature with delivery rating and feedback
+---
+
+# Epic 3: Rating & Comparison (Epic 6 Phase 3)
+
+## Goal
+Rate user delivery against their draft and provide improvement feedback.
+
+## Context
+- After practice, user has: draft (AI-generated) + delivery (transcribed)
+- Need to compare and provide actionable feedback
+- Track improvement over multiple attempts
+
+## Success Criteria
+- [ ] Delivery rated on STAR adherence, completeness
+- [ ] Side-by-side comparison UI (draft vs delivery)
+- [ ] Improvement suggestions provided
+- [ ] Progress tracked across attempts
+
+## Technical Design
+
+### Rating Logic
+
+```python
+async def rate_delivery(
+    preparation_id: UUID,
+    attempt_id: UUID,
+    draft: str,
+    delivery_transcript: str,
+) -> dict:
+    """Compare delivery to draft and rate."""
+    prompt = f"""
+    Compare this interview answer delivery to the prepared draft.
+
+    DRAFT (what they planned to say):
+    {draft}
+
+    DELIVERY (what they actually said):
+    {delivery_transcript}
+
+    Rate on:
+    1. Content Coverage (0-100): Did they hit all STAR components?
+    2. Key Points (0-100): Did they include the main points from draft?
+    3. Flow & Structure (0-100): Was the delivery logical and clear?
+
+    Provide:
+    - Overall score (0-100)
+    - 3 strengths of delivery
+    - 3 improvements needed
+    - Specific suggestions
+    """
+    # Use Claude Haiku for analysis
+```
+
+### API Contracts
+
+```
+POST /api/v1/preparation/{id}/rate-delivery
+  Body: { attempt_id: UUID }
+  Response: {
+    delivery_score: float,
+    comparison_feedback: str,
+    strengths: str[],
+    improvements: str[],
+    stage: "complete"
+  }
+
+GET /api/v1/preparation/{id}/comparison
+  Body: { attempt_id: UUID }
+  Response: {
+    draft: str,
+    delivery: str,
+    score: float,
+    feedback: str
+  }
+```
+
+## Implementation Plan
+
+### Phase 1: Rating Backend (4h)
 
 | Task | Description | Agent | Est |
 |------|-------------|-------|-----|
-| 3.1 | Extend FeedbackService for draft comparison | backend-engineer | 2h |
-| 3.2 | Create POST /preparation/{id}/rate-delivery | backend-engineer | 2h |
-| 3.3 | Implement delivery vs draft comparison logic | backend-engineer | 2h |
-| 3.4 | Create comparison view UI | frontend-builder | 2h |
-| 3.5 | Add improvement suggestions display | frontend-builder | 1h |
-| 3.6 | Add progress tracking (improvement over time) | backend-engineer | 2h |
-| 3.7 | Create progress visualization | frontend-builder | 1.5h |
-| 3.8 | Write tests for rating/comparison | qa-test-guardian | 2h |
+| 1.1 | Create rating service with Claude Haiku | backend-engineer | 2h |
+| 1.2 | Add POST /preparation/{id}/rate-delivery endpoint | backend-engineer | 1h |
+| 1.3 | Add GET /preparation/{id}/comparison endpoint | backend-engineer | 30m |
+| 1.4 | Add tests for rating endpoints | qa-test-guardian | 30m |
 
-**Checkpoint**: Complete feature with all stages
+**Checkpoint**: Rating API available
 
-### Phase 4: Polish & Optimization (1 week)
-**Goal**: Improve UX and optimize costs
+### Phase 2: Comparison UI (6h)
 
 | Task | Description | Agent | Est |
 |------|-------------|-------|-----|
-| 4.1 | Add draft editing capability | frontend-builder | 2h |
-| 4.2 | Add iteration flow (refine draft or re-record) | frontend-builder | 1.5h |
-| 4.3 | Optimize AI prompts for cost/quality | backend-engineer | 1h |
-| 4.4 | Add caching for common clarifying questions | backend-engineer | 1h |
-| 4.5 | Add loading states and error handling | frontend-builder | 1h |
-| 4.6 | Add analytics tracking | backend-engineer | 1h |
-| 4.7 | Performance testing and optimization | performance-optimizer | 2h |
+| 2.1 | Create ComparisonView component | frontend-builder | 2h |
+| 2.2 | Add side-by-side diff view | frontend-builder | 2h |
+| 2.3 | Display scores and feedback | frontend-builder | 1h |
+| 2.4 | Add progress tracking across attempts | frontend-builder | 1h |
 
-**Checkpoint**: Polished, optimized feature ready for launch
+**Checkpoint**: Complete rating and comparison flow
 
-**Total Estimated Effort**: 4-6 weeks (full implementation)  
-**MVP Effort**: 2-3 weeks (Phases 1-2 only)
+---
+
+# Epic 4: Polish & Optimization (Epic 6 Phase 4)
+
+## Goal
+Polish the Ghostwriter feature for production launch.
+
+## Success Criteria
+- [ ] Draft editing capability
+- [ ] Iteration flow (refine draft, re-record)
+- [ ] AI prompts optimized for cost/quality
+- [ ] Caching for common questions
+- [ ] Loading states and error handling polished
+
+## Implementation Plan
+
+### Phase 1: Draft Editing (3h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Add draft editing UI to PreparationPage | frontend-builder | 1.5h |
+| 1.2 | Add PATCH /preparation/{id}/draft endpoint | backend-engineer | 1h |
+| 1.3 | Add save/cancel functionality | frontend-builder | 30m |
+
+**Checkpoint**: Users can edit drafts
+
+### Phase 2: Iteration Flow (3h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Add "Try Again" button after rating | frontend-builder | 1h |
+| 2.2 | Add "Refine Draft" button | frontend-builder | 1h |
+| 2.3 | Track iteration count on attempts | backend-engineer | 1h |
+
+**Checkpoint**: Users can iterate
+
+### Phase 3: Optimization (4h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Optimize AI prompts for token efficiency | backend-engineer | 1h |
+| 3.2 | Add caching for detective questions | backend-engineer | 1h |
+| 3.3 | Polish loading states and transitions | frontend-builder | 1h |
+| 3.4 | Add error recovery UX | frontend-builder | 1h |
+
+**Checkpoint**: Feature production-ready
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests
-- **Backend**: Preparation service, detective Q&A logic, draft generation
-- **Frontend**: PreparationPage components, chat interface, draft editor
-- **Target**: 75% coverage on new code
+### Unit Tests (Epic 1)
+- **useAudioRecording**: 30+ tests for all states and transitions
+- **Backend APIs**: Cover edge cases, error paths, authorization
+- **Target**: 73% overall backend coverage
 
 ### Integration Tests
-- Full preparation flow (start → detective → draft → practice → rating)
-- Tier enforcement (Free users blocked)
-- Multiple practice attempts
-- Draft comparison accuracy
+- Full preparation flow (detective → draft → practice → rating)
+- Multi-attempt tracking and history
+- Error recovery scenarios
 
-### E2E Tests (Future)
-- Complete preparation journey
-- Iteration flow (refine and re-record)
-- Progress tracking over time
+### E2E Tests (Existing)
+- 4 Playwright suites already cover core flows
+- May add Ghostwriter-specific E2E if needed
 
 ---
 
@@ -924,191 +390,68 @@ GET    /api/v1/preparation/{id}/comparison
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Users just copy AI answers | High | Medium | Require delivery practice, track improvement |
-| Multi-stage UX overwhelming | Medium | Medium | Progressive disclosure, clear progress indicators |
-| Cost exceeds projections | Medium | Low | Tier limits, caching, cost monitoring |
-| Technical complexity delays launch | High | Medium | MVP approach, defer to post-launch |
-| Ethical concerns (cheating) | High | Low | Clear messaging, require practice, no real-time use |
-| AI quality inconsistent | Medium | Medium | Test prompts, add fallback, user feedback loop |
-
----
-
-## Cost Analysis
-
-### Per Preparation Session
-| Stage | Model | Tokens | Cost |
-|-------|-------|--------|------|
-| Detective (3-5 Qs) | Gemini Flash | 1,500-2,500 | $0.001-0.002 |
-| Ghostwriter (Draft) | Haiku 4.5 | ~3,000 | $0.01-0.02 |
-| Delivery Practice | Existing | 0 | $0 |
-| Rating | Haiku 4.5 | ~2,000 | $0.01 |
-| **Total** | | | **~$0.02-0.04** |
-
-### Monthly Projections
-- **100 users, 10 sessions each**: 1,000 × $0.03 = **$30/month**
-- **500 users, 5 sessions each**: 2,500 × $0.03 = **$75/month**
-- **Manageable** with Pro tier pricing ($29/month covers costs)
-
-### Cost Optimization
-- Cache common clarifying questions
-- Reuse drafts for similar questions
-- Batch processing for ratings
-- Use cheaper models where possible
-
----
-
-## Alternative: Quick Prep MVP (1-2 weeks)
-
-**Simpler approach for faster validation:**
-
-1. **Single-Stage Draft Generation**
-   - User provides brief context (1-2 sentences)
-   - AI generates STAR-formatted draft
-   - User practices delivery
-   - Basic rating
-
-**Pros**: Much faster (1-2 weeks), lower complexity, validates concept  
-**Cons**: Less personalized, less teaching, lower differentiation
-
-**Recommendation**: Consider as **Phase 0** to validate concept before full implementation
-
----
-
-## Open Questions
-- [ ] Should users be able to edit AI-generated drafts?
-- [ ] How many practice attempts should be allowed?
-- [ ] Should preparation history be saved for review?
-- [ ] Should we show preparation progress on dashboard?
-- [ ] How to handle preparation for system design questions?
-
----
-
-## References
-- **Ghostwriter Feature Evaluation**: docs/GHOSTWRITER_FEATURE_EVALUATION.md
-- **Existing Feedback Service**: backend/app/services/feedback_service.py
-- **Coaching API**: backend/app/api/coaching.py (for reference on AI integration)
-
----
-
-## Testing Strategy
-
-### Unit Tests (Epics 2-3)
-- **Backend**: pytest with asyncio, 75% coverage target
-- **Frontend**: Vitest + RTL, 30% coverage target
-- **Focus**: Hooks, services, API endpoints
-
-### Integration Tests (Existing)
-- Database operations: ✅ Covered
-- External API mocks: ✅ Configured (Stripe, OpenAI, Claude)
-- Auth flow: ✅ Partial coverage
-
-### Real-Time Coaching (Epic 4)
-- **Backend**: Coaching endpoint with Gemini 2.0 Flash via OpenRouter
-- **Frontend**: Debounced hint generation, streaming display
-- **Focus**: Contextual hints based on live transcript
-
-### E2E Tests (Epic 5)
-- Tool: Playwright
-- Focus: Critical user journeys
-- Target: 5-10 tests
-
----
-
-## Risks & Mitigations
-
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Linting fixes break code | Medium | Low | Run tests after each fix batch |
-| Test coverage slows dev | Low | Low | Focus on high-risk modules only |
-| Frontend tests flaky | Medium | Medium | Use proper async handling, stable selectors |
-| MSW handlers incomplete | Low | Medium | Add handlers incrementally as needed |
-| AI coaching API costs exceed budget | Medium | Low | Use Gemini Flash, rate limit strictly |
-| Coaching hints latency too high | Medium | Medium | Use streaming, debounce intelligently |
+| MediaRecorder browser differences | Medium | Low | Test on Chrome, Firefox, Safari |
+| AI rating quality inconsistent | Medium | Medium | Test prompts thoroughly, add fallback |
+| Ghostwriter costs exceed budget | Low | Low | Tier limits, monitoring |
+| Test flakiness on audio mocks | Low | Medium | Use robust mock factories |
 
 ---
 
 ## Execution Order
 
-**Recommended sequence:**
+**Week 1:**
+1. Epic 1: Test Coverage Sprint (foundation)
 
-1. **Epic 1** (Linting) - Quick wins, clean foundation ✅
-2. **Epic 2** (Backend Tests) - Deployment confidence ✅
-3. **Epic 3** (Frontend Tests) - Regression protection ✅
-4. **Epic 4** (Real-Time AI Coaching) - User experience enhancement
-5. **Epic 5** (E2E Tests) - Future enhancement
-6. **Epic 6** (AI Ghostwriter) - Post-launch feature (after user feedback)
+**Week 2-3:**
+2. Epic 2: Delivery Practice
 
-**Estimated Total Effort**: 
-- Sprint 4 (Epics 1-3): ~25 hours ✅
-- Epic 4 (Real-Time Coaching): ~11 hours
-- Epic 5 (E2E Tests): ~10 hours
-- Epic 6 (AI Ghostwriter): ~4-6 weeks (full) or 2-3 weeks (MVP)
+**Week 4:**
+3. Epic 3: Rating & Comparison
 
----
+**Week 5:**
+4. Epic 4: Polish & Optimization
 
-## Completed Sprints
-
-### Sprint 2: Four Epics (Dec 2025) ✅ COMPLETE
-
-#### Epic 1: "Practice Like the Real Thing" ✅
-- Added target_company field for company-targeted interviews
-- Implemented readiness score calculation from last 5 sessions
-- Added sample answer modal on FeedbackPage
-- Company selector in NewInterviewModal
-
-**Commits:**
-- `174942b` feat(backend): add target_company field
-- `cf5d09d` feat(frontend): add company targeting UI
-- `e0f86e1` feat(backend): add interview readiness score endpoint
-- `c7ec79e` feat(frontend): add readiness score display
-- `fbe728e` feat(frontend): add sample answer modal
-
-#### Epic 2: Expand Question Bank ✅
-- Expanded to 105 questions (50 technical, 30 behavioral, 25 system design)
-- Company tags and topic tags on all questions
-
-**Commits:**
-- `394b90f` feat(questions): expand technical question bank to 50 questions
-
-#### Epic 3: JWT Refresh Token System ✅
-- Refresh token stored in database with expiration
-- Token rotation on each refresh (security)
-- Frontend auto-refresh on 401 with request queuing
-
-**Commits:**
-- `6d4ae6b` feat(auth): implement JWT refresh token system with rotation
-- `6c94221` feat(frontend): add automatic JWT token refresh
-
-#### Epic 4: Backend Test Coverage ✅
-- Expanded from ~95 to 140 tests
-- Coverage improved to 66%
-
-**Commits:**
-- `a1f32c2` test: add comprehensive API tests for improved coverage
-
----
-
-### Sprint 1: "Feedback That Helps" (Dec 2025) ✅ COMPLETE
-
-- User experience level selection (junior/mid/senior)
-- Personalized AI feedback based on level
-- Improvement comparison vs user average
-- Score trend visualization
-
-**Commits:**
-- `f2bbad6` feat(user): add experience level
-- `5446f87` feat(frontend): add experience level selection
-- `7044b52` feat(feedback): personalize AI feedback
-- `24f65ef` feat(feedback): add improvement comparison
+**Total Estimated Effort:**
+- Epic 1: ~10 hours
+- Epic 2: ~10 hours
+- Epic 3: ~10 hours
+- Epic 4: ~10 hours
+- **Total: ~40 hours (1 week full-time or 2 weeks part-time)**
 
 ---
 
 ## References
 
-- **Codebase Audit**: docs/CODEBASE_AUDIT.md
-- **Design System**: docs/DESIGN_SYSTEM.md
-- **UI Flow**: docs/UI_SCREEN_FLOW.md
-- **Deployment**: docs/DEPLOYMENT.md
-- **Project Brief**: docs/project-brief.md
-- **Ghostwriter Feature Evaluation**: docs/GHOSTWRITER_FEATURE_EVALUATION.md
-- **Epic 5 & Epic 6 Completion Summary**: docs/EPIC5_EPIC6_COMPLETION_SUMMARY.md
+- **Codebase Audit**: docs/CODEBASE_AUDIT.md (2025-12-07)
+- **Epic 6 Design**: docs/GHOSTWRITER_FEATURE_EVALUATION.md
+- **E2E Completion**: docs/EPIC5_EPIC6_COMPLETION_SUMMARY.md
+- **Test Patterns**: frontend/src/hooks/__tests__/useAuth.test.tsx
+- **RecordingDeck Tests**: frontend/src/components/interview/__tests__/RecordingDeck.test.tsx
+
+---
+
+## Previous Sprints
+
+### Sprint 4: Technical Debt Payback ✅ COMPLETE
+- Fixed 158 backend linting errors → 0 errors
+- Fixed 28 frontend ESLint issues → 0 errors
+- Increased backend tests: 188 → 219+
+- Added 55 frontend tests (hooks 100% covered)
+- Epic 4: Real-Time AI Coaching ✅
+- Epic 5: E2E Test Suite ✅
+- Epic 6 Phase 1: AI Ghostwriter MVP ✅
+
+### Sprint 3: Sample Answers & Email ✅ COMPLETE
+- 60 questions with sample answers
+- Email service integrated with Resend
+
+### Sprint 2: Four Epics ✅ COMPLETE
+- Target company feature
+- Expanded question bank to 105
+- JWT refresh tokens
+- Test coverage to 67%
+
+### Sprint 1: Feedback That Helps ✅ COMPLETE
+- Experience level selection
+- Personalized AI feedback
+- Score visualization
