@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, AlertCircle, Search } from 'lucide-react';
-import { questionsAPI, interviewsAPI } from '../lib/api';
+import { questionsAPI, interviewsAPI, preparationAPI } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import QuestionCard from '../components/questions/QuestionCard';
 import QuestionFilters, { type QuestionFiltersState } from '../components/questions/QuestionFilters';
@@ -17,6 +18,7 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isPracticing, setIsPracticing] = useState(false);
+  const { user } = useAuth();
 
   const [filters, setFilters] = useState<QuestionFiltersState>({
     category: '',
@@ -111,6 +113,30 @@ export default function QuestionsPage() {
     setFilters(newFilters);
   }, []);
 
+  // Handle prepare answer
+  const handlePrepare = useCallback(
+    async (question: Question) => {
+      try {
+        const response = await preparationAPI.start(question.id);
+        const { preparation_id } = response.data;
+        toast.success('Preparation started', 'Answer the questions to get a personalized draft');
+        navigate(`/preparation/${preparation_id}`);
+      } catch (err: unknown) {
+        const error = err as { response?: { status?: number; data?: { message?: string } } };
+        if (error.response?.status === 402) {
+          setShowUpgradeModal(true);
+          toast.error('Upgrade required', 'Answer preparation is available for Pro and Premium subscribers');
+        } else {
+          toast.error('Error', error.response?.data?.message || 'Failed to start preparation');
+        }
+      }
+    },
+    [navigate, toast]
+  );
+
+  // Check if user has access to preparation feature
+  const canPrepare = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
+
   return (
     <div className="min-h-screen bg-surface-primary">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
@@ -195,6 +221,7 @@ export default function QuestionsPage() {
                 key={question.id}
                 question={question}
                 onPractice={handlePractice}
+                onPrepare={canPrepare ? handlePrepare : undefined}
               />
             ))}
           </div>

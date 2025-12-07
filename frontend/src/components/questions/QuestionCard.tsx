@@ -1,10 +1,11 @@
-import { Briefcase, Clock, Target, Play } from 'lucide-react';
+import { Briefcase, Clock, Target, Play, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { Question } from '../../types';
 
 interface QuestionCardProps {
   question: Question;
   onPractice: (question: Question) => void;
+  onPrepare?: (question: Question) => void;
 }
 
 const difficultyColors = {
@@ -25,7 +26,7 @@ const categoryColors = {
   system_design: 'bg-orange-100 text-orange-700',
 };
 
-export default function QuestionCard({ question, onPractice }: QuestionCardProps) {
+export default function QuestionCard({ question, onPractice, onPrepare }: QuestionCardProps) {
   const expectedMinutes = Math.ceil(question.expected_duration_seconds / 60);
 
   return (
@@ -84,19 +85,31 @@ export default function QuestionCard({ question, onPractice }: QuestionCardProps
         </div>
       )}
 
-      {/* Action Button */}
-      <div className="flex items-center justify-between pt-4 border-t border-border-light">
+      {/* Action Buttons */}
+      <div className="flex items-center justify-between pt-4 border-t border-border-light gap-2">
         <div className="flex items-center gap-2 text-sm text-text-tertiary">
           <Target size={14} />
           <span>Quick practice</span>
         </div>
-        <button
-          onClick={() => onPractice(question)}
-          className="btn-primary flex items-center gap-2 py-2 px-4"
-        >
-          <Play size={16} />
-          Practice
-        </button>
+        <div className="flex items-center gap-2">
+          {onPrepare && (
+            <button
+              onClick={() => onPrepare(question)}
+              className="btn-secondary flex items-center gap-2 py-2 px-4"
+              title="Prepare Answer (Pro/Premium)"
+            >
+              <Sparkles size={16} />
+              Prepare
+            </button>
+          )}
+          <button
+            onClick={() => onPractice(question)}
+            className="btn-primary flex items-center gap-2 py-2 px-4"
+          >
+            <Play size={16} />
+            Practice
+          </button>
+        </div>
       </div>
     </div>
   );

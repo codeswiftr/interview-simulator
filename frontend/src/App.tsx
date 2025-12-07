@@ -14,6 +14,7 @@ import QuestionsPage from './pages/QuestionsPage';
 import InterviewPage from './pages/InterviewPage';
 import FeedbackPage from './pages/FeedbackPage';
 import SettingsPage from './pages/SettingsPage';
+import PreparationPage from './pages/PreparationPage';
 
 function App() {
   return (
@@ -66,6 +67,14 @@ function App() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/preparation/:id"
+          element={
+            <ProtectedRoute>
+              <PreparationPage />
             </ProtectedRoute>
           }
         />

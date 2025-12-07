@@ -831,22 +831,22 @@ GET    /api/v1/preparation/{id}/comparison
 ### Phase 1: MVP - Detective + Draft (2-3 weeks)
 **Goal**: Validate concept with core functionality
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 1.1 | Create Alembic migration for new models | backend-engineer | 1h |
-| 1.2 | Create AnswerPreparation, PreparationQnA models | backend-engineer | 1h |
-| 1.3 | Create POST /preparation/start endpoint | backend-engineer | 1h |
-| 1.4 | Implement detective Q&A API (Gemini Flash) | backend-engineer | 2h |
-| 1.5 | Implement ghostwriter draft API (Haiku 4.5) | backend-engineer | 2h |
-| 1.6 | Add tier check (Pro/Premium only) | backend-engineer | 30m |
-| 1.7 | Create PreparationPage frontend component | frontend-builder | 2h |
-| 1.8 | Build detective Q&A chat interface | frontend-builder | 2h |
-| 1.9 | Build draft review/editing UI | frontend-builder | 1.5h |
-| 1.10 | Add "Prepare Answer" button to question cards | frontend-builder | 30m |
-| 1.11 | Write tests for preparation API | qa-test-guardian | 2h |
-| 1.12 | Write tests for detective Q&A flow | qa-test-guardian | 1h |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 1.1 | Create Alembic migration for new models | backend-engineer | 1h | ✅ Done |
+| 1.2 | Create AnswerPreparation, PreparationQnA models | backend-engineer | 1h | ✅ Done |
+| 1.3 | Create POST /preparation/start endpoint | backend-engineer | 1h | ✅ Done |
+| 1.4 | Implement detective Q&A API (Gemini Flash) | backend-engineer | 2h | ✅ Done |
+| 1.5 | Implement ghostwriter draft API (Haiku 4.5) | backend-engineer | 2h | ✅ Done |
+| 1.6 | Add tier check (Pro/Premium only) | backend-engineer | 30m | ✅ Done |
+| 1.7 | Create PreparationPage frontend component | frontend-builder | 2h | ✅ Done |
+| 1.8 | Build detective Q&A chat interface | frontend-builder | 2h | ✅ Done |
+| 1.9 | Build draft review/editing UI | frontend-builder | 1.5h | ✅ Done |
+| 1.10 | Add "Prepare Answer" button to question cards | frontend-builder | 30m | ✅ Done |
+| 1.11 | Write tests for preparation API | qa-test-guardian | 2h | ✅ Done |
+| 1.12 | Write tests for detective Q&A flow | qa-test-guardian | 1h | ✅ Done |
 
-**Checkpoint**: Users can get AI-generated drafts from Q&A
+**Checkpoint**: Users can get AI-generated drafts from Q&A ✅
 
 ### Phase 2: Delivery Practice (1-2 weeks)
 **Goal**: Enable users to practice delivering drafts

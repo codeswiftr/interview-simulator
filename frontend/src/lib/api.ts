@@ -286,6 +286,26 @@ export const subscriptionsAPI = {
 };
 
 // User API
+export const preparationAPI = {
+  start: (questionId: string) =>
+    api.post<{ preparation_id: string; stage: string; message: string }>('/preparation/start', {
+      question_id: questionId,
+    }),
+  getDetectiveQuestion: (preparationId: string) =>
+    api.post<{ question: string; order: number; is_complete: boolean }>(
+      `/preparation/${preparationId}/detective/question`
+    ),
+  submitDetectiveAnswer: (preparationId: string, answer: string) =>
+    api.post<{ next_question: string | null; stage: string; is_complete: boolean }>(
+      `/preparation/${preparationId}/detective/answer`,
+      { answer }
+    ),
+  generateDraft: (preparationId: string) =>
+    api.post<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/generate-draft`),
+  getDraft: (preparationId: string) =>
+    api.get<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/draft`),
+};
+
 export const userAPI = {
   getStats: () => api.get('/users/me/stats'),
 
