@@ -14,6 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import (
     auth,
+    coaching,
     feedback,
     health,
     interviews,
@@ -230,6 +231,7 @@ app.include_router(feedback.router, prefix="/api/v1/feedback", tags=["Feedback"]
 app.include_router(transcription.router, prefix="/api/v1/transcription", tags=["Transcription"])
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
+app.include_router(coaching.router, prefix="/api/v1/coaching", tags=["Coaching"])
 
 # Mount static files for uploaded content
 uploads_dir = Path("uploads")

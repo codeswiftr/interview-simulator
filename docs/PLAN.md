@@ -500,7 +500,133 @@ Establish frontend test infrastructure and achieve 30% coverage.
 
 ---
 
-# Epic 4: E2E Test Suite (Future)
+# Epic 4: Real-Time AI Coaching Hints
+
+## Goal
+Replace static coaching hints with dynamic, contextual AI-generated hints based on live transcript analysis during interviews.
+
+## Context
+**Current State:**
+- `CoachOverlay`: Shows static hints based on question type (behavioral → STAR, technical → approach, etc.)
+- `RecordingDeck`: Has live transcript via browser Speech Recognition API (stored in `transcript` state)
+- Backend: Uses Claude Haiku 4.5 for post-interview analysis (not real-time)
+- OpenRouter integration already exists in backend for content analysis
+
+**Research Findings:**
+- **Fast Model Options:**
+  - Gemini 2.0 Flash: $0.10/M input, $0.40/M output, ~200ms latency (cheapest)
+  - GPT-4o mini: $0.15/M input, $0.60/M output, ~300ms latency (good balance)
+  - Claude Haiku 4.5: $1.00/M input, $5.00/M output, ~400ms latency (current, too expensive)
+  - Groq (Llama 3): Free tier, ~100ms latency (ultra-fast, but quality concerns)
+
+- **Cost Estimate:** ~500 tokens/hint × 5 hints = 2,500 tokens per session
+  - Gemini Flash: ~$0.001 per session
+  - GPT-4o mini: ~$0.002 per session
+
+**Recommended Architecture: Option A (Frontend Streaming)**
+- RecordingDeck (transcript) → Debounce (2s) → Frontend API call → Streaming response → CoachOverlay
+- Pros: Low latency, no backend changes needed
+- Cons: API key exposure (use proxy or edge function)
+
+**Alternative: Option B (Backend WebSocket)**
+- Frontend → WebSocket → Backend → LLM → Streaming back → CoachOverlay
+- Pros: Secure API keys, server-side rate limiting
+- Cons: More complex, WebSocket management
+
+## Success Criteria
+- [ ] Dynamic hints generated from live transcript context
+- [ ] Hints update every 2s of silence or 50+ new words
+- [ ] Streaming response for low latency (<500ms)
+- [ ] Cost-effective: <$0.01 per interview session
+- [ ] Fallback to static hints if AI unavailable
+
+## Implementation Plan
+
+### Phase 1: Backend Coaching Endpoint (3h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Create `/api/v1/coaching/hint` endpoint | backend-builder | 1h |
+| 1.2 | Integrate Gemini 2.0 Flash via OpenRouter | backend-builder | 1h |
+| 1.3 | Add streaming response support | backend-builder | 1h |
+| 1.4 | Add rate limiting (5 hints/min per user) | backend-builder | 30m |
+
+**Checkpoint**: Endpoint returns contextual hints from question + transcript
+
+### Phase 2: Frontend Integration (4h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Add debounced hint generation hook | frontend-builder | 1h |
+| 2.2 | Connect RecordingDeck transcript to hook | frontend-builder | 30m |
+| 2.3 | Update CoachOverlay to show dynamic hints | frontend-builder | 1.5h |
+| 2.4 | Add loading state and error fallback | frontend-builder | 1h |
+
+**Checkpoint**: Dynamic hints appear in CoachOverlay during recording
+
+### Phase 3: Streaming & UX Polish (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Implement streaming hint display | frontend-builder | 1h |
+| 3.2 | Add hint quality indicators (confidence) | frontend-builder | 30m |
+| 3.3 | Test with various question types | qa-test-guardian | 30m |
+
+**Checkpoint**: Smooth streaming hints with good UX
+
+### Phase 4: Testing & Optimization (2h)
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 4.1 | Add unit tests for hint generation | qa-test-guardian | 1h |
+| 4.2 | Test rate limiting and error handling | qa-test-guardian | 30m |
+| 4.3 | Monitor costs and optimize prompt | backend-builder | 30m |
+
+**Checkpoint**: Tests passing, costs validated
+
+**Total Estimated Effort**: ~11 hours
+
+---
+
+## Technical Details
+
+### Hint Generation Prompt Template
+```
+You are an interview coach. Based on the question and the candidate's current answer transcript, provide a brief, actionable hint (1-2 sentences) to help them improve their answer.
+
+Question: {question_text}
+Question Type: {question_type}
+Current Transcript: {transcript}
+
+Provide a specific, contextual hint. Focus on:
+- For behavioral: STAR structure, quantifying results, personal contribution
+- For technical: Problem clarification, approach explanation, edge cases
+- For system design: Requirements, scalability, trade-offs
+
+Hint (max 100 words):
+```
+
+### Debounce Strategy
+- Trigger hint generation after:
+  - 2 seconds of silence (no new transcript words)
+  - OR 50+ new words added to transcript
+- Cancel pending requests if new transcript arrives
+
+### Error Handling
+- If AI service unavailable: Fall back to static hints
+- If rate limit exceeded: Show cached hint or static hint
+- If streaming fails: Show full hint when complete
+
+---
+
+## Risks & Mitigations
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|--------|------------|------------|
+| API costs exceed budget | Medium | Low | Use Gemini Flash, rate limit strictly |
+| Latency too high | Medium | Medium | Use streaming, debounce intelligently |
+| API key exposure (frontend) | High | Medium | Use backend proxy or edge function |
+| Quality of hints poor | Medium | Low | Test prompts, add fallback to static |
+
+---
+
+# Epic 5: E2E Test Suite (Future)
 
 ## Goal
 Add Playwright E2E tests for critical user journeys.
@@ -541,7 +667,12 @@ Add Playwright E2E tests for critical user journeys.
 - External API mocks: ✅ Configured (Stripe, OpenAI, Claude)
 - Auth flow: ✅ Partial coverage
 
-### E2E Tests (Epic 4)
+### Real-Time Coaching (Epic 4)
+- **Backend**: Coaching endpoint with Gemini 2.0 Flash via OpenRouter
+- **Frontend**: Debounced hint generation, streaming display
+- **Focus**: Contextual hints based on live transcript
+
+### E2E Tests (Epic 5)
 - Tool: Playwright
 - Focus: Critical user journeys
 - Target: 5-10 tests
@@ -556,6 +687,8 @@ Add Playwright E2E tests for critical user journeys.
 | Test coverage slows dev | Low | Low | Focus on high-risk modules only |
 | Frontend tests flaky | Medium | Medium | Use proper async handling, stable selectors |
 | MSW handlers incomplete | Low | Medium | Add handlers incrementally as needed |
+| AI coaching API costs exceed budget | Medium | Low | Use Gemini Flash, rate limit strictly |
+| Coaching hints latency too high | Medium | Medium | Use streaming, debounce intelligently |
 
 ---
 
@@ -563,12 +696,16 @@ Add Playwright E2E tests for critical user journeys.
 
 **Recommended sequence:**
 
-1. **Epic 1** (Linting) - Quick wins, clean foundation
-2. **Epic 2** (Backend Tests) - Deployment confidence
-3. **Epic 3** (Frontend Tests) - Regression protection
-4. **Epic 4** (E2E Tests) - Future enhancement
+1. **Epic 1** (Linting) - Quick wins, clean foundation ✅
+2. **Epic 2** (Backend Tests) - Deployment confidence ✅
+3. **Epic 3** (Frontend Tests) - Regression protection ✅
+4. **Epic 4** (Real-Time AI Coaching) - User experience enhancement
+5. **Epic 5** (E2E Tests) - Future enhancement
 
-**Estimated Total Effort**: ~25 hours
+**Estimated Total Effort**: 
+- Sprint 4 (Epics 1-3): ~25 hours ✅
+- Epic 4 (Real-Time Coaching): ~11 hours
+- Epic 5 (E2E Tests): ~10 hours
 
 ---
 
