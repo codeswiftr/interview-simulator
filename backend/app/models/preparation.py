@@ -59,7 +59,7 @@ class PreparationQnA(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     preparation_id: UUID = Field(
-        foreign_key="answer_preparations.id", index=True, sa_column=Column(ForeignKey("answer_preparations.id", ondelete="CASCADE"))
+        sa_column=Column(ForeignKey("answer_preparations.id", ondelete="CASCADE"), nullable=False, index=True)
     )
 
     # Q&A content
@@ -84,7 +84,7 @@ class DeliveryAttempt(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     preparation_id: UUID = Field(
-        foreign_key="answer_preparations.id", index=True, sa_column=Column(ForeignKey("answer_preparations.id", ondelete="CASCADE"))
+        sa_column=Column(ForeignKey("answer_preparations.id", ondelete="CASCADE"), nullable=False, index=True)
     )
 
     # Delivery content
