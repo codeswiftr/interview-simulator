@@ -14,6 +14,7 @@ from app.models.interview import (
     InterviewType,
 )
 from app.models.question import Difficulty, Question, QuestionCategory
+from app.models.user import SubscriptionTier, User
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -759,6 +760,329 @@ async def test_quick_practice_nonexistent_question_fails(client, session_overrid
 
 
 # Authorization Tests
+
+
+# Epic 2 Phase 2: Additional Tests for Coverage
+
+@pytest.mark.asyncio
+async def test_create_interview_with_all_options(client, session_override):
+    """Test POST /interviews with all optional fields."""
+    token = await register_and_login(client, email="all_options@example.com")
+
+    # Create questions for the interview
+    for i in range(5):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+            company_tags=["google", "amazon"],
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create interview with all options
+    from datetime import datetime, UTC
+
+    scheduled_at = datetime.now(UTC)
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={
+            "interview_type": "behavioral",
+            "company_style": "faang",
+            "target_company": "google",
+            "question_count": 5,
+            "difficulty": "medium",
+            "scheduled_at": scheduled_at.isoformat(),
+        },
+        headers={"Authorization": token},
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["interview_type"] == "behavioral"
+    assert data["company_style"] == "faang"
+    assert data["target_company"] == "google"
+    assert data["question_count"] == 5
+    assert data["difficulty"] == "medium"
+    assert data["status"] == "scheduled"
+
+
+@pytest.mark.asyncio
+async def test_create_interview_with_difficulty_filter(client, session_override):
+    """Test creating interview with difficulty filter."""
+    token = await register_and_login(client, email="difficulty@example.com")
+
+    # Create questions with different difficulties
+    for diff in [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD]:
+        for i in range(3):
+            question = Question(
+                content=f"{diff.value} question {i}",
+                category=QuestionCategory.TECHNICAL,
+                difficulty=diff,
+            )
+            session_override.add(question)
+    await session_override.commit()
+
+    # Create interview with hard difficulty
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={
+            "interview_type": "technical",
+            "question_count": 3,
+            "difficulty": "hard",
+        },
+        headers={"Authorization": token},
+    )
+
+    assert resp.status_code == 201
+    interview_id = resp.json()["id"]
+
+    # Start interview and verify only hard questions are assigned
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 3
+    # All questions should be hard difficulty
+    for q in questions:
+        assert q["difficulty"] == "hard"
+
+
+@pytest.mark.asyncio
+async def test_get_questions_ordering(client, session_override):
+    """Test GET /interviews/{id}/questions returns questions in correct order."""
+    token = await register_and_login(client, email="ordering@example.com")
+
+    # Create 5 questions
+    question_ids = []
+    for i in range(5):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+        await session_override.flush()
+        question_ids.append(question.id)
+    await session_override.commit()
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 5},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Start interview
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Get questions and verify ordering
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    questions = questions_resp.json()
+    assert len(questions) == 5
+
+    # Verify questions are ordered by InterviewQuestion.order
+    orders = [q.get("order") for q in questions if "order" in q]
+    if orders:
+        # If order field exists, verify it's sequential
+        assert orders == sorted(orders)
+        assert orders[0] == 1  # Should start at 1
+
+
+@pytest.mark.asyncio
+async def test_quota_enforcement_free_tier_limit(client, session_override):
+    """Test that Free tier users are blocked after 3 interviews."""
+    token = await register_and_login(client, email="free_tier@example.com")
+
+    # Create questions
+    for i in range(5):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create 3 interviews (the limit)
+    for i in range(3):
+        resp = await client.post(
+            "/api/v1/interviews/",
+            json={"interview_type": "behavioral", "question_count": 1},
+            headers={"Authorization": token},
+        )
+        assert resp.status_code == 201
+
+    # 4th interview should be blocked
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 402  # Payment Required
+    assert "limit reached" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_quota_enforcement_pro_tier_unlimited(client, session_override):
+    """Test that Pro tier users can create unlimited interviews."""
+    from app.models.user import SubscriptionTier
+
+    token = await register_and_login(client, email="pro_tier@example.com")
+
+    # Upgrade user to Pro tier
+    result = await session_override.exec(
+        select(User).where(User.email == "pro_tier@example.com")
+    )
+    user = result.first()
+    user.subscription_tier = SubscriptionTier.PRO
+    await session_override.commit()
+
+    # Create questions
+    for i in range(10):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create 5 interviews (should all succeed)
+    for i in range(5):
+        resp = await client.post(
+            "/api/v1/interviews/",
+            json={"interview_type": "behavioral", "question_count": 1},
+            headers={"Authorization": token},
+        )
+        assert resp.status_code == 201
+
+    # Verify user can still create more
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 201  # Should succeed
+
+
+@pytest.mark.asyncio
+async def test_interview_state_transition_start_to_end(client, session_override):
+    """Test complete state transition: scheduled -> in_progress -> completed."""
+    token = await register_and_login(client, email="transitions@example.com")
+
+    # Create questions
+    for i in range(3):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+    assert resp.json()["status"] == "scheduled"
+
+    # Start interview
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 200
+    assert start_resp.json()["status"] == "in_progress"
+    assert start_resp.json()["started_at"] is not None
+
+    # End interview
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp.status_code == 200
+    assert end_resp.json()["status"] == "completed"
+    assert end_resp.json()["ended_at"] is not None
+    assert end_resp.json()["duration_seconds"] is not None
+
+
+@pytest.mark.asyncio
+async def test_interview_state_transition_edge_cases(client, session_override):
+    """Test edge cases for state transitions."""
+    token = await register_and_login(client, email="edge_cases@example.com")
+
+    # Create questions
+    for i in range(3):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to end interview before starting (should fail)
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp.status_code == 400
+    assert "not in progress" in end_resp.json()["detail"].lower()
+
+    # Start interview
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Try to start again (should fail)
+    start_resp2 = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp2.status_code == 400
+    assert "already" in start_resp2.json()["detail"].lower()
+
+    # End interview
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+
+    # Try to end again (should fail)
+    end_resp2 = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp2.status_code == 400
+    assert "already" in end_resp2.json()["detail"].lower()
 
 
 @pytest.mark.asyncio

@@ -18,6 +18,7 @@ from app.api import (
     feedback,
     health,
     interviews,
+    preparation,
     questions,
     subscriptions,
     transcription,
@@ -232,6 +233,7 @@ app.include_router(transcription.router, prefix="/api/v1/transcription", tags=["
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
 app.include_router(coaching.router, prefix="/api/v1/coaching", tags=["Coaching"])
+app.include_router(preparation.router, prefix="/api/v1/preparation", tags=["Preparation"])
 
 # Mount static files for uploaded content
 uploads_dir = Path("uploads")

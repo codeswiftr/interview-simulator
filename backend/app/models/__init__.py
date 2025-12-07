@@ -11,6 +11,12 @@ from app.models.interview import (
     InterviewType,
 )
 from app.models.password_reset import PasswordResetToken
+from app.models.preparation import (
+    AnswerPreparation,
+    DeliveryAttempt,
+    PreparationQnA,
+    PreparationStage,
+)
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import ExperienceLevel, User
 
@@ -31,4 +37,8 @@ __all__ = [
     "ContentFeedback",
     "SessionFeedback",
     "PasswordResetToken",
+    "AnswerPreparation",
+    "PreparationQnA",
+    "DeliveryAttempt",
+    "PreparationStage",
 ]

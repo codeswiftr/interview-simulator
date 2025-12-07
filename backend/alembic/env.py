@@ -18,7 +18,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 # Import models so metadata is populated
-from app.models import feedback, interview, question, user  # noqa: F401
+from app.models import feedback, interview, preparation, question, user  # noqa: F401
 
 config = context.config
 
