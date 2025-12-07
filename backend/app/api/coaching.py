@@ -107,9 +107,10 @@ Hint (max 100 words):"""
             messages=[{"role": "user", "content": prompt}],
         )
 
-        hint = response.choices[0].message.content.strip()
-        if not hint:
+        content = response.choices[0].message.content
+        if not content:
             raise ValueError("Empty response from AI service")
+        hint = content.strip()
 
         return hint
 

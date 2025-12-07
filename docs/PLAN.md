@@ -546,8 +546,8 @@ Replace static coaching hints with dynamic, contextual AI-generated hints based 
 | Task | Description | Agent | Est | Status |
 |------|-------------|-------|-----|--------|
 | 1.1 | Create `/api/v1/coaching/hint` endpoint | backend-builder | 1h | ✅ Done |
-| 1.2 | Integrate Gemini 2.0 Flash via OpenRouter | backend-builder | 1h | 🔄 In Progress |
-| 1.3 | Add streaming response support | backend-builder | 1h | ⏳ Pending |
+| 1.2 | Integrate Gemini 2.0 Flash via OpenRouter | backend-builder | 1h | ✅ Done |
+| 1.3 | Add streaming response support | backend-builder | 1h | 🔄 In Progress |
 | 1.4 | Add rate limiting (5 hints/min per user) | backend-builder | 30m | ⏳ Pending |
 
 **Checkpoint**: Endpoint returns contextual hints from question + transcript
