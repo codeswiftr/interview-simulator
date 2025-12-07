@@ -2,6 +2,8 @@
 
 import json
 import logging
+import time
+from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -25,6 +27,11 @@ STATIC_HINTS = {
     "system_design": "Start with functional and non-functional requirements",
 }
 
+# Per-user rate limiting for coaching hints (5 hints per minute)
+_coaching_rate_limits: dict[str, list[float]] = defaultdict(list)
+COACHING_RATE_LIMIT = 5  # hints per minute
+COACHING_RATE_WINDOW = 60  # seconds
+
 
 def get_coaching_client() -> AsyncOpenAI:
     """Get or create OpenRouter client for coaching hints.
@@ -39,6 +46,36 @@ def get_coaching_client() -> AsyncOpenAI:
             base_url="https://openrouter.ai/api/v1",
         )
     return _coaching_client
+
+
+def check_coaching_rate_limit(user_id: str) -> tuple[bool, int]:
+    """Check if user has exceeded coaching hint rate limit.
+
+    Args:
+        user_id: User ID string
+
+    Returns:
+        Tuple of (is_allowed, remaining_requests)
+    """
+    now = time.time()
+    cutoff = now - COACHING_RATE_WINDOW
+
+    # Clean old requests
+    _coaching_rate_limits[user_id] = [
+        ts for ts in _coaching_rate_limits[user_id] if ts > cutoff
+    ]
+
+    # Count requests in window
+    request_count = len(_coaching_rate_limits[user_id])
+
+    if request_count >= COACHING_RATE_LIMIT:
+        return False, 0
+
+    # Record this request
+    _coaching_rate_limits[user_id].append(now)
+
+    remaining = COACHING_RATE_LIMIT - request_count - 1
+    return True, remaining
 
 
 class CoachingHintRequest(BaseModel):
@@ -210,8 +247,17 @@ async def get_coaching_hint(
         CoachingHintResponse with generated hint
 
     Raises:
-        HTTPException: If question_type is invalid
+        HTTPException: If question_type is invalid or rate limit exceeded
     """
+    # Check rate limit
+    is_allowed, remaining = check_coaching_rate_limit(str(current_user.id))
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded. Maximum {COACHING_RATE_LIMIT} hints per minute.",
+            headers={"X-RateLimit-Remaining": "0", "Retry-After": "60"},
+        )
+
     # Validate question_type
     valid_types = {"behavioral", "technical", "system_design"}
     if request.question_type not in valid_types:
@@ -227,7 +273,8 @@ async def get_coaching_hint(
         transcript=request.transcript,
     )
 
-    return CoachingHintResponse(hint=hint)
+    response = CoachingHintResponse(hint=hint)
+    return response
 
 
 @router.post("/hint/stream")
@@ -247,8 +294,17 @@ async def get_coaching_hint_stream(
         StreamingResponse with Server-Sent Events (SSE) format
 
     Raises:
-        HTTPException: If question_type is invalid
+        HTTPException: If question_type is invalid or rate limit exceeded
     """
+    # Check rate limit
+    is_allowed, remaining = check_coaching_rate_limit(str(current_user.id))
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded. Maximum {COACHING_RATE_LIMIT} hints per minute.",
+            headers={"X-RateLimit-Remaining": "0", "Retry-After": "60"},
+        )
+
     # Validate question_type
     valid_types = {"behavioral", "technical", "system_design"}
     if request.question_type not in valid_types:
@@ -271,5 +327,6 @@ async def get_coaching_hint_stream(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "X-RateLimit-Remaining": str(remaining),
         },
     )
