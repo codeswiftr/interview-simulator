@@ -1,6 +1,5 @@
 """Tests for coaching hint generation endpoint."""
 
-from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -77,7 +76,7 @@ async def test_coaching_hint_endpoint_requires_auth(client: AsyncClient):
 async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
     """Test that coaching hint endpoint returns a contextual hint."""
     token = await register_and_login(client)
-    
+
     response = await client.post(
         "/api/v1/coaching/hint",
         headers={"Authorization": token},
@@ -87,7 +86,7 @@ async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
             "transcript": "I once had a conflict with a teammate",
         },
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "hint" in data
@@ -99,7 +98,7 @@ async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
 async def test_coaching_hint_validates_question_type(client: AsyncClient):
     """Test that coaching hint endpoint validates question_type."""
     token = await register_and_login(client)
-    
+
     response = await client.post(
         "/api/v1/coaching/hint",
         headers={"Authorization": token},
@@ -116,7 +115,7 @@ async def test_coaching_hint_validates_question_type(client: AsyncClient):
 async def test_coaching_hint_requires_question(client: AsyncClient):
     """Test that coaching hint endpoint requires question field."""
     token = await register_and_login(client)
-    
+
     response = await client.post(
         "/api/v1/coaching/hint",
         headers={"Authorization": token},
