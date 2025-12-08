@@ -23,6 +23,7 @@ from app.models.preparation import (
 )
 from app.models.question import Question
 from app.models.user import SubscriptionTier, User
+from app.services.delivery_rating_service import DeliveryRatingService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -121,6 +122,30 @@ class DeliveryAttemptRead(BaseModel):
 
 class AttemptsResponse(BaseModel):
     attempts: list[DeliveryAttemptRead]
+
+
+class RateDeliveryRequest(BaseModel):
+    attempt_id: UUID
+
+
+class RateDeliveryResponse(BaseModel):
+    delivery_score: float
+    content_coverage: float
+    key_points: float
+    flow_structure: float
+    comparison_feedback: str
+    strengths: list[str]
+    improvements: list[str]
+    stage: str
+
+
+class ComparisonResponse(BaseModel):
+    draft: str
+    delivery: str
+    delivery_score: float | None
+    comparison_feedback: str | None
+    strengths: list[str]
+    improvements: list[str]
 
 
 # Endpoints
@@ -846,4 +871,180 @@ async def get_attempts(
             )
             for attempt in attempts
         ]
+    )
+
+
+@router.post(
+    "/{preparation_id}/rate-delivery",
+    response_model=RateDeliveryResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def rate_delivery(
+    preparation_id: UUID,
+    request: RateDeliveryRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> RateDeliveryResponse:
+    """Rate a delivery attempt against the prepared draft.
+
+    Compares the transcribed delivery to the draft answer using AI
+    and provides scores and feedback.
+
+    Args:
+        preparation_id: UUID of the preparation session
+        request: RateDeliveryRequest with attempt_id
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        RateDeliveryResponse with scores and feedback
+
+    Raises:
+        HTTPException: If preparation, attempt, or draft not found
+    """
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Check tier
+    check_preparation_tier(current_user)
+
+    # Verify draft exists
+    if not preparation.draft_answer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Draft not yet generated. Generate draft first.",
+        )
+
+    # Get the attempt
+    attempt_result = await session.exec(
+        select(DeliveryAttempt).where(
+            DeliveryAttempt.id == request.attempt_id,
+            DeliveryAttempt.preparation_id == preparation_id,
+        )
+    )
+    attempt = attempt_result.first()
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delivery attempt not found or access denied",
+        )
+
+    # Verify attempt has transcript
+    if not attempt.transcript:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Attempt has no transcript. Submit practice attempt first.",
+        )
+
+    # Rate the delivery
+    rating_service = DeliveryRatingService()
+    try:
+        rating = await rating_service.rate_delivery(
+            draft=preparation.draft_answer,
+            delivery_transcript=attempt.transcript,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Rating failed: {str(e)}",
+        ) from None
+
+    # Save rating to attempt
+    attempt.delivery_score = rating.delivery_score
+    attempt.comparison_feedback = rating.comparison_feedback
+    await session.commit()
+
+    # Update preparation stage to COMPLETE if first successful rating
+    if preparation.stage != PreparationStage.COMPLETE:
+        preparation.stage = PreparationStage.COMPLETE
+        await session.commit()
+
+    return RateDeliveryResponse(
+        delivery_score=rating.delivery_score,
+        content_coverage=rating.content_coverage,
+        key_points=rating.key_points,
+        flow_structure=rating.flow_structure,
+        comparison_feedback=rating.comparison_feedback,
+        strengths=rating.strengths,
+        improvements=rating.improvements,
+        stage=preparation.stage.value,
+    )
+
+
+@router.get(
+    "/{preparation_id}/comparison",
+    response_model=ComparisonResponse,
+)
+async def get_comparison(
+    preparation_id: UUID,
+    attempt_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ComparisonResponse:
+    """Get side-by-side comparison of draft and delivery.
+
+    Args:
+        preparation_id: UUID of the preparation session
+        attempt_id: UUID of the delivery attempt
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        ComparisonResponse with draft, delivery, scores, and feedback
+
+    Raises:
+        HTTPException: If preparation or attempt not found
+    """
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Get the attempt
+    attempt_result = await session.exec(
+        select(DeliveryAttempt).where(
+            DeliveryAttempt.id == attempt_id,
+            DeliveryAttempt.preparation_id == preparation_id,
+        )
+    )
+    attempt = attempt_result.first()
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delivery attempt not found or access denied",
+        )
+
+    # Extract strengths and improvements from stored rating
+    # For now, we parse from comparison_feedback or return empty
+    # Future: could store strengths/improvements separately in DeliveryAttempt
+    strengths: list[str] = []
+    improvements: list[str] = []
+
+    return ComparisonResponse(
+        draft=preparation.draft_answer or "",
+        delivery=attempt.transcript or "",
+        delivery_score=attempt.delivery_score,
+        comparison_feedback=attempt.comparison_feedback,
+        strengths=strengths,
+        improvements=improvements,
     )
