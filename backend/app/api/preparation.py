@@ -1,6 +1,8 @@
 """Answer preparation endpoints for AI Ghostwriter feature."""
 
 import logging
+from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.ai.transcriber import Transcriber
 from app.config import settings
 from app.db import get_session
 from app.dependencies import get_current_user
@@ -89,6 +92,35 @@ class DetectiveAnswerResponse(BaseModel):
 class DraftResponse(BaseModel):
     draft_answer: str
     stage: str
+
+
+class PracticeStartResponse(BaseModel):
+    attempt_id: UUID
+    stage: str
+
+
+class PracticeSubmitRequest(BaseModel):
+    audio_url: str = Field(..., description="URL to the uploaded audio file")
+
+
+class PracticeSubmitResponse(BaseModel):
+    attempt_id: UUID
+    transcript: str
+    stage: str
+
+
+class DeliveryAttemptRead(BaseModel):
+    id: UUID
+    preparation_id: UUID
+    audio_url: str | None
+    transcript: str | None
+    delivery_score: float | None
+    comparison_feedback: str | None
+    created_at: datetime
+
+
+class AttemptsResponse(BaseModel):
+    attempts: list[DeliveryAttemptRead]
 
 
 # Endpoints
@@ -587,4 +619,231 @@ async def get_draft(
     return DraftResponse(
         draft_answer=preparation.draft_answer,
         stage=preparation.stage.value,
+    )
+
+
+@router.post(
+    "/{preparation_id}/practice/start",
+    response_model=PracticeStartResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def start_practice(
+    preparation_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PracticeStartResponse:
+    """Start a practice delivery attempt for a prepared answer.
+
+    Creates a new DeliveryAttempt record and transitions preparation to PRACTICE stage.
+
+    Args:
+        preparation_id: UUID of the preparation session
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        PracticeStartResponse with attempt_id and stage
+
+    Raises:
+        HTTPException: If preparation not found, unauthorized, or draft not generated
+    """
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Check tier
+    check_preparation_tier(current_user)
+
+    # Verify draft exists
+    if not preparation.draft_answer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Draft not yet generated. Complete detective stage and generate draft first.",
+        )
+
+    # Create delivery attempt
+    attempt = DeliveryAttempt(
+        preparation_id=preparation_id,
+    )
+    session.add(attempt)
+    await session.commit()
+    await session.refresh(attempt)
+
+    # Update stage to PRACTICE if not already
+    if preparation.stage != PreparationStage.PRACTICE:
+        preparation.stage = PreparationStage.PRACTICE
+        await session.commit()
+
+    return PracticeStartResponse(
+        attempt_id=attempt.id,
+        stage=PreparationStage.PRACTICE.value,
+    )
+
+
+@router.post(
+    "/{preparation_id}/practice/submit",
+    response_model=PracticeSubmitResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def submit_practice(
+    preparation_id: UUID,
+    request: PracticeSubmitRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PracticeSubmitResponse:
+    """Submit a practice delivery attempt with audio.
+
+    Transcribes the audio and stores the transcript. The attempt can later be rated
+    using the rating endpoint (Epic 3).
+
+    Args:
+        preparation_id: UUID of the preparation session
+        request: PracticeSubmitRequest with audio_url
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        PracticeSubmitResponse with attempt_id, transcript, and stage
+
+    Raises:
+        HTTPException: If preparation not found, unauthorized, or transcription fails
+    """
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Check tier
+    check_preparation_tier(current_user)
+
+    # Get the most recent attempt (or create one if none exists)
+    attempts_result = await session.exec(
+        select(DeliveryAttempt)
+        .where(DeliveryAttempt.preparation_id == preparation_id)
+        .order_by(DeliveryAttempt.created_at.desc())
+    )
+    attempt = attempts_result.first()
+
+    if not attempt:
+        # Create attempt if none exists
+        attempt = DeliveryAttempt(
+            preparation_id=preparation_id,
+        )
+        session.add(attempt)
+        await session.commit()
+        await session.refresh(attempt)
+
+    # Store audio URL
+    attempt.audio_url = request.audio_url
+
+    # Transcribe audio
+    try:
+        # Convert URL path to file path (local storage)
+        # audio_url format: /uploads/audio/filename.webm
+        audio_path = Path(".") / request.audio_url.lstrip("/")
+        if not audio_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Audio file not found at specified URL",
+            )
+
+        transcriber = Transcriber()
+        transcription_result = await transcriber.transcribe(audio_path, language="en")
+        attempt.transcript = transcription_result.text
+
+    except Exception as e:
+        logger.error(f"Transcription failed for practice attempt {attempt.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Transcription failed: {str(e)}",
+        ) from None
+
+    await session.commit()
+    await session.refresh(attempt)
+
+    return PracticeSubmitResponse(
+        attempt_id=attempt.id,
+        transcript=attempt.transcript or "",
+        stage=preparation.stage.value,
+    )
+
+
+@router.get(
+    "/{preparation_id}/attempts",
+    response_model=AttemptsResponse,
+)
+async def get_attempts(
+    preparation_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> AttemptsResponse:
+    """Get all delivery attempts for a preparation session.
+
+    Returns attempts ordered by creation time (newest first).
+
+    Args:
+        preparation_id: UUID of the preparation session
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        AttemptsResponse with list of delivery attempts
+
+    Raises:
+        HTTPException: If preparation not found or unauthorized
+    """
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Get all attempts
+    attempts_result = await session.exec(
+        select(DeliveryAttempt)
+        .where(DeliveryAttempt.preparation_id == preparation_id)
+        .order_by(DeliveryAttempt.created_at.desc())
+    )
+    attempts = list(attempts_result.all())
+
+    return AttemptsResponse(
+        attempts=[
+            DeliveryAttemptRead(
+                id=attempt.id,
+                preparation_id=attempt.preparation_id,
+                audio_url=attempt.audio_url,
+                transcript=attempt.transcript,
+                delivery_score=attempt.delivery_score,
+                comparison_feedback=attempt.comparison_feedback,
+                created_at=attempt.created_at,
+            )
+            for attempt in attempts
+        ]
     )
