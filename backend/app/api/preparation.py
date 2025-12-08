@@ -289,7 +289,7 @@ async def get_detective_question(
         else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
     )
     cache_key = f"{preparation.question_id}:{exp_level}:{len(existing_qna)}"
-    
+
     # Try cache first (only for similar question counts)
     if len(existing_qna) <= 2 and cache_key in _detective_question_cache:
         # Update LRU order
@@ -297,7 +297,7 @@ async def get_detective_question(
             _cache_access_order.remove(cache_key)
         _cache_access_order.append(cache_key)
         cached_question = _detective_question_cache[cache_key]
-        
+
         # Save cached question
         next_order = len(existing_qna) + 1
         qna = PreparationQnA(
@@ -308,7 +308,7 @@ async def get_detective_question(
         )
         session.add(qna)
         await session.commit()
-        
+
         logger.debug(f"Using cached detective question for {cache_key}")
         return DetectiveQuestionResponse(
             question=cached_question,
@@ -353,7 +353,7 @@ async def get_detective_question(
             if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
             else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
         )
-        
+
         prompt = f"""Interview coach: Ask ONE clarifying question.
 
 Q: {question.content if question else "Unknown"}
@@ -402,7 +402,7 @@ Ask ONE concise question. If enough info (3-5 Q&A), respond "ENOUGH_INFO" only."
             if len(_detective_question_cache) >= _MAX_CACHE_SIZE:
                 oldest_key = _cache_access_order.pop(0)
                 del _detective_question_cache[oldest_key]
-            
+
             _detective_question_cache[cache_key] = content
             _cache_access_order.append(cache_key)
 
@@ -597,7 +597,7 @@ async def generate_draft(
     # Generate draft using Claude Haiku 4.5
     if not settings.openrouter_api_key:
         # Fallback draft
-        draft = f"""**Situation**: Based on the context provided
+        draft = """**Situation**: Based on the context provided
 **Task**: Your responsibility
 **Action**: Specific steps you took
 **Result**: Measurable outcome"""
@@ -644,7 +644,7 @@ Draft:"""
         except Exception as e:
             logger.error(f"Error generating draft: {e}")
             # Fallback draft
-            draft = f"""**Situation**: Based on your experience
+            draft = """**Situation**: Based on your experience
 **Task**: Your responsibility
 **Action**: Specific steps you took
 **Result**: Measurable outcome

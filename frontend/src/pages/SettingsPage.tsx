@@ -8,7 +8,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import SubscriptionCard from '../components/subscription/SubscriptionCard';
 import BillingInfo from '../components/subscription/BillingInfo';
 import UpgradeModal from '../components/subscription/UpgradeModal';
-import { PasswordStrengthIndicator } from '../components/ui/PasswordStrengthIndicator';
 import type { SubscriptionStatus, ExperienceLevel } from '../types';
 
 export default function SettingsPage() {
@@ -297,11 +296,10 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     onClick={() => setTheme('light')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      theme === 'light'
+                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'light'
                         ? 'border-electric-blue bg-electric-blue/10'
                         : 'border-border-light hover:border-electric-blue/50'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 rounded-lg bg-white border border-border-light flex items-center justify-center">
@@ -314,11 +312,10 @@ export default function SettingsPage() {
 
                   <button
                     onClick={() => setTheme('dark')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      theme === 'dark'
+                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'dark'
                         ? 'border-electric-blue bg-electric-blue/10'
                         : 'border-border-light hover:border-electric-blue/50'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
@@ -331,11 +328,10 @@ export default function SettingsPage() {
 
                   <button
                     onClick={() => setTheme('system')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      theme === 'system'
+                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'system'
                         ? 'border-electric-blue bg-electric-blue/10'
                         : 'border-border-light hover:border-electric-blue/50'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-gray-800 border border-border-light flex items-center justify-center">

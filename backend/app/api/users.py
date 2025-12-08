@@ -101,12 +101,12 @@ async def update_profile(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
             )
-        
+
         # Email changes require verification - send verification email instead of updating directly
         # Generate verification token
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now(UTC) + timedelta(hours=24)  # 24 hour expiry
-        
+
         # Create verification token record
         verification_token = EmailVerificationToken(
             user_id=current_user.id,
@@ -116,12 +116,12 @@ async def update_profile(
         )
         session.add(verification_token)
         await session.commit()
-        
+
         # Send verification email
         email_service = EmailService()
         verification_url = f"{settings.frontend_url}/verify-email?token={token}"
         await email_service.send_email_verification(updates.email.lower(), verification_url)
-        
+
         # Don't update email yet - return success message
         raise HTTPException(
             status_code=status.HTTP_202_ACCEPTED,

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle, Loader2, Upload, Send } from 'lucide-react';
 
 interface AudioPreviewProps {

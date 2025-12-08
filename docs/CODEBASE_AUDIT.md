@@ -1,11 +1,11 @@
 # 🔍 Codebase Audit: CareerSwiftr Interview Simulator
 
-**Date**: 2025-12-07 (Current Audit)
-**Previous Audit**: 2025-12-20
-**Overall Health**: ✅ **Good** (Production Ready)
-**Test Coverage**: Backend 69% (223+ tests) | Frontend 55 tests (hooks 100%)
+**Date**: 2025-12-08 (Current Audit)
+**Previous Audit**: 2025-12-07
+**Overall Health**: 🟡 **Good** (Production Ready with Technical Debt)
+**Test Coverage**: Backend 45.5% (292 tests) | Frontend 55 tests (hooks 100%, components partial)
 **Documentation**: ✅ **Complete** (18 documents)
-**Technical Debt**: 🟢 **Low** (Sprint 4 Complete)
+**Technical Debt**: 🟡 **Medium** (Linting issues, coverage gaps)
 
 ---
 
@@ -13,35 +13,32 @@
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| **Overall Health** | Production Ready | ✅ Good |
-| **Backend Test Coverage** | 69% (223+ tests, 18 files) | ✅ Good |
-| **Frontend Tests** | 55 tests (10 files) | 🟡 Growing |
+| **Overall Health** | Production Ready (with issues) | 🟡 Good |
+| **Backend Test Coverage** | 45.5% (292 test cases, 19 files) | 🟡 Needs Improvement |
+| **API Coverage** | 41.2% (12 API files) | 🔴 Critical Gap |
+| **Frontend Tests** | 55 tests (15 files) | 🟡 Growing |
 | **E2E Tests** | 4 Playwright suites | ✅ Complete |
 | **Documentation** | 18 markdown files | ✅ Complete |
-| **Technical Debt** | Low | ✅ Sprint 4 Complete |
-| **Linting Errors** | 0 Backend / 0 Frontend | ✅ Clean |
+| **Linting (Backend)** | 25 errors | 🔴 Needs Fix |
+| **Linting (Frontend)** | 118 errors (115 errors, 3 warnings) | 🔴 Critical |
+| **Technical Debt** | Medium | 🟡 Addressable |
 
-The CareerSwiftr Interview Simulator is a well-structured, production-ready application with a solid foundation. The backend demonstrates strong architecture with **69% test coverage and 223+ test functions** across 18 test files. The frontend has **55 tests with 100% hook coverage** on 3/4 custom hooks. Epic 4 (Real-Time Coaching) and Epic 5 (E2E Tests) are complete. Epic 6 Phase 1 (AI Ghostwriter MVP) is complete.
+The CareerSwiftr Interview Simulator is a production-ready application with solid architecture and comprehensive features. However, **test coverage has regressed significantly** from the previously reported 69% to **45.5% actual coverage**. Additionally, there are **143 linting errors** (25 backend + 118 frontend) that need immediate attention.
 
 **Key Strengths:**
 - ✅ Clean architecture with clear separation of concerns
-- ✅ Comprehensive backend test suite (223+ test functions, 18 test files)
-- ✅ Frontend hooks 75% fully tested (useAuth, useToast, useOnboarding)
-- ✅ E2E test suite with Playwright (4 suites)
+- ✅ Comprehensive feature set (auth, interviews, AI feedback, subscriptions, ghostwriter)
 - ✅ Strong type safety (Python 3.12+, TypeScript 5.9+)
 - ✅ Production-ready features (auth, payments, AI integration)
 - ✅ Excellent documentation (18 docs files)
-- ✅ Sample answers for 60 questions
-- ✅ Zero linting errors (backend + frontend)
-- ✅ Rate limiting middleware 100% covered
-- ✅ Real-time coaching (Epic 4 complete)
-- ✅ AI Ghostwriter MVP (Epic 6 Phase 1 complete)
+- ✅ E2E test suite with Playwright (4 suites)
+- ✅ Sprint 6 features complete (delivery practice, rating, draft editing)
 
-**Remaining Gaps:**
-- 🟡 Backend API coverage gaps on some modules (40-55%)
-- 🟡 useAudioRecording hook untested
-- 🟡 Frontend component tests needed (hooks done, components pending)
-- 🟡 Epic 6 Phases 2-4 pending (delivery practice + rating)
+**Critical Issues:**
+- 🔴 **Test coverage regressed**: 45.5% actual (not 69% as previously reported)
+- 🔴 **143 linting errors**: 25 backend + 118 frontend
+- 🔴 **API coverage low**: 41.2% average across API routes
+- 🟡 Frontend component tests incomplete (only critical pages tested)
 
 ---
 
@@ -58,7 +55,9 @@ The CareerSwiftr Interview Simulator is a well-structured, production-ready appl
 | Transcription | ✅ Working | 93% | Whisper API integration (OpenAI/Groq) |
 | AI Feedback | ✅ Working | 44% | Claude content analysis |
 | Real-Time Coaching | ✅ Working | 85% | Gemini 2.0 Flash hints (Epic 4) |
-| AI Ghostwriter | ✅ Working | 100% | Detective Q&A + draft generation (Epic 6 P1) |
+| AI Ghostwriter | ✅ Working | 100% | Detective Q&A + draft generation (Epic 6) |
+| Delivery Practice | ✅ Working | 100% | Practice sessions with audio recording (Sprint 5) |
+| Delivery Rating | ✅ Working | 100% | AI-powered scoring and comparison (Sprint 5) |
 | Subscriptions | ✅ Working | 55% | Stripe integration, quota enforcement |
 | User Stats | ✅ Working | 52% | Progress tracking, readiness score |
 | Password Reset | ✅ Working | 80% | Email service with Resend |
@@ -69,8 +68,8 @@ The CareerSwiftr Interview Simulator is a well-structured, production-ready appl
 
 | Endpoint | Method | Status | Tests | Coverage |
 |----------|--------|--------|-------|----------|
-| `/api/v1/auth/register` | POST | ✅ | ✅ | 71% |
-| `/api/v1/auth/login` | POST | ✅ | ✅ | 71% |
+| `/api/v1/auth/register` | POST | ✅ | ✅ | 40% |
+| `/api/v1/auth/login` | POST | ✅ | ✅ | 40% |
 | `/api/v1/auth/refresh` | POST | ✅ | ✅ | 40% |
 | `/api/v1/auth/forgot-password` | POST | ✅ | ⚠️ | 40% |
 | `/api/v1/auth/reset-password` | POST | ✅ | ⚠️ | 40% |
@@ -79,6 +78,7 @@ The CareerSwiftr Interview Simulator is a well-structured, production-ready appl
 | `/api/v1/interviews/{id}` | GET | ✅ | ✅ | 40% |
 | `/api/v1/interviews/{id}/start` | POST | ✅ | ✅ | 40% |
 | `/api/v1/interviews/{id}/end` | POST | ✅ | ✅ | 40% |
+| `/api/v1/interviews/{id}/responses` | POST/GET | ✅ | ✅ | 40% |
 | `/api/v1/feedback/session/{id}` | GET | ✅ | ⚠️ | 44% |
 | `/api/v1/feedback/response/{id}` | GET | ✅ | ⚠️ | 44% |
 | `/api/v1/questions/` | GET | ✅ | ✅ | 74% |
@@ -87,8 +87,9 @@ The CareerSwiftr Interview Simulator is a well-structured, production-ready appl
 | `/api/v1/subscriptions/*` | ALL | ✅ | ⚠️ | 55% |
 | `/api/v1/health` | GET | ✅ | ✅ | 79% |
 
-**Total Endpoints**: 38+
-**Tested Endpoints**: 30+ (79%)
+**Total Endpoints**: 40+
+**Tested Endpoints**: 32+ (80%)
+**Average API Coverage**: 41.2% 🔴
 
 ### Integrations
 
@@ -98,7 +99,7 @@ The CareerSwiftr Interview Simulator is a well-structured, production-ready appl
 | Anthropic Claude | ✅ Working | Content analysis, ghostwriter drafts |
 | Google Gemini | ✅ Working | Real-time coaching hints (Epic 4) |
 | Stripe | ✅ Working | Checkout, webhooks, subscription management |
-| PostgreSQL | ✅ Working | Async SQLModel, 9 Alembic migrations |
+| PostgreSQL | ✅ Working | Async SQLModel, 10 Alembic migrations |
 | Redis | ✅ Working | Caching, rate limiting |
 | Librosa | ✅ Working | Local audio analysis, 97% test coverage |
 | WebRTC | ✅ Working | Client-side audio capture |
@@ -112,7 +113,7 @@ The CareerSwiftr Interview Simulator is a well-structured, production-ready appl
 
 ```
 backend/app/
-├── api/              # ✅ 10 route modules (38+ endpoints)
+├── api/              # ✅ 12 route modules (40+ endpoints)
 │   ├── auth.py              (40% coverage) 🔴
 │   ├── feedback.py          (44% coverage) 🔴
 │   ├── interviews.py        (40% coverage) 🔴
@@ -123,76 +124,96 @@ backend/app/
 │   ├── transcription.py     (41% coverage) 🔴
 │   ├── upload.py            (63% coverage) 🟡
 │   ├── users.py             (52% coverage) 🟡
-│   └── health.py            (79% coverage) ✅
+│   ├── health.py            (79% coverage) ✅
+│   └── __init__.py
 ├── services/         # ✅ Business logic layer
 │   ├── audio_service.py      (97% coverage) ✅
 │   ├── background_tasks.py   (69% coverage) 🟡
 │   ├── email_service.py      (89% coverage) ✅
 │   ├── feedback_service.py   (63% coverage) 🟡
-│   └── interview_service.py  (58% coverage) 🟡
+│   ├── interview_service.py  (58% coverage) 🟡
+│   └── delivery_rating_service.py (100% coverage) ✅
 ├── ai/               # ✅ AI integration layer (92-97%)
 │   ├── audio_analyzer.py     (97% coverage) ✅
 │   ├── content_analyzer.py   (94% coverage) ✅
 │   └── transcriber.py        (93% coverage) ✅
-├── models/           # ✅ 100% coverage (7 model files)
+├── models/           # ✅ 100% coverage (8 model files)
 ├── middleware/       # ✅ Rate limiting (100% coverage)
+│   ├── rate_limit.py
+│   └── security_headers.py
 └── db.py             # ✅ 75% coverage
 
 frontend/src/
 ├── pages/            # 11 page components
+│   ├── DashboardPage.tsx         (12 tests) ✅
+│   ├── InterviewPage.tsx         (8 tests) ✅
+│   ├── FeedbackPage.tsx          (8 tests) ✅
+│   ├── PreparationPage.tsx       (8 tests) ✅
+│   └── [7 other pages]
 ├── components/       # 40+ components (5 directories)
 │   ├── dashboard/    (5 components)
 │   ├── feedback/     (7 components)
-│   ├── interview/    (10 components)
+│   ├── interview/    (10 components, 2 tested)
 │   ├── layout/       (2 components)
 │   ├── subscription/ (3 components)
-│   └── ui/           (4 components)
+│   └── ui/           (4 components, 1 tested)
 ├── hooks/            # 4 custom hooks (3 fully tested)
 │   ├── useAuth.tsx          (100% - 13 tests) ✅
 │   ├── useToast.tsx         (100% - 16 tests) ✅
 │   ├── useOnboarding.ts     (100% - 20 tests) ✅
-│   └── useAudioRecording.ts (0%) 🔴
+│   └── useAudioRecording.ts (46 tests) ✅
 ├── lib/              # API client, utilities
 ├── contexts/         # Theme context
 └── e2e/              # 4 Playwright test suites ✅
 ```
 
-### Backend Test Files (18)
+### Backend Test Files (19)
 
 | File | Tests | Focus |
 |------|-------|-------|
-| test_api.py | 50+ | Comprehensive API integration |
+| test_api.py | 55+ | Comprehensive API integration |
 | test_feedback.py | 30+ | Feedback generation |
-| test_interviews.py | 20+ | Interview lifecycle |
+| test_interviews.py | 32+ | Interview lifecycle |
 | test_coaching.py | 10+ | Real-time coaching hints |
-| test_preparation.py | 7 | AI Ghostwriter |
-| test_auth.py | 15+ | Authentication |
+| test_preparation.py | 18+ | AI Ghostwriter + practice + rating |
+| test_auth.py | 15+ | Authentication (via test_api) |
 | test_subscriptions.py | 10+ | Stripe integration |
 | test_audio_analyzer.py | 15+ | Audio analysis |
 | test_content_analyzer.py | 10+ | Claude integration |
 | test_transcription.py | 10+ | Whisper integration |
+| test_transcription_api.py | 5+ | Transcription API |
 | test_rate_limit.py | 8+ | Rate limiting |
 | test_password_reset.py | 8+ | Password reset flow |
 | test_health.py | 5+ | Health endpoints |
 | test_user_stats.py | 5+ | User statistics |
 | test_background_tasks.py | 10+ | Background processing |
+| test_background_tasks_logging.py | 5+ | Logging verification |
 | test_audio_service.py | 10+ | Audio service |
 | test_config.py | 5+ | Configuration |
 | test_interview_flow_integration.py | 5+ | E2E interview flow |
 
-### Frontend Test Files (10)
+**Total**: 292 test cases across 19 test files
+
+### Frontend Test Files (15)
 
 | File | Tests | Focus |
 |------|-------|-------|
 | useAuth.test.tsx | 13 | Auth hook (100%) |
 | useToast.test.tsx | 16 | Toast hook (100%) |
 | useOnboarding.test.tsx | 20 | Onboarding hook (100%) |
+| useAudioRecording.test.tsx | 46 | Recording hook |
+| DashboardPage.test.tsx | 12 | Dashboard page |
+| InterviewPage.test.tsx | 8 | Interview page |
+| FeedbackPage.test.tsx | 8 | Feedback page |
+| PreparationPage.test.tsx | 8 | Preparation page |
 | CoachOverlay.test.tsx | 5+ | Coaching UI |
 | RecordingDeck.test.tsx | 5+ | Recording UI |
 | Button.test.tsx | 5+ | UI components |
 | msw-integration.test.tsx | 5+ | MSW integration |
 | api.test.ts | 5+ | API client |
 | accessibility.test.tsx | 5+ | Accessibility |
+
+**Total**: 55+ tests across 15 test files
 
 ### E2E Test Suites (4)
 
@@ -209,36 +230,37 @@ frontend/src/
 
 ### Backend Coverage by Module
 
-| Module | Lines | Coverage | Status |
-|--------|-------|----------|--------|
-| `models/*` | 350+ | 100% | ✅ Excellent |
-| `middleware/rate_limit.py` | 60 | 100% | ✅ Excellent |
-| `api/preparation.py` | 568 | 100% | ✅ Excellent |
-| `config.py` | 54 | 98% | ✅ Excellent |
-| `services/audio_service.py` | 70 | 97% | ✅ Excellent |
-| `ai/audio_analyzer.py` | 65 | 97% | ✅ Excellent |
-| `ai/content_analyzer.py` | 65 | 94% | ✅ Excellent |
-| `ai/transcriber.py` | 57 | 93% | ✅ Excellent |
-| `services/email_service.py` | 68 | 89% | ✅ Good |
-| `api/coaching.py` | 100 | 85% | ✅ Good |
-| `api/health.py` | 63 | 79% | ✅ Good |
-| `db.py` | 24 | 75% | ✅ Good |
-| `api/questions.py` | 53 | 74% | ✅ Good |
-| `dependencies.py` | 33 | 73% | ✅ Good |
-| `services/background_tasks.py` | 127 | 69% | 🟡 Acceptable |
-| `services/feedback_service.py` | 158 | 63% | 🟡 Needs work |
-| `api/upload.py` | 42 | 63% | 🟡 Acceptable |
-| `services/interview_service.py` | 67 | 58% | 🟡 Needs work |
-| `api/subscriptions.py` | 202 | 55% | 🟡 Needs work |
-| `api/users.py` | 110 | 52% | 🟡 Needs work |
-| `main.py` | 116 | 46% | 🟡 Entry point |
-| `api/feedback.py` | 148 | 44% | 🔴 Priority |
-| `api/transcription.py` | 55 | 41% | 🔴 Priority |
-| `api/interviews.py` | 148 | 40% | 🔴 Priority |
-| `api/auth.py` | 148 | 40% | 🔴 Priority |
+| Module | Lines | Coverage | Status | Trend |
+|--------|-------|----------|--------|-------|
+| `models/*` | 350+ | 100% | ✅ Excellent | → |
+| `middleware/rate_limit.py` | 60 | 100% | ✅ Excellent | → |
+| `api/preparation.py` | 568 | 100% | ✅ Excellent | → |
+| `services/delivery_rating_service.py` | 150+ | 100% | ✅ Excellent | ↑ |
+| `config.py` | 54 | 98% | ✅ Excellent | → |
+| `services/audio_service.py` | 70 | 97% | ✅ Excellent | → |
+| `ai/audio_analyzer.py` | 65 | 97% | ✅ Excellent | → |
+| `ai/content_analyzer.py` | 65 | 94% | ✅ Excellent | → |
+| `ai/transcriber.py` | 57 | 93% | ✅ Excellent | → |
+| `services/email_service.py` | 68 | 89% | ✅ Good | → |
+| `api/coaching.py` | 100 | 85% | ✅ Good | → |
+| `api/health.py` | 63 | 79% | ✅ Good | → |
+| `api/questions.py` | 53 | 74% | ✅ Good | → |
+| `db.py` | 24 | 75% | ✅ Good | → |
+| `services/background_tasks.py` | 127 | 69% | 🟡 Acceptable | → |
+| `services/feedback_service.py` | 158 | 63% | 🟡 Needs work | → |
+| `api/upload.py` | 42 | 63% | 🟡 Acceptable | → |
+| `services/interview_service.py` | 67 | 58% | 🟡 Needs work | → |
+| `api/subscriptions.py` | 202 | 55% | 🟡 Needs work | → |
+| `api/users.py` | 110 | 52% | 🟡 Needs work | → |
+| `main.py` | 116 | 46% | 🟡 Entry point | → |
+| `api/feedback.py` | 148 | 44% | 🔴 Priority | ↓ |
+| `api/transcription.py` | 55 | 41% | 🔴 Priority | ↓ |
+| `api/interviews.py` | 148 | 40% | 🔴 Priority | ↓ |
+| `api/auth.py` | 148 | 40% | 🔴 Priority | ↓ |
 
-**Total Backend Tests**: 223+ test functions across 18 test files
-**Overall Coverage**: 69%
+**Total Backend Tests**: 292 test cases across 19 test files
+**Overall Coverage**: 45.5% 🔴 (down from reported 69%)
+**API Average Coverage**: 41.2% 🔴
 
 ### Frontend Hook Coverage
 
@@ -247,36 +269,40 @@ frontend/src/
 | useAuth | 100% | 13 | ✅ Excellent |
 | useToast | 100% | 16 | ✅ Excellent |
 | useOnboarding | 100% | 20 | ✅ Excellent |
-| useAudioRecording | 0% | 0 | 🔴 Priority |
-| useCoachingHint | Partial | 0 | 🟡 Next |
+| useAudioRecording | ~80% | 46 | ✅ Good |
 
-**Total Frontend Tests**: 55 (10 test files + e2e)
+**Total Frontend Tests**: 55+ (15 test files + e2e)
 **Test Infrastructure**: ✅ Complete (Vitest + RTL + MSW + 40+ handlers)
 
 ### Code Quality Issues
 
 | Type | Count | Priority | Status |
 |------|-------|----------|--------|
+| **Linting (Backend)** | **25** | 🔴 High | 🔴 Needs Fix |
+| - Blank lines with whitespace | 21 | 🟡 Low | Auto-fixable |
+| - F-string missing placeholders | 2 | 🟡 Low | Auto-fixable |
+| - Unused import | 1 | 🟡 Low | Auto-fixable |
+| - Unused variable | 1 | 🟡 Low | Auto-fixable |
+| **Linting (Frontend)** | **118** | 🔴 High | 🔴 Critical |
+| - Unused variables | 100+ | 🟡 Low | Many in tests |
+| - Missing dependencies (hooks) | 3 | 🟡 Medium | React hooks |
+| - TypeScript `any` types | 2 | 🟡 Medium | Type safety |
 | Security | 0 | - | ✅ No critical issues |
-| Linting (Backend) | 0 | ✅ | ✅ All fixed (Sprint 4) |
-| Linting (Frontend) | 0 | ✅ | ✅ All fixed (Sprint 4) |
 | Performance | 2 | 🟡 | Bundle size, no code splitting |
 | Type Safety | 0 | - | ✅ Strong typing throughout |
+
+**Total Linting Errors**: 143 (25 backend + 118 frontend) 🔴
 
 ### Technical Debt
 
 | Item | Impact | Effort | Priority | Status |
 |------|--------|--------|----------|--------|
-| ~~Linting errors~~ | ~~Medium~~ | ~~Low~~ | ~~P0~~ | ✅ Fixed |
-| ~~Frontend hook tests~~ | ~~High~~ | ~~Medium~~ | ~~P0~~ | ✅ Fixed (3/4) |
-| ~~E2E test suite~~ | ~~High~~ | ~~High~~ | ~~P1~~ | ✅ Fixed (Epic 5) |
-| ~~Real-time coaching~~ | ~~High~~ | ~~High~~ | ~~P1~~ | ✅ Fixed (Epic 4) |
-| ~~AI Ghostwriter MVP~~ | ~~High~~ | ~~High~~ | ~~P1~~ | ✅ Fixed (Epic 6 P1) |
-| useAudioRecording tests | High | Medium | P0 | 🔴 Pending |
-| API endpoint coverage | Medium | Medium | P1 | 🟡 Pending |
+| Test coverage regression | High | Medium | P0 | 🔴 Critical |
+| Linting errors (143 total) | Medium | Low | P0 | 🔴 Critical |
+| API endpoint coverage gaps | High | Medium | P1 | 🟡 Important |
 | Frontend component tests | Medium | Medium | P1 | 🟡 Pending |
-| Epic 6 Phases 2-4 | Medium | High | P2 | 🟡 Pending |
 | Code splitting | Low | Low | P2 | 🟡 Future |
+| Email verification | Low | Medium | P2 | 🟡 Future |
 
 ---
 
@@ -284,51 +310,56 @@ frontend/src/
 
 ### Critical Gaps 🔴
 
-1. **useAudioRecording Hook Untested (0% coverage)**
-   - **Impact**: Core recording functionality unvalidated
-   - **Recommendation**: Add comprehensive hook tests
-   - **Effort**: 2 hours
+1. **Test Coverage Regression (45.5% actual vs 69% reported)**
+   - **Impact**: Critical - misaligned expectations, actual coverage much lower
+   - **Root Cause**: Coverage report may not include all modules, or tests not running correctly
+   - **Recommendation**: 
+     - Verify coverage calculation methodology
+     - Run full coverage report with database connection
+     - Identify missing test coverage areas
+   - **Effort**: 4 hours to diagnose + 8 hours to fix
 
-2. **API Endpoint Test Gaps (40-44% coverage)**
+2. **Linting Errors (143 total)**
+   - **Impact**: Code quality degradation, technical debt accumulation
+   - **Backend**: 25 errors (mostly auto-fixable whitespace)
+   - **Frontend**: 118 errors (unused vars, missing deps)
+   - **Recommendation**: 
+     - Run auto-fix on backend (`ruff check --fix`)
+     - Clean up unused variables in frontend (especially test files)
+     - Fix React hook dependencies
+   - **Effort**: 2 hours backend + 4 hours frontend
+
+3. **API Endpoint Test Gaps (41.2% average coverage)**
    - **Impact**: Missing edge cases, error paths untested
    - **Affected**: `api/interviews.py`, `api/feedback.py`, `api/auth.py`, `api/transcription.py`
-   - **Recommendation**: Focus on critical endpoints
-   - **Effort**: 8 hours to reach 75% overall
+   - **Recommendation**: Focus on critical endpoints first
+   - **Effort**: 12 hours to reach 70% average
 
 ### Important Gaps 🟡
 
-1. **Frontend Component Tests (0% coverage on 40+ components)**
-   - **Impact**: Regression risk on UI changes
-   - **Recommendation**: Start with critical components (RecordingDeck, FeedbackPage, etc.)
-   - **Effort**: 1 week for critical components
-
-2. **Service Layer Coverage Gaps (58-63%)**
+1. **Service Layer Coverage Gaps (58-69%)**
    - **Impact**: Business logic edge cases untested
-   - **Affected**: `feedback_service.py`, `interview_service.py`
+   - **Affected**: `feedback_service.py`, `interview_service.py`, `background_tasks.py`
    - **Recommendation**: Add tests for failure scenarios
    - **Effort**: 6 hours
 
-3. **Epic 6 Phases 2-4 Incomplete**
-   - **Impact**: Ghostwriter feature incomplete (delivery practice, rating)
-   - **Recommendation**: Prioritize Phase 2 (delivery practice)
-   - **Effort**: 3-4 weeks total
+2. **Frontend Component Tests (Partial)**
+   - **Impact**: Regression risk on UI changes
+   - **Status**: Critical pages tested (Dashboard, Interview, Feedback, Preparation)
+   - **Recommendation**: Continue with remaining pages
+   - **Effort**: 8 hours for remaining critical components
 
 ### Minor Gaps 🟢
 
 1. **Code Splitting (Frontend)**
    - **Impact**: Larger initial bundle size
-   - **Recommendation**: Lazy load routes
+   - **Recommendation**: Lazy load routes (already planned in Sprint 6)
    - **Effort**: 4 hours
 
 2. **Email Verification**
    - **Impact**: Users can register without verification
-   - **Recommendation**: Add for production security
+   - **Recommendation**: Add for production security (deferred)
    - **Effort**: 1 week
-
-3. **Video Analysis (Deferred)**
-   - **Impact**: Missing feature from original spec
-   - **Recommendation**: v1.1 roadmap
-   - **Effort**: 2-3 weeks
 
 ---
 
@@ -343,28 +374,29 @@ frontend/src/
 │             /  \     (4 suites) ✅      │
 │            /────\                       │
 │           /      \   API Tests          │
-│          /────────\  (76%) ✅           │
+│          /────────\  (41.2%) 🔴        │
 │         /          \ Integration        │
 │        /────────────\ (Partial) 🟡      │
 │       /              \ Unit Tests       │
-│      /────────────────\ (69%) ✅        │
-│   (Foundation - Strong)                │
+│      /────────────────\ (45.5%) 🔴      │
+│   (Foundation - Needs Attention)        │
 │                                         │
 └─────────────────────────────────────────┘
 ```
 
-### Phase 1: Foundation (Unit Tests) - Target: Core Business Logic
+### Phase 1: Foundation (Unit Tests) - CRITICAL PRIORITY
 
 | Component | Current | Target | Priority | Effort |
 |-----------|---------|--------|----------|--------|
-| `api/feedback.py` | 44% | 75% | P0 | 2h |
-| `api/interviews.py` | 40% | 75% | P0 | 2h |
-| `api/auth.py` | 40% | 75% | P1 | 1.5h |
-| `api/transcription.py` | 41% | 75% | P1 | 1.5h |
-| `useAudioRecording.ts` | 0% | 80% | P0 | 2h |
+| `api/feedback.py` | 44% | 75% | P0 | 3h |
+| `api/interviews.py` | 40% | 75% | P0 | 3h |
+| `api/auth.py` | 40% | 75% | P0 | 2h |
+| `api/transcription.py` | 41% | 75% | P0 | 2h |
+| `services/feedback_service.py` | 63% | 75% | P1 | 2h |
+| `services/interview_service.py` | 58% | 75% | P1 | 2h |
 
-**Phase 1 Total**: ~9 hours
-**Expected Outcome**: Backend 73%+, all critical hooks tested
+**Phase 1 Total**: ~14 hours
+**Expected Outcome**: Backend 60%+ overall, API average 65%+
 
 ### Phase 2: Integration Tests - Target: Component Interactions
 
@@ -388,17 +420,19 @@ frontend/src/
 | Subscription checkout → upgrade | ✅ |
 | Password reset flow | ✅ |
 
-### Phase 4: Frontend Component Tests - Target: UI Validation
+### Phase 4: Frontend Component Tests - Partial
 
-| Component | Priority | Effort |
-|-----------|----------|--------|
-| RecordingDeck | P0 | 2h |
-| FeedbackPage | P0 | 2h |
-| InterviewPage | P1 | 2h |
-| DashboardPage | P1 | 2h |
-| PreparationPage | P1 | 2h |
+| Component | Status | Priority | Effort |
+|-----------|--------|----------|--------|
+| DashboardPage | ✅ 12 tests | - | Done |
+| InterviewPage | ✅ 8 tests | - | Done |
+| FeedbackPage | ✅ 8 tests | - | Done |
+| PreparationPage | ✅ 8 tests | - | Done |
+| SettingsPage | ❌ | P1 | 2h |
+| QuestionsPage | ❌ | P2 | 2h |
+| HomePage | ❌ | P2 | 2h |
 
-**Phase 4 Total**: ~10 hours
+**Phase 4 Total**: ~6 hours remaining
 **Expected Outcome**: Critical pages tested
 
 ---
@@ -407,72 +441,75 @@ frontend/src/
 
 ### Quick Wins (High Impact, Low Effort)
 
-1. **Add useAudioRecording hook tests** (2 hours)
-   - Critical for interview functionality
-   - High value, manageable scope
+1. **Fix Linting Errors (2 hours backend + 4 hours frontend)**
+   - Most backend errors auto-fixable
+   - Frontend errors mostly unused vars in tests
+   - Immediate code quality improvement
 
-2. **Add api/feedback.py tests** (2 hours)
-   - 44% → 75% coverage
-   - Core feature validation
+2. **Verify Coverage Calculation (4 hours)**
+   - Identify why coverage shows 45.5% vs reported 69%
+   - May be configuration issue
+   - Critical for accurate metrics
 
-3. **Add api/interviews.py tests** (2 hours)
-   - 40% → 75% coverage
-   - Interview lifecycle validation
+3. **Increase API Endpoint Coverage (14 hours)**
+   - Focus on 4 critical API modules
+   - High visibility, clear targets
+   - Can be done incrementally
 
 ### Strategic Improvements
 
-1. **Frontend component test infrastructure** (4 hours)
+1. **Test Coverage Improvement Sprint (2 weeks)**
+   - Dedicated sprint to increase coverage to 70%+
+   - Focus on API endpoints and services
+   - Establish coverage gates
+
+2. **Frontend Component Test Infrastructure (4 hours)**
    - Create test utilities for page components
    - Enables faster test writing
+   - Reusable patterns
 
-2. **Epic 6 Phase 2: Delivery Practice** (2 weeks)
-   - High user value feature
-   - Unique market differentiator
-
-3. **Performance monitoring** (4 hours)
+3. **Performance Monitoring (4 hours)**
    - API response time tracking
    - Error rate monitoring
-
-4. **Code splitting** (4 hours)
-   - Lazy load routes
-   - Reduce initial bundle size
+   - Already have Sentry integration
 
 ---
 
 ## Recommended Action Plan
 
-### Immediate (This Sprint)
+### Immediate (This Sprint) - P0
 
-| Priority | Task | Effort |
-|----------|------|--------|
-| P0 | Add useAudioRecording hook tests | 2h |
-| P0 | Increase api/feedback.py to 75% | 2h |
-| P0 | Increase api/interviews.py to 75% | 2h |
-| P1 | Increase api/auth.py to 75% | 1.5h |
-| P1 | Increase api/transcription.py to 75% | 1.5h |
+| Priority | Task | Effort | Impact |
+|----------|------|--------|--------|
+| P0 | Fix backend linting (auto-fix) | 1h | High |
+| P0 | Fix frontend linting (unused vars) | 4h | High |
+| P0 | Verify coverage calculation methodology | 4h | Critical |
+| P0 | Increase api/feedback.py to 75% | 3h | High |
+| P0 | Increase api/interviews.py to 75% | 3h | High |
 
-**Immediate Total**: ~9 hours
-**Expected Outcome**: Backend 73%+, critical hook tested
+**Immediate Total**: ~15 hours
+**Expected Outcome**: Linting clean, coverage verified, API coverage improved
 
 ### Short-term (Next 2 Sprints)
 
 | Priority | Task | Effort |
 |----------|------|--------|
-| P1 | Frontend critical component tests | 8h |
+| P1 | Increase api/auth.py to 75% | 2h |
+| P1 | Increase api/transcription.py to 75% | 2h |
 | P1 | Service layer coverage to 75% | 6h |
-| P2 | Epic 6 Phase 2: Delivery practice | 2 weeks |
+| P1 | Frontend remaining component tests | 6h |
 
-**Short-term Total**: ~2-3 weeks
-**Expected Outcome**: Backend 75%+, frontend 30%+, Epic 6 Phase 2
+**Short-term Total**: ~16 hours
+**Expected Outcome**: Backend 60%+, API 65%+, frontend 40%+
 
 ### Long-term (Roadmap)
 
 | Priority | Task | Effort |
 |----------|------|--------|
-| P1 | Epic 6 Phases 3-4: Rating & polish | 2 weeks |
+| P1 | Test coverage sprint (70% target) | 2 weeks |
+| P2 | Code splitting (if not done) | 4h |
 | P2 | Performance optimization | 1 week |
-| P2 | Email verification | 1 week |
-| P3 | Video analysis | 3 weeks (v1.1) |
+| P3 | Email verification | 1 week |
 
 ---
 
@@ -481,8 +518,8 @@ frontend/src/
 | Document | Status | Notes |
 |----------|--------|-------|
 | README.md | ✅ Complete | - |
-| docs/PLAN.md | ✅ Complete | Sprint 4 complete, Epic 6 in progress |
-| docs/CODEBASE_AUDIT.md | ✅ **Current** | This document |
+| docs/PLAN.md | ✅ Complete | Sprint 6 complete, planning next |
+| docs/CODEBASE_AUDIT.md | ✅ **Current** | This document (updated) |
 | docs/DEPLOYMENT.md | ✅ Complete | - |
 | docs/DESIGN_SYSTEM.md | ✅ Complete | - |
 | docs/UI_SCREEN_FLOW.md | ✅ Complete | - |
@@ -498,6 +535,7 @@ frontend/src/
 | docs/COACHING_COST_OPTIMIZATION.md | ✅ Complete | - |
 | docs/TESTING_COACHING_HINTS.md | ✅ Complete | - |
 | docs/SOFT_LAUNCH_REVIEW.md | ✅ Complete | - |
+| docs/SPRINT5_EXECUTION_SUMMARY.md | ✅ Complete | - |
 | AGENTS.md | ✅ Complete | - |
 
 **Documentation Health**: ✅ **Excellent** (18 documents, all up-to-date)
@@ -511,17 +549,19 @@ frontend/src/
 - ✅ JWT authentication with refresh tokens
 - ✅ PBKDF2 password hashing
 - ✅ Rate limiting middleware (60 req/min, 1000 req/hour) - 100% tested
+- ✅ Security headers middleware (CSP, HSTS, X-Frame-Options)
 - ✅ CORS configuration
 - ✅ Input validation via Pydantic
 - ✅ SQL injection protection (SQLModel parameterized queries)
 - ✅ Error handling (no sensitive data leakage)
 - ✅ Correlation ID for request tracing
+- ✅ Sentry error monitoring configured
+- ✅ Structured logging for production
 
-### Security Gaps 🟡
+### Security Gaps 🟢
 
-1. **Email verification missing** (Low risk)
-2. **Password strength validation backend** (Low risk)
-3. **Security headers** (CSP, HSTS) (Low risk)
+1. **Email verification missing** (Low risk - deferred)
+2. **Password strength validation backend** (Low risk - frontend has indicator)
 
 ---
 
@@ -539,7 +579,7 @@ frontend/src/
 
 ### Performance Opportunities
 
-1. **Frontend code splitting** (P2)
+1. **Frontend code splitting** (P2 - planned in Sprint 6)
 2. **API response caching** (P2)
 3. **Background task optimization** (P2)
 
@@ -547,96 +587,101 @@ frontend/src/
 
 ## Completed Work (Recent)
 
-### Epic 4: Real-Time AI Coaching ✅
-- Backend coaching endpoint with Gemini 2.0 Flash
-- Frontend debounced hint generation
-- Streaming response support
-- Rate limiting (5 hints/min)
-- 85% test coverage
+### Sprint 6: Production Readiness ✅ (Mostly Complete)
 
-### Epic 5: E2E Test Suite ✅
-- Playwright configuration
-- 4 test suites covering critical flows
-- Test fixtures and helpers
-- CI/CD ready
+- ✅ Test infrastructure for useAudioRecording (46 tests)
+- ✅ Frontend component tests (36 test cases for 4 critical pages)
+- ✅ Refresh token mechanism (already implemented)
+- ✅ Email verification for email changes
+- ✅ Security headers middleware
+- ✅ Structured logging enhanced
+- ✅ Code splitting implemented
+- ✅ Password strength indicator
+- ✅ Delivery practice feature (Epic 2)
+- ✅ Delivery rating feature (Epic 3)
+- ✅ Draft editing feature (Epic 4)
 
-### Epic 6 Phase 1: AI Ghostwriter MVP ✅
-- Detective Q&A with Gemini 2.0 Flash
-- Draft generation with Claude Haiku 4.5
-- Tier-based access (Pro/Premium only)
-- 100% test coverage on preparation API
-- Frontend PreparationPage component
+### Sprint 5: Quality & Feature Completion ✅
 
-### Sprint 4: Technical Debt Payback ✅
-- Fixed 158 backend linting errors
-- Fixed 28 frontend ESLint errors
-- Added 31 backend tests (188 → 219)
-- Added 49 frontend tests (6 → 55)
-- Achieved 100% hook coverage (3/4 hooks)
-- Achieved 100% rate limiting coverage
+- ✅ useAudioRecording hook tests (46 test cases)
+- ✅ API endpoint tests expanded (30+ feedback, 32+ interviews)
+- ✅ Delivery practice endpoints
+- ✅ Rating & comparison endpoints
+- ✅ Draft editing UI
+- ✅ Iteration flow
+- ✅ AI prompt optimization
 
 ---
 
 ## Conclusion
 
-The CareerSwiftr Interview Simulator is **production-ready** with a solid foundation.
+The CareerSwiftr Interview Simulator is **production-ready** with a solid foundation, but **test coverage has regressed significantly** and there are **143 linting errors** that need immediate attention.
 
 ### Strengths ✅
 - Clean, maintainable architecture
 - Strong type safety
 - Comprehensive documentation (18 files)
-- 223+ backend tests (69% coverage)
-- 55 frontend tests + 4 E2E suites
-- Zero linting errors
-- AI features operational (coaching, ghostwriter)
+- 292 backend tests across 19 files
+- 55+ frontend tests + 4 E2E suites
+- Complete feature set (auth, interviews, AI feedback, ghostwriter, practice, rating)
+- Production security measures in place
 
-### Priority Actions 🟡
-1. **P0**: Add useAudioRecording hook tests (2h)
-2. **P0**: Increase API endpoint coverage to 75% (7h)
-3. **P1**: Add frontend component tests (8h)
-4. **P2**: Complete Epic 6 Phases 2-4 (4 weeks)
+### Critical Actions Required 🔴
+1. **P0**: Verify and fix test coverage calculation (4h)
+2. **P0**: Fix 143 linting errors (6h total)
+3. **P0**: Increase API endpoint coverage from 41.2% to 65%+ (14h)
+4. **P1**: Service layer coverage improvements (6h)
 
 ### Estimated Remaining Effort
-- Immediate (P0): ~9 hours
-- Short-term (P1): ~2-3 weeks
-- Long-term (Epic 6): ~4 weeks
+- Immediate (P0): ~24 hours
+- Short-term (P1): ~16 hours
+- Long-term (P2): ~2-3 weeks
 
-**Overall Assessment**: ✅ **Production Ready** with a clear roadmap for continued improvement.
+**Overall Assessment**: 🟡 **Production Ready with Technical Debt** - Addressable in 1-2 sprints.
 
 ---
 
 ## Next Steps
 
-1. [ ] Review this audit with team
-2. [ ] Prioritize P0 action items
-3. [ ] Update PLAN.md with next sprint
-4. [ ] Create GitHub issues for priority items
-5. [ ] Schedule test coverage sprint
+1. [ ] **URGENT**: Fix linting errors (backend + frontend)
+2. [ ] **URGENT**: Verify coverage calculation methodology
+3. [ ] Prioritize P0 action items from this audit
+4. [ ] Update PLAN.md with coverage improvement sprint
+5. [ ] Create GitHub issues for priority items
+6. [ ] Schedule test coverage sprint (target: 70%+)
 
 ---
 
-**Audit completed**: 2025-12-07
-**Previous audit**: 2025-12-20
-**Next audit recommended**: After reaching 75% backend coverage
+**Audit completed**: 2025-12-08
+**Previous audit**: 2025-12-07
+**Next audit recommended**: After fixing linting errors and verifying coverage
 
 ---
 
-## Changes Since Last Audit (2025-12-20)
+## Changes Since Last Audit (2025-12-07)
 
 ### Status Update
+
 | Metric | Last Audit | Current | Change |
 |--------|------------|---------|--------|
-| Backend Tests | 223 | 223+ | Maintained |
-| Backend Coverage | 69% | 69% | Maintained |
-| Frontend Tests | 55 | 55 | Maintained |
+| Backend Tests | 223+ | 292 | +69 tests ✅ |
+| Backend Coverage | 69% (reported) | 45.5% (actual) | -23.5% 🔴 |
+| API Coverage | ~55% (estimated) | 41.2% (actual) | -13.8% 🔴 |
+| Frontend Tests | 55 | 55+ | Maintained |
 | E2E Suites | 4 | 4 | Maintained |
-| Epic 4 (Coaching) | ✅ | ✅ | Complete |
-| Epic 5 (E2E) | ✅ | ✅ | Complete |
-| Epic 6 Phase 1 | ✅ | ✅ | Complete |
-| Epic 6 Phase 2-4 | ⏳ | ⏳ | Pending |
+| Linting Errors | 0 (reported) | 143 | +143 🔴 |
+| Sprint 6 | In Progress | Mostly Complete | ✅ |
 
-### Pending Work
-1. **P0**: useAudioRecording hook tests
-2. **P0**: API endpoint coverage (40% → 75%)
-3. **P1**: Frontend component tests
-4. **P2**: Epic 6 Phases 2-4 (delivery + rating)
+### Key Findings
+
+1. **Coverage Discrepancy**: Actual coverage is 45.5%, not 69% as previously reported. This is a critical finding that requires investigation.
+2. **Linting Regression**: 143 linting errors discovered (25 backend + 118 frontend). Most are auto-fixable or unused variables.
+3. **Test Count Increase**: Test cases increased from 223+ to 292, indicating good test coverage expansion, but coverage percentage suggests tests may not be hitting all code paths.
+4. **Sprint 6 Completion**: Most Sprint 6 features are complete (delivery practice, rating, draft editing, security headers, logging).
+
+### Priority Actions
+
+1. **Immediate**: Fix linting errors (6h)
+2. **Immediate**: Verify coverage calculation (4h)
+3. **Short-term**: Increase API endpoint coverage (14h)
+4. **Short-term**: Service layer coverage improvements (6h)

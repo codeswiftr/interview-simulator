@@ -335,35 +335,34 @@ export default function FeedbackPage() {
               {/* Overall Score Hero */}
               <div className="card-glass p-8 sm:p-12 text-center relative overflow-hidden dark:bg-surface-secondary/40 dark:border-white/10">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-electric-blue to-indigo-500"></div>
-                
+
                 <h2 className="heading-section mb-2 text-[var(--fg-primary)]">Overall Performance</h2>
                 {user?.experience_level && (
                   <p className="body-small text-electric-blue font-medium mb-8 bg-electric-blue/5 dark:bg-electric-blue/10 inline-block px-4 py-1 rounded-full border border-electric-blue/10">
                     Feedback tailored for {experienceLevelLabels[user.experience_level] || 'Mid-Level Engineers'}
                   </p>
                 )}
-                
+
                 <div className="flex justify-center mb-8 relative z-10">
                   <div className="bg-white/50 dark:bg-white/5 rounded-full p-6 backdrop-blur-sm border border-white/20 dark:border-white/5 shadow-2xl">
                     <ScoreRing score={sessionFeedback.overall_score} size="large" />
                   </div>
                 </div>
-                
+
                 <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
-                <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
-                  You completed <span className="font-semibold text-[var(--fg-primary)]">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
-                </p>
+                  <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
+                    You completed <span className="font-semibold text-[var(--fg-primary)]">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
+                  </p>
                 </p>
 
                 {/* Improvement Banner */}
                 {comparison && comparison.sessions_compared > 0 && comparison.improvement_percent !== null && (
-                  <div className={`inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border backdrop-blur-md ${
-                    comparison.improvement_percent > 0
+                  <div className={`inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border backdrop-blur-md ${comparison.improvement_percent > 0
                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                       : comparison.improvement_percent < 0
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
                         : 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400'
-                  }`}>
+                    }`}>
                     {comparison.improvement_percent > 0 ? (
                       <TrendingUp className="w-4 h-4" />
                     ) : comparison.improvement_percent < 0 ? (

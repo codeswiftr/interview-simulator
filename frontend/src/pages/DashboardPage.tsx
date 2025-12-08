@@ -180,7 +180,7 @@ export default function DashboardPage() {
   // Generate heatmap data from sessions
   const heatmapData = useMemo(() => {
     const activityMap: Record<string, { count: number; totalScore: number; scoredSessions: number }> = {};
-    
+
     sessions.forEach(session => {
       const date = new Date(session.created_at).toISOString().split('T')[0];
       if (!activityMap[date]) {
@@ -201,7 +201,7 @@ export default function DashboardPage() {
         if (avgScore >= 80) trend = 'improvement';
         else if (avgScore < 60) trend = 'regression';
       }
-      
+
       return {
         date,
         count: data.count,
@@ -214,7 +214,7 @@ export default function DashboardPage() {
   // Generate radar data from progress
   const radarData = useMemo(() => {
     if (!userProgress) return undefined;
-    
+
     return [
       { subject: 'Content', current: Math.round(userProgress.average_content_score || 0), target: 90 },
       { subject: 'Delivery', current: Math.round(userProgress.average_audio_score || 0), target: 85 },
@@ -240,7 +240,7 @@ export default function DashboardPage() {
             <h1 className="heading-page mb-2">Welcome back{user?.full_name ? `, ${user.full_name}` : ''}!</h1>
             <p className="text-text-secondary">Track your progress and continue practicing your interview skills.</p>
           </div>
-          
+
           {!isLoading && sessions.length > 0 && (
             <button
               onClick={() => setIsModalOpen(true)}
@@ -312,7 +312,7 @@ export default function DashboardPage() {
               </div>
               <h3 className="heading-card">Improvements by Criteria</h3>
             </div>
-            
+
             <div className="grid md:grid-cols-3 gap-6">
               {/* Delivery Improvements */}
               <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
@@ -411,20 +411,20 @@ export default function DashboardPage() {
             <p className="body-default text-text-secondary mb-8 max-w-2xl">
               Complete these steps to start improving your interview skills. Our AI coach will guide you through your first session.
             </p>
-            
+
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-electric-blue text-white flex items-center justify-center font-bold shadow-lg">1</div>
                 <h3 className="heading-card mb-2">Create Interview</h3>
                 <p className="body-small text-text-secondary">Choose your topic and difficulty level to customize your practice.</p>
               </div>
-              
+
               <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">2</div>
                 <h3 className="heading-card mb-2">Record Answers</h3>
                 <p className="body-small text-text-secondary">Speak naturally. We'll record and transcribe your responses.</p>
               </div>
-              
+
               <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">3</div>
                 <h3 className="heading-card mb-2">Get Feedback</h3>

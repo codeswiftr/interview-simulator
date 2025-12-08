@@ -118,7 +118,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                     <button
                       key={type.value}
                       type="button"
-                      onClick={() => setFormData({ ...formData, interview_type: type.value as any })}
+                      onClick={() => setFormData({ ...formData, interview_type: type.value as CreateInterviewFormData['interview_type'] })}
                       className={`
                         relative group p-4 rounded-xl text-left border-2 transition-all duration-200
                         ${isSelected 
@@ -189,7 +189,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       <button
                         key={level.value}
                         type="button"
-                        onClick={() => setFormData({ ...formData, difficulty: level.value as any })}
+                        onClick={() => setFormData({ ...formData, difficulty: level.value as CreateInterviewFormData['difficulty'] })}
                         className={`
                           flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200
                           ${isSelected 

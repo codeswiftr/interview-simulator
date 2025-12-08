@@ -3,7 +3,6 @@
 import json
 import logging
 from dataclasses import dataclass
-from uuid import UUID
 
 from openai import AsyncOpenAI
 

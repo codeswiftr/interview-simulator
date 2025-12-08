@@ -1,6 +1,52 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Mic, Square, Play, Pause, X } from 'lucide-react';
 import type { RecordingState } from '../../hooks/useAudioRecording';
+
+// Type definitions for Speech Recognition API
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: {
+      new (): SpeechRecognition;
+    };
+    webkitSpeechRecognition?: {
+      new (): SpeechRecognition;
+    };
+    AudioContext?: {
+      new (): AudioContext;
+    };
+    webkitAudioContext?: {
+      new (): AudioContext;
+    };
+  }
+}
 
 interface RecordingDeckProps {
   isRecording: boolean;
@@ -35,13 +81,15 @@ export default function RecordingDeck({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const [transcript, setTranscript] = useState('');
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Audio Visualizer
   useEffect(() => {
     if (!mediaStream || !canvasRef.current) return;
 
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audioContext = new AudioContextClass();
     const analyser = audioContext.createAnalyser();
     const source = audioContext.createMediaStreamSource(mediaStream);
 
@@ -92,19 +140,26 @@ export default function RecordingDeck({
   }, [mediaStream]);
 
   // Speech Recognition (Live Transcription)
+  // Memoize callback to avoid dependency issues
+  const handleTranscriptChange = useCallback((newTranscript: string) => {
+    if (onTranscriptChange) {
+      onTranscriptChange(newTranscript);
+    }
+  }, [onTranscriptChange]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Check availability
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if (SpeechRecognition && isRecording) {
-      const recognition = new SpeechRecognition();
+    if (SpeechRecognitionClass && isRecording) {
+      const recognition = new SpeechRecognitionClass();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         let currentTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
@@ -115,9 +170,7 @@ export default function RecordingDeck({
         }
         setTranscript(currentTranscript);
         // Notify parent component of transcript changes
-        if (onTranscriptChange) {
-          onTranscriptChange(currentTranscript);
-        }
+        handleTranscriptChange(currentTranscript);
       };
 
       recognition.start();
@@ -133,7 +186,7 @@ export default function RecordingDeck({
         recognitionRef.current.stop();
       }
     };
-  }, [isRecording]);
+  }, [isRecording, handleTranscriptChange]);
 
   // Format time
   const formatTime = (seconds: number) => {

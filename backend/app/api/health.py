@@ -91,7 +91,7 @@ async def health_detailed() -> dict[str, str | dict]:
     Does not block the main health route.
     """
     import time
-    
+
     status_map: dict[str, str | dict] = {
         "status": "healthy",
     }
@@ -100,7 +100,7 @@ async def health_detailed() -> dict[str, str | dict]:
     db_start = time.time()
     db_ok = await check_db_connection()
     db_time = (time.time() - db_start) * 1000  # Convert to ms
-    
+
     if db_ok:
         status_map["database"] = {
             "status": "ok",
@@ -119,7 +119,7 @@ async def health_detailed() -> dict[str, str | dict]:
         redis_start = time.time()
         redis_ok = await check_redis()
         redis_time = (time.time() - redis_start) * 1000
-        
+
         if redis_ok:
             status_map["redis"] = {
                 "status": "ok",
@@ -143,7 +143,7 @@ async def health_detailed() -> dict[str, str | dict]:
         configured.append("anthropic")
     if ai_services.get("openrouter"):
         configured.append("openrouter")
-    
+
     if configured:
         status_map["ai_services"] = {
             "status": "configured",
@@ -155,7 +155,7 @@ async def health_detailed() -> dict[str, str | dict]:
             "providers": [],
         }
         status_map["status"] = "degraded"
-    
+
     # Add version and environment info
     status_map["version"] = "0.1.0"
     status_map["environment"] = settings.environment

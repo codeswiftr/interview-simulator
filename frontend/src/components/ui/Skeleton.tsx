@@ -13,14 +13,14 @@ interface SkeletonProps {
 /**
  * Base skeleton component with shimmer animation.
  */
-export function Skeleton({ 
-  className = '', 
-  width, 
-  height, 
-  variant = 'rectangular' 
+export function Skeleton({
+  className = '',
+  width,
+  height,
+  variant = 'rectangular'
 }: SkeletonProps) {
   const baseClasses = 'animate-pulse bg-surface-secondary rounded';
-  
+
   const variantClasses = {
     text: 'h-4',
     circular: 'rounded-full',
@@ -32,7 +32,7 @@ export function Skeleton({
   if (height) style.height = typeof height === 'number' ? `${height}px` : height;
 
   return (
-    <div 
+    <div
       className={`${baseClasses} ${variantClasses[variant]} ${className}`}
       style={style}
     />
@@ -42,10 +42,10 @@ export function Skeleton({
 /**
  * Skeleton for text content (headings, paragraphs).
  */
-export function SkeletonText({ 
-  lines = 1, 
+export function SkeletonText({
+  lines = 1,
   className = '',
-  width = '100%' 
+  width = '100%'
 }: { lines?: number; className?: string; width?: string | number }) {
   return (
     <div className={`space-y-2 ${className}`}>

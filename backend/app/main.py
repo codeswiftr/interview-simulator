@@ -38,10 +38,9 @@ def configure_logging() -> None:
     Sets up JSON-formatted logging in production, simple format in development.
     """
     log_level = logging.DEBUG if settings.debug else logging.INFO
-    
+
     if settings.debug:
         # Development: Human-readable format
-        log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
         handler = logging.StreamHandler(sys.stdout)
     else:
         # Production: JSON-structured logging
@@ -50,7 +49,7 @@ def configure_logging() -> None:
 
         class JSONFormatter(logging.Formatter):
             """JSON formatter for structured logging in production."""
-            
+
             def format(self, record: logging.LogRecord) -> str:
                 log_data = {
                     "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -58,21 +57,21 @@ def configure_logging() -> None:
                     "logger": record.name,
                     "message": record.getMessage(),
                 }
-                
+
                 # Add correlation ID if available
                 if hasattr(record, "correlation_id"):
                     log_data["correlation_id"] = record.correlation_id
-                
+
                 # Add exception info if present
                 if record.exc_info:
                     log_data["exception"] = self.formatException(record.exc_info)
-                
+
                 # Add extra fields
                 if hasattr(record, "extra"):
                     log_data.update(record.extra)
-                
+
                 return json.dumps(log_data)
-        
+
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(JSONFormatter())
 
