@@ -43,6 +43,7 @@ def check_ai_services() -> dict[str, bool]:
     return {
         "openai": bool(settings.openai_api_key),
         "anthropic": bool(settings.anthropic_api_key),
+        "openrouter": bool(getattr(settings, "openrouter_api_key", None)),
     }
 
 
@@ -83,47 +84,80 @@ async def readiness_check(response: Response) -> dict[str, str | bool]:
 
 
 @router.get("/health/details")
-async def health_detailed() -> dict[str, str]:
+async def health_detailed() -> dict[str, str | dict]:
     """Detailed health check with dependency status.
 
-    Returns status of database, Redis (if configured), and other critical services.
+    Returns comprehensive status of all dependencies including response times.
     Does not block the main health route.
     """
-    status_map: dict[str, str] = {
+    import time
+    
+    status_map: dict[str, str | dict] = {
         "status": "healthy",
     }
 
-    # Check database connection
+    # Check database connection with timing
+    db_start = time.time()
     db_ok = await check_db_connection()
+    db_time = (time.time() - db_start) * 1000  # Convert to ms
+    
     if db_ok:
-        status_map["database"] = "ok"
+        status_map["database"] = {
+            "status": "ok",
+            "response_time_ms": round(db_time, 2),
+        }
     else:
         logger.error("Database health check failed")
-        status_map["database"] = "error"
+        status_map["database"] = {
+            "status": "error",
+            "response_time_ms": round(db_time, 2),
+        }
         status_map["status"] = "degraded"
 
-    # Check Redis (if configured)
+    # Check Redis (if configured) with timing
     if settings.redis_url:
+        redis_start = time.time()
         redis_ok = await check_redis()
+        redis_time = (time.time() - redis_start) * 1000
+        
         if redis_ok:
-            status_map["redis"] = "ok"
+            status_map["redis"] = {
+                "status": "ok",
+                "response_time_ms": round(redis_time, 2),
+            }
         else:
-            status_map["redis"] = "error"
+            status_map["redis"] = {
+                "status": "error",
+                "response_time_ms": round(redis_time, 2),
+            }
             status_map["status"] = "degraded"
     else:
-        status_map["redis"] = "not_configured"
+        status_map["redis"] = {"status": "not_configured"}
 
     # Check AI service keys (presence only, not actual API calls)
     ai_services = check_ai_services()
-    if ai_services["openai"] or ai_services["anthropic"]:
-        configured = []
-        if ai_services["openai"]:
-            configured.append("openai")
-        if ai_services["anthropic"]:
-            configured.append("anthropic")
-        status_map["ai_services"] = f"configured ({', '.join(configured)})"
+    configured = []
+    if ai_services["openai"]:
+        configured.append("openai")
+    if ai_services["anthropic"]:
+        configured.append("anthropic")
+    if ai_services.get("openrouter"):
+        configured.append("openrouter")
+    
+    if configured:
+        status_map["ai_services"] = {
+            "status": "configured",
+            "providers": configured,
+        }
     else:
-        status_map["ai_services"] = "not_configured"
+        status_map["ai_services"] = {
+            "status": "not_configured",
+            "providers": [],
+        }
         status_map["status"] = "degraded"
+    
+    # Add version and environment info
+    status_map["version"] = "0.1.0"
+    status_map["environment"] = settings.environment
 
     return status_map

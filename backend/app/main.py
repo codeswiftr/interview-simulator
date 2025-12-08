@@ -38,16 +38,47 @@ def configure_logging() -> None:
     Sets up JSON-formatted logging in production, simple format in development.
     """
     log_level = logging.DEBUG if settings.debug else logging.INFO
-    log_format = (
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        if settings.debug
-        else "%(asctime)s [%(levelname)s] %(name)s [%(correlation_id)s]: %(message)s"
-    )
+    
+    if settings.debug:
+        # Development: Human-readable format
+        log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        handler = logging.StreamHandler(sys.stdout)
+    else:
+        # Production: JSON-structured logging
+        import json
+        from datetime import datetime
+
+        class JSONFormatter(logging.Formatter):
+            """JSON formatter for structured logging in production."""
+            
+            def format(self, record: logging.LogRecord) -> str:
+                log_data = {
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "message": record.getMessage(),
+                }
+                
+                # Add correlation ID if available
+                if hasattr(record, "correlation_id"):
+                    log_data["correlation_id"] = record.correlation_id
+                
+                # Add exception info if present
+                if record.exc_info:
+                    log_data["exception"] = self.formatException(record.exc_info)
+                
+                # Add extra fields
+                if hasattr(record, "extra"):
+                    log_data.update(record.extra)
+                
+                return json.dumps(log_data)
+        
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(JSONFormatter())
 
     logging.basicConfig(
         level=log_level,
-        format=log_format,
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[handler],
     )
 
     # Set specific loggers
