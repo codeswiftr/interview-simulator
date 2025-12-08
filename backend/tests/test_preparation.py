@@ -802,3 +802,242 @@ async def test_get_attempts_unauthorized(client, session_override):
     )
 
     assert response.status_code == 404
+
+
+# Rating Endpoints Tests
+
+
+@pytest.mark.asyncio
+async def test_rate_delivery_success(client, session_override):
+    """Test rating a delivery attempt."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    token = await register_and_login_pro(client, session_override, email="rate@example.com")
+
+    # Create question and preparation with draft
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    from app.models.user import User
+
+    result = await session_override.exec(select(User).where(User.email == "rate@example.com"))
+    user = result.first()
+
+    preparation = AnswerPreparation(
+        user_id=user.id,
+        question_id=question.id,
+        stage=PreparationStage.PRACTICE,
+        draft_answer="**Situation**: Test situation\n**Task**: Test task\n**Action**: Test action\n**Result**: Test result",
+    )
+    session_override.add(preparation)
+    await session_override.commit()
+    await session_override.refresh(preparation)
+
+    # Create attempt with transcript
+    attempt = DeliveryAttempt(
+        preparation_id=preparation.id,
+        transcript="I faced a test situation. My task was to handle it. I took specific actions. The result was positive.",
+    )
+    session_override.add(attempt)
+    await session_override.commit()
+    await session_override.refresh(attempt)
+
+    # Mock rating service
+    with patch("app.api.preparation.DeliveryRatingService") as MockRatingService:
+        mock_service = MagicMock()
+        mock_rating = MagicMock()
+        mock_rating.delivery_score = 85.0
+        mock_rating.content_coverage = 90.0
+        mock_rating.key_points = 85.0
+        mock_rating.flow_structure = 80.0
+        mock_rating.strengths = ["Clear delivery", "Good structure", "Engaging"]
+        mock_rating.improvements = ["Add more details", "Include metrics", "Smoother transitions"]
+        mock_rating.comparison_feedback = "Your delivery captured the key points well."
+        mock_service.rate_delivery = AsyncMock(return_value=mock_rating)
+        MockRatingService.return_value = mock_service
+
+        # Rate delivery
+        response = await client.post(
+            f"/api/v1/preparation/{preparation.id}/rate-delivery",
+            headers={"Authorization": token},
+            json={"attempt_id": str(attempt.id)},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "delivery_score" in data
+        assert data["delivery_score"] == 85.0
+        assert data["content_coverage"] == 90.0
+        assert len(data["strengths"]) == 3
+        assert len(data["improvements"]) == 3
+        assert data["stage"] == "complete"
+
+        # Verify attempt was updated
+        await session_override.refresh(attempt)
+        assert attempt.delivery_score == 85.0
+        assert attempt.comparison_feedback is not None
+
+
+@pytest.mark.asyncio
+async def test_rate_delivery_no_transcript(client, session_override):
+    """Test that rating fails if attempt has no transcript."""
+    token = await register_and_login_pro(client, session_override, email="notranscript@example.com")
+
+    # Create preparation with draft
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    from app.models.user import User
+
+    result = await session_override.exec(
+        select(User).where(User.email == "notranscript@example.com")
+    )
+    user = result.first()
+
+    preparation = AnswerPreparation(
+        user_id=user.id,
+        question_id=question.id,
+        stage=PreparationStage.PRACTICE,
+        draft_answer="Test draft",
+    )
+    session_override.add(preparation)
+    await session_override.commit()
+    await session_override.refresh(preparation)
+
+    # Create attempt without transcript
+    attempt = DeliveryAttempt(
+        preparation_id=preparation.id,
+        transcript=None,
+    )
+    session_override.add(attempt)
+    await session_override.commit()
+    await session_override.refresh(attempt)
+
+    # Try to rate
+    response = await client.post(
+        f"/api/v1/preparation/{preparation.id}/rate-delivery",
+        headers={"Authorization": token},
+        json={"attempt_id": str(attempt.id)},
+    )
+
+    assert response.status_code == 400
+    assert "transcript" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_comparison_success(client, session_override):
+    """Test getting comparison view."""
+    token = await register_and_login_pro(client, session_override, email="comparison@example.com")
+
+    # Create preparation with draft
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    from app.models.user import User
+
+    result = await session_override.exec(
+        select(User).where(User.email == "comparison@example.com")
+    )
+    user = result.first()
+
+    preparation = AnswerPreparation(
+        user_id=user.id,
+        question_id=question.id,
+        stage=PreparationStage.COMPLETE,
+        draft_answer="**Situation**: Planned situation\n**Task**: Planned task\n**Action**: Planned action\n**Result**: Planned result",
+    )
+    session_override.add(preparation)
+    await session_override.commit()
+    await session_override.refresh(preparation)
+
+    # Create rated attempt
+    attempt = DeliveryAttempt(
+        preparation_id=preparation.id,
+        transcript="I handled a situation. I had a task. I took actions. The result was good.",
+        delivery_score=85.0,
+        comparison_feedback="Good delivery covering main points.",
+    )
+    session_override.add(attempt)
+    await session_override.commit()
+    await session_override.refresh(attempt)
+
+    # Get comparison
+    response = await client.get(
+        f"/api/v1/preparation/{preparation.id}/comparison?attempt_id={attempt.id}",
+        headers={"Authorization": token},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["draft"] == preparation.draft_answer
+    assert data["delivery"] == attempt.transcript
+    assert data["delivery_score"] == 85.0
+    assert data["comparison_feedback"] == "Good delivery covering main points."
+
+
+@pytest.mark.asyncio
+async def test_get_comparison_unauthorized(client, session_override):
+    """Test that users cannot access other users' comparisons."""
+    token1 = await register_and_login_pro(client, session_override, email="user1comp@example.com")
+    token2 = await register_and_login_pro(client, session_override, email="user2comp@example.com")
+
+    # User 1 creates preparation
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    from app.models.user import User
+
+    result = await session_override.exec(
+        select(User).where(User.email == "user1comp@example.com")
+    )
+    user1 = result.first()
+
+    preparation = AnswerPreparation(
+        user_id=user1.id,
+        question_id=question.id,
+        stage=PreparationStage.PRACTICE,
+        draft_answer="Test draft",
+    )
+    session_override.add(preparation)
+    await session_override.commit()
+    await session_override.refresh(preparation)
+
+    attempt = DeliveryAttempt(
+        preparation_id=preparation.id,
+        transcript="Test delivery",
+    )
+    session_override.add(attempt)
+    await session_override.commit()
+    await session_override.refresh(attempt)
+
+    # User 2 tries to access User 1's comparison
+    response = await client.get(
+        f"/api/v1/preparation/{preparation.id}/comparison?attempt_id={attempt.id}",
+        headers={"Authorization": token2},
+    )
+
+    assert response.status_code == 404

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from sqlmodel import select
@@ -988,7 +988,7 @@ async def rate_delivery(
 )
 async def get_comparison(
     preparation_id: UUID,
-    attempt_id: UUID,
+    attempt_id: UUID = Query(..., description="UUID of the delivery attempt"),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ComparisonResponse:
@@ -996,7 +996,7 @@ async def get_comparison(
 
     Args:
         preparation_id: UUID of the preparation session
-        attempt_id: UUID of the delivery attempt
+        attempt_id: UUID of the delivery attempt (query parameter)
         current_user: Authenticated user
         session: Database session
 
