@@ -99,9 +99,12 @@ describe('useAudioRecording', () => {
 
     // Mock global MediaRecorder constructor to return our mock instance
     originalMediaRecorder = global.MediaRecorder;
-    const MediaRecorderConstructor = vi.fn(() => mockMediaRecorderInstance) as unknown as typeof MediaRecorder;
+    // Use a proper constructor function instead of vi.fn() to avoid warnings
+    function MediaRecorderConstructor(this: any) {
+      return mockMediaRecorderInstance;
+    }
     MediaRecorderConstructor.isTypeSupported = MockMediaRecorder.isTypeSupported;
-    global.MediaRecorder = MediaRecorderConstructor;
+    global.MediaRecorder = MediaRecorderConstructor as unknown as typeof MediaRecorder;
     // Ensure it's also on window for browser-like behavior
     (global as any).window = global;
     (global.window as any).MediaRecorder = MediaRecorderConstructor;
@@ -121,9 +124,13 @@ describe('useAudioRecording', () => {
 
     // Mock Audio constructor - always return the same mock instance
     originalAudio = global.Audio;
-    global.Audio = vi.fn(() => mockAudio) as unknown as typeof Audio;
+    // Use a proper constructor function instead of vi.fn() to avoid warnings
+    function AudioConstructor(this: any) {
+      return mockAudio;
+    }
+    global.Audio = AudioConstructor as unknown as typeof Audio;
     if ((global as any).window) {
-      (global.window as any).Audio = global.Audio;
+      (global.window as any).Audio = AudioConstructor;
     }
   });
 
