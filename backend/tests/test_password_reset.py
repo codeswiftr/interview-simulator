@@ -409,3 +409,78 @@ async def test_refresh_token_clears_expired_token(client: AsyncClient, session_o
     assert user.refresh_token_expires_at is None
 
 
+@pytest.mark.asyncio
+async def test_reset_password_user_not_found_after_token_lookup(client: AsyncClient, session_override):
+    """Test edge case where token exists but user was deleted (data inconsistency)."""
+    email = await create_test_user(client, email="orphan_token@example.com")
+
+    # Request password reset
+    await client.post("/api/v1/auth/forgot-password", json={"email": email})
+
+    # Get the token
+    result = await session_override.exec(select(PasswordResetToken))
+    reset_token = result.first()
+    assert reset_token is not None
+
+    # Delete the user (simulating data inconsistency)
+    user_result = await session_override.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    await session_override.delete(user)
+    await session_override.commit()
+
+    # Try to reset password with token pointing to deleted user
+    resp = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": reset_token.token, "new_password": "newpassword"}
+    )
+    assert resp.status_code == 400
+    assert "invalid" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_lowercase_email_normalization(client: AsyncClient, session_override):
+    """Test that email is normalized to lowercase before lookup."""
+    email_uppercase = "TEST@EXAMPLE.COM"
+    email_lowercase = email_uppercase.lower()
+
+    # Register with lowercase
+    await create_test_user(client, email=email_lowercase)
+
+    # Request password reset with uppercase email
+    resp = await client.post("/api/v1/auth/forgot-password", json={"email": email_uppercase})
+    assert resp.status_code == 200
+
+    # Verify token was created (email was normalized)
+    result = await session_override.exec(select(PasswordResetToken))
+    tokens = list(result.all())
+    assert len(tokens) == 1
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_null_refresh_token_handling(client: AsyncClient, session_override):
+    """Test that refresh endpoint handles null refresh_token gracefully."""
+    email = await create_test_user(client, email="null_refresh@example.com")
+
+    # Login to get tokens
+    login_resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": email, "password": "password123"}
+    )
+    assert login_resp.status_code == 200
+
+    # Manually clear refresh token (simulating edge case)
+    user_result = await session_override.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    user.refresh_token = None
+    user.refresh_token_expires_at = None
+    await session_override.commit()
+
+    # Try to refresh with null token
+    resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "some-token"}
+    )
+    assert resp.status_code == 401
+    assert "invalid" in resp.json()["detail"].lower()
+
+
