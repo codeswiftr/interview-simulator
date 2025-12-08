@@ -34,16 +34,16 @@ interface SpeechRecognitionAlternative {
 declare global {
   interface Window {
     SpeechRecognition?: {
-      new (): SpeechRecognition;
+      new(): SpeechRecognition;
     };
     webkitSpeechRecognition?: {
-      new (): SpeechRecognition;
+      new(): SpeechRecognition;
     };
     AudioContext?: {
-      new (): AudioContext;
+      new(): AudioContext;
     };
     webkitAudioContext?: {
-      new (): AudioContext;
+      new(): AudioContext;
     };
   }
 }

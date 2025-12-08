@@ -77,11 +77,11 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
 
   return (
     <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div 
+      <div
         className="backdrop-blur-xl max-w-4xl w-full rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] animate-scale-in"
         style={{ backgroundColor: resolvedTheme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)' }}
       >
-        
+
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-white/10">
           <div>
@@ -104,7 +104,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8">
-            
+
             {/* Left Column: Interview Type */}
             <div className="flex-1 space-y-4">
               <label className="text-sm font-semibold text-text-tertiary dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
@@ -121,8 +121,8 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       onClick={() => setFormData({ ...formData, interview_type: type.value as CreateInterviewFormData['interview_type'] })}
                       className={`
                         relative group p-4 rounded-xl text-left border-2 transition-all duration-200
-                        ${isSelected 
-                          ? `border-electric-blue bg-electric-blue/5 dark:bg-electric-blue/10 shadow-lg shadow-electric-blue/10` 
+                        ${isSelected
+                          ? `border-electric-blue bg-electric-blue/5 dark:bg-electric-blue/10 shadow-lg shadow-electric-blue/10`
                           : 'border-transparent bg-surface-secondary dark:bg-[#1F2937] hover:bg-surface-tertiary dark:hover:bg-[#334155]'
                         }
                       `}
@@ -135,7 +135,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       </div>
                       <div className={`font-semibold mb-1 ${isSelected ? 'text-text-primary dark:text-white' : 'text-text-primary dark:text-gray-200'}`}>{type.label}</div>
                       <div className={`text-xs ${isSelected ? 'text-text-secondary dark:text-gray-300' : 'text-text-secondary dark:text-gray-400'}`}>{type.description}</div>
-                      
+
                       {isSelected && (
                         <div className="absolute top-3 right-3 text-electric-blue animate-scale-in">
                           <CheckCircle2 size={18} fill="currentColor" className="text-white" />
@@ -149,7 +149,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
 
             {/* Right Column: Configuration */}
             <div className="flex-1 space-y-8 lg:border-l border-border-light dark:border-white/10 lg:pl-8">
-              
+
               {/* Target Company */}
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-text-tertiary dark:text-gray-400 uppercase tracking-wider">
@@ -192,8 +192,8 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                         onClick={() => setFormData({ ...formData, difficulty: level.value as CreateInterviewFormData['difficulty'] })}
                         className={`
                           flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200
-                          ${isSelected 
-                            ? `border-current ${level.color} bg-current/5` 
+                          ${isSelected
+                            ? `border-current ${level.color} bg-current/5`
                             : 'border-transparent bg-surface-secondary dark:bg-[#1F2937] hover:bg-surface-tertiary dark:hover:bg-[#334155] text-text-secondary dark:text-gray-400'
                           }
                         `}
@@ -221,8 +221,8 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                         onClick={() => setFormData({ ...formData, question_count: count })}
                         className={`
                           flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-200
-                          ${isSelected 
-                            ? 'bg-white dark:bg-[#334155] text-electric-blue dark:text-white shadow-sm scale-105' 
+                          ${isSelected
+                            ? 'bg-white dark:bg-[#334155] text-electric-blue dark:text-white shadow-sm scale-105'
                             : 'text-text-secondary dark:text-gray-400 hover:text-text-primary dark:hover:text-gray-200'
                           }
                         `}

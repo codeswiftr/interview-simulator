@@ -297,8 +297,8 @@ export default function SettingsPage() {
                   <button
                     onClick={() => setTheme('light')}
                     className={`p-4 rounded-lg border-2 transition-all ${theme === 'light'
-                        ? 'border-electric-blue bg-electric-blue/10'
-                        : 'border-border-light hover:border-electric-blue/50'
+                      ? 'border-electric-blue bg-electric-blue/10'
+                      : 'border-border-light hover:border-electric-blue/50'
                       }`}
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -313,8 +313,8 @@ export default function SettingsPage() {
                   <button
                     onClick={() => setTheme('dark')}
                     className={`p-4 rounded-lg border-2 transition-all ${theme === 'dark'
-                        ? 'border-electric-blue bg-electric-blue/10'
-                        : 'border-border-light hover:border-electric-blue/50'
+                      ? 'border-electric-blue bg-electric-blue/10'
+                      : 'border-border-light hover:border-electric-blue/50'
                       }`}
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -329,8 +329,8 @@ export default function SettingsPage() {
                   <button
                     onClick={() => setTheme('system')}
                     className={`p-4 rounded-lg border-2 transition-all ${theme === 'system'
-                        ? 'border-electric-blue bg-electric-blue/10'
-                        : 'border-border-light hover:border-electric-blue/50'
+                      ? 'border-electric-blue bg-electric-blue/10'
+                      : 'border-border-light hover:border-electric-blue/50'
                       }`}
                   >
                     <div className="flex flex-col items-center gap-2">

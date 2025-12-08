@@ -48,32 +48,32 @@ export default function AudioPreview({
     const draw = () => {
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       const bars = 40;
       const barWidth = canvas.width / bars;
-      
+
       for (let i = 0; i < bars; i++) {
         // Create a wave effect based on time and index
-        const heightMultiplier = isPlaying 
+        const heightMultiplier = isPlaying
           ? Math.max(0.2, (Math.sin((Date.now() / 100) + i * 0.5) + 1) / 2)
           : 0.2; // Static low bars when paused
-          
+
         const barHeight = (canvas.height * 0.8) * heightMultiplier;
         const x = i * barWidth;
         const y = (canvas.height - barHeight) / 2;
-        
+
         // Gradient based on playing state
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
         if (isPlaying) {
           gradient.addColorStop(0, '#38bdf8'); // sky-400
           gradient.addColorStop(1, '#6366f1'); // indigo-500
         } else {
-           gradient.addColorStop(0, '#94a3b8'); // slate-400
-           gradient.addColorStop(1, '#64748b'); // slate-500
+          gradient.addColorStop(0, '#94a3b8'); // slate-400
+          gradient.addColorStop(1, '#64748b'); // slate-500
         }
 
         ctx.fillStyle = gradient;
-        
+
         // Rounded caps manually or just rects
         ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
       }
@@ -132,25 +132,25 @@ export default function AudioPreview({
 
       {/* Audio Player Card - Premium Glassmorphism */}
       <div className="bg-white/80 dark:bg-surface-secondary/80 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/50 dark:border-white/10 relative overflow-hidden group">
-        
+
         {/* Background Glow Effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1/2 bg-electric-blue/10 blur-[50px] rounded-full pointer-events-none"></div>
 
         {/* Visualizer Canvas */}
         <div className="h-32 w-full mb-6 relative flex items-center justify-center">
-            <canvas 
-              ref={canvasRef} 
-              width={600} 
-              height={128}
-              className="w-full h-full opacity-90"
-            />
-             
-             {/* Play/Pause Overlay Button */}
-             <div className="absolute inset-0 flex items-center justify-center">
-                <button
-                    onClick={isPlaying ? onPause : onPlay}
-                    disabled={disabled || isSubmitting}
-                    className={`
+          <canvas
+            ref={canvasRef}
+            width={600}
+            height={128}
+            className="w-full h-full opacity-90"
+          />
+
+          {/* Play/Pause Overlay Button */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <button
+              onClick={isPlaying ? onPause : onPlay}
+              disabled={disabled || isSubmitting}
+              className={`
                     flex items-center justify-center
                     w-16 h-16 rounded-full
                     bg-electric-blue text-white
@@ -159,26 +159,26 @@ export default function AudioPreview({
                     shadow-lg hover:shadow-blue-glow z-10
                     ${(disabled || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}
                     `}
-                >
-                    {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" className="ml-1" />}
-                </button>
-             </div>
+            >
+              {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" className="ml-1" />}
+            </button>
+          </div>
         </div>
 
         {/* Metadata & Progress */}
         <div className="space-y-3 relative z-10">
-            <div className="flex items-center justify-between text-xs font-mono font-medium text-text-tertiary uppercase tracking-wider">
-               <span>{isPlaying ? 'Playing' : 'Paused'}</span>
-               <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
-            </div>
+          <div className="flex items-center justify-between text-xs font-mono font-medium text-text-tertiary uppercase tracking-wider">
+            <span>{isPlaying ? 'Playing' : 'Paused'}</span>
+            <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+          </div>
 
-            {/* Custom Progress Bar */}
-            <div className="relative w-full h-1.5 bg-surface-tertiary rounded-full overflow-hidden cursor-pointer group-hover:h-2 transition-all">
-                <div
-                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-electric-blue to-indigo-500 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(56,189,248,0.5)]"
-                    style={{ width: `${progress}%` }}
-                />
-            </div>
+          {/* Custom Progress Bar */}
+          <div className="relative w-full h-1.5 bg-surface-tertiary rounded-full overflow-hidden cursor-pointer group-hover:h-2 transition-all">
+            <div
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-electric-blue to-indigo-500 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
       </div>
 
@@ -196,9 +196,8 @@ export default function AudioPreview({
         <button
           onClick={onConfirm}
           disabled={disabled || isSubmitting}
-          className={`btn-primary flex-1 flex items-center justify-center gap-2 shadow-lg shadow-electric-blue/20 hover:shadow-electric-blue/40 ${
-            isSubmitting ? 'bg-electric-blue/70' : ''
-          }`}
+          className={`btn-primary flex-1 flex items-center justify-center gap-2 shadow-lg shadow-electric-blue/20 hover:shadow-electric-blue/40 ${isSubmitting ? 'bg-electric-blue/70' : ''
+            }`}
         >
           {getSubmitButtonContent()}
         </button>
