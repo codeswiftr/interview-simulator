@@ -32,36 +32,35 @@ class DeliveryRatingService:
     to draft answers and provide actionable feedback.
     """
 
-    RATING_PROMPT = """You are an expert interview coach comparing a candidate's actual delivery to their prepared draft answer.
+    RATING_PROMPT = """Compare delivery to draft and rate.
 
-DRAFT (what they planned to say):
+DRAFT:
 {draft}
 
-DELIVERY (what they actually said):
+DELIVERY:
 {delivery}
 
-Rate the delivery on the following dimensions (0-100):
+Rate (0-100):
+1. Content Coverage: STAR components & main points covered?
+2. Key Points: Essential info from draft included?
+3. Flow & Structure: Logical, clear, organized?
 
-1. **Content Coverage** (0-100): Did they hit all STAR components and cover the main points from the draft?
-2. **Key Points** (0-100): Did they include the essential information from their draft?
-3. **Flow & Structure** (0-100): Was the delivery logical, clear, and well-organized?
+Calculate average for delivery_score.
 
-Calculate an overall score as the average of these three dimensions.
+Provide:
+- Strengths: 3 things done well
+- Improvements: 3 actionable suggestions
+- Comparison Feedback: Brief paragraph on coverage vs draft
 
-Also provide:
-- **Strengths**: 3 specific things they did well in their delivery
-- **Improvements**: 3 actionable suggestions for how they can improve their delivery
-- **Comparison Feedback**: A detailed paragraph comparing their delivery to the draft, highlighting what they covered well and what they missed
-
-Respond in this exact JSON format:
+JSON:
 {{
     "content_coverage": <score>,
     "key_points": <score>,
     "flow_structure": <score>,
-    "delivery_score": <overall average>,
-    "strengths": ["strength1", "strength2", "strength3"],
-    "improvements": ["improvement1", "improvement2", "improvement3"],
-    "comparison_feedback": "<detailed paragraph>"
+    "delivery_score": <average>,
+    "strengths": ["s1", "s2", "s3"],
+    "improvements": ["i1", "i2", "i3"],
+    "comparison_feedback": "<brief paragraph>"
 }}"""
 
     def __init__(self) -> None:
@@ -118,7 +117,7 @@ Respond in this exact JSON format:
 
             response = await client.chat.completions.create(
                 model="anthropic/claude-3.5-haiku",
-                max_tokens=1000,
+                max_tokens=800,  # Reduced from 1000 - feedback should be concise
                 temperature=0.7,
                 messages=[{"role": "user", "content": prompt}],
             )

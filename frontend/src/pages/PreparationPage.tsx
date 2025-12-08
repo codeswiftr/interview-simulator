@@ -142,8 +142,18 @@ export default function PreparationPage() {
       }
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to get question');
-      toast.error('Error', 'Failed to get next question');
+      const errorMsg = axiosError.response?.data?.message || 'Failed to get question';
+      setError(errorMsg);
+      toast.error('Error', errorMsg);
+      
+      // Auto-retry on network errors
+      if (errorMsg.includes('network') || errorMsg.includes('connection') || axiosError.code === 'ECONNREFUSED') {
+        setTimeout(() => {
+          if (id) {
+            getNextQuestion();
+          }
+        }, 2000);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -182,8 +192,14 @@ export default function PreparationPage() {
       }
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to submit answer');
-      toast.error('Error', 'Failed to submit answer');
+      const errorMsg = axiosError.response?.data?.message || 'Failed to submit answer';
+      setError(errorMsg);
+      toast.error('Error', errorMsg);
+      
+      // Retry suggestion for network errors
+      if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+        toast.warning('Retry', 'Check your connection and try submitting again');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -203,8 +219,14 @@ export default function PreparationPage() {
       toast.success('Draft generated', 'Review your personalized answer');
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to generate draft');
-      toast.error('Error', 'Failed to generate draft');
+      const errorMsg = axiosError.response?.data?.message || 'Failed to generate draft';
+      setError(errorMsg);
+      toast.error('Error', errorMsg);
+      
+      // Retry suggestion
+      if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
+        toast.warning('Retry', 'AI service may be slow. Try again in a moment.');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -258,20 +280,28 @@ export default function PreparationPage() {
 
       // Submit practice attempt
       const response = await preparationAPI.submitPractice(id, audioUrl);
-      
+
       toast.success('Practice submitted', 'Your delivery has been transcribed');
-      
+
       // Reload attempts
       const attemptsResponse = await preparationAPI.getAttempts(id);
       setAttempts(attemptsResponse.data.attempts);
-      
+
       // Reset recording
       resetRecording();
       setCurrentAttemptId(null);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to submit practice');
-      toast.error('Error', 'Failed to submit practice attempt');
+      const errorMsg = axiosError.response?.data?.message || 'Failed to submit practice';
+      setError(errorMsg);
+      toast.error('Error', errorMsg);
+      
+      // Recovery suggestions
+      if (errorMsg.includes('transcription') || errorMsg.includes('audio')) {
+        toast.warning('Retry', 'Audio processing failed. Please try recording again.');
+      } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+        toast.warning('Retry', 'Connection issue. Your recording is saved locally - try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -316,13 +346,13 @@ export default function PreparationPage() {
       setError(null);
 
       const response = await preparationAPI.rateDelivery(id, attemptId);
-      
+
       toast.success('Delivery rated', `Score: ${response.data.delivery_score.toFixed(1)}%`);
-      
+
       // Reload attempts to get updated scores
       const attemptsResponse = await preparationAPI.getAttempts(id);
       setAttempts(attemptsResponse.data.attempts);
-      
+
       // Show comparison
       setSelectedAttemptForComparison(attemptId);
       await loadComparison(id, attemptId);
@@ -411,13 +441,33 @@ export default function PreparationPage() {
           </p>
         </div>
 
-        {/* Error Display */}
+        {/* Error Display with Recovery */}
         {error && (
           <div className="card p-4 mb-6 border-status-error/20 bg-status-error/5">
-            <div className="flex items-center gap-3 text-status-error">
-              <AlertCircle size={20} />
-              <p className="body-small">{error}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-status-error">
+                <AlertCircle size={20} />
+                <p className="body-small">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-xs text-status-error hover:underline"
+                aria-label="Dismiss error"
+              >
+                Dismiss
+              </button>
             </div>
+            {/* Error recovery suggestions */}
+            {(error.includes('network') || error.includes('connection') || error.includes('failed')) && (
+              <div className="mt-3 pt-3 border-t border-status-error/20">
+                <p className="text-xs text-text-secondary mb-2">Try:</p>
+                <ul className="text-xs text-text-secondary list-disc list-inside space-y-1">
+                  <li>Check your internet connection</li>
+                  <li>Refresh the page and try again</li>
+                  <li>Wait a moment and retry</li>
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
@@ -487,7 +537,8 @@ export default function PreparationPage() {
             {isLoading && !currentQuestion && (
               <div className="text-center py-8">
                 <Loader2 size={32} className="animate-spin text-electric-blue mx-auto mb-4" />
-                <p className="text-text-secondary">Getting next question...</p>
+                <p className="text-text-secondary">Generating your personalized question...</p>
+                <p className="text-xs text-text-tertiary mt-2">This usually takes 2-3 seconds</p>
               </div>
             )}
           </div>
@@ -509,7 +560,10 @@ export default function PreparationPage() {
               {isGenerating ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Generating Draft...
+                  <span className="flex items-center gap-2">
+                    Generating Draft...
+                    <span className="text-xs opacity-75">(10-15 seconds)</span>
+                  </span>
                 </>
               ) : (
                 <>
@@ -658,6 +712,7 @@ export default function PreparationPage() {
                 <div className="mt-4 text-center">
                   <Loader2 size={20} className="animate-spin text-electric-blue mx-auto mb-2" />
                   <p className="text-text-secondary text-sm">Submitting and transcribing...</p>
+                  <p className="text-xs text-text-tertiary mt-1">This may take 10-20 seconds</p>
                 </div>
               )}
             </div>
@@ -699,7 +754,10 @@ export default function PreparationPage() {
                                 {isRating ? (
                                   <>
                                     <Loader2 size={12} className="animate-spin" />
-                                    Rating...
+                                    <span className="flex items-center gap-1">
+                                      Rating...
+                                      <span className="text-xs opacity-75">(5-10s)</span>
+                                    </span>
                                   </>
                                 ) : (
                                   <>

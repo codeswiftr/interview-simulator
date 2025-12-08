@@ -31,6 +31,12 @@ router = APIRouter()
 # Initialize OpenRouter client for Gemini 2.0 Flash (detective) and Claude Haiku 4.5 (ghostwriter)
 _preparation_client: AsyncOpenAI | None = None
 
+# Simple in-memory cache for detective questions (question_id + exp_level + qna_count -> question)
+# Cache size limit: 100 entries (LRU eviction)
+_detective_question_cache: dict[str, str] = {}
+_cache_access_order: list[str] = []
+_MAX_CACHE_SIZE = 100
+
 
 def get_preparation_client() -> AsyncOpenAI:
     """Get or create OpenRouter client for preparation AI.
@@ -276,6 +282,40 @@ async def get_detective_question(
     )
     existing_qna = list(qna_result.all())
 
+    # Check cache for similar question patterns
+    exp_level = (
+        current_user.experience_level.value
+        if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
+        else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
+    )
+    cache_key = f"{preparation.question_id}:{exp_level}:{len(existing_qna)}"
+    
+    # Try cache first (only for similar question counts)
+    if len(existing_qna) <= 2 and cache_key in _detective_question_cache:
+        # Update LRU order
+        if cache_key in _cache_access_order:
+            _cache_access_order.remove(cache_key)
+        _cache_access_order.append(cache_key)
+        cached_question = _detective_question_cache[cache_key]
+        
+        # Save cached question
+        next_order = len(existing_qna) + 1
+        qna = PreparationQnA(
+            preparation_id=preparation_id,
+            question=cached_question,
+            answer="",
+            order=next_order,
+        )
+        session.add(qna)
+        await session.commit()
+        
+        logger.debug(f"Using cached detective question for {cache_key}")
+        return DetectiveQuestionResponse(
+            question=cached_question,
+            order=next_order,
+            is_complete=False,
+        )
+
     # Generate next question using Gemini 2.0 Flash
     if not settings.openrouter_api_key:
         # Fallback: return a generic question
@@ -306,21 +346,25 @@ async def get_detective_question(
             for qna in existing_qna:
                 qna_context += f"Q: {qna.question}\nA: {qna.answer}\n"
 
-        # Build prompt
-        prompt = f"""You are an interview coach helping a candidate prepare an answer. Based on the interview question and any previous answers, ask ONE clarifying question to gather more context.
+        # Build prompt (optimized for token efficiency)
+        q_type = question.category if question else "behavioral"
+        exp_level = (
+            current_user.experience_level.value
+            if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
+            else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
+        )
+        
+        prompt = f"""Interview coach: Ask ONE clarifying question.
 
-Interview Question: {question.content if question else "Unknown"}
-Question Type: {question.category if question else "behavioral"}
-User Experience Level: {current_user.experience_level if hasattr(current_user, 'experience_level') else 'mid'}
+Q: {question.content if question else "Unknown"}
+Type: {q_type} | Level: {exp_level}
 {qna_context}
 
-Ask ONE specific, helpful question to gather context. Keep it concise (1 sentence). If you have enough information (3-5 questions asked), respond with "ENOUGH_INFO" instead of a question.
-
-Question:"""
+Ask ONE concise question. If enough info (3-5 Q&A), respond "ENOUGH_INFO" only."""
 
         response = await client.chat.completions.create(
             model="google/gemini-2.0-flash-exp:free",
-            max_tokens=100,
+            max_tokens=80,  # Reduced from 100 - questions should be shorter
             temperature=0.7,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -351,6 +395,16 @@ Question:"""
         )
         session.add(qna)
         await session.commit()
+
+        # Cache the question if it's an early question (more likely to be reusable)
+        if len(existing_qna) <= 2:
+            # LRU eviction if cache is full
+            if len(_detective_question_cache) >= _MAX_CACHE_SIZE:
+                oldest_key = _cache_access_order.pop(0)
+                del _detective_question_cache[oldest_key]
+            
+            _detective_question_cache[cache_key] = content
+            _cache_access_order.append(cache_key)
 
         return DetectiveQuestionResponse(
             question=content,
@@ -537,10 +591,8 @@ async def generate_draft(
             detail="No Q&A found. Complete detective stage first.",
         )
 
-    # Build Q&A context
-    qna_context = "\n\nContext from Q&A:\n"
-    for qna in qna_list:
-        qna_context += f"Q: {qna.question}\nA: {qna.answer}\n"
+    # Build Q&A context (optimized format)
+    qna_context = "\n".join([f"Q{i+1}: {qna.question}\nA{i+1}: {qna.answer}" for i, qna in enumerate(qna_list)])
 
     # Generate draft using Claude Haiku 4.5
     if not settings.openrouter_api_key:
@@ -553,28 +605,33 @@ async def generate_draft(
         try:
             client = get_preparation_client()
 
-            prompt = f"""You are an interview coach helping a candidate prepare a personalized answer. Based on the interview question and the candidate's responses to clarifying questions, draft a well-structured answer using the STAR method (Situation, Task, Action, Result).
+            q_type = question.category if question else "behavioral"
+            exp_level = (
+                current_user.experience_level.value
+                if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
+                else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
+            )
 
-Interview Question: {question.content if question else "Unknown"}
-Question Type: {question.category if question else "behavioral"}
-User Experience Level: {current_user.experience_level if hasattr(current_user, 'experience_level') else 'mid'}
+            # Optimized prompt for token efficiency
+            prompt = f"""Draft STAR answer.
+
+Question: {question.content if question else "Unknown"}
+Type: {q_type} | Level: {exp_level}
+
 {qna_context}
 
-Draft a personalized, authentic answer that:
-1. Uses the STAR framework (Situation, Task, Action, Result)
-2. Incorporates specific details from the Q&A context
-3. Is grounded in the candidate's actual experiences
-4. Is concise but complete (2-3 minutes when spoken)
-5. Quantifies results where possible
-6. Emphasizes the candidate's personal contribution
+Requirements:
+- STAR format (Situation, Task, Action, Result)
+- Use Q&A details
+- 2-3 min when spoken
+- Quantify results
+- Personal contribution focus
 
-Format the answer clearly with STAR sections labeled. Make it feel authentic and personal, not generic.
-
-Draft Answer:"""
+Draft:"""
 
             response = await client.chat.completions.create(
                 model="anthropic/claude-3.5-haiku",  # Claude Haiku 4.5 via OpenRouter
-                max_tokens=800,
+                max_tokens=700,  # Reduced from 800 - drafts should be concise
                 temperature=0.7,
                 messages=[{"role": "user", "content": prompt}],
             )
