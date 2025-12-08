@@ -296,3 +296,205 @@ From soft launch review and codebase audit:
 - Epic 4: Real-Time AI Coaching ✅
 - Epic 5: E2E Test Suite ✅
 - Epic 6 Phase 1: AI Ghostwriter MVP ✅
+
+---
+
+# Sprint 7: Voice-Enabled Practice Mode
+
+## Status: Planning
+## Target: Post-Sprint 6 (after Production Readiness)
+## Context: Feature Enhancement Request
+
+---
+
+## Overview
+
+Sprint 7 focuses on enhancing the preparation/practice mode with voice capabilities. Currently, the detective stage (Q&A) and draft editing are text-only, while practice delivery already has voice recording. This sprint adds voice input throughout the preparation workflow.
+
+**Current State Analysis**:
+- ✅ Practice delivery already has voice recording via `RecordingDeck`
+- ✅ `RecordingDeck` has live transcription via Web Speech API
+- ✅ `useAudioRecording` hook handles recording/transcription
+- ⚠️ Detective Q&A stage is text-only (users type answers)
+- ⚠️ Draft editing is text-only (no voice dictation)
+- ⚠️ No AI coaching hints during practice delivery (unlike InterviewPage)
+
+**User Value**:
+- More natural interview preparation experience
+- Hands-free answer dictation during detective stage
+- Real-time coaching during practice delivery (parity with interview mode)
+- Faster workflow for users who prefer speaking over typing
+
+---
+
+## Strategic Assessment: ICE-Scored Epics
+
+### Epic 1: Voice Input for Detective Q&A
+**ICE Score: 8.5** (Impact: 9, Confidence: 8, Ease: 8.5)
+
+| Factor | Score | Reasoning |
+|--------|-------|-----------|
+| Impact | 9 | High user value - speaking answers is faster than typing, more natural prep |
+| Confidence | 8 | Reuse existing RecordingDeck & Web Speech API - proven tech stack |
+| Ease | 8.5 | Mostly frontend work, backend already accepts text answers |
+
+**Goal**: Allow users to speak their answers to detective questions instead of typing.
+
+**Key Changes**:
+1. Add voice input toggle button to detective Q&A UI
+2. Integrate `RecordingDeck` component (or simplified variant)
+3. Use Web Speech API for live transcription (client-side, no backend changes)
+4. Populate text field with transcription, user can edit before submitting
+
+**Dependencies**: None - uses existing components
+
+---
+
+### Epic 2: AI Coaching During Practice Delivery
+**ICE Score: 8.3** (Impact: 9, Confidence: 9, Ease: 7)
+
+| Factor | Score | Reasoning |
+|--------|-------|-----------|
+| Impact | 9 | Feature parity with InterviewPage - users expect coaching |
+| Confidence | 9 | Already implemented in InterviewPage - copy pattern |
+| Ease | 7 | Need to integrate useCoachingHint hook, add CoachOverlay component |
+
+**Goal**: Provide real-time AI coaching hints during practice delivery, showing tips based on user's live transcript compared to their draft answer.
+
+**Key Changes**:
+1. Import and use `useCoachingHint` hook in PreparationPage
+2. Add `CoachOverlay` component to practice stage UI
+3. Pass draft answer as context for coaching (compare delivery to planned answer)
+4. Handle coaching hint streaming display
+
+**Dependencies**: None - uses existing hooks and components
+
+---
+
+### Epic 3: Voice Dictation for Draft Editing
+**ICE Score: 6.8** (Impact: 7, Confidence: 7, Ease: 6.5)
+
+| Factor | Score | Reasoning |
+|--------|-------|-----------|
+| Impact | 7 | Nice-to-have for power users, but most will use keyboard for edits |
+| Confidence | 7 | Web Speech API works, but continuous dictation for editing is tricky UX |
+| Ease | 6.5 | Need careful UX design for cursor placement, append vs replace modes |
+
+**Goal**: Allow users to dictate edits to their draft answer using voice.
+
+**Key Changes**:
+1. Add microphone button to draft textarea
+2. Implement "append mode" dictation (speech adds to end of draft)
+3. Visual indicator when dictation is active
+4. Voice commands for basic editing ("delete last sentence", "new paragraph")
+
+**Dependencies**: Epic 1 (reuse voice input component)
+
+---
+
+### Epic 4: Mobile-Optimized Voice Experience
+**ICE Score: 5.5** (Impact: 6, Confidence: 5, Ease: 5.5)
+
+| Factor | Score | Reasoning |
+|--------|-------|-----------|
+| Impact | 6 | Mobile users benefit from voice input, but mobile usage may be low |
+| Confidence | 5 | Mobile browsers have varying Speech API support, iOS has limitations |
+| Ease | 5.5 | Need responsive voice UI, handle mobile permission flows |
+
+**Goal**: Optimize voice input experience for mobile devices.
+
+**Key Changes**:
+1. Mobile-responsive voice input controls
+2. Handle iOS/Safari Speech API differences
+3. Touch-optimized recording buttons
+4. Mobile permission flow improvements
+
+**Dependencies**: Epics 1-3, Sprint 6 mobile polish
+
+---
+
+## Recommended Priority Order
+
+Based on ICE scores and dependencies:
+
+1. **Epic 1: Voice Input for Detective Q&A** (ICE: 8.5) - Highest impact, easiest to implement
+2. **Epic 2: AI Coaching During Practice** (ICE: 8.3) - High impact, proven pattern
+3. **Epic 3: Voice Dictation for Draft** (ICE: 6.8) - Nice-to-have enhancement
+4. **Epic 4: Mobile Voice Experience** (ICE: 5.5) - Optional polish
+
+---
+
+## Implementation Plan
+
+### Epic 1: Voice Input for Detective Q&A (6h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Create VoiceInputButton component with microphone toggle | frontend-builder | 2h |
+| 1.2 | Integrate Web Speech API into detective answer form | frontend-builder | 2h |
+| 1.3 | Add visual feedback (waveform/recording indicator) | frontend-builder | 1h |
+| 1.4 | Test cross-browser compatibility (Chrome, Safari, Firefox) | qa-test-guardian | 1h |
+
+**Checkpoint**: Users can speak detective answers
+
+### Epic 2: AI Coaching During Practice (4h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Add useCoachingHint hook to PreparationPage practice stage | frontend-builder | 1h |
+| 2.2 | Integrate CoachOverlay component into practice UI | frontend-builder | 1.5h |
+| 2.3 | Customize coaching prompts for draft comparison context | backend-engineer | 1h |
+| 2.4 | Test coaching hint streaming during practice | qa-test-guardian | 0.5h |
+
+**Checkpoint**: Real-time coaching hints appear during practice delivery
+
+### Epic 3: Voice Dictation for Draft (4h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Add dictation mode to draft textarea | frontend-builder | 2h |
+| 3.2 | Implement append/insert mode selection | frontend-builder | 1h |
+| 3.3 | Add voice command parsing (optional) | frontend-builder | 1h |
+
+**Checkpoint**: Users can dictate draft edits
+
+---
+
+## Success Criteria
+
+- [ ] Users can speak answers during detective Q&A stage
+- [ ] Live transcription appears as user speaks
+- [ ] AI coaching hints appear during practice delivery
+- [ ] Coaching compares live delivery to draft answer
+- [ ] Voice input works on Chrome, Safari, Firefox
+- [ ] Optional: Voice dictation for draft editing
+
+---
+
+## Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Web Speech API browser support | Medium | Graceful fallback to text-only, browser detection |
+| Speech recognition accuracy | Low | User can edit transcription before submitting |
+| Mobile Safari limitations | Medium | Test early, document limitations, text fallback |
+| Rate limiting on coaching API | Low | Already handled with debouncing in useCoachingHint |
+
+---
+
+## Technical Notes
+
+**Existing Components to Reuse**:
+- `RecordingDeck` - full recording UI with visualization
+- `useAudioRecording` - recording state management
+- `useCoachingHint` - AI coaching with debouncing
+- `CoachOverlay` - coaching hint display
+- Web Speech API types already declared in RecordingDeck.tsx
+
+**Backend Requirements**:
+- None for Epic 1 (client-side transcription)
+- Epic 2 may need coaching prompt customization for draft comparison
+
+**Total Estimated Effort**: ~14 hours (Epics 1-3)
+
+---
