@@ -1,436 +1,291 @@
-# Sprint 5: Quality & Feature Completion
+# Sprint 6: Production Readiness & Finalization
 
-## Status: Planning → Ready
-## Target: December 2025
-## Context: Post-Sprint 4 (Technical Debt Payback Complete)
+## Status: Planning
+## Target: January 2026
+## Context: Post-Sprint 5 (Quality & Feature Completion)
 
 ---
 
 ## Overview
 
-Sprint 5 focuses on two parallel tracks:
-1. **Quality Track**: Increase test coverage on critical paths to enable confident deployments
-2. **Feature Track**: Complete the AI Ghostwriter feature (Epic 6 Phases 2-4) to deliver full user value
+Sprint 6 focuses on finalizing production readiness by completing test coverage verification, adding critical frontend component tests, addressing remaining P1 issues from the soft launch review, and implementing production monitoring/observability.
 
-The codebase audit (2025-12-07) identified 223+ backend tests (69% coverage), 55 frontend tests, and 4 E2E suites. Key gaps remain in the `useAudioRecording` hook (0% coverage) and API endpoints for interviews/feedback/auth (40-44% coverage).
+**Context from Sprint 5**:
+- ✅ All major features complete (AI Ghostwriter end-to-end)
+- ✅ Test infrastructure in place (46 useAudioRecording tests, 30+ feedback tests, 32 interview tests)
+- ✅ Backend coverage estimated at 73%+ (verification pending database)
+- ⚠️ Frontend component tests still needed (only hooks tested)
+- ⚠️ Some vitest warnings in useAudioRecording tests need debugging
+- ⚠️ Coverage verification requires database connection
 
-**Priority Order:**
-1. **Epic 1**: Test Coverage Sprint (foundation for confident deployments)
-2. **Epic 2**: Epic 6 Phase 2 - Delivery Practice (high user value)
-3. **Epic 3**: Epic 6 Phase 3 - Rating & Comparison (complete feature loop)
-4. **Epic 4**: Epic 6 Phase 4 - Polish & Optimization (production readiness)
+**Priority Order**:
+1. **Epic 1**: Test Coverage Finalization (verify and complete)
+2. **Epic 2**: Frontend Component Testing (critical pages)
+3. **Epic 3**: Production Security & Observability (monitoring, logging, alerts)
+4. **Epic 4**: Performance & Polish (optimization and UX improvements)
 
 ---
 
 ## Success Criteria
 
-- [x] Production health checks implemented ✅ (already complete in main.py)
-- [x] `useAudioRecording` hook test suite created ✅ (46 test cases, structure complete)
-- [x] Backend API tests complete ✅ (feedback.py: 30, interviews.py: 32, auth.py: complete)
-- [x] Epic 6 Phase 2: Users can practice delivering drafts ✅
-- [x] Epic 6 Phase 3: Delivery rated and compared to draft ✅
-- [x] Epic 6 Phase 4: Draft editing and iteration flow ✅
+- [ ] Backend test coverage verified at 73%+ (with database connection)
+- [ ] useAudioRecording test warnings resolved
+- [ ] Critical frontend components tested (DashboardPage, InterviewPage, FeedbackPage, PreparationPage)
+- [ ] Production monitoring and error tracking configured
+- [ ] P1 security issues addressed (refresh tokens, email verification)
+- [ ] Performance optimizations implemented (code splitting, bundle size)
+- [ ] Production deployment checklist validated
 
 ---
 
-# Epic 1: Test Coverage Sprint ⭐ Highest Priority
+# Epic 1: Test Coverage Finalization
 
 ## Goal
-Increase test coverage on critical paths to enable confident deployments and prevent regressions.
+Verify and finalize test coverage, resolve test warnings, and ensure all critical paths are tested.
 
 ## Context
-From codebase audit (2025-12-07):
-- `useAudioRecording` hook: 0% coverage (core recording functionality)
-- `api/feedback.py`: 44% → target 75%
-- `api/interviews.py`: 40% → target 75%
-- `api/auth.py`: 40% → target 75%
-- `api/transcription.py`: 41% → target 75%
+From Sprint 5:
+- Test suites created but some need debugging (useAudioRecording vitest warnings)
+- Coverage verification requires database connection
+- API endpoint tests exist but coverage percentages need verification
 
 ## Success Criteria
-- [ ] `useAudioRecording` hook: 80%+ coverage (30+ tests) - Test suite created (30+ tests), mocks need debugging (vitest warnings)
-- [x] `api/feedback.py`: 75%+ coverage ✅ - 30 comprehensive tests exist, all endpoints covered
-- [x] `api/interviews.py`: 75%+ coverage ✅ - 32 tests exist, 4 additional tests added
-- [x] `api/auth.py`: 75%+ coverage ✅ - All required tests exist
-- [ ] Overall backend: 73%+ (from 69%) - Coverage verification pending (requires database connection)
+- [ ] useAudioRecording test warnings resolved (all 46 tests passing)
+- [ ] Backend coverage verified at 73%+ (requires database)
+- [ ] All API endpoints have minimum 70% coverage
+- [ ] Test infrastructure supports database-connected runs
 
 ## Implementation Plan
 
-### Phase 1: useAudioRecording Hook Tests (4h)
-
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 1.1 | Create mock factories for MediaRecorder, MediaStream, Audio | qa-test-guardian | 1h | ✅ Done (mocks created, need vi.fn() fixes) |
-| 1.2 | Test initial state and state transitions | qa-test-guardian | 1h | ✅ Done (tests written) |
-| 1.3 | Test recording flow (start, pause, resume, stop) | qa-test-guardian | 1h | ✅ Done (tests written) |
-| 1.4 | Test preview flow and cleanup on unmount | qa-test-guardian | 1h | ✅ Done (tests written) |
-
-**Mocks Required:**
-```typescript
-// Mock MediaRecorder
-class MockMediaRecorder {
-  state = 'inactive';
-  start = vi.fn(() => { this.state = 'recording'; });
-  stop = vi.fn(() => { this.state = 'inactive'; this.onstop?.(); });
-  pause = vi.fn(() => { this.state = 'paused'; });
-  resume = vi.fn(() => { this.state = 'recording'; });
-  ondataavailable: ((e: { data: Blob }) => void) | null = null;
-  onstop: (() => void) | null = null;
-}
-
-// Mock navigator.mediaDevices
-const mockMediaStream = {
-  getTracks: () => [{ stop: vi.fn() }],
-};
-
-// Mock Audio element
-const mockAudio = {
-  play: vi.fn().mockResolvedValue(undefined),
-  pause: vi.fn(),
-  currentTime: 0,
-  duration: 60,
-  onloadedmetadata: null,
-  ontimeupdate: null,
-  onended: null,
-};
-```
-
-**Test Cases:**
-1. Initial state is 'idle' with null values
-2. `startRecording()` requests microphone permission
-3. `startRecording()` handles permission denied error
-4. `startRecording()` creates MediaRecorder and starts timer
-5. `stopRecording()` creates blob and enters preview mode
-6. `pauseRecording()` pauses recorder and timer
-7. `resumeRecording()` resumes recorder and timer
-8. `resetRecording()` clears all state and resources
-9. Preview mode creates Audio element
-10. `playPreview()` plays audio
-11. `pausePreview()` pauses audio
-12. `clearPreview()` returns to idle state
-13. `confirmRecording()` returns audioBlob
-14. Cleanup on unmount revokes object URLs
-15. Error handling for unsupported browsers
-
-**Checkpoint**: `useAudioRecording` hook fully tested
-
-### Phase 2: API Endpoint Tests (6h)
-
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 2.1 | Add feedback.py tests (generate, get, list) | qa-test-guardian | 2h | ✅ Done (30 tests exist) |
-| 2.2 | Add interviews.py tests (lifecycle, responses) | qa-test-guardian | 2h | ✅ Done (32 tests, 4 added) |
-| 2.3 | Add auth.py tests (refresh, password reset edge cases) | qa-test-guardian | 1.5h | ✅ Done (all tests exist) |
-| 2.4 | Run coverage report and fill gaps | qa-test-guardian | 30m | ⏳ Pending (requires DB connection) |
-
-**Feedback API Tests to Add:**
-- `test_get_session_feedback_returns_all_responses`
-- `test_get_session_feedback_not_found`
-- `test_get_response_feedback_not_found`
-- `test_generate_feedback_requires_transcript`
-- `test_feedback_unauthorized_access`
-
-**Interviews API Tests to Add:**
-- `test_create_interview_with_target_company`
-- `test_start_interview_already_started`
-- `test_end_interview_already_ended`
-- `test_submit_response_interview_not_started`
-- `test_quota_enforcement_free_tier`
-- `test_quota_reset_monthly`
-
-**Auth API Tests to Add:**
-- `test_refresh_token_expired`
-- `test_refresh_token_reused`
-- `test_password_reset_token_expired`
-- `test_password_reset_token_already_used`
-- `test_login_user_not_found`
-
-**Checkpoint**: Backend coverage at 73%+
-
----
-
-# Epic 2: Delivery Practice (Epic 6 Phase 2)
-
-## Goal
-Enable users to practice delivering their AI-generated drafts with audio recording.
-
-## Context
-- PreparationPage already has draft generation (Phase 1 complete)
-- RecordingDeck component exists for audio recording
-- Need to integrate practice session with preparation flow
-
-## Success Criteria
-- [x] Users can start practice from PreparationPage ✅
-- [x] Recording integrates with existing RecordingDeck ✅
-- [x] Practice attempts saved to database ✅
-- [x] Multiple attempts allowed with history ✅
-
-## Technical Design
-
-### Data Models
-
-```python
-# Already exists in models/preparation.py
-class DeliveryAttempt(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    preparation_id: UUID = Field(foreign_key="answerpreparation.id")
-    audio_url: str | None = None
-    transcript: str | None = None
-    delivery_score: float | None = None
-    comparison_feedback: str | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-```
-
-### API Contracts
-
-```
-POST /api/v1/preparation/{id}/practice/start
-  Response: { attempt_id: UUID, stage: "practice" }
-
-POST /api/v1/preparation/{id}/practice/submit
-  Body: { audio_url: str }
-  Response: { attempt_id: UUID, transcript: str, stage: "rating" }
-
-GET /api/v1/preparation/{id}/attempts
-  Response: { attempts: DeliveryAttempt[] }
-```
-
-## Implementation Plan
-
-### Phase 1: Backend Practice API (4h) ✅ COMPLETE
-
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 1.1 | Create Alembic migration for DeliveryAttempt (if needed) | backend-engineer | 30m | ✅ Done |
-| 1.2 | Add POST /preparation/{id}/practice/start endpoint | backend-engineer | 1h | ✅ Done |
-| 1.3 | Add POST /preparation/{id}/practice/submit endpoint | backend-engineer | 1.5h | ✅ Done |
-| 1.4 | Add GET /preparation/{id}/attempts endpoint | backend-engineer | 30m | ✅ Done |
-| 1.5 | Add tests for practice endpoints | qa-test-guardian | 30m | ✅ Done |
-
-**Checkpoint**: Practice API endpoints available ✅
-
-### Phase 2: Frontend Integration (6h) ✅ COMPLETE
-
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 2.1 | Add practice stage UI to PreparationPage | frontend-builder | 2h | ✅ Done |
-| 2.2 | Integrate RecordingDeck for practice recording | frontend-builder | 2h | ✅ Done |
-| 2.3 | Add attempt history display | frontend-builder | 1h | ✅ Done |
-| 2.4 | Wire submit to transcription and storage | frontend-builder | 1h | ✅ Done |
-
-**Checkpoint**: Users can practice delivering drafts ✅
-
----
-
-# Epic 3: Rating & Comparison (Epic 6 Phase 3)
-
-## Goal
-Rate user delivery against their draft and provide improvement feedback.
-
-## Context
-- After practice, user has: draft (AI-generated) + delivery (transcribed)
-- Need to compare and provide actionable feedback
-- Track improvement over multiple attempts
-
-## Success Criteria
-- [x] Delivery rated on STAR adherence, completeness ✅
-- [x] Side-by-side comparison UI (draft vs delivery) ✅
-- [x] Improvement suggestions provided ✅
-- [x] Progress tracked across attempts ✅
-
-## Technical Design
-
-### Rating Logic
-
-```python
-async def rate_delivery(
-    preparation_id: UUID,
-    attempt_id: UUID,
-    draft: str,
-    delivery_transcript: str,
-) -> dict:
-    """Compare delivery to draft and rate."""
-    prompt = f"""
-    Compare this interview answer delivery to the prepared draft.
-
-    DRAFT (what they planned to say):
-    {draft}
-
-    DELIVERY (what they actually said):
-    {delivery_transcript}
-
-    Rate on:
-    1. Content Coverage (0-100): Did they hit all STAR components?
-    2. Key Points (0-100): Did they include the main points from draft?
-    3. Flow & Structure (0-100): Was the delivery logical and clear?
-
-    Provide:
-    - Overall score (0-100)
-    - 3 strengths of delivery
-    - 3 improvements needed
-    - Specific suggestions
-    """
-    # Use Claude Haiku for analysis
-```
-
-### API Contracts
-
-```
-POST /api/v1/preparation/{id}/rate-delivery
-  Body: { attempt_id: UUID }
-  Response: {
-    delivery_score: float,
-    comparison_feedback: str,
-    strengths: str[],
-    improvements: str[],
-    stage: "complete"
-  }
-
-GET /api/v1/preparation/{id}/comparison
-  Body: { attempt_id: UUID }
-  Response: {
-    draft: str,
-    delivery: str,
-    score: float,
-    feedback: str
-  }
-```
-
-## Implementation Plan
-
-### Phase 1: Rating Backend (4h)
+### Phase 1: Test Infrastructure & Verification (4h)
 
 | Task | Description | Agent | Est |
 |------|-------------|-------|-----|
-| 1.1 | Create rating service with Claude Haiku | backend-engineer | 2h |
-| 1.2 | Add POST /preparation/{id}/rate-delivery endpoint | backend-engineer | 1h |
-| 1.3 | Add GET /preparation/{id}/comparison endpoint | backend-engineer | 30m |
-| 1.4 | Add tests for rating endpoints | qa-test-guardian | 30m |
+| 1.1 | Set up database for test coverage runs | backend-engineer | 1h |
+| 1.2 | Run full backend coverage report and identify gaps | qa-test-guardian | 1h |
+| 1.3 | Fix useAudioRecording test mock warnings | frontend-builder | 2h |
 
-**Checkpoint**: Rating API available
+**Checkpoint**: All test infrastructure working, coverage report available
 
-### Phase 2: Comparison UI (6h)
+### Phase 2: Coverage Gaps (6h)
 
 | Task | Description | Agent | Est |
 |------|-------------|-------|-----|
-| 2.1 | Create ComparisonView component | frontend-builder | 2h |
-| 2.2 | Add side-by-side diff view | frontend-builder | 2h |
-| 2.3 | Display scores and feedback | frontend-builder | 1h |
-| 2.4 | Add progress tracking across attempts | frontend-builder | 1h |
+| 2.1 | Fill coverage gaps in api/auth.py (40% → 75%) | qa-test-guardian | 2h |
+| 2.2 | Fill coverage gaps in api/transcription.py (41% → 75%) | qa-test-guardian | 2h |
+| 2.3 | Fill coverage gaps in api/subscriptions.py (55% → 75%) | qa-test-guardian | 2h |
 
-**Checkpoint**: Complete rating and comparison flow
+**Checkpoint**: Backend coverage at 73%+ verified
 
 ---
 
-# Epic 4: Polish & Optimization (Epic 6 Phase 4)
+# Epic 2: Frontend Component Testing
 
 ## Goal
-Polish the Ghostwriter feature for production launch.
+Add comprehensive tests for critical page components to prevent UI regressions.
+
+## Context
+From codebase audit:
+- Hooks are well-tested (useAuth, useToast, useOnboarding at 100%)
+- Components have minimal test coverage (only RecordingDeck, CoachOverlay, Button)
+- Critical pages (Dashboard, Interview, Feedback, Preparation) have no tests
 
 ## Success Criteria
-- [x] Draft editing capability ✅
-- [x] Iteration flow (refine draft, re-record) ✅
-- [x] AI prompts optimized for cost/quality ✅ (~30% token reduction)
-- [x] Caching for common questions ✅ (LRU cache)
-- [x] Loading states and error handling polished ✅
+- [ ] DashboardPage: 70%+ coverage (state management, data loading, stats display)
+- [ ] InterviewPage: 70%+ coverage (recording flow, question navigation, submission)
+- [ ] FeedbackPage: 70%+ coverage (feedback display, polling, audio playback)
+- [ ] PreparationPage: 70%+ coverage (detective flow, draft generation, practice)
 
 ## Implementation Plan
 
-### Phase 1: Draft Editing (3h) ✅ COMPLETE
+### Phase 1: Test Infrastructure (2h)
 
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 1.1 | Add draft editing UI to PreparationPage | frontend-builder | 1.5h | ✅ Done |
-| 1.2 | Add PATCH /preparation/{id}/draft endpoint | backend-engineer | 1h | ✅ Done |
-| 1.3 | Add save/cancel functionality | frontend-builder | 30m | ✅ Done |
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Create page component test utilities and helpers | qa-test-guardian | 1h |
+| 1.2 | Set up MSW handlers for all page API calls | qa-test-guardian | 1h |
 
-**Checkpoint**: Users can edit drafts ✅
+**Checkpoint**: Test utilities ready for page component tests
 
-### Phase 2: Iteration Flow (3h) ✅ COMPLETE
+### Phase 2: Critical Page Tests (12h)
 
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 2.1 | Add "Try Again" button after rating | frontend-builder | 1h | ✅ Done |
-| 2.2 | Add "Refine Draft" button | frontend-builder | 1h | ✅ Done |
-| 2.3 | Track iteration count on attempts | backend-engineer | 1h | ⏳ Deferred (nice-to-have) |
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | DashboardPage tests (loading, stats, interviews list) | qa-test-guardian | 3h |
+| 2.2 | InterviewPage tests (recording, navigation, submission) | qa-test-guardian | 3h |
+| 2.3 | FeedbackPage tests (display, polling, processing status) | qa-test-guardian | 3h |
+| 2.4 | PreparationPage tests (detective, draft, practice, rating) | qa-test-guardian | 3h |
 
-**Checkpoint**: Users can iterate ✅
+**Checkpoint**: All critical pages have test coverage
 
-### Phase 3: Optimization (4h) ✅ COMPLETE
+---
 
-| Task | Description | Agent | Est | Status |
-|------|-------------|-------|-----|--------|
-| 3.1 | Optimize AI prompts for token efficiency | backend-engineer | 1h | ✅ Done (~30% reduction) |
-| 3.2 | Add caching for detective questions | backend-engineer | 1h | ✅ Done (LRU cache) |
-| 3.3 | Polish loading states and transitions | frontend-builder | 1h | ✅ Done (time estimates) |
-| 3.4 | Add error recovery UX | frontend-builder | 1h | ✅ Done (recovery suggestions) |
+# Epic 3: Production Security & Observability
 
-**Checkpoint**: Feature production-ready ✅
+## Goal
+Implement production-grade security measures, monitoring, and error tracking.
+
+## Context
+From soft launch review:
+- P1: No refresh token mechanism (users logged out after 30min)
+- P1: Email change without verification (security risk)
+- No production error tracking (Sentry recommended)
+- No structured logging for production debugging
+
+## Success Criteria
+- [ ] Refresh token mechanism implemented and tested
+- [ ] Email verification for email changes
+- [ ] Error tracking configured (Sentry or equivalent)
+- [ ] Structured logging for production
+- [ ] Health check monitoring endpoint enhanced
+- [ ] Security headers implemented (CSP, HSTS)
+
+## Implementation Plan
+
+### Phase 1: Security Improvements (8h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Implement refresh token mechanism (frontend + backend) | backend-engineer, frontend-builder | 4h |
+| 1.2 | Add email verification for email changes | backend-engineer | 2h |
+| 1.3 | Add security headers middleware (CSP, HSTS, X-Frame-Options) | security-auditor | 2h |
+
+**Checkpoint**: Security vulnerabilities addressed
+
+### Phase 2: Observability (6h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Integrate error tracking (Sentry or similar) | backend-engineer | 2h |
+| 2.2 | Set up structured logging (JSON logs for production) | backend-engineer | 2h |
+| 2.3 | Enhance health check with dependency status | backend-engineer | 1h |
+| 2.4 | Add request ID correlation for tracing | backend-engineer | 1h |
+
+**Checkpoint**: Production monitoring and error tracking operational
+
+---
+
+# Epic 4: Performance & Polish
+
+## Goal
+Optimize performance, improve UX, and polish the application for production.
+
+## Context
+From soft launch review and codebase audit:
+- No code splitting (larger initial bundle)
+- Mobile responsive design needs polish
+- Some P2/P3 UX improvements identified
+- Performance optimizations needed
+
+## Success Criteria
+- [ ] Code splitting implemented (route-based lazy loading)
+- [ ] Bundle size reduced by 20%+
+- [ ] Mobile responsive design polished (all pages)
+- [ ] Loading states optimized (skeleton screens)
+- [ ] Image/asset optimization implemented
+
+## Implementation Plan
+
+### Phase 1: Code Splitting & Bundle Optimization (4h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 1.1 | Implement route-based code splitting | frontend-builder | 2h |
+| 1.2 | Analyze and optimize bundle size | frontend-builder | 1h |
+| 1.3 | Lazy load heavy components (PreparationPage, FeedbackPage) | frontend-builder | 1h |
+
+**Checkpoint**: Bundle size reduced, initial load faster
+
+### Phase 2: UX Polish (6h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 2.1 | Polish mobile responsive design (all pages) | frontend-builder | 3h |
+| 2.2 | Implement skeleton loading screens | frontend-builder | 2h |
+| 2.3 | Add password strength indicator | frontend-builder | 1h |
+
+**Checkpoint**: UX improvements complete
+
+### Phase 3: Performance Optimization (4h)
+
+| Task | Description | Agent | Est |
+|------|-------------|-------|-----|
+| 3.1 | Optimize image loading and assets | frontend-builder | 2h |
+| 3.2 | Add service worker for caching (optional PWA) | frontend-builder | 2h |
+
+**Checkpoint**: Performance optimizations complete
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests (Epic 1)
-- **useAudioRecording**: 30+ tests for all states and transitions
-- **Backend APIs**: Cover edge cases, error paths, authorization
-- **Target**: 73% overall backend coverage
+### Unit Tests
+- **Backend**: Target 75%+ overall coverage
+- **Frontend Hooks**: Maintain 100% coverage
+- **Frontend Components**: Target 70%+ for critical pages
 
 ### Integration Tests
-- Full preparation flow (detective → draft → practice → rating)
-- Multi-attempt tracking and history
-- Error recovery scenarios
+- API endpoint integration tests (existing 223+ tests)
+- Frontend API integration tests (MSW-based)
+- Database integration tests
 
-### E2E Tests (Existing)
-- 4 Playwright suites already cover core flows
-- May add Ghostwriter-specific E2E if needed
+### E2E Tests
+- Maintain existing 4 Playwright suites
+- Add PreparationPage E2E flow (optional)
 
 ---
 
 ## Risks & Mitigations
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| MediaRecorder browser differences | Medium | Low | Test on Chrome, Firefox, Safari |
-| AI rating quality inconsistent | Medium | Medium | Test prompts thoroughly, add fallback |
-| Ghostwriter costs exceed budget | Low | Low | Tier limits, monitoring |
-| Test flakiness on audio mocks | Low | Medium | Use robust mock factories |
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Database connection for coverage reports | Medium | Set up Docker Compose for local testing |
+| Refresh token implementation complexity | Medium | Follow existing JWT patterns, comprehensive testing |
+| Code splitting breaking lazy loading | Low | Thorough testing, fallback mechanisms |
+| Performance regressions | Low | Before/after bundle size comparison, Lighthouse audits |
 
 ---
 
-## Execution Order
+## Open Questions
 
-**Week 1:**
-1. Epic 1: Test Coverage Sprint (foundation)
-
-**Week 2-3:**
-2. Epic 2: Delivery Practice
-
-**Week 4:**
-3. Epic 3: Rating & Comparison
-
-**Week 5:**
-4. Epic 4: Polish & Optimization
-
-**Total Estimated Effort:**
-- Epic 1: ~10 hours
-- Epic 2: ~10 hours
-- Epic 3: ~10 hours
-- Epic 4: ~10 hours
-- **Total: ~40 hours (1 week full-time or 2 weeks part-time)**
+- [ ] Error tracking service choice (Sentry vs. alternatives)
+- [ ] Bundle size target (current baseline needs measurement)
+- [ ] Mobile responsive breakpoints standardization
+- [ ] Service worker strategy (full PWA vs. basic caching)
 
 ---
 
 ## References
 
-- **Codebase Audit**: docs/CODEBASE_AUDIT.md (2025-12-07)
-- **Epic 6 Design**: docs/GHOSTWRITER_FEATURE_EVALUATION.md
-- **E2E Completion**: docs/EPIC5_EPIC6_COMPLETION_SUMMARY.md
-- **Test Patterns**: frontend/src/hooks/__tests__/useAuth.test.tsx
-- **RecordingDeck Tests**: frontend/src/components/interview/__tests__/RecordingDeck.test.tsx
+- [Sprint 5 Execution Summary](./SPRINT5_EXECUTION_SUMMARY.md)
+- [Codebase Audit](./CODEBASE_AUDIT.md)
+- [Soft Launch Review](./SOFT_LAUNCH_REVIEW.md)
+- [Deployment Guide](./DEPLOYMENT.md)
+
+---
+
+## Estimated Timeline
+
+| Epic | Effort | Dependencies |
+|------|--------|--------------|
+| Epic 1: Test Coverage | 10h | Database setup |
+| Epic 2: Component Tests | 14h | Epic 1 Phase 1 |
+| Epic 3: Security & Observability | 14h | None |
+| Epic 4: Performance & Polish | 14h | None |
+
+**Total Estimated Effort**: ~52 hours (~1.5 weeks for 1 engineer, or 1 week for 2 engineers)
+
+**Parallel Execution**: Epic 3 and Epic 4 can run in parallel after Epic 1 Phase 1 completes.
 
 ---
 
 ## Previous Sprints
+
+### Sprint 5: Quality & Feature Completion ✅ COMPLETE
+- Epic 1: Test Coverage Sprint (95% complete)
+- Epic 2: Delivery Practice ✅
+- Epic 3: Rating & Comparison ✅
+- Epic 4: Polish & Optimization ✅
 
 ### Sprint 4: Technical Debt Payback ✅ COMPLETE
 - Fixed 158 backend linting errors → 0 errors
@@ -440,18 +295,3 @@ Polish the Ghostwriter feature for production launch.
 - Epic 4: Real-Time AI Coaching ✅
 - Epic 5: E2E Test Suite ✅
 - Epic 6 Phase 1: AI Ghostwriter MVP ✅
-
-### Sprint 3: Sample Answers & Email ✅ COMPLETE
-- 60 questions with sample answers
-- Email service integrated with Resend
-
-### Sprint 2: Four Epics ✅ COMPLETE
-- Target company feature
-- Expanded question bank to 105
-- JWT refresh tokens
-- Test coverage to 67%
-
-### Sprint 1: Feedback That Helps ✅ COMPLETE
-- Experience level selection
-- Personalized AI feedback
-- Score visualization
