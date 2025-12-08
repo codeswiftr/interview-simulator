@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
+import { PasswordStrengthIndicator } from '../components/ui/PasswordStrengthIndicator';
 import type { ExperienceLevel } from '../types';
 import type { AxiosError } from 'axios';
 
@@ -104,9 +105,7 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 required
               />
-              <p className="mt-1 text-xs text-text-tertiary">
-                Must be at least 8 characters long
-              </p>
+              <PasswordStrengthIndicator password={password} />
             </div>
 
             <div>

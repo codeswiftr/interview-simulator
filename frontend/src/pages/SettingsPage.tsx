@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import SubscriptionCard from '../components/subscription/SubscriptionCard';
 import BillingInfo from '../components/subscription/BillingInfo';
 import UpgradeModal from '../components/subscription/UpgradeModal';
+import { PasswordStrengthIndicator } from '../components/ui/PasswordStrengthIndicator';
 import type { SubscriptionStatus, ExperienceLevel } from '../types';
 
 export default function SettingsPage() {
