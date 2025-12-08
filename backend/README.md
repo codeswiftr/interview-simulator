@@ -2,6 +2,24 @@
 
 FastAPI + SQLModel service powering the interview simulator. Use `uv run uvicorn app.main:app --reload` to start locally and `uv run pytest` to run tests.
 
+## Running Test Coverage
+
+To run test coverage with database support:
+
+```bash
+# Option 1: Use the convenience script (recommended)
+./scripts/run_coverage.sh
+
+# Option 2: Manual steps
+docker compose up -d postgres  # Start database
+uv run pytest --cov=app --cov-report=term-missing --cov-report=json --cov-report=html
+```
+
+Coverage reports will be generated:
+- Terminal output with line-by-line coverage
+- JSON: `coverage.json`
+- HTML: `htmlcov/index.html` (open in browser for detailed view)
+
 ## Environment Setup
 
 Create a `.env` file in the `backend/` directory with the following variables:
