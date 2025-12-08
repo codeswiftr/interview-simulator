@@ -159,10 +159,10 @@ Enable users to practice delivering their AI-generated drafts with audio recordi
 - Need to integrate practice session with preparation flow
 
 ## Success Criteria
-- [ ] Users can start practice from PreparationPage
-- [ ] Recording integrates with existing RecordingDeck
-- [ ] Practice attempts saved to database
-- [ ] Multiple attempts allowed with history
+- [x] Users can start practice from PreparationPage ✅
+- [x] Recording integrates with existing RecordingDeck ✅
+- [x] Practice attempts saved to database ✅
+- [x] Multiple attempts allowed with history ✅
 
 ## Technical Design
 
@@ -196,28 +196,28 @@ GET /api/v1/preparation/{id}/attempts
 
 ## Implementation Plan
 
-### Phase 1: Backend Practice API (4h)
+### Phase 1: Backend Practice API (4h) ✅ COMPLETE
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 1.1 | Create Alembic migration for DeliveryAttempt (if needed) | backend-engineer | 30m |
-| 1.2 | Add POST /preparation/{id}/practice/start endpoint | backend-engineer | 1h |
-| 1.3 | Add POST /preparation/{id}/practice/submit endpoint | backend-engineer | 1.5h |
-| 1.4 | Add GET /preparation/{id}/attempts endpoint | backend-engineer | 30m |
-| 1.5 | Add tests for practice endpoints | qa-test-guardian | 30m |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 1.1 | Create Alembic migration for DeliveryAttempt (if needed) | backend-engineer | 30m | ✅ Done |
+| 1.2 | Add POST /preparation/{id}/practice/start endpoint | backend-engineer | 1h | ✅ Done |
+| 1.3 | Add POST /preparation/{id}/practice/submit endpoint | backend-engineer | 1.5h | ✅ Done |
+| 1.4 | Add GET /preparation/{id}/attempts endpoint | backend-engineer | 30m | ✅ Done |
+| 1.5 | Add tests for practice endpoints | qa-test-guardian | 30m | ✅ Done |
 
-**Checkpoint**: Practice API endpoints available
+**Checkpoint**: Practice API endpoints available ✅
 
-### Phase 2: Frontend Integration (6h)
+### Phase 2: Frontend Integration (6h) ✅ COMPLETE
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Add practice stage UI to PreparationPage | frontend-builder | 2h |
-| 2.2 | Integrate RecordingDeck for practice recording | frontend-builder | 2h |
-| 2.3 | Add attempt history display | frontend-builder | 1h |
-| 2.4 | Wire submit to transcription and storage | frontend-builder | 1h |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 2.1 | Add practice stage UI to PreparationPage | frontend-builder | 2h | ✅ Done |
+| 2.2 | Integrate RecordingDeck for practice recording | frontend-builder | 2h | ✅ Done |
+| 2.3 | Add attempt history display | frontend-builder | 1h | ✅ Done |
+| 2.4 | Wire submit to transcription and storage | frontend-builder | 1h | ✅ Done |
 
-**Checkpoint**: Users can practice delivering drafts
+**Checkpoint**: Users can practice delivering drafts ✅
 
 ---
 
@@ -232,10 +232,10 @@ Rate user delivery against their draft and provide improvement feedback.
 - Track improvement over multiple attempts
 
 ## Success Criteria
-- [ ] Delivery rated on STAR adherence, completeness
-- [ ] Side-by-side comparison UI (draft vs delivery)
-- [ ] Improvement suggestions provided
-- [ ] Progress tracked across attempts
+- [x] Delivery rated on STAR adherence, completeness ✅
+- [x] Side-by-side comparison UI (draft vs delivery) ✅
+- [x] Improvement suggestions provided ✅
+- [x] Progress tracked across attempts ✅
 
 ## Technical Design
 
@@ -327,33 +327,33 @@ GET /api/v1/preparation/{id}/comparison
 Polish the Ghostwriter feature for production launch.
 
 ## Success Criteria
-- [ ] Draft editing capability
-- [ ] Iteration flow (refine draft, re-record)
+- [x] Draft editing capability ✅
+- [x] Iteration flow (refine draft, re-record) ✅
 - [ ] AI prompts optimized for cost/quality
 - [ ] Caching for common questions
 - [ ] Loading states and error handling polished
 
 ## Implementation Plan
 
-### Phase 1: Draft Editing (3h)
+### Phase 1: Draft Editing (3h) ✅ COMPLETE
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 1.1 | Add draft editing UI to PreparationPage | frontend-builder | 1.5h |
-| 1.2 | Add PATCH /preparation/{id}/draft endpoint | backend-engineer | 1h |
-| 1.3 | Add save/cancel functionality | frontend-builder | 30m |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 1.1 | Add draft editing UI to PreparationPage | frontend-builder | 1.5h | ✅ Done |
+| 1.2 | Add PATCH /preparation/{id}/draft endpoint | backend-engineer | 1h | ✅ Done |
+| 1.3 | Add save/cancel functionality | frontend-builder | 30m | ✅ Done |
 
-**Checkpoint**: Users can edit drafts
+**Checkpoint**: Users can edit drafts ✅
 
-### Phase 2: Iteration Flow (3h)
+### Phase 2: Iteration Flow (3h) ✅ COMPLETE
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Add "Try Again" button after rating | frontend-builder | 1h |
-| 2.2 | Add "Refine Draft" button | frontend-builder | 1h |
-| 2.3 | Track iteration count on attempts | backend-engineer | 1h |
+| Task | Description | Agent | Est | Status |
+|------|-------------|-------|-----|--------|
+| 2.1 | Add "Try Again" button after rating | frontend-builder | 1h | ✅ Done |
+| 2.2 | Add "Refine Draft" button | frontend-builder | 1h | ✅ Done |
+| 2.3 | Track iteration count on attempts | backend-engineer | 1h | ⏳ Deferred (nice-to-have) |
 
-**Checkpoint**: Users can iterate
+**Checkpoint**: Users can iterate ✅
 
 ### Phase 3: Optimization (4h)
 
