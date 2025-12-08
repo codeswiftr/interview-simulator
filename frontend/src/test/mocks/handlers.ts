@@ -136,7 +136,12 @@ export const handlers = [
   }),
 
   http.get(`${API_URL}/users/me/readiness-score`, () => {
-    return HttpResponse.json({ score: 85 });
+    return HttpResponse.json({
+      readiness_score: 85,
+      sessions_used: 10,
+      improvement_trend: 5,
+      message: 'You are well-prepared for interviews',
+    });
   }),
 
   // Interview handlers
@@ -317,5 +322,105 @@ export const handlers = [
 
   http.post(`${API_URL}/subscriptions/cancel`, () => {
     return HttpResponse.json({ message: 'Subscription cancelled successfully' });
+  }),
+
+  // Preparation API handlers (AI Ghostwriter)
+  http.post(`${API_URL}/preparation/start`, () => {
+    return HttpResponse.json({
+      preparation_id: 'prep-test-id',
+      stage: 'detective',
+      message: 'Preparation started',
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/detective/question`, () => {
+    return HttpResponse.json({
+      question: 'Can you tell me about a specific project that relates to this question?',
+      order: 1,
+      is_complete: false,
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/detective/answer`, () => {
+    return HttpResponse.json({
+      next_question: 'What challenges did you face in that project?',
+      stage: 'detective',
+      is_complete: false,
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/generate-draft`, () => {
+    return HttpResponse.json({
+      draft_answer: '**Situation**: I worked on a project where...\n**Task**: My responsibility was...\n**Action**: I took the following steps...\n**Result**: The outcome was...',
+      stage: 'draft',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/draft`, () => {
+    return HttpResponse.json({
+      draft_answer: '**Situation**: I worked on a project where...\n**Task**: My responsibility was...\n**Action**: I took the following steps...\n**Result**: The outcome was...',
+      stage: 'draft',
+    });
+  }),
+
+  http.patch(`${API_URL}/preparation/:id/draft`, () => {
+    return HttpResponse.json({
+      draft_answer: 'Updated draft answer...',
+      stage: 'draft',
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/practice/start`, () => {
+    return HttpResponse.json({
+      attempt_id: 'attempt-test-id',
+      stage: 'practice',
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/practice/submit`, () => {
+    return HttpResponse.json({
+      attempt_id: 'attempt-test-id',
+      transcript: 'This is the transcribed delivery from practice.',
+      stage: 'practice',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/attempts`, () => {
+    return HttpResponse.json({
+      attempts: [
+        {
+          id: 'attempt-1',
+          preparation_id: 'prep-test-id',
+          audio_url: 'https://example.com/audio1.mp3',
+          transcript: 'First practice attempt transcript',
+          delivery_score: null,
+          comparison_feedback: null,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/rate-delivery`, () => {
+    return HttpResponse.json({
+      delivery_score: 85,
+      content_coverage: 90,
+      key_points: 85,
+      flow_structure: 80,
+      strengths: ['Clear communication', 'Good structure', 'Relevant examples'],
+      improvements: ['Add more specific metrics', 'Improve pacing', 'Better conclusion'],
+      comparison_feedback: 'Your delivery covered most key points from the draft. Good structure and flow.',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/comparison`, () => {
+    return HttpResponse.json({
+      draft: '**Situation**: I worked on a project...',
+      delivery: 'I worked on a project where we had to...',
+      delivery_score: 85,
+      comparison_feedback: 'Good coverage of main points.',
+      strengths: ['Clear communication', 'Good examples'],
+      improvements: ['Add more metrics', 'Better pacing'],
+    });
   }),
 ];
