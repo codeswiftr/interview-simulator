@@ -255,11 +255,23 @@ export const feedbackAPI = {
 
 // Upload API for audio files
 export const uploadAPI = {
-  uploadAudio: (file: File, sessionId: string, questionId: string) => {
+  uploadAudio: (
+    file: File,
+    sessionId: string | null,
+    questionId: string | null,
+    preparationId?: string | null
+  ) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('session_id', sessionId);
-    formData.append('question_id', questionId);
+    if (sessionId) {
+      formData.append('session_id', sessionId);
+    }
+    if (questionId) {
+      formData.append('question_id', questionId);
+    }
+    if (preparationId) {
+      formData.append('preparation_id', preparationId);
+    }
 
     return api.post('/upload/audio', formData, {
       timeout: 60000, // 60 seconds for large audio files
@@ -304,6 +316,27 @@ export const preparationAPI = {
     api.post<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/generate-draft`),
   getDraft: (preparationId: string) =>
     api.get<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/draft`),
+  startPractice: (preparationId: string) =>
+    api.post<{ attempt_id: string; stage: string }>(
+      `/preparation/${preparationId}/practice/start`
+    ),
+  submitPractice: (preparationId: string, audioUrl: string) =>
+    api.post<{ attempt_id: string; transcript: string; stage: string }>(
+      `/preparation/${preparationId}/practice/submit`,
+      { audio_url: audioUrl }
+    ),
+  getAttempts: (preparationId: string) =>
+    api.get<{
+      attempts: Array<{
+        id: string;
+        preparation_id: string;
+        audio_url: string | null;
+        transcript: string | null;
+        delivery_score: number | null;
+        comparison_feedback: string | null;
+        created_at: string;
+      }>;
+    }>(`/preparation/${preparationId}/attempts`),
 };
 
 export const userAPI = {

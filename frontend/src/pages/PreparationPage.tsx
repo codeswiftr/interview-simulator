@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { preparationAPI } from '../lib/api';
+import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History } from 'lucide-react';
+import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
+import { useAudioRecording } from '../hooks/useAudioRecording';
+import RecordingDeck from '../components/interview/RecordingDeck';
+import { getExtensionForMimeType } from '../lib/audio-utils';
 import type { AxiosError } from 'axios';
 
 type PreparationStage = 'detective' | 'draft' | 'practice' | 'complete';
@@ -29,6 +32,40 @@ export default function PreparationPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [attempts, setAttempts] = useState<Array<{
+    id: string;
+    audio_url: string | null;
+    transcript: string | null;
+    delivery_score: number | null;
+    comparison_feedback: string | null;
+    created_at: string;
+  }>>([]);
+  const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
+
+  // Audio recording hook
+  const {
+    duration,
+    isRecording,
+    recordingState,
+    isPreviewMode,
+    isPlaying,
+    currentTime,
+    audioDuration,
+    startRecording,
+    stopRecording,
+    resetRecording,
+    playPreview,
+    pausePreview,
+    clearPreview,
+    pauseRecording,
+    resumeRecording,
+    confirmRecording,
+    error: recordingError,
+    mediaStream,
+    mimeType,
+  } = useAudioRecording();
 
   // Load preparation state
   useEffect(() => {
@@ -56,6 +93,22 @@ export default function PreparationPage() {
 
     loadDraft();
   }, [id, navigate]);
+
+  // Load attempts when in practice stage
+  useEffect(() => {
+    if (!id || stage !== 'practice') return;
+
+    const loadAttempts = async () => {
+      try {
+        const response = await preparationAPI.getAttempts(id);
+        setAttempts(response.data.attempts);
+      } catch (err) {
+        // Silently fail - attempts might not exist yet
+      }
+    };
+
+    loadAttempts();
+  }, [id, stage]);
 
   // Get next detective question
   const getNextQuestion = useCallback(async () => {
@@ -143,6 +196,103 @@ export default function PreparationPage() {
       setIsGenerating(false);
     }
   }, [id, toast]);
+
+  // Start practice session
+  const handleStartPractice = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await preparationAPI.startPractice(id);
+      setCurrentAttemptId(response.data.attempt_id);
+      setStage('practice');
+      toast.success('Practice started', 'Record your delivery');
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to start practice');
+      toast.error('Error', 'Failed to start practice');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id, toast]);
+
+  // Upload audio and submit practice attempt
+  const handleSubmitPractice = useCallback(async () => {
+    if (!id) return;
+
+    const blob = confirmRecording();
+    if (!blob) {
+      toast.error('Error', 'No recording available');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // Create a temporary file for upload
+      // Note: For practice, we need a preparation-specific upload endpoint
+      // For now, we'll use a workaround with a dummy session/question
+      const extension = mimeType ? getExtensionForMimeType(mimeType) : 'webm';
+      const type = mimeType || 'audio/webm';
+      const audioFile = new File([blob], `practice-${Date.now()}.${extension}`, { type });
+
+      // Upload audio for practice
+      const uploadResponse = await uploadAPI.uploadAudio(audioFile, null, null, id);
+      const audioUrl = uploadResponse.data.audio_url;
+
+      // Submit practice attempt
+      const response = await preparationAPI.submitPractice(id, audioUrl);
+      
+      toast.success('Practice submitted', 'Your delivery has been transcribed');
+      
+      // Reload attempts
+      const attemptsResponse = await preparationAPI.getAttempts(id);
+      setAttempts(attemptsResponse.data.attempts);
+      
+      // Reset recording
+      resetRecording();
+      setCurrentAttemptId(null);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to submit practice');
+      toast.error('Error', 'Failed to submit practice attempt');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [id, confirmRecording, mimeType, toast, resetRecording]);
+
+  // Recording handlers
+  const handleStartRecording = async () => {
+    try {
+      if (!currentAttemptId && id) {
+        // Start practice session if not started
+        await handleStartPractice();
+      }
+      await startRecording();
+    } catch (err) {
+      const error = err as { message?: string };
+      setError(error.message || 'Failed to start recording');
+      toast.error('Error', 'Failed to start recording');
+    }
+  };
+
+  const handleStopRecording = () => {
+    stopRecording();
+  };
+
+  const handleCancelRecording = () => {
+    clearPreview();
+    resetRecording();
+    setError(null);
+  };
+
+  // Update live transcript
+  const handleTranscriptChange = useCallback((transcript: string) => {
+    setLiveTranscript(transcript);
+  }, []);
 
   return (
     <div className="min-h-screen bg-surface-primary">
@@ -276,7 +426,7 @@ export default function PreparationPage() {
         )}
 
         {/* Draft Review */}
-        {draft && (
+        {draft && stage !== 'practice' && (
           <div className="card p-8">
             <div className="mb-6">
               <h2 className="heading-card mb-2">Your Personalized Draft</h2>
@@ -299,10 +449,119 @@ export default function PreparationPage() {
                 Done
               </button>
               <button
-                onClick={() => navigate(`/interview?practice_draft=${id}`)}
+                onClick={handleStartPractice}
+                disabled={isLoading}
                 className="btn-primary"
               >
-                Practice Delivery
+                {isLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  'Start Practice'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Practice Stage */}
+        {stage === 'practice' && draft && (
+          <div className="space-y-6">
+            {/* Draft Display */}
+            <div className="card p-6">
+              <h2 className="heading-card mb-4">Your Draft Answer</h2>
+              <div className="bg-surface-secondary p-4 rounded-lg">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <pre className="whitespace-pre-wrap font-sans text-text-primary text-sm">{draft}</pre>
+                </div>
+              </div>
+            </div>
+
+            {/* Recording Interface */}
+            <div className="card p-6">
+              <h2 className="heading-card mb-4">Practice Your Delivery</h2>
+              <p className="text-text-secondary mb-6">
+                Record yourself delivering your prepared answer. You can practice multiple times.
+              </p>
+
+              {recordingError && (
+                <div className="mb-4 p-4 bg-status-error/10 border border-status-error/20 rounded-lg">
+                  <p className="text-status-error text-sm">{recordingError}</p>
+                </div>
+              )}
+
+              <RecordingDeck
+                isRecording={isRecording}
+                recordingState={recordingState}
+                duration={duration}
+                mediaStream={mediaStream}
+                onStart={handleStartRecording}
+                onStop={handleStopRecording}
+                onPause={pauseRecording}
+                onResume={resumeRecording}
+                onCancel={handleCancelRecording}
+                onConfirm={handleSubmitPractice}
+                disabled={isSubmitting}
+                onTranscriptChange={handleTranscriptChange}
+              />
+
+              {isSubmitting && (
+                <div className="mt-4 text-center">
+                  <Loader2 size={20} className="animate-spin text-electric-blue mx-auto mb-2" />
+                  <p className="text-text-secondary text-sm">Submitting and transcribing...</p>
+                </div>
+              )}
+            </div>
+
+            {/* Attempt History */}
+            {attempts.length > 0 && (
+              <div className="card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <History size={20} className="text-electric-blue" />
+                  <h2 className="heading-card">Practice History</h2>
+                </div>
+                <div className="space-y-4">
+                  {attempts.map((attempt) => (
+                    <div key={attempt.id} className="bg-surface-secondary p-4 rounded-lg border border-border-light">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-xs text-text-tertiary">
+                          {new Date(attempt.created_at).toLocaleString()}
+                        </span>
+                        {attempt.delivery_score !== null && (
+                          <span className="text-sm font-semibold text-electric-blue">
+                            Score: {attempt.delivery_score.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      {attempt.transcript && (
+                        <p className="text-text-secondary text-sm mt-2">{attempt.transcript}</p>
+                      )}
+                      {attempt.comparison_feedback && (
+                        <div className="mt-3 p-3 bg-surface-primary rounded border border-border-light">
+                          <p className="text-xs font-semibold text-text-primary mb-1">Feedback:</p>
+                          <p className="text-xs text-text-secondary">{attempt.comparison_feedback}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setStage('draft')}
+                className="btn-secondary"
+              >
+                Back to Draft
+              </button>
+              <button
+                onClick={() => navigate('/questions')}
+                className="btn-ghost"
+              >
+                Done
               </button>
             </div>
           </div>

@@ -37,18 +37,21 @@ class AudioUploadResponse(BaseModel):
 @router.post("/audio", response_model=AudioUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_audio(
     file: UploadFile = File(...),
-    session_id: str = Form(...),
-    question_id: str = Form(...),
+    session_id: str | None = Form(None),
+    question_id: str | None = Form(None),
+    preparation_id: str | None = Form(None),
     current_user: User = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_session),
 ) -> AudioUploadResponse:
-    """Upload an audio file for an interview response.
+    """Upload an audio file for an interview response or practice attempt.
 
     Validates that:
     - File is an allowed audio format
     - File size is within limits
-    - Interview session belongs to the current user
+    - Interview session or preparation belongs to the current user
     """
+    from app.models.preparation import AnswerPreparation
+
     # Validate file extension
     file_ext = Path(file.filename or "").suffix.lower()
     if file_ext not in ALLOWED_EXTENSIONS:
@@ -57,19 +60,46 @@ async def upload_audio(
             detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
-    # Verify interview session exists and belongs to user
-    result = await db_session.exec(
-        select(InterviewSession).where(
-            InterviewSession.id == session_id,
-            InterviewSession.user_id == current_user.id,
-        )
-    )
-    interview = result.first()
-    if not interview:
+    # Validate that either session_id or preparation_id is provided
+    if not session_id and not preparation_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Interview session not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either session_id or preparation_id must be provided",
         )
+
+    # Verify ownership - interview session or preparation
+    if session_id:
+        result = await db_session.exec(
+            select(InterviewSession).where(
+                InterviewSession.id == session_id,
+                InterviewSession.user_id == current_user.id,
+            )
+        )
+        resource = result.first()
+        if not resource:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Interview session not found",
+            )
+        # Use session_id and question_id for filename
+        resource_id = session_id
+        secondary_id = question_id or session_id
+    elif preparation_id:
+        result = await db_session.exec(
+            select(AnswerPreparation).where(
+                AnswerPreparation.id == preparation_id,
+                AnswerPreparation.user_id == current_user.id,
+            )
+        )
+        resource = result.first()
+        if not resource:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Preparation not found",
+            )
+        # Use preparation_id for filename
+        resource_id = preparation_id
+        secondary_id = preparation_id
 
     # Read and validate file size
     content = await file.read()
@@ -89,7 +119,7 @@ async def upload_audio(
 
     # Generate unique filename
     unique_id = uuid.uuid4().hex[:12]
-    filename = f"{session_id}_{question_id}_{unique_id}{file_ext}"
+    filename = f"{resource_id}_{secondary_id}_{unique_id}{file_ext}"
     file_path = UPLOAD_DIR / filename
 
     # Save file
