@@ -3,11 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2 } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
-import { useAuth } from '../hooks/useAuth';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import RecordingDeck from '../components/interview/RecordingDeck';
 import { getExtensionForMimeType } from '../lib/audio-utils';
-import { SkeletonQuestion, SkeletonText } from '../components/ui/Skeleton';
 import type { AxiosError } from 'axios';
 
 type PreparationStage = 'detective' | 'draft' | 'practice' | 'complete';
@@ -22,7 +20,6 @@ export default function PreparationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
-  const { user } = useAuth();
 
   const [stage, setStage] = useState<PreparationStage>('detective');
   const [currentQuestion, setCurrentQuestion] = useState<string>('');
@@ -43,7 +40,6 @@ export default function PreparationPage() {
   }>>([]);
   const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState('');
   const [selectedAttemptForComparison, setSelectedAttemptForComparison] = useState<string | null>(null);
   const [comparisonData, setComparisonData] = useState<{
     draft: string;
@@ -63,15 +59,9 @@ export default function PreparationPage() {
     duration,
     isRecording,
     recordingState,
-    isPreviewMode,
-    isPlaying,
-    currentTime,
-    audioDuration,
     startRecording,
     stopRecording,
     resetRecording,
-    playPreview,
-    pausePreview,
     clearPreview,
     pauseRecording,
     resumeRecording,
@@ -280,7 +270,7 @@ export default function PreparationPage() {
       const audioUrl = uploadResponse.data.audio_url;
 
       // Submit practice attempt
-      const response = await preparationAPI.submitPractice(id, audioUrl);
+      await preparationAPI.submitPractice(id, audioUrl);
 
       toast.success('Practice submitted', 'Your delivery has been transcribed');
 
@@ -333,9 +323,9 @@ export default function PreparationPage() {
     setError(null);
   };
 
-  // Update live transcript
-  const handleTranscriptChange = useCallback((transcript: string) => {
-    setLiveTranscript(transcript);
+  // Update live transcript (not currently used but kept for future use)
+  const handleTranscriptChange = useCallback((_transcript: string) => {
+    // Transcript handling can be added here if needed in future
   }, []);
 
   // Rate delivery attempt

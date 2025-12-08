@@ -14,7 +14,7 @@ import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
 import ComingSoonBadge from '../components/ui/ComingSoonBadge';
-import { SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
+import { Skeleton, SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
 import type { AxiosError } from 'axios';
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Mic, Square, Play, Pause, X } from 'lucide-react';
 import type { RecordingState } from '../../hooks/useAudioRecording';
 
@@ -77,7 +77,7 @@ export default function RecordingDeck({
   onTranscriptChange
 }: RecordingDeckProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const [transcript, setTranscript] = useState('');

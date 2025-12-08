@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle, Loader2, Upload, Send } from 'lucide-react';
 
 interface AudioPreviewProps {
@@ -34,7 +34,7 @@ export default function AudioPreview({
 }: AudioPreviewProps) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   // Simulated visualizer for preview mode (since we don't have the raw stream stream anymore easily)
   // We'll generate a pleasing "playback" animation when playing

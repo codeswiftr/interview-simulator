@@ -413,8 +413,7 @@ export default function InterviewPage() {
     hint: coachingHint,
     isLoading: isHintLoading,
     isStreaming: isHintStreaming,
-    error: hintError,
-    triggerHint
+    error: hintError
   } = useCoachingHint({
     question: currentQuestion?.content || '',
     questionType: (currentQuestion?.category as 'behavioral' | 'technical' | 'system_design') || 'behavioral',

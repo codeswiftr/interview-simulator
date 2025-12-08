@@ -21,15 +21,15 @@ export default function HomePage() {
               <span className="flex h-2 w-2 rounded-full bg-electric-blue"></span>
               <span className="text-sm font-medium text-text-secondary">AI-Powered Interview Coach</span>
             </div>
-            
+
             <h1 className="heading-hero mb-6 text-text-primary animate-slide-up">
               Master Your Interview Skills with <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-indigo-600">Real-Time AI Feedback</span>
             </h1>
-            
+
             <p className="body-large text-text-secondary mb-10 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
               Simulate real interview scenarios, record your answers, and get instant, actionable feedback to land your dream job.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
               {isAuthenticated ? (
                 <Link to="/dashboard" className="btn-primary flex items-center justify-center gap-2 group">
@@ -140,7 +140,7 @@ export default function HomePage() {
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-charcoal -z-20"></div>
         <div className="absolute inset-0 bg-gradient-to-br from-charcoal to-gray-900 -z-10"></div>
-        
+
         {/* Background Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-electric-blue/20 blur-[150px] rounded-full pointer-events-none"></div>
 
@@ -149,7 +149,7 @@ export default function HomePage() {
           <p className="body-large mb-10 text-gray-300 max-w-2xl mx-auto">
             Join thousands of engineers who have improved their interview skills with our AI-powered simulator.
           </p>
-          
+
           {isAuthenticated ? (
             <Link
               to="/dashboard"
