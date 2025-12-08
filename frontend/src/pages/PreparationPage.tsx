@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2 } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -808,6 +808,42 @@ export default function PreparationPage() {
                     </ul>
                   </div>
                 )}
+
+                {/* Iteration Actions */}
+                <div className="mt-6 flex items-center gap-4 pt-4 border-t border-border-light">
+                  <button
+                    onClick={() => {
+                      setSelectedAttemptForComparison(null);
+                      setComparisonData(null);
+                      resetRecording();
+                      handleStartPractice();
+                    }}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    <RefreshCw size={16} />
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedAttemptForComparison(null);
+                      setComparisonData(null);
+                      handleStartEditDraft();
+                    }}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    <Wand2 size={16} />
+                    Refine Draft
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedAttemptForComparison(null);
+                      setComparisonData(null);
+                    }}
+                    className="btn-ghost"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             )}
 
