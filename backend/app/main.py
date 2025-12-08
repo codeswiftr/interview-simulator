@@ -29,6 +29,7 @@ from app.config import settings
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal, check_db_connection, close_db_connections
 from app.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 
 def configure_logging() -> None:
@@ -201,6 +202,9 @@ app = FastAPI(
 
 # Correlation ID middleware (add early for request tracing)
 app.add_middleware(CorrelationIDMiddleware)
+
+# Security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS configuration
 app.add_middleware(

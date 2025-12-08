@@ -1,11 +1,16 @@
 """User management endpoints."""
 
+import secrets
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.config import settings
 from app.db import get_session
 from app.dependencies import get_current_user
+from app.models.email_verification import EmailVerificationToken
 from app.models.user import (
     ExperienceLevel,
     PasswordChange,
@@ -17,6 +22,7 @@ from app.models.user import (
     UserUpdate,
 )
 from app.security import create_access_token, create_refresh_token, hash_password, verify_password
+from app.services.email_service import EmailService
 from app.services.feedback_service import FeedbackService
 
 router = APIRouter()
@@ -95,11 +101,112 @@ async def update_profile(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
             )
-        current_user.email = updates.email.lower()
+        
+        # Email changes require verification - send verification email instead of updating directly
+        # Generate verification token
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(UTC) + timedelta(hours=24)  # 24 hour expiry
+        
+        # Create verification token record
+        verification_token = EmailVerificationToken(
+            user_id=current_user.id,
+            new_email=updates.email.lower(),
+            token=token,
+            expires_at=expires_at,
+        )
+        session.add(verification_token)
+        await session.commit()
+        
+        # Send verification email
+        email_service = EmailService()
+        verification_url = f"{settings.frontend_url}/verify-email?token={token}"
+        await email_service.send_email_verification(updates.email.lower(), verification_url)
+        
+        # Don't update email yet - return success message
+        raise HTTPException(
+            status_code=status.HTTP_202_ACCEPTED,
+            detail="Verification email sent to new address. Please verify before email is changed."
+        )
 
     await session.commit()
     await session.refresh(current_user)
     return current_user
+
+
+@router.post("/verify-email")
+async def verify_email(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Verify email address using verification token.
+
+    Updates user email to the verified new email address.
+
+    Args:
+        token: Email verification token from email link
+        session: Database session
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If token is invalid, expired, or already used
+    """
+
+    # Look up verification token
+    result = await session.exec(
+        select(EmailVerificationToken).where(EmailVerificationToken.token == token)
+    )
+    verification_token = result.first()
+
+    if not verification_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token"
+        )
+
+    # Check if token is already used
+    if verification_token.used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification token has already been used"
+        )
+
+    # Check if token is expired
+    now = datetime.now(UTC)
+    if verification_token.expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification token has expired"
+        )
+
+    # Get the user
+    user_result = await session.exec(select(User).where(User.id == verification_token.user_id))
+    user = user_result.first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification token"
+        )
+
+    # Check if new email is already taken
+    existing = await session.exec(select(User).where(User.email == verification_token.new_email))
+    if existing.first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email address is already registered"
+        )
+
+    # Update user's email
+    user.email = verification_token.new_email
+
+    # Mark token as used
+    verification_token.used = True
+
+    await session.commit()
+
+    return {"message": "Email address successfully verified and updated"}
 
 
 @router.post("/me/change-password")
