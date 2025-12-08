@@ -52,7 +52,6 @@ export default function InterviewPage() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [lastFailedUpload, setLastFailedUpload] = useState<{ blob: Blob; questionId: string } | null>(null);
   const [showCoach, setShowCoach] = useState(true);
-  const [liveTranscript, setLiveTranscript] = useState('');
 
   // Audio recording hook
   const {
@@ -76,6 +75,28 @@ export default function InterviewPage() {
     mediaStream,
     mimeType
   } = useAudioRecording();
+
+  // Live transcript state for coaching
+  const [liveTranscript, setLiveTranscript] = useState('');
+
+  // AI Coaching Hint hook - MUST be called before any early returns
+  const currentQuestion = questions[currentQuestionIndex];
+  const {
+    hint: coachingHint,
+    isLoading: isHintLoading,
+    isStreaming: isHintStreaming,
+    error: hintError
+  } = useCoachingHint({
+    question: currentQuestion?.content || '',
+    questionType: (currentQuestion?.category as 'behavioral' | 'technical' | 'system_design') || 'behavioral',
+    transcript: liveTranscript,
+    enabled: isRecording && showCoach && !!currentQuestion
+  });
+
+  // Handle transcript updates from RecordingDeck
+  const handleTranscriptChange = useCallback((transcript: string) => {
+    setLiveTranscript(transcript);
+  }, []);
 
   // Warn user before leaving with unsaved progress
   useEffect(() => {
@@ -405,26 +426,7 @@ export default function InterviewPage() {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-
-  // AI Coaching Hint hook
-  const {
-    hint: coachingHint,
-    isLoading: isHintLoading,
-    isStreaming: isHintStreaming,
-    error: hintError
-  } = useCoachingHint({
-    question: currentQuestion?.content || '',
-    questionType: (currentQuestion?.category as 'behavioral' | 'technical' | 'system_design') || 'behavioral',
-    transcript: liveTranscript,
-    enabled: isRecording && showCoach && !!currentQuestion
-  });
-
-  // Handle transcript updates from RecordingDeck
-  const handleTranscriptChange = useCallback((transcript: string) => {
-    setLiveTranscript(transcript);
-  }, []);
 
   return (
     <ErrorBoundary>
