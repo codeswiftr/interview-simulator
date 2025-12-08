@@ -28,6 +28,11 @@ from app.services.delivery_rating_service import DeliveryRatingService
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
+def get_stage_value(stage: PreparationStage | str) -> str:
+    """Get string value from stage (handles both enum and string from DB)."""
+    return stage.value if hasattr(stage, "value") else stage
+
 # Initialize OpenRouter client for Gemini 2.0 Flash (detective) and Claude Haiku 4.5 (ghostwriter)
 _preparation_client: AsyncOpenAI | None = None
 
@@ -197,10 +202,13 @@ async def start_preparation(
             AnswerPreparation.question_id == request.question_id,
         )
     )
-    if existing_result.first():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Preparation already exists for this question. Use GET /preparation/{id} to retrieve it.",
+    existing_prep = existing_result.first()
+    if existing_prep:
+        # Return the existing preparation instead of error
+        return PreparationStartResponse(
+            preparation_id=existing_prep.id,
+            stage=get_stage_value(existing_prep.stage),
+            message="Existing preparation found. Resuming from current stage.",
         )
 
     # Create preparation
@@ -215,7 +223,7 @@ async def start_preparation(
 
     return PreparationStartResponse(
         preparation_id=preparation.id,
-        stage=preparation.stage.value,
+        stage=get_stage_value(preparation.stage),
         message="Preparation started. Use POST /preparation/{id}/detective/question to get the first question.",
     )
 
@@ -265,7 +273,7 @@ async def get_detective_question(
     if preparation.stage != PreparationStage.DETECTIVE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Preparation is in {preparation.stage.value} stage, not detective stage",
+            detail=f"Preparation is in {get_stage_value(preparation.stage)} stage, not detective stage",
         )
 
     # Get question
@@ -484,7 +492,7 @@ async def submit_detective_answer(
     if preparation.stage != PreparationStage.DETECTIVE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Preparation is in {preparation.stage.value} stage, not detective stage",
+            detail=f"Preparation is in {get_stage_value(preparation.stage)} stage, not detective stage",
         )
 
     # Get the last unanswered question
@@ -568,7 +576,7 @@ async def generate_draft(
     if preparation.stage != PreparationStage.DRAFT:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Preparation is in {preparation.stage.value} stage. Complete detective stage first.",
+            detail=f"Preparation is in {get_stage_value(preparation.stage)} stage. Complete detective stage first.",
         )
 
     # Get question
@@ -659,7 +667,7 @@ Use the context from your answers to fill in the details above."""
 
     return DraftResponse(
         draft_answer=draft,
-        stage=preparation.stage.value,
+        stage=get_stage_value(preparation.stage),
     )
 
 
@@ -704,7 +712,7 @@ async def get_draft(
 
     return DraftResponse(
         draft_answer=preparation.draft_answer,
-        stage=preparation.stage.value,
+        stage=get_stage_value(preparation.stage),
     )
 
 
@@ -766,7 +774,7 @@ async def update_draft(
 
     return DraftResponse(
         draft_answer=preparation.draft_answer,
-        stage=preparation.stage.value,
+        stage=get_stage_value(preparation.stage),
     )
 
 
@@ -931,7 +939,7 @@ async def submit_practice(
     return PracticeSubmitResponse(
         attempt_id=attempt.id,
         transcript=attempt.transcript or "",
-        stage=preparation.stage.value,
+        stage=get_stage_value(preparation.stage),
     )
 
 
@@ -1101,7 +1109,7 @@ async def rate_delivery(
         comparison_feedback=rating.comparison_feedback,
         strengths=rating.strengths,
         improvements=rating.improvements,
-        stage=preparation.stage.value,
+        stage=get_stage_value(preparation.stage),
     )
 
 

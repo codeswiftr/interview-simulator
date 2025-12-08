@@ -350,9 +350,7 @@ export default function FeedbackPage() {
                 </div>
 
                 <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
-                  <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
-                    You completed <span className="font-semibold text-[var(--fg-primary)]">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
-                  </p>
+                  You completed <span className="font-semibold text-[var(--fg-primary)]">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
                 </p>
 
                 {/* Improvement Banner */}

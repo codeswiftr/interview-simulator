@@ -168,6 +168,11 @@ export function useCoachingHint({
     const previousWordCount = wordCountRef.current;
     const newWords = currentWordCount - previousWordCount;
 
+    // Don't generate hints for very short transcripts (less than 10 words)
+    if (currentWordCount < 10) {
+      return;
+    }
+
     // Update word count
     wordCountRef.current = currentWordCount;
 
