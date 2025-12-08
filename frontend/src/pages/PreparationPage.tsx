@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -53,6 +53,9 @@ export default function PreparationPage() {
     improvements: string[];
   } | null>(null);
   const [isRating, setIsRating] = useState(false);
+  const [isEditingDraft, setIsEditingDraft] = useState(false);
+  const [editedDraft, setEditedDraft] = useState<string>('');
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   // Audio recording hook
   const {
@@ -350,6 +353,43 @@ export default function PreparationPage() {
     await loadComparison(id, attemptId);
   }, [id, loadComparison]);
 
+  // Start editing draft
+  const handleStartEditDraft = useCallback(() => {
+    setEditedDraft(draft);
+    setIsEditingDraft(true);
+  }, [draft]);
+
+  // Cancel editing
+  const handleCancelEditDraft = useCallback(() => {
+    setIsEditingDraft(false);
+    setEditedDraft('');
+  }, []);
+
+  // Save edited draft
+  const handleSaveDraft = useCallback(async () => {
+    if (!id || !editedDraft.trim()) {
+      toast.error('Error', 'Draft cannot be empty');
+      return;
+    }
+
+    try {
+      setIsSavingDraft(true);
+      setError(null);
+
+      const response = await preparationAPI.updateDraft(id, editedDraft.trim());
+      setDraft(response.data.draft_answer);
+      setIsEditingDraft(false);
+      setEditedDraft('');
+      toast.success('Draft updated', 'Your changes have been saved');
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to update draft');
+      toast.error('Error', 'Failed to update draft');
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [id, editedDraft, toast]);
+
   return (
     <div className="min-h-screen bg-surface-primary">
       <div className="container mx-auto px-6 py-8 max-w-4xl">
@@ -484,41 +524,92 @@ export default function PreparationPage() {
         {/* Draft Review */}
         {draft && stage !== 'practice' && (
           <div className="card p-8">
-            <div className="mb-6">
-              <h2 className="heading-card mb-2">Your Personalized Draft</h2>
-              <p className="text-text-secondary">
-                Review and edit your draft answer. You can practice delivering it next.
-              </p>
-            </div>
-
-            <div className="bg-surface-secondary p-6 rounded-lg mb-6">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <pre className="whitespace-pre-wrap font-sans text-text-primary">{draft}</pre>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="heading-card mb-2">Your Personalized Draft</h2>
+                <p className="text-text-secondary">
+                  Review and edit your draft answer. You can practice delivering it next.
+                </p>
               </div>
+              {!isEditingDraft && (
+                <button
+                  onClick={handleStartEditDraft}
+                  className="btn-ghost flex items-center gap-2"
+                >
+                  <Edit2 size={16} />
+                  Edit
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/questions')}
-                className="btn-secondary"
-              >
-                Done
-              </button>
-              <button
-                onClick={handleStartPractice}
-                disabled={isLoading}
-                className="btn-primary"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  'Start Practice'
-                )}
-              </button>
-            </div>
+            {isEditingDraft ? (
+              <div className="mb-6">
+                <textarea
+                  value={editedDraft}
+                  onChange={(e) => setEditedDraft(e.target.value)}
+                  className="w-full min-h-[300px] p-4 border border-border-light rounded-lg bg-surface-primary text-text-primary font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-electric-blue"
+                  placeholder="Edit your draft answer..."
+                />
+                <div className="flex items-center gap-4 mt-4">
+                  <button
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft || !editedDraft.trim()}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    {isSavingDraft ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleCancelEditDraft}
+                    disabled={isSavingDraft}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    <X size={16} />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-surface-secondary p-6 rounded-lg mb-6">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <pre className="whitespace-pre-wrap font-sans text-text-primary">{draft}</pre>
+                </div>
+              </div>
+            )}
+
+            {!isEditingDraft && (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate('/questions')}
+                  className="btn-secondary"
+                >
+                  Done
+                </button>
+                <button
+                  onClick={handleStartPractice}
+                  disabled={isLoading}
+                  className="btn-primary"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    'Start Practice'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

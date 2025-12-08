@@ -316,6 +316,11 @@ export const preparationAPI = {
     api.post<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/generate-draft`),
   getDraft: (preparationId: string) =>
     api.get<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/draft`),
+  updateDraft: (preparationId: string, draftAnswer: string) =>
+    api.patch<{ draft_answer: string; stage: string }>(
+      `/preparation/${preparationId}/draft`,
+      { draft_answer: draftAnswer }
+    ),
   startPractice: (preparationId: string) =>
     api.post<{ attempt_id: string; stage: string }>(
       `/preparation/${preparationId}/practice/start`

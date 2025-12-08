@@ -95,6 +95,10 @@ class DraftResponse(BaseModel):
     stage: str
 
 
+class DraftUpdateRequest(BaseModel):
+    draft_answer: str = Field(..., min_length=1, description="Updated draft answer")
+
+
 class PracticeStartResponse(BaseModel):
     attempt_id: UUID
     stage: str
@@ -640,6 +644,68 @@ async def get_draft(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Draft not yet generated. Complete detective stage and call POST /preparation/{id}/generate-draft first.",
         )
+
+    return DraftResponse(
+        draft_answer=preparation.draft_answer,
+        stage=preparation.stage.value,
+    )
+
+
+@router.patch(
+    "/{preparation_id}/draft",
+    response_model=DraftResponse,
+)
+async def update_draft(
+    preparation_id: UUID,
+    request: DraftUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> DraftResponse:
+    """Update the draft answer.
+
+    Allows users to edit their AI-generated draft before practicing.
+
+    Args:
+        preparation_id: UUID of the preparation session
+        request: DraftUpdateRequest with updated draft
+        current_user: Authenticated user
+        session: Database session
+
+    Returns:
+        DraftResponse with updated draft answer
+
+    Raises:
+        HTTPException: If preparation not found, unauthorized, or draft not generated
+    """
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Check tier
+    check_preparation_tier(current_user)
+
+    # Verify draft exists (must have been generated first)
+    if not preparation.draft_answer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Draft not yet generated. Generate draft first before editing.",
+        )
+
+    # Update draft
+    preparation.draft_answer = request.draft_answer
+    preparation.updated_at = datetime.now(UTC)
+    await session.commit()
+    await session.refresh(preparation)
 
     return DraftResponse(
         draft_answer=preparation.draft_answer,
