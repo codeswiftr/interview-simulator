@@ -23,6 +23,7 @@ import ScoreRing from '../components/feedback/ScoreRing';
 import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
 import ProcessingStatus from '../components/feedback/ProcessingStatus';
+import { SkeletonScoreRing, SkeletonText } from '../components/ui/Skeleton';
 import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback } from '../types';

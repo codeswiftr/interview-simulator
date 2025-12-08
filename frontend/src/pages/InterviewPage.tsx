@@ -13,6 +13,7 @@ import AudioPreview from '../components/interview/AudioPreview';
 import RecordingDeck from '../components/interview/RecordingDeck';
 import TranscriptionDisplay from '../components/interview/TranscriptionDisplay';
 import CoachOverlay from '../components/interview/CoachOverlay';
+import { SkeletonQuestion } from '../components/ui/Skeleton';
 import type { InterviewSession, Question, InterviewResponse, ProcessingStatus } from '../types';
 
 const MAX_RETRY_ATTEMPTS = 3;

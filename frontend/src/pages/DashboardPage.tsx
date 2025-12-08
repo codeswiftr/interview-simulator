@@ -14,6 +14,7 @@ import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
 import ComingSoonBadge from '../components/ui/ComingSoonBadge';
+import { SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
 import type { AxiosError } from 'axios';
 
@@ -459,9 +460,12 @@ export default function DashboardPage() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="card-glass p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-electric-blue border-t-transparent mb-4"></div>
-            <p className="text-text-secondary font-medium">Loading your dashboard...</p>
+          <div className="space-y-8">
+            <SkeletonStatsOverview />
+            <div>
+              <Skeleton variant="text" width={200} height={24} className="mb-6" />
+              <SkeletonInterviewList count={3} />
+            </div>
           </div>
         )}
 

@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import RecordingDeck from '../components/interview/RecordingDeck';
 import { getExtensionForMimeType } from '../lib/audio-utils';
+import { SkeletonQuestion, SkeletonText } from '../components/ui/Skeleton';
 import type { AxiosError } from 'axios';
 
 type PreparationStage = 'detective' | 'draft' | 'practice' | 'complete';
@@ -145,7 +146,7 @@ export default function PreparationPage() {
       const errorMsg = axiosError.response?.data?.message || 'Failed to get question';
       setError(errorMsg);
       toast.error('Error', errorMsg);
-      
+
       // Auto-retry on network errors
       if (errorMsg.includes('network') || errorMsg.includes('connection') || axiosError.code === 'ECONNREFUSED') {
         setTimeout(() => {
@@ -195,7 +196,7 @@ export default function PreparationPage() {
       const errorMsg = axiosError.response?.data?.message || 'Failed to submit answer';
       setError(errorMsg);
       toast.error('Error', errorMsg);
-      
+
       // Retry suggestion for network errors
       if (errorMsg.includes('network') || errorMsg.includes('connection')) {
         toast.warning('Retry', 'Check your connection and try submitting again');
@@ -222,7 +223,7 @@ export default function PreparationPage() {
       const errorMsg = axiosError.response?.data?.message || 'Failed to generate draft';
       setError(errorMsg);
       toast.error('Error', errorMsg);
-      
+
       // Retry suggestion
       if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
         toast.warning('Retry', 'AI service may be slow. Try again in a moment.');
@@ -295,7 +296,7 @@ export default function PreparationPage() {
       const errorMsg = axiosError.response?.data?.message || 'Failed to submit practice';
       setError(errorMsg);
       toast.error('Error', errorMsg);
-      
+
       // Recovery suggestions
       if (errorMsg.includes('transcription') || errorMsg.includes('audio')) {
         toast.warning('Retry', 'Audio processing failed. Please try recording again.');
