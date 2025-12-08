@@ -61,6 +61,9 @@ export default function HomePage() {
                 src="/images/hero-illustration.png"
                 alt="Dashboard Preview"
                 className="w-full h-auto rounded-2xl"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
               />
               {/* Floating Elements */}
               <div className="absolute top-10 right-10 p-4 bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-white/50 animate-float hidden md:block">

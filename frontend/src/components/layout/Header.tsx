@@ -70,6 +70,10 @@ export default function Header() {
               src="/images/logo-192.png"
               alt="CareerSwiftr"
               className="w-8 h-8 rounded-lg"
+              width="32"
+              height="32"
+              loading="eager"
+              decoding="async"
             />
             <div className="flex flex-col">
               <span className="font-heading font-bold text-lg leading-none text-[var(--fg-primary)]">
