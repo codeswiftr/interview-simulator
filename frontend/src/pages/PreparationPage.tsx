@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3 } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -43,6 +43,16 @@ export default function PreparationPage() {
   const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
+  const [selectedAttemptForComparison, setSelectedAttemptForComparison] = useState<string | null>(null);
+  const [comparisonData, setComparisonData] = useState<{
+    draft: string;
+    delivery: string;
+    delivery_score: number | null;
+    comparison_feedback: string | null;
+    strengths: string[];
+    improvements: string[];
+  } | null>(null);
+  const [isRating, setIsRating] = useState(false);
 
   // Audio recording hook
   const {
@@ -294,6 +304,52 @@ export default function PreparationPage() {
     setLiveTranscript(transcript);
   }, []);
 
+  // Rate delivery attempt
+  const handleRateAttempt = useCallback(async (attemptId: string) => {
+    if (!id) return;
+
+    try {
+      setIsRating(true);
+      setError(null);
+
+      const response = await preparationAPI.rateDelivery(id, attemptId);
+      
+      toast.success('Delivery rated', `Score: ${response.data.delivery_score.toFixed(1)}%`);
+      
+      // Reload attempts to get updated scores
+      const attemptsResponse = await preparationAPI.getAttempts(id);
+      setAttempts(attemptsResponse.data.attempts);
+      
+      // Show comparison
+      setSelectedAttemptForComparison(attemptId);
+      await loadComparison(id, attemptId);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to rate delivery');
+      toast.error('Error', 'Failed to rate delivery');
+    } finally {
+      setIsRating(false);
+    }
+  }, [id, toast]);
+
+  // Load comparison data
+  const loadComparison = useCallback(async (preparationId: string, attemptId: string) => {
+    try {
+      const response = await preparationAPI.getComparison(preparationId, attemptId);
+      setComparisonData(response.data);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to load comparison');
+    }
+  }, []);
+
+  // View comparison for an attempt
+  const handleViewComparison = useCallback(async (attemptId: string) => {
+    if (!id) return;
+    setSelectedAttemptForComparison(attemptId);
+    await loadComparison(id, attemptId);
+  }, [id, loadComparison]);
+
   return (
     <div className="min-h-screen bg-surface-primary">
       <div className="container mx-auto px-6 py-8 max-w-4xl">
@@ -529,14 +585,44 @@ export default function PreparationPage() {
                         <span className="text-xs text-text-tertiary">
                           {new Date(attempt.created_at).toLocaleString()}
                         </span>
-                        {attempt.delivery_score !== null && (
-                          <span className="text-sm font-semibold text-electric-blue">
-                            Score: {attempt.delivery_score.toFixed(1)}%
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {attempt.delivery_score !== null ? (
+                            <>
+                              <span className="text-sm font-semibold text-electric-blue">
+                                Score: {attempt.delivery_score.toFixed(1)}%
+                              </span>
+                              <button
+                                onClick={() => handleViewComparison(attempt.id)}
+                                className="text-xs text-electric-blue hover:underline"
+                              >
+                                View Comparison
+                              </button>
+                            </>
+                          ) : (
+                            attempt.transcript && (
+                              <button
+                                onClick={() => handleRateAttempt(attempt.id)}
+                                disabled={isRating}
+                                className="btn-secondary text-xs"
+                              >
+                                {isRating ? (
+                                  <>
+                                    <Loader2 size={12} className="animate-spin" />
+                                    Rating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <BarChart3 size={12} />
+                                    Rate Delivery
+                                  </>
+                                )}
+                              </button>
+                            )
+                          )}
+                        </div>
                       </div>
                       {attempt.transcript && (
-                        <p className="text-text-secondary text-sm mt-2">{attempt.transcript}</p>
+                        <p className="text-text-secondary text-sm mt-2 line-clamp-2">{attempt.transcript}</p>
                       )}
                       {attempt.comparison_feedback && (
                         <div className="mt-3 p-3 bg-surface-primary rounded border border-border-light">
@@ -547,6 +633,90 @@ export default function PreparationPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Comparison View */}
+            {comparisonData && selectedAttemptForComparison && (
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={20} className="text-electric-blue" />
+                    <h2 className="heading-card">Delivery Comparison</h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedAttemptForComparison(null);
+                      setComparisonData(null);
+                    }}
+                    className="text-sm text-text-tertiary hover:text-text-primary"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {comparisonData.delivery_score !== null && (
+                  <div className="mb-6 p-4 bg-electric-blue/10 border border-electric-blue/20 rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <p className="text-xs text-text-tertiary mb-1">Overall Score</p>
+                        <p className="text-3xl font-bold text-electric-blue">
+                          {comparisonData.delivery_score.toFixed(1)}%
+                        </p>
+                      </div>
+                      {comparisonData.strengths.length > 0 && (
+                        <div className="flex-1">
+                          <p className="text-xs text-text-tertiary mb-1">Strengths</p>
+                          <ul className="text-sm text-text-primary list-disc list-inside">
+                            {comparisonData.strengths.map((strength, idx) => (
+                              <li key={idx}>{strength}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  {/* Draft Column */}
+                  <div className="bg-surface-secondary p-4 rounded-lg">
+                    <h3 className="text-sm font-semibold text-text-primary mb-2">Your Draft (Planned)</h3>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <pre className="whitespace-pre-wrap font-sans text-text-primary text-sm bg-surface-primary p-3 rounded">
+                        {comparisonData.draft}
+                      </pre>
+                    </div>
+                  </div>
+
+                  {/* Delivery Column */}
+                  <div className="bg-surface-secondary p-4 rounded-lg">
+                    <h3 className="text-sm font-semibold text-text-primary mb-2">Your Delivery (Actual)</h3>
+                    <p className="text-text-primary text-sm bg-surface-primary p-3 rounded whitespace-pre-wrap">
+                      {comparisonData.delivery}
+                    </p>
+                  </div>
+                </div>
+
+                {comparisonData.comparison_feedback && (
+                  <div className="mt-4 p-4 bg-surface-secondary rounded-lg border border-border-light">
+                    <p className="text-sm font-semibold text-text-primary mb-2">Detailed Feedback</p>
+                    <p className="text-sm text-text-secondary whitespace-pre-wrap">
+                      {comparisonData.comparison_feedback}
+                    </p>
+                  </div>
+                )}
+
+                {comparisonData.improvements.length > 0 && (
+                  <div className="mt-4 p-4 bg-status-warning/10 border border-status-warning/20 rounded-lg">
+                    <p className="text-sm font-semibold text-text-primary mb-2">Improvements</p>
+                    <ul className="text-sm text-text-secondary list-disc list-inside space-y-1">
+                      {comparisonData.improvements.map((improvement, idx) => (
+                        <li key={idx}>{improvement}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 

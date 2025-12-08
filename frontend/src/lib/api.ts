@@ -337,6 +337,28 @@ export const preparationAPI = {
         created_at: string;
       }>;
     }>(`/preparation/${preparationId}/attempts`),
+  rateDelivery: (preparationId: string, attemptId: string) =>
+    api.post<{
+      delivery_score: number;
+      content_coverage: number;
+      key_points: number;
+      flow_structure: number;
+      comparison_feedback: string;
+      strengths: string[];
+      improvements: string[];
+      stage: string;
+    }>(`/preparation/${preparationId}/rate-delivery`, {
+      attempt_id: attemptId,
+    }),
+  getComparison: (preparationId: string, attemptId: string) =>
+    api.get<{
+      draft: string;
+      delivery: string;
+      delivery_score: number | null;
+      comparison_feedback: string | null;
+      strengths: string[];
+      improvements: string[];
+    }>(`/preparation/${preparationId}/comparison?attempt_id=${attemptId}`),
 };
 
 export const userAPI = {
