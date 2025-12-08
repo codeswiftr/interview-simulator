@@ -23,7 +23,7 @@ import ScoreRing from '../components/feedback/ScoreRing';
 import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
 import ProcessingStatus from '../components/feedback/ProcessingStatus';
-import { SkeletonScoreRing, SkeletonText } from '../components/ui/Skeleton';
+import { Skeleton, SkeletonScoreRing, SkeletonText } from '../components/ui/Skeleton';
 import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback } from '../types';
@@ -174,10 +174,23 @@ export default function FeedbackPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-electric-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="body-large text-text-secondary">Loading feedback...</p>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-8">
+          <Skeleton variant="text" width={300} height={32} className="mb-4" />
+          <SkeletonText lines={2} width="60%" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonScoreRing key={i} />
+          ))}
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card p-6">
+              <Skeleton variant="text" width="70%" height={20} className="mb-4" />
+              <SkeletonText lines={3} />
+            </div>
+          ))}
         </div>
       </div>
     );

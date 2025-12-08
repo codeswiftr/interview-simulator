@@ -382,11 +382,8 @@ export default function InterviewPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-electric-blue border-t-transparent mb-4"></div>
-          <p className="text-text-secondary">Loading interview...</p>
-        </div>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <SkeletonQuestion />
       </div>
     );
   }
