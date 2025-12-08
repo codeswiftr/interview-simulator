@@ -7,8 +7,10 @@
 import type { ReactElement, ReactNode } from 'react';
 import { render, type RenderOptions, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 import { AuthProvider } from '../../hooks/useAuth';
 import { ToastProvider } from '../../hooks/useToast';
+import { ThemeProvider } from '../../contexts/ThemeContext';
 import type { User, ExperienceLevel } from '../../types';
 import { createMockUser } from '../utils';
 
@@ -31,11 +33,13 @@ function PageTestProviders({ children, initialRoute = '/', user }: PageTestProvi
 
   return (
     <MemoryRouter initialEntries={[initialRoute]}>
-      <AuthProvider>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </MemoryRouter>
   );
 }
