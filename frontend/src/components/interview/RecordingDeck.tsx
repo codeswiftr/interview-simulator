@@ -1,52 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Mic, Square, Play, Pause, X } from 'lucide-react';
 import type { RecordingState } from '../../hooks/useAudioRecording';
-
-// Type definitions for Speech Recognition API
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-}
-
-interface SpeechRecognitionEvent {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  isFinal: boolean;
-  [index: number]: SpeechRecognitionAlternative;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: {
-      new(): SpeechRecognition;
-    };
-    webkitSpeechRecognition?: {
-      new(): SpeechRecognition;
-    };
-    AudioContext?: {
-      new(): AudioContext;
-    };
-    webkitAudioContext?: {
-      new(): AudioContext;
-    };
-  }
-}
+import type { SpeechRecognition, SpeechRecognitionEvent } from '../../types/speech';
+import { getSpeechRecognitionConstructor } from '../../types/speech';
 
 interface RecordingDeckProps {
   isRecording: boolean;
@@ -151,7 +107,7 @@ export default function RecordingDeck({
     if (typeof window === 'undefined') return;
 
     // Check availability
-    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionClass = getSpeechRecognitionConstructor();
 
     if (SpeechRecognitionClass && isRecording) {
       const recognition = new SpeechRecognitionClass();

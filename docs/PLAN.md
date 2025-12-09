@@ -584,16 +584,16 @@ POST /coaching/hint/stream
 
 ## Implementation Plan
 
-### Phase 1: Foundation - Speech Recognition Hook (3h)
+### Phase 1: Foundation - Speech Recognition Hook (3h) ✅ COMPLETE
 
 | Task | Description | Agent | Est | Done |
 |------|-------------|-------|-----|------|
-| 1.1.1 | Extract Speech API types from RecordingDeck to `types/speech.ts` | frontend-builder | 0.5h | [ ] |
-| 1.1.2 | Create `useSpeechRecognition` hook with start/stop/reset | frontend-builder | 1.5h | [ ] |
-| 1.1.3 | Add browser support detection and fallback messaging | frontend-builder | 0.5h | [ ] |
-| 1.1.4 | Write unit tests for useSpeechRecognition hook | qa-test-guardian | 0.5h | [ ] |
+| 1.1.1 | Extract Speech API types from RecordingDeck to `types/speech.ts` | frontend-builder | 0.5h | ✅ Done |
+| 1.1.2 | Create `useSpeechRecognition` hook with start/stop/reset | frontend-builder | 1.5h | ✅ Done |
+| 1.1.3 | Add browser support detection and fallback messaging | frontend-builder | 0.5h | ✅ Done |
+| 1.1.4 | Write unit tests for useSpeechRecognition hook | qa-test-guardian | 0.5h | ✅ Done (21 tests passing) |
 
-**Checkpoint**: `useSpeechRecognition` hook works in isolation with tests passing
+**Checkpoint**: `useSpeechRecognition` hook works in isolation with tests passing ✅
 
 **Files Created:**
 - `frontend/src/types/speech.ts`
