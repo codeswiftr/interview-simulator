@@ -471,7 +471,7 @@ Type: {q_type} | Level: {exp_level}
 Ask ONE concise question. If enough info (3-5 Q&A), respond "ENOUGH_INFO" only."""
 
         response = await client.chat.completions.create(
-            model="google/gemini-2.0-flash-exp:free",
+            model="google/gemini-2.5-flash",  # Gemini 2.5 Flash via OpenRouter
             max_tokens=80,  # Reduced from 100 - questions should be shorter
             temperature=0.7,
             messages=[{"role": "user", "content": prompt}],
