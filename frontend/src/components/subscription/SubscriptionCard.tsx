@@ -55,9 +55,8 @@ export default function SubscriptionCard({ subscription, onUpgrade }: Subscripti
           </div>
           <div className="progress-bar">
             <div
-              className={`progress-bar-fill ${
-                usagePercentage >= 100 ? 'bg-status-error' : 'bg-electric-blue'
-              }`}
+              className={`progress-bar-fill ${usagePercentage >= 100 ? 'bg-status-error' : 'bg-electric-blue'
+                }`}
               style={{ width: `${Math.min(usagePercentage, 100)}%` }}
             />
           </div>

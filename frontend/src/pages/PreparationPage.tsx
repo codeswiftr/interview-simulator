@@ -118,21 +118,45 @@ export default function PreparationPage() {
           setCurrentAnswer('');
         } else if (data.stage === 'detective') {
           // Fetch the next question if none pending
-          await getNextQuestion();
+          // Don't set loading here - we're already loading
+          const questionResponse = await preparationAPI.getDetectiveQuestion(id);
+          const questionData = questionResponse.data;
+          if (questionData.is_complete) {
+            setIsComplete(true);
+            setStage('draft');
+          } else {
+            setCurrentQuestion(questionData.question);
+            setCurrentAnswer('');
+          }
         } else {
           setCurrentQuestion('');
         }
       } catch (err) {
         // Fall back to fetching the next question to keep flow alive
         setQuestionContext(null);
-        await getNextQuestion();
+        try {
+          const questionResponse = await preparationAPI.getDetectiveQuestion(id);
+          const questionData = questionResponse.data;
+          if (questionData.is_complete) {
+            setIsComplete(true);
+            setStage('draft');
+          } else {
+            setCurrentQuestion(questionData.question);
+            setCurrentAnswer('');
+          }
+        } catch (questionErr) {
+          // If we can't even fetch a question, show error
+          const axiosError = questionErr as AxiosError<{ message?: string }>;
+          const errorMsg = axiosError.response?.data?.message || 'Failed to load preparation';
+          setError(errorMsg);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadState();
-  }, [id, navigate, getNextQuestion]);
+  }, [id, navigate]);
 
   // Load attempts when in practice stage
   useEffect(() => {

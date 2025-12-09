@@ -86,6 +86,11 @@
 
 **Verdict: GO FOR SOFT LAUNCH**
 
+### 2025-12-09: Preparation Mentor Flow Polish
+- Added preparation state endpoint (question context, Q&A history, attempts) for resume flows
+- Persisted strengths/improvements on delivery ratings and exposed comparison data
+- Updated PreparationPage to hydrate from state, show question context, and keep attempts visible across sessions
+
 ### 2025-11-28: Sprint 4 Major Progress
 **Audio Analysis Pipeline (Epic 1):**
 - Implemented real Librosa audio analysis replacing mock values
