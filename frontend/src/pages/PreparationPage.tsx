@@ -5,6 +5,7 @@ import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import RecordingDeck from '../components/interview/RecordingDeck';
+import { VoiceInputButton } from '../components/common/VoiceInputButton';
 import { getExtensionForMimeType } from '../lib/audio-utils';
 import type { AxiosError } from 'axios';
 
@@ -53,6 +54,7 @@ export default function PreparationPage() {
   const [isEditingDraft, setIsEditingDraft] = useState(false);
   const [editedDraft, setEditedDraft] = useState<string>('');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState<string>('');
 
   // Audio recording hook
   const {
@@ -495,16 +497,39 @@ export default function PreparationPage() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Your Answer
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-text-primary">
+                      Your Answer
+                    </label>
+                    <VoiceInputButton
+                      onTranscript={(text) => {
+                        // Append to existing answer or replace if empty
+                        setCurrentAnswer((prev) => 
+                          prev.trim() ? `${prev} ${text}`.trim() : text
+                        );
+                        setInterimTranscript('');
+                      }}
+                      onInterim={(text) => {
+                        setInterimTranscript(text);
+                      }}
+                      disabled={isLoading}
+                      placeholder="Listening..."
+                      size="sm"
+                    />
+                  </div>
                   <textarea
                     value={currentAnswer}
                     onChange={(e) => setCurrentAnswer(e.target.value)}
-                    placeholder="Type your answer here..."
+                    placeholder="Type your answer here or use voice input..."
                     className="w-full min-h-[120px] p-4 border border-border-light rounded-lg bg-surface-primary text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-electric-blue"
                     disabled={isLoading}
                   />
+                  {/* Interim transcript preview */}
+                  {interimTranscript && (
+                    <div className="mt-2 p-2 bg-electric-blue/10 border border-electric-blue/20 rounded text-sm text-text-secondary italic">
+                      <span className="text-electric-blue">Preview:</span> {interimTranscript}
+                    </div>
+                  )}
                 </div>
 
                 <button

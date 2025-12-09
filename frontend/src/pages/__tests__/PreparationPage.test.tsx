@@ -1,8 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderPage, waitFor, screen } from '../../test/utils/pageTestUtils';
 import PreparationPage from '../PreparationPage';
 import { server } from '../../test/mocks/server';
 import { http, HttpResponse } from 'msw';
+
+// Mock VoiceInputButton to avoid speech recognition API in tests
+vi.mock('../../components/common/VoiceInputButton', () => ({
+  VoiceInputButton: ({ onTranscript, disabled }: any) => (
+    <button
+      onClick={() => onTranscript && onTranscript('Mocked transcript')}
+      disabled={disabled}
+      data-testid="voice-input-button"
+    >
+      🎤
+    </button>
+  ),
+}));
 
 describe('PreparationPage', () => {
   beforeEach(() => {

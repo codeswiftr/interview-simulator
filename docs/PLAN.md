@@ -619,16 +619,16 @@ POST /coaching/hint/stream
 
 ---
 
-### Phase 3: Detective Q&A Voice Integration (2h)
+### Phase 3: Detective Q&A Voice Integration (2h) ✅ COMPLETE
 
 | Task | Description | Agent | Est | Done |
 |------|-------------|-------|-----|------|
-| 1.3.1 | Add VoiceInputButton to detective answer textarea | frontend-builder | 0.5h | [ ] |
-| 1.3.2 | Wire transcript to currentAnswer state with append logic | frontend-builder | 0.5h | [ ] |
-| 1.3.3 | Add interim transcript preview below textarea | frontend-builder | 0.5h | [ ] |
-| 1.3.4 | Test detective voice flow end-to-end | qa-test-guardian | 0.5h | [ ] |
+| 1.3.1 | Add VoiceInputButton to detective answer textarea | frontend-builder | 0.5h | ✅ Done |
+| 1.3.2 | Wire transcript to currentAnswer state with append logic | frontend-builder | 0.5h | ✅ Done |
+| 1.3.3 | Add interim transcript preview below textarea | frontend-builder | 0.5h | ✅ Done |
+| 1.3.4 | Test detective voice flow end-to-end | qa-test-guardian | 0.5h | ✅ Done (mock added) |
 
-**Checkpoint**: Users can speak answers in detective Q&A stage
+**Checkpoint**: Users can speak answers in detective Q&A stage ✅
 
 **Files Modified:**
 - `frontend/src/pages/PreparationPage.tsx` (lines ~488-525)
