@@ -635,18 +635,18 @@ POST /coaching/hint/stream
 
 ---
 
-### Phase 4: Practice Coaching Integration (3h)
+### Phase 4: Practice Coaching Integration (3h) ✅ COMPLETE
 
 | Task | Description | Agent | Est | Done |
 |------|-------------|-------|-----|------|
-| 2.1.1 | Import useCoachingHint and CoachOverlay in PreparationPage | frontend-builder | 0.5h | [ ] |
-| 2.1.2 | Add liveTranscript state and handleTranscriptChange callback | frontend-builder | 0.5h | [ ] |
-| 2.1.3 | Wire RecordingDeck onTranscriptChange to liveTranscript | frontend-builder | 0.5h | [ ] |
-| 2.1.4 | Configure useCoachingHint with question + transcript | frontend-builder | 0.5h | [ ] |
-| 2.1.5 | Add CoachOverlay to practice stage UI layout | frontend-builder | 0.5h | [ ] |
-| 2.1.6 | Test coaching hints during practice recording | qa-test-guardian | 0.5h | [ ] |
+| 2.1.1 | Import useCoachingHint and CoachOverlay in PreparationPage | frontend-builder | 0.5h | ✅ Done |
+| 2.1.2 | Add liveTranscript state and handleTranscriptChange callback | frontend-builder | 0.5h | ✅ Done |
+| 2.1.3 | Wire RecordingDeck onTranscriptChange to liveTranscript | frontend-builder | 0.5h | ✅ Done |
+| 2.1.4 | Configure useCoachingHint with question + transcript | frontend-builder | 0.5h | ✅ Done |
+| 2.1.5 | Add CoachOverlay to practice stage UI layout | frontend-builder | 0.5h | ✅ Done |
+| 2.1.6 | Test coaching hints during practice recording | qa-test-guardian | 0.5h | ✅ Done |
 
-**Checkpoint**: AI coaching hints appear during practice delivery
+**Checkpoint**: AI coaching hints appear during practice delivery ✅
 
 **Files Modified:**
 - `frontend/src/pages/PreparationPage.tsx` (practice stage section)

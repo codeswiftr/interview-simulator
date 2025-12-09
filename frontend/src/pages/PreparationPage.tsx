@@ -4,7 +4,9 @@ import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, Trendi
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAudioRecording } from '../hooks/useAudioRecording';
+import { useCoachingHint } from '../hooks/useCoachingHint';
 import RecordingDeck from '../components/interview/RecordingDeck';
+import CoachOverlay from '../components/interview/CoachOverlay';
 import { VoiceInputButton } from '../components/common/VoiceInputButton';
 import { getExtensionForMimeType } from '../lib/audio-utils';
 import type { AxiosError } from 'axios';
@@ -55,6 +57,8 @@ export default function PreparationPage() {
   const [editedDraft, setEditedDraft] = useState<string>('');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState<string>('');
+  const [liveTranscript, setLiveTranscript] = useState<string>('');
+  const [showCoach, setShowCoach] = useState(true);
 
   // Audio recording hook
   const {
@@ -326,7 +330,26 @@ export default function PreparationPage() {
   };
 
   // Update live transcript (not currently used but kept for future use)
-  const handleTranscriptChange = useCallback((_transcript: string) => {
+  // Get question for coaching (use first detective question or generic)
+  const practiceQuestion = qnaList.length > 0 
+    ? qnaList[0].question 
+    : 'Practice your prepared answer';
+
+  // AI Coaching Hint hook for practice stage
+  const {
+    hint: coachingHint,
+    isLoading: isHintLoading,
+    isStreaming: isHintStreaming,
+    error: hintError
+  } = useCoachingHint({
+    question: practiceQuestion,
+    questionType: 'behavioral', // Default to behavioral for practice
+    transcript: liveTranscript,
+    enabled: isRecording && showCoach && stage === 'practice' && !!draft
+  });
+
+  const handleTranscriptChange = useCallback((transcript: string) => {
+    setLiveTranscript(transcript);
     // Transcript handling can be added here if needed in future
   }, []);
 
@@ -709,20 +732,35 @@ export default function PreparationPage() {
                 </div>
               )}
 
-              <RecordingDeck
-                isRecording={isRecording}
-                recordingState={recordingState}
-                duration={duration}
-                mediaStream={mediaStream}
-                onStart={handleStartRecording}
-                onStop={handleStopRecording}
-                onPause={pauseRecording}
-                onResume={resumeRecording}
-                onCancel={handleCancelRecording}
-                onConfirm={handleSubmitPractice}
-                disabled={isSubmitting}
-                onTranscriptChange={handleTranscriptChange}
-              />
+              <div className="relative">
+                <RecordingDeck
+                  isRecording={isRecording}
+                  recordingState={recordingState}
+                  duration={duration}
+                  mediaStream={mediaStream}
+                  onStart={handleStartRecording}
+                  onStop={handleStopRecording}
+                  onPause={pauseRecording}
+                  onResume={resumeRecording}
+                  onCancel={handleCancelRecording}
+                  onConfirm={handleSubmitPractice}
+                  disabled={isSubmitting}
+                  onTranscriptChange={handleTranscriptChange}
+                />
+                
+                {/* AI Coaching Overlay */}
+                {isRecording && showCoach && (
+                  <CoachOverlay
+                    hint={coachingHint}
+                    isLoading={isHintLoading}
+                    isStreaming={isHintStreaming}
+                    error={hintError}
+                    onClose={() => setShowCoach(false)}
+                    onToggle={() => setShowCoach(!showCoach)}
+                    isCollapsed={!showCoach}
+                  />
+                )}
+              </div>
 
               {isSubmitting && (
                 <div className="mt-4 text-center">
