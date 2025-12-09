@@ -4,8 +4,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = "20251209_add_comparison_details_delivery_attempts"
-down_revision = "085fbd9abb08_add_answer_preparation_models"
+revision = "0011_comparison_details"
+down_revision = "0010"
 branch_labels = None
 depends_on = None
 
