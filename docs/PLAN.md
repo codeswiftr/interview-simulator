@@ -424,77 +424,364 @@ Based on ICE scores and dependencies:
 
 ---
 
+## Technical Design
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        PreparationPage.tsx                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
+│  │ Detective Stage │    │   Draft Stage   │    │  Practice Stage │ │
+│  │                 │    │                 │    │                 │ │
+│  │ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │ │
+│  │ │VoiceInput   │ │    │ │VoiceInput   │ │    │ │RecordingDeck│ │ │
+│  │ │Button (NEW) │ │    │ │Button (NEW) │ │    │ │(existing)   │ │ │
+│  │ └──────┬──────┘ │    │ └──────┬──────┘ │    │ └──────┬──────┘ │ │
+│  │        │        │    │        │        │    │        │        │ │
+│  │        v        │    │        v        │    │        v        │ │
+│  │ ┌─────────────┐ │    │ ┌─────────────┐ │    │ liveTranscript │ │
+│  │ │useSpeech    │ │    │ │useSpeech    │ │    │        │        │ │
+│  │ │Recognition  │ │    │ │Recognition  │ │    │        v        │ │
+│  │ │Hook (NEW)   │ │    │ │Hook (reuse) │ │    │ ┌─────────────┐ │ │
+│  │ └──────┬──────┘ │    │ └──────┬──────┘ │    │ │useCoaching  │ │ │
+│  │        │        │    │        │        │    │ │Hint (exist) │ │ │
+│  │        v        │    │        v        │    │ └──────┬──────┘ │ │
+│  │  currentAnswer  │    │   editedDraft   │    │        │        │ │
+│  │     (state)     │    │     (state)     │    │        v        │ │
+│  │                 │    │                 │    │ ┌─────────────┐ │ │
+│  │                 │    │                 │    │ │CoachOverlay │ │ │
+│  │                 │    │                 │    │ │(existing)   │ │ │
+│  │                 │    │                 │    │ └─────────────┘ │ │
+│  └─────────────────┘    └─────────────────┘    └─────────────────┘ │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### New Components
+
+#### 1. useSpeechRecognition Hook (Epic 1)
+Extracted from RecordingDeck for reuse across components.
+
+```typescript
+// frontend/src/hooks/useSpeechRecognition.ts
+export interface UseSpeechRecognitionOptions {
+  lang?: string;              // Default: 'en-US'
+  continuous?: boolean;       // Default: true
+  interimResults?: boolean;   // Default: true
+  onResult?: (transcript: string, isFinal: boolean) => void;
+}
+
+export interface UseSpeechRecognitionReturn {
+  isListening: boolean;
+  transcript: string;
+  finalTranscript: string;
+  error: string | null;
+  isSupported: boolean;
+  startListening: () => void;
+  stopListening: () => void;
+  resetTranscript: () => void;
+}
+```
+
+#### 2. VoiceInputButton Component (Epic 1)
+Compact microphone button with status indicator.
+
+```typescript
+// frontend/src/components/common/VoiceInputButton.tsx
+interface VoiceInputButtonProps {
+  onTranscript: (text: string) => void;  // Called with final transcript
+  onInterim?: (text: string) => void;    // Called with interim results
+  disabled?: boolean;
+  className?: string;
+  placeholder?: string;                   // Shown when listening
+}
+```
+
+### Data Flow
+
+**Epic 1 - Detective Q&A Voice Input:**
+```
+User clicks mic → VoiceInputButton → useSpeechRecognition
+                                          │
+                                          v
+                          Web Speech API (browser-native)
+                                          │
+                                          v
+                              onTranscript callback
+                                          │
+                                          v
+                          setCurrentAnswer(transcript)
+                                          │
+                                          v
+                          User reviews/edits → Submit
+```
+
+**Epic 2 - Practice Coaching:**
+```
+RecordingDeck (existing) → onTranscriptChange → liveTranscript state
+                                                        │
+                                                        v
+                                              useCoachingHint hook
+                                                        │
+                                                        v
+                                           POST /coaching/hint/stream
+                                           (with draft as context)
+                                                        │
+                                                        v
+                                                CoachOverlay display
+```
+
+### API Contracts
+
+**No new backend endpoints required for Epic 1** (client-side only)
+
+**Epic 2 - Coaching Enhancement:**
+The existing `/coaching/hint/stream` endpoint will be reused. The coaching prompt may need adjustment to compare against the user's draft answer instead of just the question.
+
+```typescript
+// Existing endpoint - no changes needed
+POST /coaching/hint/stream
+{
+  "question": string,        // Original interview question
+  "question_type": string,   // 'behavioral' | 'technical' | 'system_design'
+  "transcript": string       // User's live speech transcript
+}
+
+// Response: Server-Sent Events (SSE)
+data: {"hint": "partial hint...", "done": false}
+data: {"hint": "complete hint text", "done": true}
+```
+
+**Optional Enhancement** - Pass draft for comparison:
+```typescript
+POST /coaching/hint/stream
+{
+  "question": string,
+  "question_type": string,
+  "transcript": string,
+  "reference_answer": string  // NEW: User's draft for comparison
+}
+```
+
+### Dependencies
+
+**External:**
+- Web Speech API (browser-native, no library needed)
+- Cross-browser compatibility: Chrome ✅, Firefox ✅, Safari ✅ (webkit prefix), Edge ✅
+
+**Internal (Existing Components to Reuse):**
+| Component | Location | Used In |
+|-----------|----------|---------|
+| `useCoachingHint` | `hooks/useCoachingHint.ts` | Epic 2 |
+| `CoachOverlay` | `components/interview/CoachOverlay.tsx` | Epic 2 |
+| `RecordingDeck` | `components/interview/RecordingDeck.tsx` | Reference for Speech API |
+| Web Speech API types | `RecordingDeck.tsx` lines 6-49 | Epic 1 (extract to shared types) |
+
+---
+
 ## Implementation Plan
 
-### Epic 1: Voice Input for Detective Q&A (6h)
+### Phase 1: Foundation - Speech Recognition Hook (3h)
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 1.1 | Create VoiceInputButton component with microphone toggle | frontend-builder | 2h |
-| 1.2 | Integrate Web Speech API into detective answer form | frontend-builder | 2h |
-| 1.3 | Add visual feedback (waveform/recording indicator) | frontend-builder | 1h |
-| 1.4 | Test cross-browser compatibility (Chrome, Safari, Firefox) | qa-test-guardian | 1h |
+| Task | Description | Agent | Est | Done |
+|------|-------------|-------|-----|------|
+| 1.1.1 | Extract Speech API types from RecordingDeck to `types/speech.ts` | frontend-builder | 0.5h | [ ] |
+| 1.1.2 | Create `useSpeechRecognition` hook with start/stop/reset | frontend-builder | 1.5h | [ ] |
+| 1.1.3 | Add browser support detection and fallback messaging | frontend-builder | 0.5h | [ ] |
+| 1.1.4 | Write unit tests for useSpeechRecognition hook | qa-test-guardian | 0.5h | [ ] |
 
-**Checkpoint**: Users can speak detective answers
+**Checkpoint**: `useSpeechRecognition` hook works in isolation with tests passing
 
-### Epic 2: AI Coaching During Practice (4h)
+**Files Created:**
+- `frontend/src/types/speech.ts`
+- `frontend/src/hooks/useSpeechRecognition.ts`
+- `frontend/src/hooks/__tests__/useSpeechRecognition.test.tsx`
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Add useCoachingHint hook to PreparationPage practice stage | frontend-builder | 1h |
-| 2.2 | Integrate CoachOverlay component into practice UI | frontend-builder | 1.5h |
-| 2.3 | Customize coaching prompts for draft comparison context | backend-engineer | 1h |
-| 2.4 | Test coaching hint streaming during practice | qa-test-guardian | 0.5h |
+---
 
-**Checkpoint**: Real-time coaching hints appear during practice delivery
+### Phase 2: Voice Input Component (2.5h)
 
-### Epic 3: Voice Dictation for Draft (4h)
+| Task | Description | Agent | Est | Done |
+|------|-------------|-------|-----|------|
+| 1.2.1 | Create `VoiceInputButton` component with mic icon toggle | frontend-builder | 1h | [ ] |
+| 1.2.2 | Add listening state indicator (pulsing animation) | frontend-builder | 0.5h | [ ] |
+| 1.2.3 | Integrate with useSpeechRecognition hook | frontend-builder | 0.5h | [ ] |
+| 1.2.4 | Write component tests for VoiceInputButton | qa-test-guardian | 0.5h | [ ] |
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 3.1 | Add dictation mode to draft textarea | frontend-builder | 2h |
-| 3.2 | Implement append/insert mode selection | frontend-builder | 1h |
-| 3.3 | Add voice command parsing (optional) | frontend-builder | 1h |
+**Checkpoint**: Standalone `VoiceInputButton` component ready for integration
 
-**Checkpoint**: Users can dictate draft edits
+**Files Created:**
+- `frontend/src/components/common/VoiceInputButton.tsx`
+- `frontend/src/components/common/__tests__/VoiceInputButton.test.tsx`
+
+---
+
+### Phase 3: Detective Q&A Voice Integration (2h)
+
+| Task | Description | Agent | Est | Done |
+|------|-------------|-------|-----|------|
+| 1.3.1 | Add VoiceInputButton to detective answer textarea | frontend-builder | 0.5h | [ ] |
+| 1.3.2 | Wire transcript to currentAnswer state with append logic | frontend-builder | 0.5h | [ ] |
+| 1.3.3 | Add interim transcript preview below textarea | frontend-builder | 0.5h | [ ] |
+| 1.3.4 | Test detective voice flow end-to-end | qa-test-guardian | 0.5h | [ ] |
+
+**Checkpoint**: Users can speak answers in detective Q&A stage
+
+**Files Modified:**
+- `frontend/src/pages/PreparationPage.tsx` (lines ~488-525)
+
+---
+
+### Phase 4: Practice Coaching Integration (3h)
+
+| Task | Description | Agent | Est | Done |
+|------|-------------|-------|-----|------|
+| 2.1.1 | Import useCoachingHint and CoachOverlay in PreparationPage | frontend-builder | 0.5h | [ ] |
+| 2.1.2 | Add liveTranscript state and handleTranscriptChange callback | frontend-builder | 0.5h | [ ] |
+| 2.1.3 | Wire RecordingDeck onTranscriptChange to liveTranscript | frontend-builder | 0.5h | [ ] |
+| 2.1.4 | Configure useCoachingHint with question + transcript | frontend-builder | 0.5h | [ ] |
+| 2.1.5 | Add CoachOverlay to practice stage UI layout | frontend-builder | 0.5h | [ ] |
+| 2.1.6 | Test coaching hints during practice recording | qa-test-guardian | 0.5h | [ ] |
+
+**Checkpoint**: AI coaching hints appear during practice delivery
+
+**Files Modified:**
+- `frontend/src/pages/PreparationPage.tsx` (practice stage section)
+
+---
+
+### Phase 5: Draft Voice Dictation (2.5h)
+
+| Task | Description | Agent | Est | Done |
+|------|-------------|-------|-----|------|
+| 3.1.1 | Add VoiceInputButton to draft editing textarea | frontend-builder | 0.5h | [ ] |
+| 3.1.2 | Implement append mode (add to end of draft) | frontend-builder | 0.5h | [ ] |
+| 3.1.3 | Add "replace selection" mode for editing | frontend-builder | 1h | [ ] |
+| 3.1.4 | Test draft dictation flow | qa-test-guardian | 0.5h | [ ] |
+
+**Checkpoint**: Users can dictate draft edits by voice
+
+**Files Modified:**
+- `frontend/src/pages/PreparationPage.tsx` (draft editing section)
+
+---
+
+### Phase 6: Polish & Cross-Browser Testing (2h)
+
+| Task | Description | Agent | Est | Done |
+|------|-------------|-------|-----|------|
+| 6.1 | Test on Chrome, Firefox, Safari, Edge | qa-test-guardian | 1h | [ ] |
+| 6.2 | Add graceful degradation for unsupported browsers | frontend-builder | 0.5h | [ ] |
+| 6.3 | Update PreparationPage.test.tsx with voice integration tests | qa-test-guardian | 0.5h | [ ] |
+
+**Checkpoint**: Voice features work across all major browsers
 
 ---
 
 ## Success Criteria
 
-- [ ] Users can speak answers during detective Q&A stage
-- [ ] Live transcription appears as user speaks
-- [ ] AI coaching hints appear during practice delivery
-- [ ] Coaching compares live delivery to draft answer
-- [ ] Voice input works on Chrome, Safari, Firefox
-- [ ] Optional: Voice dictation for draft editing
+### Epic 1: Voice Input for Detective Q&A
+- [ ] VoiceInputButton component renders with microphone icon
+- [ ] Clicking mic starts speech recognition (browser permission requested)
+- [ ] Live transcript appears as user speaks (interim results)
+- [ ] Final transcript populates the answer textarea
+- [ ] User can edit transcribed text before submitting
+- [ ] Unsupported browsers show helpful fallback message
+
+### Epic 2: AI Coaching During Practice
+- [ ] CoachOverlay appears when recording starts in practice stage
+- [ ] Live transcript from RecordingDeck feeds into useCoachingHint
+- [ ] AI hints stream in after 2s silence or 50+ words
+- [ ] Hints reference the original question content
+- [ ] Coach panel is collapsible/dismissible
+- [ ] Loading and streaming states display correctly
+
+### Epic 3: Voice Dictation for Draft
+- [ ] VoiceInputButton appears next to draft textarea
+- [ ] Dictation appends to existing draft content
+- [ ] Visual indicator shows when dictation is active
+- [ ] User can switch between typing and dictating
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- **useSpeechRecognition hook**: Mock SpeechRecognition API, test state transitions
+- **VoiceInputButton component**: Render tests, click handlers, accessibility
+- **Integration with PreparationPage**: Voice input flows
+
+### Integration Tests
+- **Detective flow**: Voice input → transcript → submit answer → next question
+- **Practice flow**: Recording → transcript → coaching hint → display
+
+### E2E Tests (Optional)
+- Full preparation flow with voice input simulation (Playwright audio mocking)
+
+### Browser Compatibility Matrix
+| Browser | Speech API | Status |
+|---------|------------|--------|
+| Chrome 33+ | `SpeechRecognition` | ✅ Full support |
+| Firefox 49+ | `SpeechRecognition` | ✅ Full support |
+| Safari 14.1+ | `webkitSpeechRecognition` | ✅ Requires prefix |
+| Edge 79+ | `SpeechRecognition` | ✅ Full support |
+| iOS Safari | `webkitSpeechRecognition` | ⚠️ Limited (requires HTTPS) |
 
 ---
 
 ## Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Web Speech API browser support | Medium | Graceful fallback to text-only, browser detection |
-| Speech recognition accuracy | Low | User can edit transcription before submitting |
-| Mobile Safari limitations | Medium | Test early, document limitations, text fallback |
-| Rate limiting on coaching API | Low | Already handled with debouncing in useCoachingHint |
+| Risk | Impact | Likelihood | Mitigation |
+|------|--------|------------|------------|
+| Web Speech API not supported | High | Low | Browser detection + text-only fallback + help message |
+| Speech recognition accuracy issues | Medium | Medium | User can edit transcript, clear visual indicator |
+| Mobile Safari limitations | Medium | Medium | Test early, document limitations, ensure text fallback works |
+| Rate limiting on coaching API | Low | Low | Already handled with debouncing in useCoachingHint |
+| Microphone permission denied | Medium | Medium | Clear permission request UI, recovery instructions |
+| Background noise affecting recognition | Low | Medium | User can retry, edit transcript manually |
 
 ---
 
-## Technical Notes
+## Open Questions
 
-**Existing Components to Reuse**:
-- `RecordingDeck` - full recording UI with visualization
-- `useAudioRecording` - recording state management
-- `useCoachingHint` - AI coaching with debouncing
-- `CoachOverlay` - coaching hint display
-- Web Speech API types already declared in RecordingDeck.tsx
+- [x] Should coaching hints compare delivery to draft answer? → **Yes, pass draft as context**
+- [x] Append vs replace mode for draft dictation? → **Start with append, add replace later**
+- [ ] Should we show word count during dictation?
+- [ ] Keyboard shortcut for voice input toggle? (e.g., Ctrl+M)
 
-**Backend Requirements**:
-- None for Epic 1 (client-side transcription)
-- Epic 2 may need coaching prompt customization for draft comparison
+---
 
-**Total Estimated Effort**: ~14 hours (Epics 1-3)
+## Files to Create/Modify Summary
+
+### New Files (5)
+1. `frontend/src/types/speech.ts` - Speech API type definitions
+2. `frontend/src/hooks/useSpeechRecognition.ts` - Reusable speech hook
+3. `frontend/src/hooks/__tests__/useSpeechRecognition.test.tsx` - Hook tests
+4. `frontend/src/components/common/VoiceInputButton.tsx` - Voice input UI
+5. `frontend/src/components/common/__tests__/VoiceInputButton.test.tsx` - Component tests
+
+### Modified Files (2)
+1. `frontend/src/pages/PreparationPage.tsx` - Integration of voice features
+2. `frontend/src/components/interview/RecordingDeck.tsx` - Extract shared types
+
+---
+
+## Estimated Timeline
+
+| Phase | Effort | Cumulative |
+|-------|--------|------------|
+| Phase 1: Foundation (Hook) | 3h | 3h |
+| Phase 2: Voice Input Component | 2.5h | 5.5h |
+| Phase 3: Detective Integration | 2h | 7.5h |
+| Phase 4: Practice Coaching | 3h | 10.5h |
+| Phase 5: Draft Dictation | 2.5h | 13h |
+| Phase 6: Polish & Testing | 2h | 15h |
+
+**Total Estimated Effort**: 15 hours
+
+**Parallel Execution**: Phases 1-3 (Epic 1) and Phase 4 (Epic 2) can run in parallel after Phase 1 completes.
 
 ---
