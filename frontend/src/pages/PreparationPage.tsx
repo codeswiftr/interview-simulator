@@ -331,8 +331,8 @@ export default function PreparationPage() {
 
   // Update live transcript (not currently used but kept for future use)
   // Get question for coaching (use first detective question or generic)
-  const practiceQuestion = qnaList.length > 0 
-    ? qnaList[0].question 
+  const practiceQuestion = qnaList.length > 0
+    ? qnaList[0].question
     : 'Practice your prepared answer';
 
   // AI Coaching Hint hook for practice stage
@@ -527,7 +527,7 @@ export default function PreparationPage() {
                     <VoiceInputButton
                       onTranscript={(text) => {
                         // Append to existing answer or replace if empty
-                        setCurrentAnswer((prev) => 
+                        setCurrentAnswer((prev) =>
                           prev.trim() ? `${prev} ${text}`.trim() : text
                         );
                         setInterimTranscript('');
@@ -747,7 +747,7 @@ export default function PreparationPage() {
                   disabled={isSubmitting}
                   onTranscriptChange={handleTranscriptChange}
                 />
-                
+
                 {/* AI Coaching Overlay */}
                 {isRecording && showCoach && (
                   <CoachOverlay

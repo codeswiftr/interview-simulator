@@ -9,15 +9,15 @@ export default function HomePage() {
     <div className="min-h-screen bg-surface-primary overflow-hidden">
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        {/* Abstract Background Elements */}
+        {/* Abstract Background Elements - Theme Aware */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
-          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-electric-blue/20 blur-[100px] animate-pulse-glow" />
-          <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[120px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-electric-blue/20 dark:bg-electric-blue/10 blur-[100px] animate-pulse-glow" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
         </div>
 
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 border border-white/60 backdrop-blur-sm shadow-sm mb-8 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-surface-secondary/80 border border-white/60 dark:border-border-light backdrop-blur-sm shadow-sm mb-8 animate-fade-in">
               <span className="flex h-2 w-2 rounded-full bg-electric-blue"></span>
               <span className="text-sm font-medium text-text-secondary">AI-Powered Interview Coach</span>
             </div>
@@ -55,8 +55,8 @@ export default function HomePage() {
 
           {/* Hero Visual */}
           <div className="mt-20 relative max-w-5xl mx-auto animate-scale-in" style={{ animationDelay: '0.3s' }}>
-            <div className="absolute -inset-1 bg-gradient-to-r from-electric-blue to-indigo-600 rounded-2xl blur opacity-20"></div>
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-white/50 backdrop-blur-xl">
+            <div className="absolute -inset-1 bg-gradient-to-r from-electric-blue to-indigo-600 rounded-2xl blur opacity-20 dark:opacity-10"></div>
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/20 dark:border-border-light bg-white/50 dark:bg-surface-secondary/30 backdrop-blur-xl">
               <img
                 src="/images/hero-illustration.png"
                 alt="Dashboard Preview"
@@ -66,14 +66,14 @@ export default function HomePage() {
                 fetchPriority="high"
               />
               {/* Floating Elements */}
-              <div className="absolute top-10 right-10 p-4 bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-white/50 animate-float hidden md:block">
+              <div className="absolute top-10 right-10 p-4 bg-white/90 dark:bg-surface-secondary/90 backdrop-blur-md rounded-xl shadow-lg border border-white/50 dark:border-border-light animate-float hidden md:block">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
                     <p className="text-xs text-text-secondary font-medium uppercase">Audio Score</p>
-                    <p className="text-xl font-bold text-charcoal">92/100</p>
+                    <p className="text-xl font-bold text-charcoal dark:text-text-primary">92/100</p>
                   </div>
                 </div>
               </div>

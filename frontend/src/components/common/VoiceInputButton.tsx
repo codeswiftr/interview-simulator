@@ -142,7 +142,7 @@ export function VoiceInputButton({
         {isListening && (
           <span className="absolute inset-0 rounded-full bg-status-error opacity-75 animate-ping" />
         )}
-        
+
         {/* Microphone icon */}
         {isListening ? (
           <Mic size={iconSizes[size]} className="relative z-10" />

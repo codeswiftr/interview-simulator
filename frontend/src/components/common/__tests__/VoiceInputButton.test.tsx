@@ -33,7 +33,7 @@ describe('VoiceInputButton', () => {
   describe('rendering', () => {
     it('should render microphone button', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button', { name: /start voice input/i });
       expect(button).toBeInTheDocument();
     });
@@ -45,7 +45,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button', { name: /stop voice input/i });
       expect(button).toHaveAttribute('aria-pressed', 'true');
     });
@@ -57,7 +57,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} placeholder="Listening..." />);
-      
+
       expect(screen.getByText('Listening...')).toBeInTheDocument();
     });
 
@@ -68,7 +68,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       expect(screen.getByText('Permission denied')).toBeInTheDocument();
     });
 
@@ -79,7 +79,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('title', 'Speech recognition not supported in this browser');
@@ -89,21 +89,21 @@ describe('VoiceInputButton', () => {
   describe('size variants', () => {
     it('should apply small size', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} size="sm" />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toHaveClass('h-8', 'w-8');
     });
 
     it('should apply medium size by default', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toHaveClass('h-10', 'w-10');
     });
 
     it('should apply large size', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} size="lg" />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toHaveClass('h-12', 'w-12');
     });
@@ -113,10 +113,10 @@ describe('VoiceInputButton', () => {
     it('should start listening when clicked', async () => {
       const user = userEvent.setup();
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button', { name: /start voice input/i });
       await user.click(button);
-      
+
       expect(mockResetTranscript).toHaveBeenCalled();
       expect(mockStartListening).toHaveBeenCalled();
     });
@@ -131,10 +131,10 @@ describe('VoiceInputButton', () => {
       const onTranscript = vi.fn();
       const user = userEvent.setup();
       render(<VoiceInputButton onTranscript={onTranscript} />);
-      
+
       const button = screen.getByRole('button', { name: /stop voice input/i });
       await user.click(button);
-      
+
       expect(mockStopListening).toHaveBeenCalled();
       expect(onTranscript).toHaveBeenCalledWith('Hello world');
       expect(mockResetTranscript).toHaveBeenCalled();
@@ -142,7 +142,7 @@ describe('VoiceInputButton', () => {
 
     it('should be disabled when disabled prop is true', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} disabled />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toBeDisabled();
     });
@@ -154,7 +154,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toBeDisabled();
     });
@@ -163,18 +163,18 @@ describe('VoiceInputButton', () => {
   describe('transcript handling', () => {
     it('should call onTranscript with final transcript', async () => {
       const onTranscript = vi.fn();
-      
+
       // First render with no final transcript
       const { rerender } = render(<VoiceInputButton onTranscript={onTranscript} />);
-      
+
       // Simulate final transcript arriving
       vi.mocked(speechRecognitionModule.useSpeechRecognition).mockReturnValue({
         ...defaultMockReturn,
         finalTranscript: 'Hello world',
       });
-      
+
       rerender(<VoiceInputButton onTranscript={onTranscript} />);
-      
+
       await waitFor(() => {
         expect(onTranscript).toHaveBeenCalledWith('Hello world');
       });
@@ -184,7 +184,7 @@ describe('VoiceInputButton', () => {
     it('should call onInterim with interim transcript', async () => {
       const onInterim = vi.fn();
       const onResult = vi.fn();
-      
+
       // Mock the hook to call onResult callback
       let resultCallback: ((text: string, isFinal: boolean) => void) | undefined;
       vi.mocked(speechRecognitionModule.useSpeechRecognition).mockImplementation((options) => {
@@ -193,12 +193,12 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} onInterim={onInterim} />);
-      
+
       // Simulate interim result
       if (resultCallback) {
         resultCallback('Hello', false);
       }
-      
+
       await waitFor(() => {
         expect(onInterim).toHaveBeenCalledWith('Hello');
       });
@@ -207,7 +207,7 @@ describe('VoiceInputButton', () => {
     it('should not call onInterim for final results', async () => {
       const onInterim = vi.fn();
       const onResult = vi.fn();
-      
+
       let resultCallback: ((text: string, isFinal: boolean) => void) | undefined;
       vi.mocked(speechRecognitionModule.useSpeechRecognition).mockImplementation((options) => {
         resultCallback = options?.onResult;
@@ -215,12 +215,12 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} onInterim={onInterim} />);
-      
+
       // Simulate final result
       if (resultCallback) {
         resultCallback('Hello world', true);
       }
-      
+
       // onInterim should not be called for final results
       expect(onInterim).not.toHaveBeenCalled();
     });
@@ -234,7 +234,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} autoStart />);
-      
+
       expect(mockStartListening).toHaveBeenCalled();
     });
 
@@ -245,7 +245,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} autoStart disabled />);
-      
+
       expect(mockStartListening).not.toHaveBeenCalled();
     });
 
@@ -256,7 +256,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} autoStart />);
-      
+
       expect(mockStartListening).not.toHaveBeenCalled();
     });
   });
@@ -264,7 +264,7 @@ describe('VoiceInputButton', () => {
   describe('accessibility', () => {
     it('should have proper aria-label', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button', { name: /start voice input/i });
       expect(button).toHaveAttribute('aria-label', 'Start voice input');
     });
@@ -276,7 +276,7 @@ describe('VoiceInputButton', () => {
       });
 
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toHaveAttribute('aria-pressed', 'true');
       expect(button).toHaveAttribute('aria-label', 'Stop voice input');
@@ -284,7 +284,7 @@ describe('VoiceInputButton', () => {
 
     it('should have focus-visible ring', () => {
       render(<VoiceInputButton onTranscript={vi.fn()} />);
-      
+
       const button = screen.getByRole('button');
       expect(button).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-electric-blue');
     });
