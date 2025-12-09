@@ -18,7 +18,7 @@ export default function HomePage() {
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-surface-secondary/80 border border-white/60 dark:border-border-light backdrop-blur-sm shadow-sm mb-8 animate-fade-in">
-              <span className="flex h-2 w-2 rounded-full bg-electric-blue"></span>
+              <span className="flex h-2 w-2 rounded-full bg-[#FF6B9D]"></span>
               <span className="text-sm font-medium text-text-secondary">AI-Powered Interview Coach</span>
             </div>
 
@@ -68,8 +68,8 @@ export default function HomePage() {
               {/* Floating Elements */}
               <div className="absolute top-10 right-10 p-4 bg-white/90 dark:bg-surface-secondary/90 backdrop-blur-md rounded-xl shadow-lg border border-white/50 dark:border-border-light animate-float hidden md:block">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  <div className="w-10 h-10 rounded-full bg-[#FF6B9D]/10 dark:bg-[#FF6B9D]/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-[#FF6B9D]" />
                   </div>
                   <div>
                     <p className="text-xs text-text-secondary font-medium uppercase">Audio Score</p>
@@ -93,7 +93,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300">
+            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
               <div className="w-14 h-14 rounded-2xl bg-electric-blue/10 flex items-center justify-center mb-6">
                 <Mic className="w-7 h-7 text-electric-blue" />
               </div>
@@ -103,9 +103,9 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-score-excellent/10 flex items-center justify-center mb-6">
-                <BarChart2 className="w-7 h-7 text-score-excellent" />
+            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
+              <div className="w-14 h-14 rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center mb-6">
+                <BarChart2 className="w-7 h-7 text-[#FF6B9D]" />
               </div>
               <h3 className="heading-card mb-3">AI Feedback</h3>
               <p className="body-small text-text-secondary leading-relaxed">

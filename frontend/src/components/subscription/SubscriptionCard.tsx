@@ -20,7 +20,7 @@ export default function SubscriptionCard({ subscription, onUpgrade }: Subscripti
 
   const tierColors: Record<string, string> = {
     free: 'bg-gray-100 text-gray-800',
-    pro: 'bg-electric-blue/10 text-electric-blue',
+    pro: 'bg-[#FF6B9D]/10 text-[#FF6B9D] border border-[#FF6B9D]/20', // Brand pink for Pro
     team: 'bg-purple-100 text-purple-800',
   };
 
@@ -33,7 +33,7 @@ export default function SubscriptionCard({ subscription, onUpgrade }: Subscripti
         <div>
           <div className="flex items-center gap-3 mb-2">
             <span className={`badge ${tierColors[tier]}`}>{tierLabels[tier]}</span>
-            {tier !== 'free' && <Crown className="w-5 h-5 text-electric-blue" />}
+            {tier !== 'free' && <Crown className={`w-5 h-5 ${tier === 'pro' ? 'text-[#FF6B9D]' : 'text-electric-blue'}`} />}
           </div>
           <h3 className="heading-card">Current Plan</h3>
         </div>

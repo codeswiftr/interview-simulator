@@ -19,12 +19,21 @@ interface DetectiveQnA {
   order: number;
 }
 
+interface QuestionContext {
+  id: string;
+  content: string;
+  category?: string;
+  difficulty?: string;
+  company_tags?: string[];
+}
+
 export default function PreparationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
 
   const [stage, setStage] = useState<PreparationStage>('detective');
+  const [questionContext, setQuestionContext] = useState<QuestionContext | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<string>('');
   const [currentAnswer, setCurrentAnswer] = useState<string>('');
   const [qnaList, setQnaList] = useState<DetectiveQnA[]>([]);
@@ -77,36 +86,57 @@ export default function PreparationPage() {
     mimeType,
   } = useAudioRecording();
 
-  // Load preparation state
+  // Load preparation state (resume support)
   useEffect(() => {
     if (!id) {
       navigate('/questions');
       return;
     }
 
-    // Check if we have a draft (stage = practice or complete)
-    const loadDraft = async () => {
+    const loadState = async () => {
       try {
-        const response = await preparationAPI.getDraft(id);
-        if (response.data.draft_answer) {
-          setDraft(response.data.draft_answer);
-          setStage(response.data.stage as PreparationStage);
+        setIsLoading(true);
+        setError(null);
+        const response = await preparationAPI.getState(id);
+        const data = response.data;
+
+        setStage(data.stage as PreparationStage);
+        setIsComplete(data.stage !== 'detective');
+        setDraft(data.draft_answer || '');
+        setQnaList(
+          data.qna.map((qna) => ({
+            question: qna.question,
+            answer: qna.answer,
+            order: qna.order,
+          }))
+        );
+        setQuestionContext(data.question);
+        setAttempts(data.attempts);
+
+        if (data.current_question) {
+          setCurrentQuestion(data.current_question);
+          setCurrentAnswer('');
+        } else if (data.stage === 'detective') {
+          // Fetch the next question if none pending
+          await getNextQuestion();
         } else {
-          // Start detective stage
-          getNextQuestion();
+          setCurrentQuestion('');
         }
       } catch (err) {
-        // Draft not generated yet, continue with detective stage
-        getNextQuestion();
+        // Fall back to fetching the next question to keep flow alive
+        setQuestionContext(null);
+        await getNextQuestion();
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadDraft();
-  }, [id, navigate]);
+    loadState();
+  }, [id, navigate, getNextQuestion]);
 
   // Load attempts when in practice stage
   useEffect(() => {
-    if (!id || stage !== 'practice') return;
+    if (!id || (stage !== 'practice' && stage !== 'complete')) return;
 
     const loadAttempts = async () => {
       try {
@@ -364,6 +394,8 @@ export default function PreparationPage() {
       const response = await preparationAPI.rateDelivery(id, attemptId);
 
       toast.success('Delivery rated', `Score: ${response.data.delivery_score.toFixed(1)}%`);
+      setStage(response.data.stage as PreparationStage);
+      setIsComplete(true);
 
       // Reload attempts to get updated scores
       const attemptsResponse = await preparationAPI.getAttempts(id);
@@ -456,6 +488,20 @@ export default function PreparationPage() {
             Answer a few questions to get a personalized, STAR-formatted draft answer.
           </p>
         </div>
+
+        {questionContext && (
+          <div className="card p-4 mb-6">
+            <p className="font-semibold text-text-primary mb-1">Question</p>
+            <p className="text-text-secondary">{questionContext.content}</p>
+            <div className="flex flex-wrap gap-3 text-xs text-text-tertiary mt-3">
+              {questionContext.category && <span>Type: {questionContext.category}</span>}
+              {questionContext.difficulty && <span>Difficulty: {questionContext.difficulty}</span>}
+              {questionContext.company_tags && questionContext.company_tags.length > 0 && (
+                <span>Companies: {questionContext.company_tags.join(', ')}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Error Display with Recovery */}
         {error && (

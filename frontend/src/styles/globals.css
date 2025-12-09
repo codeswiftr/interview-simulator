@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 @theme {
+  /* Brand Identity Colors */
+  --color-brand-primary: #FF6B9D;    /* Pink/Magenta - The "Soul" */
+  --color-brand-product: #38BDF8;    /* Electric Blue - The "Utility" */
+  --color-brand-accent: #00D9FF;     /* Cyan/Teal - The "Future/AI" */
+  --color-black-pure: #050505;       /* Marketing dark background */
+
   /* Color Tokens - Design System */
   --color-charcoal: #111827;
   --color-electric-blue: #38BDF8;

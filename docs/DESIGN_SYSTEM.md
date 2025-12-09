@@ -18,16 +18,31 @@
 
 ## Color System
 
+### Brand Identity Colors (Unified)
+```css
+/* Brand Identity - The Core Palette */
+--color-brand-primary: #FF6B9D;    /* Pink/Magenta - The "Soul" (brand identity) */
+--color-brand-product: #38BDF8;    /* Electric Blue - The "Utility" (product/CTAs) */
+--color-brand-accent: #00D9FF;     /* Cyan/Teal - The "Future/AI" (tech elements) */
+
+/* Usage Guidelines */
+/* - Brand Primary (Pink): Logo, brand moments, Pro badges, success states */
+/* - Brand Product (Blue): Primary CTAs, interactive elements, functional UI */
+/* - Brand Accent (Cyan): AI indicators, tech highlights, futuristic elements */
+```
+
 ### Primary Palette (CodeSwiftr)
 ```css
 /* Core Brand Colors */
 --color-charcoal: #111827;        /* Primary dark - backgrounds, text */
---color-electric-blue: #38BDF8;   /* Primary accent - CTAs, highlights */
+--color-electric-blue: #38BDF8;   /* Primary accent - CTAs, highlights (alias for --color-brand-product) */
 --color-clean-white: #F8FAFC;     /* Light backgrounds */
+--color-black-pure: #050505;      /* Marketing dark background */
 
 /* RGB variants for opacity */
 --color-charcoal-rgb: 17, 24, 39;
 --color-electric-blue-rgb: 56, 189, 248;
+--color-brand-primary-rgb: 255, 107, 157;
 ```
 
 ### Extended Palette
@@ -97,17 +112,26 @@
 
 ## Typography
 
-### Font Stack
+### Font Stack (Unified)
 ```css
 /* Headings - Modern, technical feel */
 --font-heading: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+/* ⚠️ DEPRECATED: Space Grotesk - No longer used. Use Outfit instead. */
 
 /* Body - Highly readable */
 --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+/* ⚠️ DEPRECATED: Plus Jakarta Sans - No longer used. Use Inter instead. */
 
 /* Code/Technical - For code snippets, scores */
 --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+/* ✅ Consistent across all touchpoints */
 ```
+
+### Typography Migration Notes
+- **Legacy fonts** (Space Grotesk, Plus Jakarta Sans) are deprecated
+- **Current standard**: Outfit for headings, Inter for body text
+- All new components should use the unified font stack
+- Marketing site updated to match product/app typography
 
 ### Type Scale
 ```css
@@ -148,6 +172,44 @@
 .label { @apply font-body text-xs font-medium uppercase tracking-wide; }
 .score-display { @apply font-mono text-3xl font-bold; }
 ```
+
+### Brand Color Usage Guidelines
+
+#### Brand Primary (Pink #FF6B9D)
+**Use for:**
+- Logo and brand identity elements
+- Pro/premium tier badges and indicators
+- Success states and achievements
+- Celebration moments
+- Brand reminders (subtle accents)
+
+**Don't use for:**
+- Primary CTAs (use Electric Blue)
+- Error states (use red)
+- Body text (low contrast)
+
+#### Brand Product (Electric Blue #38BDF8)
+**Use for:**
+- Primary call-to-action buttons
+- Interactive elements (links, hover states)
+- Functional UI indicators
+- Progress indicators
+- Focus states
+
+#### Brand Accent (Cyan #00D9FF)
+**Use for:**
+- AI/tech indicators
+- Futuristic UI elements
+- Special highlights
+- Marketing site AI illustration accents
+
+### Context-Specific Usage
+
+| Context | Primary Color | Accent Color | Background |
+|---------|--------------|--------------|------------|
+| **Marketing Site** | Pink (#FF6B9D) | Cyan (#00D9FF) | Black (#050505) |
+| **Product Landing** | Electric Blue (#38BDF8) | Pink (subtle) | Light (#F8FAFC) |
+| **Application** | Electric Blue (#38BDF8) | Pink (minimal) | Light/Dark |
 
 ---
 

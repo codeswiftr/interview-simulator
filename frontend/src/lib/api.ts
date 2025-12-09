@@ -303,6 +303,32 @@ export const preparationAPI = {
     api.post<{ preparation_id: string; stage: string; message: string }>('/preparation/start', {
       question_id: questionId,
     }),
+  getState: (preparationId: string) =>
+    api.get<{
+      preparation_id: string;
+      stage: string;
+      question: {
+        id: string;
+        content: string;
+        category?: string;
+        difficulty?: string;
+        company_tags?: string[];
+      };
+      qna: Array<{ question: string; answer: string; order: number }>;
+      current_question: string | null;
+      draft_answer: string | null;
+      attempts: Array<{
+        id: string;
+        preparation_id: string;
+        audio_url: string | null;
+        transcript: string | null;
+        delivery_score: number | null;
+        comparison_feedback: string | null;
+        strengths: string[];
+        improvements: string[];
+        created_at: string;
+      }>;
+    }>(`/preparation/${preparationId}/state`),
   getDetectiveQuestion: (preparationId: string) =>
     api.post<{ question: string; order: number; is_complete: boolean }>(
       `/preparation/${preparationId}/detective/question`

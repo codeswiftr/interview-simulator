@@ -70,7 +70,7 @@ export default function UpgradeModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Crown className="w-6 h-6 text-electric-blue" />
+            <Crown className="w-6 h-6 text-[#FF6B9D]" />
             <h2 className="heading-section">Upgrade to Pro</h2>
           </div>
           <button
@@ -107,10 +107,10 @@ export default function UpgradeModal({
           </div>
 
           {/* Pro Plan */}
-          <div className="card p-6 border-2 border-electric-blue bg-electric-blue/5">
+          <div className="card p-6 border-2 border-[#FF6B9D] bg-[#FF6B9D]/5">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="heading-card">Pro</h3>
-              <span className="badge badge-in-progress">Recommended</span>
+              <span className="badge bg-[#FF6B9D]/10 text-[#FF6B9D] border border-[#FF6B9D]/20">Recommended</span>
             </div>
             <div className="text-3xl font-bold mb-4">
               $29<span className="text-lg">/month</span>

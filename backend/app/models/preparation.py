@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, ForeignKey
+from sqlalchemy import JSON, Column, DateTime, ForeignKey
 from sqlalchemy.types import String
 from sqlmodel import Field, SQLModel
 
@@ -97,6 +97,11 @@ class DeliveryAttempt(SQLModel, table=True):
     )
     comparison_feedback: str | None = Field(
         default=None, description="AI feedback comparing delivery to draft"
+    )
+    comparison_details: dict | None = Field(
+        default=None,
+        description="Structured comparison data (strengths/improvements/etc.)",
+        sa_column=Column(JSON, nullable=True),
     )
 
     # Timestamps

@@ -132,6 +132,8 @@ class DeliveryAttemptRead(BaseModel):
     transcript: str | None
     delivery_score: float | None
     comparison_feedback: str | None
+    strengths: list[str] = Field(default_factory=list)
+    improvements: list[str] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -161,6 +163,104 @@ class ComparisonResponse(BaseModel):
     comparison_feedback: str | None
     strengths: list[str]
     improvements: list[str]
+
+
+class QuestionContext(BaseModel):
+    id: UUID
+    content: str
+    category: str | None = None
+    difficulty: str | None = None
+    company_tags: list[str] | None = None
+
+
+class PreparationStateResponse(BaseModel):
+    preparation_id: UUID
+    stage: str
+    question: QuestionContext
+    qna: list[PreparationQnA]
+    current_question: str | None
+    draft_answer: str | None
+    attempts: list[DeliveryAttemptRead]
+
+
+@router.get("/{preparation_id}/state", response_model=PreparationStateResponse)
+async def get_preparation_state(
+    preparation_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PreparationStateResponse:
+    """Get complete preparation state for resume flows."""
+    # Verify preparation exists and belongs to user
+    result = await session.exec(
+        select(AnswerPreparation).where(
+            AnswerPreparation.id == preparation_id,
+            AnswerPreparation.user_id == current_user.id,
+        )
+    )
+    preparation = result.first()
+    if not preparation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preparation not found or access denied",
+        )
+
+    # Fetch question context
+    question_result = await session.exec(
+        select(Question).where(Question.id == preparation.question_id)
+    )
+    question = question_result.first()
+
+    # Fetch Q&A history
+    qna_result = await session.exec(
+        select(PreparationQnA)
+        .where(PreparationQnA.preparation_id == preparation_id)
+        .order_by(PreparationQnA.order)
+    )
+    qna_list = list(qna_result.all())
+
+    # Determine the current (unanswered) question if any
+    current_question = None
+    for qna in qna_list:
+        if qna.answer == "":
+            current_question = qna.question
+            break
+
+    # Fetch attempts
+    attempts_result = await session.exec(
+        select(DeliveryAttempt)
+        .where(DeliveryAttempt.preparation_id == preparation_id)
+        .order_by(DeliveryAttempt.created_at.desc())
+    )
+    attempts = list(attempts_result.all())
+
+    return PreparationStateResponse(
+        preparation_id=preparation.id,
+        stage=get_stage_value(preparation.stage),
+        question=QuestionContext(
+            id=question.id if question else preparation.question_id,
+            content=question.content if question else "",
+            category=getattr(question, "category", None),
+            difficulty=getattr(question, "difficulty", None),
+            company_tags=getattr(question, "company_tags", None),
+        ),
+        qna=qna_list,
+        current_question=current_question,
+        draft_answer=preparation.draft_answer,
+        attempts=[
+            DeliveryAttemptRead(
+                id=attempt.id,
+                preparation_id=attempt.preparation_id,
+                audio_url=attempt.audio_url,
+                transcript=attempt.transcript,
+                delivery_score=attempt.delivery_score,
+                comparison_feedback=attempt.comparison_feedback,
+                strengths=(attempt.comparison_details or {}).get("strengths", []),
+                improvements=(attempt.comparison_details or {}).get("improvements", []),
+                created_at=attempt.created_at,
+            )
+            for attempt in attempts
+        ],
+    )
 
 
 # Endpoints
@@ -911,17 +1011,17 @@ async def submit_practice(
     # Store audio URL
     attempt.audio_url = request.audio_url
 
+    # Convert URL path to file path (local storage)
+    # audio_url format: /uploads/audio/filename.webm
+    audio_path = Path(".") / request.audio_url.lstrip("/")
+    if not audio_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Audio file not found at specified URL",
+        )
+
     # Transcribe audio
     try:
-        # Convert URL path to file path (local storage)
-        # audio_url format: /uploads/audio/filename.webm
-        audio_path = Path(".") / request.audio_url.lstrip("/")
-        if not audio_path.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Audio file not found at specified URL",
-            )
-
         transcriber = Transcriber()
         transcription_result = await transcriber.transcribe(audio_path, language="en")
         attempt.transcript = transcription_result.text
@@ -998,6 +1098,8 @@ async def get_attempts(
                 transcript=attempt.transcript,
                 delivery_score=attempt.delivery_score,
                 comparison_feedback=attempt.comparison_feedback,
+                strengths=(attempt.comparison_details or {}).get("strengths", []),
+                improvements=(attempt.comparison_details or {}).get("improvements", []),
                 created_at=attempt.created_at,
             )
             for attempt in attempts
@@ -1094,6 +1196,13 @@ async def rate_delivery(
     # Save rating to attempt
     attempt.delivery_score = rating.delivery_score
     attempt.comparison_feedback = rating.comparison_feedback
+    attempt.comparison_details = {
+        "strengths": rating.strengths,
+        "improvements": rating.improvements,
+        "content_coverage": rating.content_coverage,
+        "key_points": rating.key_points,
+        "flow_structure": rating.flow_structure,
+    }
     await session.commit()
 
     # Update preparation stage to COMPLETE if first successful rating
@@ -1165,11 +1274,9 @@ async def get_comparison(
             detail="Delivery attempt not found or access denied",
         )
 
-    # Extract strengths and improvements from stored rating
-    # For now, we parse from comparison_feedback or return empty
-    # Future: could store strengths/improvements separately in DeliveryAttempt
-    strengths: list[str] = []
-    improvements: list[str] = []
+    details = attempt.comparison_details or {}
+    strengths: list[str] = details.get("strengths", [])
+    improvements: list[str] = details.get("improvements", [])
 
     return ComparisonResponse(
         draft=preparation.draft_answer or "",

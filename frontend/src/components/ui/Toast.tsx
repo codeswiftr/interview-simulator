@@ -25,7 +25,7 @@ const toastIcons = {
 };
 
 const toastStyles = {
-  success: 'bg-status-success/10 border-status-success/30 text-status-success',
+  success: 'bg-[#FF6B9D]/10 border-[#FF6B9D]/30 text-[#FF6B9D]', // Brand pink for success
   error: 'bg-status-error/10 border-status-error/30 text-status-error',
   warning: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
   info: 'bg-electric-blue/10 border-electric-blue/30 text-electric-blue',

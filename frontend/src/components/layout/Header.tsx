@@ -79,7 +79,10 @@ export default function Header() {
                 <span className="font-heading font-bold text-lg leading-none text-[var(--fg-primary)]">
                   Interview Simulator
                 </span>
-                <span className="text-xs text-text-tertiary hidden sm:block">by CareerSwiftr</span>
+                <span className="text-xs hidden sm:block">
+                  <span className="text-[#FF6B9D] font-semibold">Code</span>
+                  <span className="text-text-tertiary">Swiftr</span>
+                </span>
               </div>
             </Link>
 

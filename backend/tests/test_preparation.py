@@ -1,6 +1,7 @@
 """Tests for answer preparation endpoints."""
 
 import pytest
+from uuid import UUID
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlmodel import SQLModel, select
