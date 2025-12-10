@@ -21,7 +21,7 @@ This milestone focuses on two key areas:
 ## Success Criteria
 
 - [x] CoachOverlay props mismatch fixed (critical bug) ✅ COMPLETE
-- [ ] Sprint 7 Phase 5-6 completed (Draft Voice Dictation + Polish)
+- [x] Sprint 7 Phase 5-6 completed (Draft Voice Dictation + Polish) ✅ COMPLETE
 - [ ] Enhanced onboarding with guided first-session flow
 - [ ] Contextual tooltips for key features
 - [ ] Mentor hint history panel
