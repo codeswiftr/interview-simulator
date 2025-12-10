@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
+import { Star } from 'lucide-react';
 import type { VoiceSettings } from '../../hooks/useVoicePreferences';
+import { getVoiceQuality, sortVoicesByQuality, getRecommendedVoice } from '../../lib/voice-quality';
 
 interface VoiceSettingsPanelProps {
   settings: VoiceSettings;
@@ -17,6 +20,14 @@ export function VoiceSettingsPanel({
   onTestVoice,
   onReset,
 }: VoiceSettingsPanelProps) {
+  // Sort voices by quality (premium first)
+  const sortedVoices = useMemo(() => sortVoicesByQuality(voices), [voices]);
+  const recommendedVoice = useMemo(() => getRecommendedVoice(voices), [voices]);
+
+  // Check if current selected voice is premium
+  const selectedVoice = voices.find((v) => v.name === settings.voiceName);
+  const isCurrentPremium = selectedVoice ? getVoiceQuality(selectedVoice) === 'premium' : false;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -36,7 +47,15 @@ export function VoiceSettingsPanel({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="label">Voice</label>
+          <div className="flex items-center gap-2">
+            <label className="label">Voice</label>
+            {isCurrentPremium && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 rounded-full">
+                <Star size={10} className="fill-current" />
+                Premium
+              </span>
+            )}
+          </div>
           <select
             className="input w-full"
             value={settings.voiceName ?? ''}
@@ -45,14 +64,25 @@ export function VoiceSettingsPanel({
           >
             {voices.length === 0 && <option value="">Loading voices...</option>}
             {voices.length > 0 && <option value="">System default</option>}
-            {voices.map((voice) => (
-              <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
-                {voice.name} ({voice.lang})
+            {recommendedVoice && !settings.voiceName && (
+              <option value={recommendedVoice.name} disabled className="text-text-tertiary">
+                --- Recommended ---
               </option>
-            ))}
+            )}
+            {sortedVoices.map((voice) => {
+              const isPremium = getVoiceQuality(voice) === 'premium';
+              return (
+                <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
+                  {isPremium ? '★ ' : ''}{voice.name} ({voice.lang})
+                </option>
+              );
+            })}
           </select>
           <p className="text-xs text-text-tertiary">
-            Voice availability depends on the OS and browser.
+            {recommendedVoice && !settings.voiceName
+              ? `Recommended: ${recommendedVoice.name}`
+              : 'Voices with ★ are premium quality.'
+            }
           </p>
         </div>
 
