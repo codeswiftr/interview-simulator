@@ -2,10 +2,19 @@
 
 ## Current Status
 
-**Phase**: Soft Launch Ready + Sprint 8 Complete
+**Phase**: Sprint 9 Planning - Conversational Voice Mentor
 **Last Updated**: 2025-12-10
 
 ## What We're Working On
+
+### Sprint 9: Conversational Voice Mentor (Planned)
+Transform text-based mentor Q&A into a phone-call-like voice conversation:
+- [ ] Epic 1: Voice Mentor TTS Integration (ICE 8.4/10)
+- [ ] Epic 2: Conversational Mode - Phone-like Experience (ICE 7.2/10)
+- [ ] Epic 3: Premium Voice Quality (ICE 5.4/10)
+- [ ] Epic 4: Enable Prepare for Free Tier (ICE 7.0/10)
+
+See `docs/PLAN.md` for detailed implementation phases.
 
 ### Completed (All Sprints)
 - [x] Project structure created
@@ -39,10 +48,18 @@
 - [x] Sprint 8: Onboarding & Mentor Mode Enhancement (Complete 2025-12-10)
 
 ### Active Tasks
-- None - Ready for soft launch!
-- Sprint 8 complete: Onboarding flow, contextual tooltips, mentor hint history
+- Sprint 9 planning complete - ready for implementation
+- Next: Phase 1.1 - Create useSpeechSynthesis hook
 
 ## Recent Decisions
+
+### 2025-12-10: Sprint 9 - Conversational Voice Mentor Planning
+- Identified gap: Mentor displays text but never "speaks"
+- Solution: Web Speech API SpeechSynthesis (browser-native, free)
+- 4 epics planned with ICE scoring
+- Key hooks: useSpeechSynthesis, useConversationMode
+- Phone-call-like turn-taking: mentor_speaking → user_turn → processing
+- Free tier users to get 3 preparations/month (currently Pro/Team only)
 
 ### 2025-12-10: Sprint 8 - Onboarding & Mentor Mode Enhancement
 - Fixed CoachOverlay dual-interface props (canonical + alias for PreparationPage)
