@@ -1,6 +1,6 @@
 # Milestone: Conversational Voice Mentor
 
-## Status: 📋 PLANNED
+## Status: ✅ COMPLETE
 ## Target: Sprint 9
 
 ---
@@ -24,14 +24,14 @@ Transform the text-based mentor Q&A into a conversational voice experience, like
 
 ## Success Criteria
 
-- [ ] Mentor questions are spoken aloud using TTS
-- [ ] Conversation flows naturally with clear turn indicators
-- [ ] User can interrupt mentor while speaking
-- [ ] Voice settings persist in user preferences
-- [ ] Works across Chrome, Firefox, Safari, Edge
-- [ ] Graceful fallback for unsupported browsers
-- [ ] Free tier users can access basic preparation (Epic 4)
-- [ ] All tests passing, no TypeScript errors
+- [x] Mentor questions are spoken aloud using TTS
+- [x] Conversation flows naturally with clear turn indicators
+- [x] User can interrupt mentor while speaking
+- [x] Voice settings persist in user preferences
+- [x] Works across Chrome, Firefox, Safari, Edge
+- [x] Graceful fallback for unsupported browsers
+- [x] Free tier users can access basic preparation (Epic 4)
+- [x] All tests passing, no TypeScript errors
 
 ---
 
@@ -743,3 +743,41 @@ async def start_preparation(...):
 - VoiceInputButton component ✅
 - Detective Q&A voice integration ✅
 - Practice coaching voice integration ✅
+
+### Sprint 9: Conversational Voice Mentor ✅ COMPLETE (Dec 2025)
+
+#### Epic 1: Voice Mentor TTS Integration ✅
+- Phase 1.1: useSpeechSynthesis hook ✅
+- Phase 1.2: TTS integrated into Detective Stage ✅
+- Phase 1.3: VoiceSettingsPanel with voice selection ✅
+
+#### Epic 2: Conversational Mode ✅
+- Phase 2.1: useConversationMode state machine ✅
+- Phase 2.2: ConversationIndicator UI component ✅
+- Phase 2.3: Auto-listen mode after mentor speaks ✅
+- Phase 2.4: Interrupt handling (stop TTS when user speaks) ✅
+
+#### Epic 3: Premium Voice Quality ✅
+- Phase 3.1: Voice quality assessment (premium badges) ✅
+- voice-quality.ts with ranking utilities ✅
+- VoiceSettingsPanel shows premium indicators ✅
+
+#### Epic 4: Free Tier Prepare Access ✅
+- Phase 4.1: Updated subscription gating ✅
+- Phase 4.2: usePrepUsage hook (3/month limit, localStorage) ✅
+- QuestionCard shows remaining preparations ✅
+
+#### New Files Created:
+- `frontend/src/hooks/useSpeechSynthesis.ts`
+- `frontend/src/hooks/useConversationMode.ts`
+- `frontend/src/hooks/useVoicePreferences.ts`
+- `frontend/src/hooks/usePrepUsage.ts`
+- `frontend/src/lib/voice-quality.ts`
+- `frontend/src/components/interview/ConversationIndicator.tsx`
+- `frontend/src/components/settings/VoiceSettingsPanel.tsx`
+
+#### Files Modified:
+- `frontend/src/pages/PreparationPage.tsx` - TTS + conversation mode
+- `frontend/src/pages/QuestionsPage.tsx` - Free tier prepare access
+- `frontend/src/pages/SettingsPage.tsx` - Voice settings section
+- `frontend/src/components/questions/QuestionCard.tsx` - Usage badge
