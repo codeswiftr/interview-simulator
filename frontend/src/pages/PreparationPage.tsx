@@ -5,6 +5,8 @@ import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useCoachingHint } from '../hooks/useCoachingHint';
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
+import { useVoicePreferences } from '../hooks/useVoicePreferences';
 import RecordingDeck from '../components/interview/RecordingDeck';
 import CoachOverlay from '../components/interview/CoachOverlay';
 import HintHistoryPanel from '../components/interview/HintHistoryPanel';
@@ -74,6 +76,21 @@ export default function PreparationPage() {
   const [hintHistory, setHintHistory] = useState<Array<{ timestamp: Date; hint: string; stage: 'detective' | 'practice' }>>([]);
   const [isHintHistoryExpanded, setIsHintHistoryExpanded] = useState(false);
   const draftTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const { settings: voiceSettings, updateSettings: updateVoiceSettings } = useVoicePreferences();
+  const [voiceEnabled, setVoiceEnabled] = useState(voiceSettings.enabled);
+
+  const {
+    speak,
+    stop: stopSpeaking,
+    isSpeaking,
+    isSupported: isSpeechSupported,
+    error: speechError,
+    setVoice,
+    setRate,
+    setPitch,
+    setVolume,
+    voices,
+  } = useSpeechSynthesis();
 
   // Audio recording hook
   const {
@@ -389,6 +406,34 @@ export default function PreparationPage() {
     setError(null);
   };
 
+  // Auto-speak detective questions when enabled and supported
+  useEffect(() => {
+    if (stage !== 'detective' || !currentQuestion || !voiceEnabled || !isSpeechSupported) {
+      stopSpeaking();
+      return;
+    }
+
+    speak(currentQuestion);
+  }, [stage, currentQuestion, voiceEnabled, isSpeechSupported, speak, stopSpeaking]);
+
+  // Cleanup TTS on unmount
+  useEffect(() => () => stopSpeaking(), [stopSpeaking]);
+
+  // Sync speech hook with saved preferences
+  useEffect(() => {
+    setVoiceEnabled(voiceSettings.enabled);
+    setRate(voiceSettings.rate);
+    setPitch(voiceSettings.pitch);
+    setVolume(voiceSettings.volume);
+
+    if (voiceSettings.voiceName && voices.length > 0) {
+      const match = voices.find((v) => v.name === voiceSettings.voiceName);
+      if (match) {
+        setVoice(match);
+      }
+    }
+  }, [setPitch, setRate, setVoice, setVolume, voiceSettings, voices]);
+
   // Update live transcript (not currently used but kept for future use)
   // Get question for coaching (use first detective question or generic)
   const practiceQuestion = qnaList.length > 0
@@ -624,6 +669,44 @@ export default function PreparationPage() {
                     Question {qnaList.length + 1}:
                   </p>
                   <p className="text-lg text-text-primary">{currentQuestion}</p>
+                  <div className="flex flex-wrap items-center gap-3 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isSpeechSupported) return;
+                        setVoiceEnabled((prev) => {
+                          const next = !prev;
+                          updateVoiceSettings({ enabled: next });
+                          if (!next) {
+                            stopSpeaking();
+                          } else if (currentQuestion) {
+                            speak(currentQuestion);
+                          }
+                          return next;
+                        });
+                      }}
+                      className="btn-ghost flex items-center gap-2 text-sm"
+                      disabled={!isSpeechSupported}
+                    >
+                      {voiceEnabled ? 'Mute mentor voice' : 'Enable mentor voice'}
+                    </button>
+                    {isSpeaking && (
+                      <span className="flex items-center gap-1 text-electric-blue text-sm">
+                        <Loader2 size={14} className="animate-spin" />
+                        Mentor is speaking
+                      </span>
+                    )}
+                    {!isSpeechSupported && (
+                      <span className="text-xs text-text-secondary">
+                        Voice not supported in this browser
+                      </span>
+                    )}
+                    {speechError && (
+                      <span className="text-xs text-status-error">
+                        TTS error: {speechError}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">

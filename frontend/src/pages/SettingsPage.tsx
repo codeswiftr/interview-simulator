@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2 } from 'lucide-react';
 import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +8,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import SubscriptionCard from '../components/subscription/SubscriptionCard';
 import BillingInfo from '../components/subscription/BillingInfo';
 import UpgradeModal from '../components/subscription/UpgradeModal';
+import { useVoicePreferences } from '../hooks/useVoicePreferences';
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
+import VoiceSettingsPanel from '../components/settings/VoiceSettingsPanel';
 import type { SubscriptionStatus, ExperienceLevel } from '../types';
 
 export default function SettingsPage() {
@@ -16,6 +19,22 @@ export default function SettingsPage() {
   const toast = useToast();
   const { user, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { settings: voiceSettings, updateSettings: updateVoiceSettings, resetSettings: resetVoiceSettings } = useVoicePreferences();
+  const {
+    speak,
+    stop,
+    voices,
+    setVoice,
+    setRate,
+    setPitch,
+    setVolume,
+    isSupported: isSpeechSupported,
+  } = useSpeechSynthesis({
+    defaultRate: voiceSettings.rate,
+    defaultPitch: voiceSettings.pitch,
+    defaultVolume: voiceSettings.volume,
+    defaultVoiceName: voiceSettings.voiceName || undefined,
+  });
 
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +65,32 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sync speech hook with persisted voice preferences when they change
+  useEffect(() => {
+    setRate(voiceSettings.rate);
+    setPitch(voiceSettings.pitch);
+    setVolume(voiceSettings.volume);
+
+    if (voiceSettings.voiceName && voices.length > 0) {
+      const match = voices.find((v) => v.name === voiceSettings.voiceName);
+      if (match) {
+        setVoice(match);
+      }
+    }
+  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume, setPitch, setRate, setVoice, setVolume, voices]);
+
+  const handleTestVoice = () => {
+    if (!isSpeechSupported || !voiceSettings.enabled) return;
+    stop();
+    const sample = 'Hi! I am your interview mentor. Let us prepare together.';
+    speak(sample);
+  };
+
+  const voiceSummary = useMemo(() => {
+    const name = voiceSettings.voiceName || 'System default';
+    return `${name} • ${voiceSettings.rate.toFixed(2)}x • pitch ${voiceSettings.pitch.toFixed(2)} • volume ${voiceSettings.volume.toFixed(2)}`;
+  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume]);
 
   useEffect(() => {
     loadSubscription();
@@ -343,6 +388,31 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Voice & Conversation */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Volume2 className="w-5 h-5 text-electric-blue" />
+              <h2 className="heading-section">Voice & Conversation</h2>
+            </div>
+
+            <div className="mb-3 text-sm text-text-secondary">
+              Configure the mentor voice used in conversational mode. Settings are stored on this device.
+            </div>
+
+            <VoiceSettingsPanel
+              settings={voiceSettings}
+              voices={voices}
+              isSupported={isSpeechSupported}
+              onChange={updateVoiceSettings}
+              onReset={resetVoiceSettings}
+              onTestVoice={handleTestVoice}
+            />
+
+            <div className="mt-4 text-xs text-text-tertiary">
+              Current: {voiceSummary}
             </div>
           </div>
 

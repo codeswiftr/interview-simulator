@@ -74,6 +74,12 @@
 
 ## Completed Work
 
+### 2025-12-10: Conversational Voice Mentor Kickoff
+- Implemented `useSpeechSynthesis` hook wrapping the Web Speech API with voice selection, rate/pitch/volume controls, and graceful error handling.
+- Added unit tests covering voice loading, controls, pause/resume, and error scenarios.
+- Integrated TTS into `PreparationPage` detective stage with mentor voice toggle and status indicator (gracefully falls back when TTS unsupported).
+- Added `useVoicePreferences` (localStorage persistence) and `VoiceSettingsPanel` on Settings page for voice enable/voice choice/rate/pitch/volume/auto-listen with test voice action; preferences now drive PreparationPage TTS defaults.
+
 ### 2025-12-02: Soft Launch Readiness
 **Final Polish & Documentation:**
 - Fixed dark mode CSS variable issues (hex values instead of @theme refs)

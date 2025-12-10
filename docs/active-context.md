@@ -49,7 +49,10 @@ See `docs/PLAN.md` for detailed implementation phases.
 
 ### Active Tasks
 - Sprint 9 planning complete - ready for implementation
-- Next: Phase 1.1 - Create useSpeechSynthesis hook
+- Phase 1.1 - useSpeechSynthesis hook + tests ✅
+- Phase 1.2 - TTS integrated into PreparationPage ✅
+- Phase 1.3 - Voice Settings Panel & persistence ✅
+- Next: Phase 2.1 - Conversation state machine (useConversationMode)
 
 ## Recent Decisions
 
