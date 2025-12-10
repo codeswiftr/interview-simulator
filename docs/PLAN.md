@@ -1,6 +1,6 @@
 # Milestone: Onboarding & Prepare/Mentor Mode Enhancement
 
-## Status: Planning
+## Status: In Progress
 ## Target: Sprint 8 (Post-Sprint 7)
 
 ---
@@ -14,13 +14,13 @@ This milestone focuses on two key areas:
 **Current State**:
 - Onboarding: Basic WelcomeModal only (4-step tour for new users)
 - Preparation Mode: Comprehensive 4-stage flow, voice features 80% complete
-- **Critical Bug**: CoachOverlay props mismatch causing TypeScript errors
+- ✅ CoachOverlay props mismatch FIXED (was critical bug)
 
 ---
 
 ## Success Criteria
 
-- [ ] CoachOverlay props mismatch fixed (critical bug)
+- [x] CoachOverlay props mismatch fixed (critical bug) ✅ COMPLETE
 - [ ] Sprint 7 Phase 5-6 completed (Draft Voice Dictation + Polish)
 - [ ] Enhanced onboarding with guided first-session flow
 - [ ] Contextual tooltips for key features
