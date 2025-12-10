@@ -90,12 +90,12 @@ export function useConversationMode({
   }, [stt.isListening, stt.finalTranscript, mode, isActive, enabled, onUserFinish]);
 
   // Start conversation mode
+  // Note: Does NOT reset transcript - caller should reset when appropriate (after answer is submitted)
   const startConversation = useCallback(() => {
     if (!enabled) return;
     setIsActive(true);
     setMode('idle');
-    stt.resetTranscript();
-  }, [enabled, stt]);
+  }, [enabled]);
 
   // End conversation mode
   const endConversation = useCallback(() => {

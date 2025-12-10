@@ -173,6 +173,12 @@ export function useSpeechSynthesis(
       utterance.onresume = () => setIsPaused(false);
 
       utterance.onerror = (event) => {
+        // "canceled" is not a real error - it happens when speechSynthesis.cancel() is called
+        if (event?.error === 'canceled') {
+          setIsSpeaking(false);
+          setIsPaused(false);
+          return;
+        }
         setError(event?.error || 'Speech synthesis error');
         setIsSpeaking(false);
         setIsPaused(false);

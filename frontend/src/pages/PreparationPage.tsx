@@ -284,6 +284,9 @@ export default function PreparationPage() {
         { question: currentQuestion, answer: currentAnswer.trim(), order: prev.length + 1 },
       ]);
 
+      // Reset transcript for next question (conversation mode)
+      stt.resetTranscript();
+
       if (data.is_complete) {
         // Move to draft stage
         setStage('draft');
@@ -308,7 +311,7 @@ export default function PreparationPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [id, currentQuestion, currentAnswer, toast]);
+  }, [id, currentQuestion, currentAnswer, toast, stt]);
 
   // Generate draft
   const handleGenerateDraft = useCallback(async () => {
