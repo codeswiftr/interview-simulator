@@ -6,6 +6,7 @@ interface QuestionCardProps {
   question: Question;
   onPractice: (question: Question) => void;
   onPrepare?: (question: Question) => void;
+  prepRemaining?: number; // Show remaining preparations for free tier
 }
 
 const difficultyColors = {
@@ -26,7 +27,7 @@ const categoryColors = {
   system_design: 'bg-orange-100 text-orange-700',
 };
 
-export default function QuestionCard({ question, onPractice, onPrepare }: QuestionCardProps) {
+export default function QuestionCard({ question, onPractice, onPrepare, prepRemaining }: QuestionCardProps) {
   const expectedMinutes = Math.ceil(question.expected_duration_seconds / 60);
 
   return (
@@ -95,11 +96,23 @@ export default function QuestionCard({ question, onPractice, onPrepare }: Questi
           {onPrepare && (
             <button
               onClick={() => onPrepare(question)}
-              className="btn-secondary flex items-center gap-2 py-2 px-4"
-              title="Prepare Answer (Pro/Premium)"
+              className={cn(
+                'btn-secondary flex items-center gap-2 py-2 px-4',
+                prepRemaining === 0 && 'opacity-50'
+              )}
+              title={
+                prepRemaining !== undefined
+                  ? `${prepRemaining} free preparations remaining this month`
+                  : 'Prepare Answer'
+              }
             >
               <Sparkles size={16} />
               Prepare
+              {prepRemaining !== undefined && (
+                <span className="text-xs bg-electric-blue/20 text-electric-blue px-1.5 py-0.5 rounded-full">
+                  {prepRemaining}
+                </span>
+              )}
             </button>
           )}
           <button

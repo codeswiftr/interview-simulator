@@ -4,6 +4,7 @@ import { BookOpen, AlertCircle, Search } from 'lucide-react';
 import { questionsAPI, interviewsAPI, preparationAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { usePrepUsage } from '../hooks/usePrepUsage';
 import QuestionCard from '../components/questions/QuestionCard';
 import QuestionFilters, { type QuestionFiltersState } from '../components/questions/QuestionFilters';
 import UpgradeModal from '../components/subscription/UpgradeModal';
@@ -19,6 +20,7 @@ export default function QuestionsPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isPracticing, setIsPracticing] = useState(false);
   const { user } = useAuth();
+  const { isLimitReached, remaining, prepLimit, incrementUsage } = usePrepUsage();
 
   const [filters, setFilters] = useState<QuestionFiltersState>({
     category: '',
@@ -116,9 +118,23 @@ export default function QuestionsPage() {
   // Handle prepare answer
   const handlePrepare = useCallback(
     async (question: Question) => {
+      // Check free tier limits (Pro/Team users bypass)
+      const isPaidUser = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
+      if (!isPaidUser && isLimitReached) {
+        setShowUpgradeModal(true);
+        toast.error('Limit reached', `Free tier allows ${prepLimit} preparations per month. Upgrade for unlimited.`);
+        return;
+      }
+
       try {
         const response = await preparationAPI.start(question.id);
         const { preparation_id } = response.data;
+
+        // Track usage for free tier
+        if (!isPaidUser) {
+          incrementUsage();
+        }
+
         toast.success('Preparation started', 'Answer the questions to get a personalized draft');
         navigate(`/preparation/${preparation_id}`);
       } catch (err: unknown) {
@@ -131,11 +147,11 @@ export default function QuestionsPage() {
         }
       }
     },
-    [navigate, toast]
+    [navigate, toast, user?.subscription_tier, isLimitReached, prepLimit, incrementUsage]
   );
 
-  // Check if user has access to preparation feature
-  const canPrepare = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
+  // All users can now access prepare (with usage limits for free tier)
+  const isPaidUser = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
 
   return (
     <div className="min-h-screen bg-surface-primary">
@@ -221,7 +237,8 @@ export default function QuestionsPage() {
                 key={question.id}
                 question={question}
                 onPractice={handlePractice}
-                onPrepare={canPrepare ? handlePrepare : undefined}
+                onPrepare={handlePrepare}
+                prepRemaining={isPaidUser ? undefined : remaining}
               />
             ))}
           </div>
