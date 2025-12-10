@@ -183,6 +183,70 @@ class PreparationStateResponse(BaseModel):
     attempts: list[DeliveryAttemptRead]
 
 
+class PreparationListItem(BaseModel):
+    id: UUID
+    question_id: UUID
+    question_content: str
+    stage: str
+    draft_answer: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PreparationsListResponse(BaseModel):
+    preparations: list[PreparationListItem]
+
+
+@router.get("/", response_model=PreparationsListResponse)
+async def list_preparations(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PreparationsListResponse:
+    """List all preparation sessions for the current user.
+    
+    Returns preparations ordered by most recently updated first.
+    
+    Args:
+        current_user: Authenticated user
+        session: Database session
+        
+    Returns:
+        PreparationsListResponse with list of user's preparations
+    """
+    # Check tier
+    check_preparation_tier(current_user)
+    
+    # Get all preparations for user
+    result = await session.exec(
+        select(AnswerPreparation)
+        .where(AnswerPreparation.user_id == current_user.id)
+        .order_by(AnswerPreparation.updated_at.desc())
+    )
+    preparations = list(result.all())
+    
+    # Fetch question content for each preparation
+    preparation_items = []
+    for prep in preparations:
+        question_result = await session.exec(
+            select(Question).where(Question.id == prep.question_id)
+        )
+        question = question_result.first()
+        
+        preparation_items.append(
+            PreparationListItem(
+                id=prep.id,
+                question_id=prep.question_id,
+                question_content=question.content if question else "Unknown question",
+                stage=get_stage_value(prep.stage),
+                draft_answer=prep.draft_answer,
+                created_at=prep.created_at,
+                updated_at=prep.updated_at,
+            )
+        )
+    
+    return PreparationsListResponse(preparations=preparation_items)
+
+
 @router.get("/{preparation_id}/state", response_model=PreparationStateResponse)
 async def get_preparation_state(
     preparation_id: UUID,

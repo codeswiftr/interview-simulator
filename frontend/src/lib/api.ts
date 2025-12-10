@@ -299,6 +299,18 @@ export const subscriptionsAPI = {
 
 // User API
 export const preparationAPI = {
+  getAll: () =>
+    api.get<{
+      preparations: Array<{
+        id: string;
+        question_id: string;
+        question_content: string;
+        stage: string;
+        draft_answer: string | null;
+        created_at: string;
+        updated_at: string;
+      }>;
+    }>('/preparation/'),
   start: (questionId: string) =>
     api.post<{ preparation_id: string; stage: string; message: string }>('/preparation/start', {
       question_id: questionId,

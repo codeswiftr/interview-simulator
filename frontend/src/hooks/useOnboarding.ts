@@ -6,11 +6,15 @@ interface OnboardingState {
   hasSeenWelcome: boolean;
   completedSteps: string[];
   dismissedAt?: string;
+  firstSessionCreated?: boolean;
+  preparationTourCompleted?: boolean;
 }
 
 const defaultState: OnboardingState = {
   hasSeenWelcome: false,
   completedSteps: [],
+  firstSessionCreated: false,
+  preparationTourCompleted: false,
 };
 
 export function useOnboarding() {
@@ -59,6 +63,27 @@ export function useOnboarding() {
     [state.completedSteps]
   );
 
+  // Mark first session as created
+  const markFirstSessionCreated = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      firstSessionCreated: true,
+    }));
+  }, []);
+
+  // Mark preparation tour as completed
+  const markPreparationTourCompleted = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      preparationTourCompleted: true,
+    }));
+  }, []);
+
+  // Check if should show first session prompt
+  const shouldShowFirstSessionPrompt = useCallback(() => {
+    return state.hasSeenWelcome && !state.firstSessionCreated;
+  }, [state.hasSeenWelcome, state.firstSessionCreated]);
+
   // Reset onboarding (for testing/debugging)
   const resetOnboarding = useCallback(() => {
     setState(defaultState);
@@ -76,6 +101,9 @@ export function useOnboarding() {
     markWelcomeSeen,
     completeStep,
     isStepCompleted,
+    markFirstSessionCreated,
+    markPreparationTourCompleted,
+    shouldShowFirstSessionPrompt: shouldShowFirstSessionPrompt(),
     resetOnboarding,
     triggerNewUserOnboarding,
   };

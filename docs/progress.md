@@ -91,6 +91,34 @@
 - Persisted strengths/improvements on delivery ratings and exposed comparison data
 - Updated PreparationPage to hydrate from state, show question context, and keep attempts visible across sessions
 
+### 2025-12-09: Onboarding & Mentor Mode Enhancement
+**Phase 1: CoachOverlay Compatibility**
+- Fixed CoachOverlay props mismatch - added alias props (hint/isLoading/isStreaming/error/onToggle/isCollapsed) for PreparationPage
+- Made InterviewPage props optional for backward compatibility
+- Added controlled/uncontrolled collapse support
+
+**Phase 2: Draft Voice Dictation**
+- Added VoiceInputButton to draft editor with append and selection-replace modes
+- Implemented cursor-aware text insertion (replaces selection or appends at cursor)
+- Added browser support detection with fallback messaging
+
+**Phase 3: First Session Onboarding**
+- Created FirstSessionPrompt modal component
+- Extended useOnboarding hook with firstSessionCreated and preparationTourCompleted tracking
+- Chained WelcomeModal → FirstSessionPrompt → Create Session flow
+- Added dashboard "Get Started" card for new users
+
+**Phase 4: Contextual Tooltips**
+- Created reusable ContextualTooltip component (accessible, mobile-safe)
+- Added tooltips to PreparationPage stages (detective Q&A, draft generation, practice tips)
+- Added tooltips to Dashboard interview sessions list
+
+**Phase 5: Mentor Hint History**
+- Created HintHistoryPanel component (collapsible, scrollable)
+- Implemented hint tracking in PreparationPage (practice stage)
+- Added hint history display in practice stage UI
+- Limited to last 20 hints per session for performance
+
 ### 2025-11-28: Sprint 4 Major Progress
 **Audio Analysis Pipeline (Epic 1):**
 - Implemented real Librosa audio analysis replacing mock values

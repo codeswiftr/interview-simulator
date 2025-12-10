@@ -287,6 +287,41 @@ describe('CoachOverlay', () => {
     });
   });
 
+  describe('Preparation alias props', () => {
+    it('should render dynamic hint via alias props without timers', () => {
+      render(
+        <CoachOverlay
+          onClose={vi.fn()}
+          hint="Alias hint"
+          isLoading={false}
+          isStreaming={true}
+        />
+      );
+
+      expect(screen.getByText('AI Coach')).toBeInTheDocument();
+      expect(screen.getByText('Alias hint')).toBeInTheDocument();
+    });
+
+    it('should call onToggle when provided in alias mode', async () => {
+      const user = userEvent.setup();
+      const onToggle = vi.fn();
+
+      render(
+        <CoachOverlay
+          onClose={vi.fn()}
+          hint="Toggle test"
+          onToggle={onToggle}
+          isCollapsed={true}
+        />
+      );
+
+      const toggleButton = screen.getByRole('button');
+      await user.click(toggleButton);
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Mobile Auto-Collapse', () => {
     it('should set up timer on mobile viewport', () => {
       // Mock mobile viewport

@@ -48,6 +48,7 @@ export default function WelcomeModal({ isOpen, onClose, onStartInterview, userNa
 
   const handleNext = () => {
     if (isLastStep) {
+      // On last step, complete welcome and trigger next onboarding step
       onStartInterview();
     } else {
       setCurrentStep((prev) => prev + 1);

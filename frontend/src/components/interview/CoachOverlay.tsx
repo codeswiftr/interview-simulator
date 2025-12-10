@@ -2,38 +2,80 @@ import { useState, useEffect } from 'react';
 import { Lightbulb, Clock, X, ChevronRight, ChevronLeft, MessageSquare, Info, Loader2, AlertCircle } from 'lucide-react';
 
 interface CoachOverlayProps {
-  isVisible: boolean;
+  // InterviewPage (full context)
+  isVisible?: boolean;
+  questionType?: string;
+  elapsedTime?: number;
+  expectedDuration?: number;
+
+  // Shared
   onClose: () => void;
-  questionType: string;
-  elapsedTime: number;
-  expectedDuration: number;
+
+  // Dynamic hints (canonical)
   dynamicHint?: string | null;
   isHintLoading?: boolean;
   isHintStreaming?: boolean;
   hintError?: string | null;
+
+  // Simplified aliases (PreparationPage)
+  hint?: string | null;
+  isLoading?: boolean;
+  isStreaming?: boolean;
+  error?: string | null;
+  onToggle?: () => void;
+  isCollapsed?: boolean;
 }
 
 export default function CoachOverlay({
-  isVisible,
+  isVisible = true,
   onClose,
-  questionType,
-  elapsedTime,
-  expectedDuration,
+  questionType: rawQuestionType,
+  elapsedTime: rawElapsedTime,
+  expectedDuration: rawExpectedDuration,
   dynamicHint,
-  isHintLoading = false,
-  isHintStreaming = false,
-  hintError = null
+  isHintLoading,
+  isHintStreaming,
+  hintError,
+  hint,
+  isLoading,
+  isStreaming,
+  error,
+  onToggle,
+  isCollapsed,
 }: CoachOverlayProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [internalExpanded, setInternalExpanded] = useState(isCollapsed !== true);
   const [activeHint, setActiveHint] = useState(0);
+
+  // Derive resolved props for backwards compatibility
+  const resolvedHint = dynamicHint ?? hint ?? null;
+  const resolvedLoading = isHintLoading ?? isLoading ?? false;
+  const resolvedStreaming = isHintStreaming ?? isStreaming ?? false;
+  const resolvedError = hintError ?? error ?? null;
+  const questionType = rawQuestionType ?? 'behavioral';
+  const elapsedTime = rawElapsedTime ?? 0;
+  const expectedDuration = rawExpectedDuration ?? 0;
+  const shouldBeExpanded = isCollapsed !== undefined ? !isCollapsed : internalExpanded;
+  const isExpanded = shouldBeExpanded;
 
   // Auto-collapse on mobile after 5 seconds
   useEffect(() => {
+    if (isCollapsed !== undefined) return; // controlled mode, don't override
     if (window.innerWidth < 768) {
-      const timer = setTimeout(() => setIsExpanded(false), 5000);
+      const timer = setTimeout(() => setInternalExpanded(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isCollapsed]);
+
+  // Sync internal expanded state when controlled prop changes
+  // Use derived state - no effect needed
+
+  const handleToggle = () => {
+    if (onToggle) {
+      onToggle();
+    } else {
+      setInternalExpanded(prev => !prev);
+    }
+  };
 
   if (!isVisible) return null;
 
@@ -71,14 +113,14 @@ export default function CoachOverlay({
 
   const hints = getHints();
   const timeLeft = Math.max(0, expectedDuration - elapsedTime);
-  const isTimeRunningOut = timeLeft < 60 && timeLeft > 0;
+  const isTimeRunningOut = expectedDuration > 0 && timeLeft < 60 && timeLeft > 0;
 
   return (
     <div className={`fixed right-4 top-24 z-40 transition-all duration-300 ease-in-out ${isExpanded ? 'w-80' : 'w-12'}`}>
       <div className="bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md border border-electric-blue/30 shadow-xl rounded-2xl overflow-hidden">
         {/* Header / Toggle */}
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={handleToggle}
           className="w-full p-3 flex items-center justify-between bg-electric-blue/10 hover:bg-electric-blue/20 transition-colors"
         >
           {isExpanded ? (
@@ -108,13 +150,13 @@ export default function CoachOverlay({
 
             {/* Hint Carousel */}
             <div className="relative bg-surface-secondary rounded-xl p-4 min-h-[140px] flex flex-col justify-between border border-border-light">
-              {dynamicHint ? (
+              {resolvedHint ? (
                 // Dynamic AI-generated hint
                 <div>
                   <h4 className="font-bold text-text-primary mb-1 flex items-center gap-2">
                     <MessageSquare size={14} className="text-electric-blue" />
                     AI Suggestion
-                    {isHintStreaming && (
+                    {resolvedStreaming && (
                       <span className="ml-1 inline-flex items-center gap-1 text-xs text-electric-blue">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-electric-blue opacity-75"></span>
@@ -125,19 +167,19 @@ export default function CoachOverlay({
                     )}
                   </h4>
                   <p className="text-sm text-text-secondary leading-relaxed relative">
-                    {dynamicHint}
-                    {isHintStreaming && (
+                    {resolvedHint}
+                    {resolvedStreaming && (
                       <span className="inline-block w-0.5 h-4 bg-electric-blue ml-1 animate-pulse" />
                     )}
                   </p>
-                  {isHintLoading && !isHintStreaming && (
+                  {resolvedLoading && !resolvedStreaming && (
                     <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
                       <Loader2 size={12} className="animate-spin" />
                       <span>Updating hint...</span>
                     </div>
                   )}
                 </div>
-              ) : hintError ? (
+              ) : resolvedError ? (
                 // Error state - fallback to static hints
                 <div>
                   <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-400">

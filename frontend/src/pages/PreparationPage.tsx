@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2 } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
@@ -7,7 +7,9 @@ import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useCoachingHint } from '../hooks/useCoachingHint';
 import RecordingDeck from '../components/interview/RecordingDeck';
 import CoachOverlay from '../components/interview/CoachOverlay';
+import HintHistoryPanel from '../components/interview/HintHistoryPanel';
 import { VoiceInputButton } from '../components/common/VoiceInputButton';
+import ContextualTooltip from '../components/common/ContextualTooltip';
 import { getExtensionForMimeType } from '../lib/audio-utils';
 import type { AxiosError } from 'axios';
 
@@ -66,8 +68,12 @@ export default function PreparationPage() {
   const [editedDraft, setEditedDraft] = useState<string>('');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState<string>('');
+  const [draftInterimTranscript, setDraftInterimTranscript] = useState<string>('');
   const [liveTranscript, setLiveTranscript] = useState<string>('');
   const [showCoach, setShowCoach] = useState(true);
+  const [hintHistory, setHintHistory] = useState<Array<{ timestamp: Date; hint: string; stage: 'detective' | 'practice' }>>([]);
+  const [isHintHistoryExpanded, setIsHintHistoryExpanded] = useState(false);
+  const draftTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Audio recording hook
   const {
@@ -402,6 +408,29 @@ export default function PreparationPage() {
     enabled: isRecording && showCoach && stage === 'practice' && !!draft
   });
 
+  // Track hints in history when they're received
+  useEffect(() => {
+    if (coachingHint && !isHintStreaming && !isHintLoading) {
+      // Only add if it's a new hint (not already in history)
+      setHintHistory((prev) => {
+        const lastHint = prev[prev.length - 1];
+        // Avoid duplicates - check if last hint is the same
+        if (lastHint && lastHint.hint === coachingHint) {
+          return prev;
+        }
+        const hintStage: 'detective' | 'practice' = stage === 'practice' ? 'practice' : 'detective';
+        return [
+          ...prev,
+          {
+            timestamp: new Date(),
+            hint: coachingHint,
+            stage: hintStage,
+          },
+        ].slice(-20); // Keep last 20 hints
+      });
+    }
+  }, [coachingHint, isHintStreaming, isHintLoading, stage]);
+
   const handleTranscriptChange = useCallback((transcript: string) => {
     setLiveTranscript(transcript);
     // Transcript handling can be added here if needed in future
@@ -561,7 +590,15 @@ export default function PreparationPage() {
         {stage === 'detective' && !isComplete && (
           <div className="card p-8">
             <div className="mb-6">
-              <h2 className="heading-card mb-2">Step 1: Answer Questions</h2>
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="heading-card">Step 1: Answer Questions</h2>
+                <ContextualTooltip
+                  content="Our AI coach will ask you 3-5 clarifying questions to understand your experience. Answer honestly and with specific examples - this helps us create a personalized, authentic draft answer for you."
+                  position="right"
+                  trigger="click"
+                  title="How it works"
+                />
+              </div>
               <p className="text-text-secondary">
                 Help us understand your experience so we can create a personalized answer.
               </p>
@@ -689,7 +726,15 @@ export default function PreparationPage() {
           <div className="card p-8">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h2 className="heading-card mb-2">Your Personalized Draft</h2>
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="heading-card">Your Personalized Draft</h2>
+                  <ContextualTooltip
+                    content="This draft was generated using your answers from the questions above. It follows the STAR method (Situation, Task, Action, Result) and is tailored to your experience level. You can edit it before practicing."
+                    position="right"
+                    trigger="click"
+                    title="AI-Generated Draft"
+                  />
+                </div>
                 <p className="text-text-secondary">
                   Review and edit your draft answer. You can practice delivering it next.
                 </p>
@@ -707,12 +752,75 @@ export default function PreparationPage() {
 
             {isEditingDraft ? (
               <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <label className="block text-sm font-medium text-text-primary">
+                      Edit Draft
+                    </label>
+                    <span className="text-xs text-text-tertiary">
+                      (Select text to replace, or click to append)
+                    </span>
+                  </div>
+                  <VoiceInputButton
+                    onTranscript={(text) => {
+                      const textarea = draftTextareaRef.current;
+                      if (!textarea) return;
+
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const currentValue = editedDraft;
+
+                      if (start !== end) {
+                        // Replace selection mode
+                        const newValue =
+                          currentValue.substring(0, start) +
+                          text +
+                          currentValue.substring(end);
+                        setEditedDraft(newValue);
+                        // Restore cursor position after the inserted text
+                        setTimeout(() => {
+                          textarea.focus();
+                          textarea.setSelectionRange(start + text.length, start + text.length);
+                        }, 0);
+                      } else {
+                        // Append mode - add to end or at cursor with space
+                        const insertText = start === currentValue.length || currentValue[start - 1] === ' ' || currentValue[start - 1] === '\n'
+                          ? text
+                          : ` ${text}`;
+                        const newValue =
+                          currentValue.substring(0, start) +
+                          insertText +
+                          currentValue.substring(end);
+                        setEditedDraft(newValue);
+                        // Restore cursor position after the inserted text
+                        setTimeout(() => {
+                          textarea.focus();
+                          textarea.setSelectionRange(start + insertText.length, start + insertText.length);
+                        }, 0);
+                      }
+                      setDraftInterimTranscript('');
+                    }}
+                    onInterim={(text) => {
+                      setDraftInterimTranscript(text);
+                    }}
+                    disabled={isSavingDraft}
+                    placeholder="Listening..."
+                    size="sm"
+                  />
+                </div>
                 <textarea
+                  ref={draftTextareaRef}
                   value={editedDraft}
                   onChange={(e) => setEditedDraft(e.target.value)}
                   className="w-full min-h-[300px] p-4 border border-border-light rounded-lg bg-surface-primary text-text-primary font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-electric-blue"
                   placeholder="Edit your draft answer..."
                 />
+                {/* Interim transcript preview for draft */}
+                {draftInterimTranscript && (
+                  <div className="mt-2 p-2 bg-electric-blue/10 border border-electric-blue/20 rounded text-sm text-text-secondary italic">
+                    <span className="text-electric-blue">Preview:</span> {draftInterimTranscript}
+                  </div>
+                )}
                 <div className="flex items-center gap-4 mt-4">
                   <button
                     onClick={handleSaveDraft}
@@ -791,7 +899,15 @@ export default function PreparationPage() {
 
             {/* Recording Interface */}
             <div className="card p-6">
-              <h2 className="heading-card mb-4">Practice Your Delivery</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="heading-card">Practice Your Delivery</h2>
+                <ContextualTooltip
+                  content="Record yourself speaking your draft answer naturally. Practice multiple times to improve. Our AI coach will provide real-time hints while you speak. After recording, you can get feedback comparing your delivery to your draft."
+                  position="right"
+                  trigger="click"
+                  title="Practice Tips"
+                />
+              </div>
               <p className="text-text-secondary mb-6">
                 Record yourself delivering your prepared answer. You can practice multiple times.
               </p>
@@ -837,6 +953,17 @@ export default function PreparationPage() {
                   <Loader2 size={20} className="animate-spin text-electric-blue mx-auto mb-2" />
                   <p className="text-text-secondary text-sm">Submitting and transcribing...</p>
                   <p className="text-xs text-text-tertiary mt-1">This may take 10-20 seconds</p>
+                </div>
+              )}
+
+              {/* Hint History Panel */}
+              {hintHistory.length > 0 && (
+                <div className="mt-6">
+                  <HintHistoryPanel
+                    hints={hintHistory}
+                    isExpanded={isHintHistoryExpanded}
+                    onToggle={() => setIsHintHistoryExpanded(!isHintHistoryExpanded)}
+                  />
                 </div>
               )}
             </div>

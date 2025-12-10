@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOnboarding } from '../hooks/useOnboarding';
-import { interviewsAPI, userAPI } from '../lib/api';
+import { interviewsAPI, userAPI, preparationAPI } from '../lib/api';
 import StatsOverview from '../components/dashboard/StatsOverview';
 import ProgressChart from '../components/dashboard/ProgressChart';
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown';
@@ -13,6 +13,8 @@ import InterviewCard from '../components/interview/InterviewCard';
 import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
+import FirstSessionPrompt from '../components/onboarding/FirstSessionPrompt';
+import ContextualTooltip from '../components/common/ContextualTooltip';
 import ComingSoonBadge from '../components/ui/ComingSoonBadge';
 import { Skeleton, SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
@@ -42,8 +44,22 @@ interface ReadinessScore {
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { shouldShowWelcome, markWelcomeSeen } = useOnboarding();
+  const {
+    shouldShowWelcome,
+    markWelcomeSeen,
+    shouldShowFirstSessionPrompt,
+    markFirstSessionCreated,
+  } = useOnboarding();
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
+  const [preparations, setPreparations] = useState<Array<{
+    id: string;
+    question_id: string;
+    question_content: string;
+    stage: string;
+    draft_answer: string | null;
+    created_at: string;
+    updated_at: string;
+  }>>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   const [readinessScore, setReadinessScore] = useState<ReadinessScore | null>(null);
@@ -52,6 +68,7 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showFirstSessionPrompt, setShowFirstSessionPrompt] = useState(false);
 
   // Show welcome modal for new users after data loads
   useEffect(() => {
@@ -60,15 +77,34 @@ export default function DashboardPage() {
     }
   }, [isLoading, shouldShowWelcome, sessions.length]);
 
+  // Show first session prompt after welcome is seen
+  useEffect(() => {
+    if (!isLoading && shouldShowFirstSessionPrompt && sessions.length === 0) {
+      setShowFirstSessionPrompt(true);
+    }
+  }, [isLoading, shouldShowFirstSessionPrompt, sessions.length]);
+
   const handleWelcomeClose = () => {
     markWelcomeSeen();
     setShowWelcomeModal(false);
   };
 
-  const handleWelcomeStartInterview = () => {
+  const handleWelcomeComplete = () => {
     markWelcomeSeen();
     setShowWelcomeModal(false);
+    // Show first session prompt after welcome
+    setShowFirstSessionPrompt(true);
+  };
+
+  const handleFirstSessionCreate = () => {
+    markFirstSessionCreated();
+    setShowFirstSessionPrompt(false);
     setIsModalOpen(true);
+  };
+
+  const handleFirstSessionSkip = () => {
+    markFirstSessionCreated();
+    setShowFirstSessionPrompt(false);
   };
 
   const loadInterviews = useCallback(async () => {
@@ -85,9 +121,21 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const loadPreparations = useCallback(async () => {
+    try {
+      // Only load if user has Pro/Team tier
+      if (user?.subscription_tier === 'pro' || user?.subscription_tier === 'team') {
+        const response = await preparationAPI.getAll();
+        setPreparations(response.data.preparations);
+      }
+    } catch (err) {
+      // Silently fail - user might not have access
+    }
+  }, [user?.subscription_tier]);
+
   const loadData = useCallback(async () => {
-    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore()]);
-  }, [loadInterviews]);
+    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore(), loadPreparations()]);
+  }, [loadInterviews, loadPreparations]);
 
   useEffect(() => {
     loadData();
@@ -124,6 +172,12 @@ export default function DashboardPage() {
     try {
       const response = await interviewsAPI.create(data);
       const newSession = response.data;
+      // Mark first session as created if this is the first one
+      if (sessions.length === 0) {
+        markFirstSessionCreated();
+      }
+      await loadInterviews();
+      setIsModalOpen(false);
       navigate(`/interview/${newSession.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
@@ -442,10 +496,65 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Preparation Sessions (Pro/Team only) */}
+        {!isLoading && preparations.length > 0 && (
+          <div className="animate-slide-up mb-8" style={{ animationDelay: '0.15s' }}>
+            <div className="flex items-center gap-2 mb-6">
+              <h2 className="heading-section">Answer Preparations</h2>
+              <ContextualTooltip
+                content="Resume your answer preparation sessions. Click to continue where you left off - answer questions, review your draft, or practice your delivery."
+                position="right"
+                trigger="click"
+                title="Preparation Mode"
+              />
+            </div>
+            <div className="grid gap-4">
+              {preparations.map((prep) => (
+                <div
+                  key={prep.id}
+                  onClick={() => navigate(`/preparation/${prep.id}`)}
+                  className="card p-6 hover:border-electric-blue cursor-pointer transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="heading-card mb-2 line-clamp-2">{prep.question_content}</h3>
+                      <div className="flex items-center gap-4 text-sm text-text-secondary">
+                        <span className="badge badge-outline">
+                          {prep.stage === 'detective' ? 'Answering Questions' :
+                            prep.stage === 'draft' ? 'Reviewing Draft' :
+                              prep.stage === 'practice' ? 'Practicing' :
+                                'Complete'}
+                        </span>
+                        <span className="text-text-tertiary">
+                          Updated {new Date(prep.updated_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <Sparkles size={20} className="text-electric-blue shrink-0" />
+                  </div>
+                  {prep.draft_answer && (
+                    <p className="text-sm text-text-secondary line-clamp-2 mt-2">
+                      {prep.draft_answer.substring(0, 150)}...
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Interview History */}
         {!isLoading && sessions.length > 0 && (
           <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <h2 className="heading-section mb-6">Recent Interviews</h2>
+            <div className="flex items-center gap-2 mb-6">
+              <h2 className="heading-section">Recent Interviews</h2>
+              <ContextualTooltip
+                content="View and continue your practice sessions. Click on any session to see feedback or resume recording. Completed sessions show your scores and detailed analysis."
+                position="right"
+                trigger="click"
+                title="Interview Sessions"
+              />
+            </div>
             <div className="grid gap-4">
               {sessions.map((session) => (
                 <InterviewCard
@@ -511,8 +620,15 @@ export default function DashboardPage() {
       <WelcomeModal
         isOpen={showWelcomeModal}
         onClose={handleWelcomeClose}
-        onStartInterview={handleWelcomeStartInterview}
+        onStartInterview={handleWelcomeComplete}
         userName={user?.full_name?.split(' ')[0]}
+      />
+
+      {/* First Session Prompt */}
+      <FirstSessionPrompt
+        isOpen={showFirstSessionPrompt}
+        onCreateSession={handleFirstSessionCreate}
+        onSkip={handleFirstSessionSkip}
       />
     </div>
   );

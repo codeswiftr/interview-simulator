@@ -112,6 +112,50 @@ async def test_start_preparation_requires_pro_tier(client, session_override):
 
 
 @pytest.mark.asyncio
+async def test_list_preparations(client, session_override):
+    """Test listing user's preparations."""
+    token = await register_and_login_pro(client, session_override, email="list@example.com")
+    
+    # Create a question
+    question = Question(
+        content="Test question for listing",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+    
+    # Create a preparation
+    from app.models.user import User
+    result = await session_override.exec(select(User).where(User.email == "list@example.com"))
+    user = result.first()
+    
+    preparation = AnswerPreparation(
+        user_id=user.id,
+        question_id=question.id,
+        stage=PreparationStage.DRAFT,
+        draft_answer="Test draft",
+    )
+    session_override.add(preparation)
+    await session_override.commit()
+    await session_override.refresh(preparation)
+    
+    # List preparations
+    response = await client.get(
+        "/api/v1/preparation/",
+        headers={"Authorization": token},
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "preparations" in data
+    assert len(data["preparations"]) == 1
+    assert data["preparations"][0]["id"] == str(preparation.id)
+    assert data["preparations"][0]["question_content"] == "Test question for listing"
+
+
+@pytest.mark.asyncio
 async def test_start_preparation_success(client, session_override):
     """Test successful preparation start."""
     token = await register_and_login_pro(client, session_override, email="pro@example.com")
