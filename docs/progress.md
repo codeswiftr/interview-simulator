@@ -74,11 +74,35 @@
 
 ## Completed Work
 
-### 2025-12-10: Conversational Voice Mentor Kickoff
-- Implemented `useSpeechSynthesis` hook wrapping the Web Speech API with voice selection, rate/pitch/volume controls, and graceful error handling.
-- Added unit tests covering voice loading, controls, pause/resume, and error scenarios.
-- Integrated TTS into `PreparationPage` detective stage with mentor voice toggle and status indicator (gracefully falls back when TTS unsupported).
-- Added `useVoicePreferences` (localStorage persistence) and `VoiceSettingsPanel` on Settings page for voice enable/voice choice/rate/pitch/volume/auto-listen with test voice action; preferences now drive PreparationPage TTS defaults.
+### 2025-12-10: Sprint 9 - Conversational Voice Mentor COMPLETE
+
+**Epic 1: Voice Mentor TTS Integration**
+- Implemented `useSpeechSynthesis` hook wrapping Web Speech API with voice selection, rate/pitch/volume controls
+- Integrated TTS into `PreparationPage` detective stage - mentor speaks questions aloud
+- Created `useVoicePreferences` for localStorage persistence
+- Built `VoiceSettingsPanel` on Settings page with voice enable/choice/rate/pitch/volume/auto-listen
+
+**Epic 2: Conversational Mode - Phone-like Experience**
+- Created `useConversationMode` hook with state machine (idle → mentor_speaking → user_turn → processing)
+- Built `ConversationIndicator` component showing turn-taking UI
+- Implemented auto-listen mode after mentor speaks
+- Added interrupt handling (stop TTS when user speaks)
+
+**Epic 3: Premium Voice Quality**
+- Created `voice-quality.ts` with voice ranking utilities
+- Added premium voice badges to VoiceSettingsPanel
+- Implemented voice quality assessment (premium vs standard indicators)
+
+**Epic 4: Free Tier Prepare Access**
+- Created `usePrepUsage` hook (3/month limit, localStorage tracking)
+- Updated `QuestionsPage` - all users can now access prepare
+- Updated `QuestionCard` to show remaining preparations badge
+
+**Post-Sprint Bugfix:**
+- Fixed dual STT conflict between VoiceInputButton and conversation mode
+- Hide VoiceInputButton when conversation mode active
+- Added Start/Done speaking buttons and live transcript preview
+- ConversationIndicator now shows isListening state
 
 ### 2025-12-02: Soft Launch Readiness
 **Final Polish & Documentation:**

@@ -2,17 +2,17 @@
 
 ## Current Status
 
-**Phase**: Sprint 9 Planning - Conversational Voice Mentor
+**Phase**: Sprint 9 COMPLETE - Conversational Voice Mentor
 **Last Updated**: 2025-12-10
 
 ## What We're Working On
 
-### Sprint 9: Conversational Voice Mentor (Planned)
+### Sprint 9: Conversational Voice Mentor ✅ COMPLETE
 Transform text-based mentor Q&A into a phone-call-like voice conversation:
-- [ ] Epic 1: Voice Mentor TTS Integration (ICE 8.4/10)
-- [ ] Epic 2: Conversational Mode - Phone-like Experience (ICE 7.2/10)
-- [ ] Epic 3: Premium Voice Quality (ICE 5.4/10)
-- [ ] Epic 4: Enable Prepare for Free Tier (ICE 7.0/10)
+- [x] Epic 1: Voice Mentor TTS Integration (ICE 8.4/10)
+- [x] Epic 2: Conversational Mode - Phone-like Experience (ICE 7.2/10)
+- [x] Epic 3: Premium Voice Quality (ICE 5.4/10)
+- [x] Epic 4: Enable Prepare for Free Tier (ICE 7.0/10)
 
 See `docs/PLAN.md` for detailed implementation phases.
 
@@ -46,23 +46,33 @@ See `docs/PLAN.md` for detailed implementation phases.
 - [x] Epic 6: AI Ghostwriter MVP (Detective Q&A + Draft Generation)
 - [x] Sprint 7: Voice-Enabled Practice Mode
 - [x] Sprint 8: Onboarding & Mentor Mode Enhancement (Complete 2025-12-10)
+- [x] Sprint 9: Conversational Voice Mentor (Complete 2025-12-10)
 
 ### Active Tasks
-- Sprint 9 planning complete - ready for implementation
-- Phase 1.1 - useSpeechSynthesis hook + tests ✅
-- Phase 1.2 - TTS integrated into PreparationPage ✅
-- Phase 1.3 - Voice Settings Panel & persistence ✅
-- Next: Phase 2.1 - Conversation state machine (useConversationMode)
+- Sprint 9 complete - all epics implemented
+- Next: Sprint 10 planning (TBD)
 
 ## Recent Decisions
 
-### 2025-12-10: Sprint 9 - Conversational Voice Mentor Planning
-- Identified gap: Mentor displays text but never "speaks"
-- Solution: Web Speech API SpeechSynthesis (browser-native, free)
-- 4 epics planned with ICE scoring
-- Key hooks: useSpeechSynthesis, useConversationMode
-- Phone-call-like turn-taking: mentor_speaking → user_turn → processing
-- Free tier users to get 3 preparations/month (currently Pro/Team only)
+### 2025-12-10: Sprint 9 - Conversational Voice Mentor COMPLETE
+**Implementation:**
+- Epic 1: useSpeechSynthesis hook + TTS integration in PreparationPage
+- Epic 2: useConversationMode state machine (mentor_speaking → user_turn → processing)
+- Epic 3: Voice quality assessment with premium badges
+- Epic 4: Free tier prepare access (3/month limit, usePrepUsage hook)
+
+**Key Files Created:**
+- `frontend/src/hooks/useSpeechSynthesis.ts` - TTS wrapper
+- `frontend/src/hooks/useConversationMode.ts` - Conversation state machine
+- `frontend/src/hooks/useVoicePreferences.ts` - Settings persistence
+- `frontend/src/hooks/usePrepUsage.ts` - Free tier usage tracking
+- `frontend/src/components/interview/ConversationIndicator.tsx` - Turn indicator UI
+- `frontend/src/components/settings/VoiceSettingsPanel.tsx` - Voice settings UI
+
+**Post-Sprint Bugfix:**
+- Fixed dual STT conflict (VoiceInputButton vs conversation mode)
+- Hide VoiceInputButton when conversation mode active
+- Added proper listening indicators and Start/Done speaking buttons
 
 ### 2025-12-10: Sprint 8 - Onboarding & Mentor Mode Enhancement
 - Fixed CoachOverlay dual-interface props (canonical + alias for PreparationPage)
@@ -121,9 +131,14 @@ None - application is launch-ready.
 - `backend/app/api/preparation.py` - Ghostwriter + practice APIs (Epic 6)
 - `frontend/src/hooks/useCoachingHint.ts` - Coaching hint hook (Epic 4)
 - `frontend/src/hooks/useSpeechRecognition.ts` - Voice input hook (Sprint 7)
+- `frontend/src/hooks/useSpeechSynthesis.ts` - TTS hook (Sprint 9)
+- `frontend/src/hooks/useConversationMode.ts` - Conversation state machine (Sprint 9)
+- `frontend/src/hooks/usePrepUsage.ts` - Free tier usage tracking (Sprint 9)
 - `frontend/src/components/common/ContextualTooltip.tsx` - Tooltip component (Sprint 8)
 - `frontend/src/components/onboarding/FirstSessionPrompt.tsx` - Onboarding modal (Sprint 8)
 - `frontend/src/components/interview/HintHistoryPanel.tsx` - Hint history (Sprint 8)
+- `frontend/src/components/interview/ConversationIndicator.tsx` - Turn indicator (Sprint 9)
+- `frontend/src/components/settings/VoiceSettingsPanel.tsx` - Voice settings (Sprint 9)
 - `docs/UI_SCREEN_FLOW.md` - Complete screen validation
 - `docs/PLAN.md` - Current milestone planning
 

@@ -781,3 +781,10 @@ async def start_preparation(...):
 - `frontend/src/pages/QuestionsPage.tsx` - Free tier prepare access
 - `frontend/src/pages/SettingsPage.tsx` - Voice settings section
 - `frontend/src/components/questions/QuestionCard.tsx` - Usage badge
+
+#### Post-Sprint Fixes:
+- **Conversation Mode STT Conflict** (d5fc412): Fixed dual speech recognition issue where VoiceInputButton and conversation mode had competing STT instances
+  - Hide VoiceInputButton when conversation mode is active
+  - Added Start/Done speaking buttons for conversation mode
+  - Live transcript preview during recording
+  - ConversationIndicator shows isListening state
