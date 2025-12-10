@@ -1,6 +1,6 @@
 # Milestone: Onboarding & Prepare/Mentor Mode Enhancement
 
-## Status: In Progress
+## Status: ✅ COMPLETE
 ## Target: Sprint 8 (Post-Sprint 7)
 
 ---
@@ -22,10 +22,10 @@ This milestone focuses on two key areas:
 
 - [x] CoachOverlay props mismatch fixed (critical bug) ✅ COMPLETE
 - [x] Sprint 7 Phase 5-6 completed (Draft Voice Dictation + Polish) ✅ COMPLETE
-- [ ] Enhanced onboarding with guided first-session flow
-- [ ] Contextual tooltips for key features
-- [ ] Mentor hint history panel
-- [ ] All tests passing, no TypeScript errors
+- [x] Enhanced onboarding with guided first-session flow ✅ COMPLETE (FirstSessionPrompt)
+- [x] Contextual tooltips for key features ✅ COMPLETE (ContextualTooltip)
+- [x] Mentor hint history panel ✅ COMPLETE (HintHistoryPanel)
+- [x] All tests passing, no TypeScript errors ✅ Build successful
 
 ---
 
