@@ -1,31 +1,37 @@
-# Milestone: Onboarding & Prepare/Mentor Mode Enhancement
+# Milestone: Conversational Voice Mentor
 
-## Status: ✅ COMPLETE
-## Target: Sprint 8 (Post-Sprint 7)
+## Status: 📋 PLANNED
+## Target: Sprint 9
 
 ---
 
 ## Overview
 
-This milestone focuses on two key areas:
-1. **Onboarding Journey Enhancement** - Transform minimal welcome modal into comprehensive guided onboarding
-2. **Preparation/Mentor Mode Polish** - Complete Sprint 7 voice features, fix CoachOverlay props mismatch, and add mentor enhancements
+Transform the text-based mentor Q&A into a conversational voice experience, like a phone call with a career coach. The mentor will speak questions aloud, listen to user responses, and guide the conversation naturally.
 
 **Current State**:
-- Onboarding: Basic WelcomeModal only (4-step tour for new users)
-- Preparation Mode: Comprehensive 4-stage flow, voice features 80% complete
-- ✅ CoachOverlay props mismatch FIXED (was critical bug)
+- Detective stage: Text-based Q&A with voice INPUT only (user can speak, mentor displays text)
+- No Text-to-Speech (TTS) - mentor never "speaks"
+- Disconnected feel - reading text breaks conversational flow
+
+**Target State**:
+- Mentor speaks questions aloud using Web Speech API
+- Continuous conversation flow: mentor speaks → user responds → mentor processes → mentor speaks
+- Phone-call-like experience with turn-taking indicators
+- Premium voice options for enhanced experience
 
 ---
 
 ## Success Criteria
 
-- [x] CoachOverlay props mismatch fixed (critical bug) ✅ COMPLETE
-- [x] Sprint 7 Phase 5-6 completed (Draft Voice Dictation + Polish) ✅ COMPLETE
-- [x] Enhanced onboarding with guided first-session flow ✅ COMPLETE (FirstSessionPrompt)
-- [x] Contextual tooltips for key features ✅ COMPLETE (ContextualTooltip)
-- [x] Mentor hint history panel ✅ COMPLETE (HintHistoryPanel)
-- [x] All tests passing, no TypeScript errors ✅ Build successful
+- [ ] Mentor questions are spoken aloud using TTS
+- [ ] Conversation flows naturally with clear turn indicators
+- [ ] User can interrupt mentor while speaking
+- [ ] Voice settings persist in user preferences
+- [ ] Works across Chrome, Firefox, Safari, Edge
+- [ ] Graceful fallback for unsupported browsers
+- [ ] Free tier users can access basic preparation (Epic 4)
+- [ ] All tests passing, no TypeScript errors
 
 ---
 
@@ -35,332 +41,680 @@ This milestone focuses on two key areas:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           User Journey                                       │
+│                     Conversational Voice Flow                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Registration → WelcomeModal → FirstSessionPrompt → PreparationPage         │
-│       │              │                │                    │                 │
-│       v              v                v                    v                 │
-│  ┌─────────┐   ┌──────────┐    ┌───────────┐      ┌──────────────┐          │
-│  │ Auth    │   │ Tour     │    │ Create    │      │ 4-Stage Flow │          │
-│  │ Flow    │   │ Carousel │    │ Session   │      │              │          │
-│  └─────────┘   └──────────┘    │ Prompt    │      │ Detective    │          │
-│                                 └───────────┘      │ Draft        │          │
-│                                                    │ Practice     │          │
-│                                                    │ Complete     │          │
-│                                                    └──────────────┘          │
-│                                                           │                  │
-│                                                           v                  │
-│                                                    ┌──────────────┐          │
-│                                                    │ CoachOverlay │          │
-│                                                    │ (AI Coaching)│          │
-│                                                    └──────────────┘          │
+│  User enters Detective Stage                                                 │
+│       │                                                                      │
+│       v                                                                      │
+│  ┌─────────────┐     ┌──────────────┐     ┌─────────────┐                   │
+│  │ MENTOR      │ --> │ USER         │ --> │ PROCESSING  │                   │
+│  │ SPEAKING    │     │ TURN         │     │             │                   │
+│  │             │     │              │     │             │                   │
+│  │ TTS plays   │     │ Mic active   │     │ AI thinking │                   │
+│  │ question    │     │ User speaks  │     │ Next Q      │                   │
+│  │ Animated    │     │ STT captures │     │ Streaming   │                   │
+│  └─────────────┘     └──────────────┘     └─────────────┘                   │
+│       ^                                          │                           │
+│       └──────────────────────────────────────────┘                           │
+│                                                                              │
+│  State Machine: mentor_speaking → user_turn → processing → mentor_speaking   │
+│                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Models
 
-**OnboardingState** (localStorage):
+**ConversationState** (React state):
 ```typescript
-interface OnboardingState {
-  hasSeenWelcome: boolean;
-  completedSteps: string[];         // Track completed onboarding steps
-  dismissedAt?: string;             // When user dismissed onboarding
-  firstSessionCreated?: boolean;    // NEW: Track first session milestone
-  preparationTourCompleted?: boolean; // NEW: Track preparation tour
+type ConversationMode = 'mentor_speaking' | 'user_turn' | 'processing' | 'idle';
+
+interface VoiceSettings {
+  enabled: boolean;
+  voiceName: string;         // Selected voice identifier
+  rate: number;              // Speech rate (0.5 - 2.0)
+  pitch: number;             // Voice pitch (0.5 - 2.0)
+  volume: number;            // Volume (0 - 1)
+  autoListen: boolean;       // Auto-start listening after mentor speaks
+}
+
+interface ConversationState {
+  mode: ConversationMode;
+  isMentorSpeaking: boolean;
+  isUserSpeaking: boolean;
+  canInterrupt: boolean;
+  transcript: string;
+}
+```
+
+**User Preferences** (localStorage + API):
+```typescript
+interface UserPreferences {
+  voiceSettings: VoiceSettings;
+  preferConversationalMode: boolean;
 }
 ```
 
 ### API Contracts
 
-No new backend endpoints required. All enhancements are frontend-only.
+No new backend endpoints required for TTS (browser-native).
+
+**Optional Enhancement** (Epic 3 - Premium Voices):
+```
+POST /api/tts/generate
+Body: { text: string, voice_id: string }
+Response: { audio_url: string } // Signed URL to audio file
+```
+
+### New Hooks
+
+**useSpeechSynthesis** (Epic 1):
+```typescript
+interface UseSpeechSynthesisReturn {
+  speak: (text: string) => void;
+  stop: () => void;
+  pause: () => void;
+  resume: () => void;
+  isSpeaking: boolean;
+  isPaused: boolean;
+  voices: SpeechSynthesisVoice[];
+  selectedVoice: SpeechSynthesisVoice | null;
+  setVoice: (voice: SpeechSynthesisVoice) => void;
+  rate: number;
+  setRate: (rate: number) => void;
+  pitch: number;
+  setPitch: (pitch: number) => void;
+  isSupported: boolean;
+  error: string | null;
+}
+```
+
+**useConversationMode** (Epic 2):
+```typescript
+interface UseConversationModeReturn {
+  mode: ConversationMode;
+  startConversation: () => void;
+  endConversation: () => void;
+  transitionTo: (mode: ConversationMode) => void;
+  mentorSay: (text: string) => Promise<void>;  // Speaks and waits
+  onUserResponse: (callback: (text: string) => void) => void;
+  interrupt: () => void;
+  isActive: boolean;
+}
+```
 
 ### Dependencies
 
 **Existing Components to Modify**:
 | Component | Location | Changes |
 |-----------|----------|---------|
-| `CoachOverlay` | `components/interview/CoachOverlay.tsx` | Fix interface, add new props |
-| `PreparationPage` | `pages/PreparationPage.tsx` | Fix CoachOverlay usage, add voice dictation |
-| `WelcomeModal` | `components/onboarding/WelcomeModal.tsx` | Add first-session prompt |
-| `useOnboarding` | `hooks/useOnboarding.ts` | Add new tracking methods |
+| `PreparationPage` | `pages/PreparationPage.tsx` | Add conversational mode, TTS integration |
+| `VoiceInputButton` | `components/common/VoiceInputButton.tsx` | Add auto-listen mode |
+| `useSettings` | `hooks/useSettings.ts` | Add voice preferences |
 
 **New Components to Create**:
 | Component | Purpose |
 |-----------|---------|
-| `FirstSessionPrompt` | Modal prompting user to create first interview session |
-| `ContextualTooltip` | Reusable tooltip component for feature hints |
-| `HintHistoryPanel` | Collapsible panel showing coaching hint history |
+| `ConversationIndicator` | Visual feedback for who's turn (mentor/user) |
+| `VoiceSettingsPanel` | Configure voice preferences |
+| `MentorAvatar` | Animated avatar showing mentor state |
+
+**New Hooks to Create**:
+| Hook | Purpose |
+|------|---------|
+| `useSpeechSynthesis` | Text-to-Speech wrapper |
+| `useConversationMode` | Conversation state machine |
+| `useVoicePreferences` | Persist voice settings |
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Critical Bug Fix - CoachOverlay Props (2h)
+### Epic 1: Voice Mentor - TTS Integration (ICE 8.4/10)
 
-**Priority: CRITICAL** - Blocking practice coaching feature
+**Priority: HIGH** - Core feature enabling mentor to speak
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 1.1 | Audit CoachOverlay interface vs all usages | frontend-builder | 0.5h |
-| 1.2 | Update CoachOverlay interface to support both use cases | frontend-builder | 0.5h |
-| 1.3 | Fix PreparationPage CoachOverlay props | frontend-builder | 0.5h |
-| 1.4 | Add missing tests for CoachOverlay | qa-test-guardian | 0.5h |
+#### Phase 1.1: useSpeechSynthesis Hook
 
-**Current Interface (CoachOverlay.tsx:4-14)**:
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.1.1 | Create `useSpeechSynthesis` hook with speak/stop/pause | 1h |
+| 1.1.2 | Add voice selection and listing | 0.5h |
+| 1.1.3 | Add rate/pitch/volume controls | 0.5h |
+| 1.1.4 | Add browser support detection | 0.5h |
+| 1.1.5 | Write unit tests for hook | 0.5h |
+
+**Implementation**:
 ```typescript
-interface CoachOverlayProps {
-  isVisible: boolean;          // Required - NOT passed in PreparationPage
-  onClose: () => void;         // Required - Passed ✅
-  questionType: string;        // Required - NOT passed in PreparationPage
-  elapsedTime: number;         // Required - NOT passed in PreparationPage
-  expectedDuration: number;    // Required - NOT passed in PreparationPage
-  dynamicHint?: string | null; // Optional - Passed as "hint"
-  isHintLoading?: boolean;     // Optional - Passed as "isLoading"
-  isHintStreaming?: boolean;   // Optional - Passed as "isStreaming"
-  hintError?: string | null;   // Optional - Passed as "error"
+// frontend/src/hooks/useSpeechSynthesis.ts
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+export function useSpeechSynthesis() {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [rate, setRate] = useState(1);
+  const [pitch, setPitch] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+  useEffect(() => {
+    if (!isSupported) return;
+
+    const loadVoices = () => {
+      const available = speechSynthesis.getVoices();
+      setVoices(available);
+      // Default to first English voice
+      const englishVoice = available.find(v => v.lang.startsWith('en'));
+      if (englishVoice && !selectedVoice) {
+        setSelectedVoice(englishVoice);
+      }
+    };
+
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      speechSynthesis.onvoiceschanged = null;
+    };
+  }, [isSupported]);
+
+  const speak = useCallback((text: string) => {
+    if (!isSupported) {
+      setError('Speech synthesis not supported');
+      return;
+    }
+
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = selectedVoice;
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+    utterance.onerror = (e) => {
+      setError(e.error);
+      setIsSpeaking(false);
+    };
+
+    utteranceRef.current = utterance;
+    speechSynthesis.speak(utterance);
+  }, [isSupported, selectedVoice, rate, pitch]);
+
+  const stop = useCallback(() => {
+    speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+  }, []);
+
+  const pause = useCallback(() => {
+    speechSynthesis.pause();
+    setIsPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    speechSynthesis.resume();
+    setIsPaused(false);
+  }, []);
+
+  return {
+    speak,
+    stop,
+    pause,
+    resume,
+    isSpeaking,
+    isPaused,
+    voices,
+    selectedVoice,
+    setVoice: setSelectedVoice,
+    rate,
+    setRate,
+    pitch,
+    setPitch,
+    isSupported,
+    error,
+  };
 }
 ```
 
-**PreparationPage Usage (lines 823-831)**:
+**Checkpoint**: Hook can speak text with configurable voice
+
+---
+
+#### Phase 1.2: Integrate TTS into Detective Stage
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.2.1 | Import useSpeechSynthesis in PreparationPage | 0.5h |
+| 1.2.2 | Auto-speak questions when displayed | 0.5h |
+| 1.2.3 | Add mute/unmute toggle button | 0.5h |
+| 1.2.4 | Show speaking indicator animation | 0.5h |
+| 1.2.5 | Test TTS in detective flow | 0.5h |
+
+**Integration Point** (PreparationPage.tsx):
 ```typescript
-<CoachOverlay
-  hint={coachingHint}            // ❌ Wrong prop name
-  isLoading={isHintLoading}      // ❌ Wrong prop name
-  isStreaming={isHintStreaming}  // ❌ Wrong prop name
-  error={hintError}              // ❌ Wrong prop name
-  onClose={() => setShowCoach(false)}  // ✅ Correct
-  onToggle={() => setShowCoach(!showCoach)}  // ❌ Not in interface
-  isCollapsed={!showCoach}       // ❌ Not in interface
-/>
+// In detective stage rendering
+const { speak, stop, isSpeaking, isSupported } = useSpeechSynthesis();
+const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+useEffect(() => {
+  if (currentQuestion && voiceEnabled && isSupported) {
+    speak(currentQuestion);
+  }
+}, [currentQuestion, voiceEnabled]);
 ```
 
-**Solution**: Update CoachOverlay to accept alias props for backward compatibility:
+**Checkpoint**: Mentor speaks questions in detective stage
+
+---
+
+#### Phase 1.3: Voice Settings Panel
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 1.3.1 | Create VoiceSettingsPanel component | 1h |
+| 1.3.2 | Add voice selection dropdown | 0.5h |
+| 1.3.3 | Add rate/pitch sliders | 0.5h |
+| 1.3.4 | Add "Test Voice" button | 0.5h |
+| 1.3.5 | Persist settings to localStorage | 0.5h |
+| 1.3.6 | Add to Settings page | 0.5h |
+
+**Component Design**:
 ```typescript
-interface CoachOverlayProps {
-  // For InterviewPage usage (existing)
-  isVisible?: boolean;
-  questionType?: string;
-  elapsedTime?: number;
-  expectedDuration?: number;
-
-  // For PreparationPage usage (simplified)
-  hint?: string | null;          // Alias for dynamicHint
-  isLoading?: boolean;           // Alias for isHintLoading
-  isStreaming?: boolean;         // Alias for isHintStreaming
-  error?: string | null;         // Alias for hintError
-  onToggle?: () => void;         // NEW: Toggle expanded/collapsed
-  isCollapsed?: boolean;         // NEW: Controlled collapse state
-
-  // Common
-  onClose: () => void;
-  dynamicHint?: string | null;
-  isHintLoading?: boolean;
-  isHintStreaming?: boolean;
-  hintError?: string | null;
+interface VoiceSettingsPanelProps {
+  onSettingsChange?: (settings: VoiceSettings) => void;
 }
 ```
 
-**Checkpoint**: Practice coaching displays correctly in PreparationPage
+**Checkpoint**: Users can customize mentor voice
 
 ---
 
-### Phase 2: Sprint 7 Completion - Draft Voice Dictation (2.5h)
+### Epic 2: Conversational Mode - Phone-like Experience (ICE 7.2/10)
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 2.1 | Add VoiceInputButton to draft editing textarea | frontend-builder | 0.5h |
-| 2.2 | Implement append mode (add to end of draft) | frontend-builder | 0.5h |
-| 2.3 | Add "replace selection" mode for editing | frontend-builder | 1h |
-| 2.4 | Test draft dictation flow | qa-test-guardian | 0.5h |
+**Priority: HIGH** - Transforms from Q&A to conversation
 
-**Files Modified**:
-- `frontend/src/pages/PreparationPage.tsx` (draft stage section)
+#### Phase 2.1: Conversation State Machine
 
-**Checkpoint**: Users can dictate draft edits by voice
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.1.1 | Create useConversationMode hook | 1.5h |
+| 2.1.2 | Implement state transitions | 1h |
+| 2.1.3 | Add interrupt handling | 0.5h |
+| 2.1.4 | Write state machine tests | 0.5h |
 
----
-
-### Phase 3: Sprint 7 Completion - Polish & Testing (2h)
-
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 3.1 | Test on Chrome, Firefox, Safari, Edge | qa-test-guardian | 1h |
-| 3.2 | Add graceful degradation for unsupported browsers | frontend-builder | 0.5h |
-| 3.3 | Update PreparationPage tests with voice integration | qa-test-guardian | 0.5h |
-
-**Checkpoint**: Voice features work across all major browsers
-
----
-
-### Phase 4: Enhanced Onboarding - First Session Flow (4h)
-
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 4.1 | Create FirstSessionPrompt modal component | frontend-builder | 1h |
-| 4.2 | Update useOnboarding hook with new tracking | frontend-builder | 0.5h |
-| 4.3 | Add first-session prompt after WelcomeModal | frontend-builder | 0.5h |
-| 4.4 | Add "create session" shortcut in DashboardPage | frontend-builder | 1h |
-| 4.5 | Test new onboarding flow | qa-test-guardian | 1h |
-
-**New Component: FirstSessionPrompt**
+**State Machine Implementation**:
 ```typescript
-interface FirstSessionPromptProps {
-  isOpen: boolean;
-  onCreateSession: () => void;
-  onSkip: () => void;
+// frontend/src/hooks/useConversationMode.ts
+type ConversationMode = 'idle' | 'mentor_speaking' | 'user_turn' | 'processing';
+
+interface ConversationActions {
+  mentorStartSpeaking: () => void;
+  mentorFinishSpeaking: () => void;
+  userStartSpeaking: () => void;
+  userFinishSpeaking: (transcript: string) => void;
+  startProcessing: () => void;
+  finishProcessing: () => void;
+  interrupt: () => void;
+  reset: () => void;
+}
+
+export function useConversationMode(
+  tts: ReturnType<typeof useSpeechSynthesis>,
+  stt: ReturnType<typeof useSpeechRecognition>
+): [ConversationMode, ConversationActions] {
+  const [mode, setMode] = useState<ConversationMode>('idle');
+
+  const actions: ConversationActions = useMemo(() => ({
+    mentorStartSpeaking: () => setMode('mentor_speaking'),
+    mentorFinishSpeaking: () => setMode('user_turn'),
+    userStartSpeaking: () => { /* already in user_turn */ },
+    userFinishSpeaking: () => setMode('processing'),
+    startProcessing: () => setMode('processing'),
+    finishProcessing: () => setMode('mentor_speaking'),
+    interrupt: () => {
+      tts.stop();
+      setMode('user_turn');
+    },
+    reset: () => {
+      tts.stop();
+      stt.stopListening();
+      setMode('idle');
+    },
+  }), [tts, stt]);
+
+  return [mode, actions];
 }
 ```
 
-**Flow**:
-```
-New User → WelcomeModal → "Start Practicing" → FirstSessionPrompt
-                                                      │
-                              ┌───────────────────────┴────────────────────────┐
-                              │                                                │
-                              v                                                v
-                       [Create Session]                                  [Maybe Later]
-                              │                                                │
-                              v                                                v
-                    CreateSessionPage                                    DashboardPage
-                                                                    (with "Getting Started" card)
-```
-
-**Checkpoint**: New users guided to create first session
+**Checkpoint**: State machine manages conversation flow
 
 ---
 
-### Phase 5: Contextual Tooltips (3h)
+#### Phase 2.2: Conversation UI Indicators
 
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 5.1 | Create ContextualTooltip component | frontend-builder | 1h |
-| 5.2 | Add tooltips to PreparationPage stages | frontend-builder | 1h |
-| 5.3 | Add tooltips to Dashboard key features | frontend-builder | 0.5h |
-| 5.4 | Test tooltip accessibility and mobile behavior | qa-test-guardian | 0.5h |
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.2.1 | Create ConversationIndicator component | 1h |
+| 2.2.2 | Add pulsing animation for mentor speaking | 0.5h |
+| 2.2.3 | Add microphone animation for user turn | 0.5h |
+| 2.2.4 | Add processing spinner | 0.5h |
+| 2.2.5 | Integrate indicators into PreparationPage | 0.5h |
 
-**Tooltip Locations**:
-- Dashboard: Interview sessions list, preparation mode entry
-- PreparationPage: Detective stage (how Q&A works), Draft stage (AI generation), Practice stage (recording tips)
-
-**Checkpoint**: Users have in-context help throughout app
-
----
-
-### Phase 6: Mentor Enhancements (4h)
-
-| Task | Description | Agent | Est |
-|------|-------------|-------|-----|
-| 6.1 | Create HintHistoryPanel component | frontend-builder | 1.5h |
-| 6.2 | Add hint tracking state to PreparationPage | frontend-builder | 0.5h |
-| 6.3 | Integrate history panel with CoachOverlay | frontend-builder | 1h |
-| 6.4 | Add hint pagination/scrolling for long sessions | frontend-builder | 0.5h |
-| 6.5 | Test mentor history functionality | qa-test-guardian | 0.5h |
-
-**HintHistoryPanel Component**:
+**Component Design**:
 ```typescript
-interface HintHistoryPanelProps {
-  hints: Array<{
-    timestamp: Date;
-    hint: string;
-    stage: 'detective' | 'practice';
-  }>;
-  isExpanded: boolean;
-  onToggle: () => void;
+// frontend/src/components/interview/ConversationIndicator.tsx
+interface ConversationIndicatorProps {
+  mode: ConversationMode;
+  mentorName?: string;
+}
+
+export function ConversationIndicator({ mode, mentorName = 'Mentor' }: ConversationIndicatorProps) {
+  return (
+    <div className="flex items-center gap-3 p-4 bg-surface-secondary rounded-lg">
+      {mode === 'mentor_speaking' && (
+        <>
+          <div className="w-10 h-10 rounded-full bg-electric-blue animate-pulse" />
+          <span className="text-text-primary">{mentorName} is speaking...</span>
+        </>
+      )}
+      {mode === 'user_turn' && (
+        <>
+          <Mic className="w-10 h-10 text-green-500 animate-pulse" />
+          <span className="text-text-primary">Your turn to speak</span>
+        </>
+      )}
+      {mode === 'processing' && (
+        <>
+          <Loader2 className="w-10 h-10 text-electric-blue animate-spin" />
+          <span className="text-text-primary">Thinking...</span>
+        </>
+      )}
+    </div>
+  );
 }
 ```
 
-**Checkpoint**: Users can review all coaching hints received during session
+**Checkpoint**: Visual feedback shows conversation state
+
+---
+
+#### Phase 2.3: Auto-Listen Mode
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.3.1 | Add auto-listen after TTS completes | 1h |
+| 2.3.2 | Add silence detection to end turn | 0.5h |
+| 2.3.3 | Add manual "I'm done" button fallback | 0.5h |
+| 2.3.4 | Test end-to-end conversation flow | 0.5h |
+
+**Integration**:
+```typescript
+// In PreparationPage
+useEffect(() => {
+  if (mode === 'user_turn' && autoListen && !isListening) {
+    startListening();
+  }
+}, [mode, autoListen]);
+
+// When TTS ends, transition to user turn
+useEffect(() => {
+  if (!isSpeaking && mode === 'mentor_speaking') {
+    actions.mentorFinishSpeaking();
+  }
+}, [isSpeaking, mode]);
+```
+
+**Checkpoint**: Conversation flows automatically
+
+---
+
+#### Phase 2.4: Interrupt Handling
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 2.4.1 | Detect user starting to speak during mentor | 0.5h |
+| 2.4.2 | Stop TTS when interrupt detected | 0.5h |
+| 2.4.3 | Add visual feedback for interrupt | 0.5h |
+| 2.4.4 | Test interrupt scenarios | 0.5h |
+
+**Checkpoint**: User can interrupt mentor naturally
+
+---
+
+### Epic 3: Premium Voice Quality (ICE 5.4/10)
+
+**Priority: MEDIUM** - Enhancement for paid tiers
+
+#### Phase 3.1: Voice Quality Assessment
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 3.1.1 | Analyze available browser voices | 0.5h |
+| 3.1.2 | Rank voices by quality/naturalness | 0.5h |
+| 3.1.3 | Create voice recommendation system | 1h |
+| 3.1.4 | Add "Premium Voice" badge in settings | 0.5h |
+
+**Voice Ranking Logic**:
+```typescript
+const PREMIUM_VOICES = [
+  'Google UK English Female',
+  'Google UK English Male',
+  'Microsoft Zira',
+  'Microsoft David',
+  'Samantha',  // macOS
+  'Daniel',    // macOS
+];
+
+function getVoiceQuality(voice: SpeechSynthesisVoice): 'premium' | 'standard' {
+  return PREMIUM_VOICES.some(name => voice.name.includes(name))
+    ? 'premium'
+    : 'standard';
+}
+```
+
+**Checkpoint**: Users see voice quality indicators
+
+---
+
+#### Phase 3.2: External TTS Integration (Optional)
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 3.2.1 | Research ElevenLabs/Google Cloud TTS APIs | 1h |
+| 3.2.2 | Add backend endpoint for TTS generation | 2h |
+| 3.2.3 | Implement audio streaming to frontend | 1h |
+| 3.2.4 | Gate behind Pro subscription | 0.5h |
+
+**Note**: This phase is optional and can be deferred. Browser TTS is sufficient for MVP.
+
+**Checkpoint**: Premium users get high-quality voices
+
+---
+
+### Epic 4: Enable Prepare for Free Tier (ICE 7.0/10)
+
+**Priority: HIGH** - Removes friction for new users
+
+#### Phase 4.1: Update Subscription Gating
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 4.1.1 | Modify QuestionsPage canPrepare logic | 0.5h |
+| 4.1.2 | Add usage limits for free tier | 1h |
+| 4.1.3 | Create upgrade prompt component | 1h |
+| 4.1.4 | Test free tier preparation flow | 0.5h |
+
+**Implementation**:
+```typescript
+// QuestionsPage.tsx - Before:
+const canPrepare = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
+
+// After:
+const canPrepare = true;  // All users can prepare
+
+// Add usage tracking
+const FREE_TIER_PREP_LIMIT = 3;  // 3 preparations per month
+const { prepCount, isLimitReached } = usePrepUsage();
+
+// Show upgrade prompt when approaching limit
+{isLimitReached && <UpgradePrompt feature="preparation" />}
+```
+
+---
+
+#### Phase 4.2: Usage Tracking
+
+| Task | Description | Est |
+|------|-------------|-----|
+| 4.2.1 | Add preparation_count to user model | 0.5h |
+| 4.2.2 | Create API endpoint to track usage | 1h |
+| 4.2.3 | Reset count monthly (cron/scheduled task) | 0.5h |
+| 4.2.4 | Display usage in dashboard | 0.5h |
+
+**Backend Changes**:
+```python
+# backend/app/models/user.py
+class User:
+    preparation_count: int = 0
+    preparation_reset_date: datetime
+
+# backend/app/api/preparation.py
+@router.post("/sessions/{session_id}/prepare")
+async def start_preparation(...):
+    user = await get_current_user(...)
+    if user.subscription_tier == 'free':
+        if user.preparation_count >= FREE_TIER_LIMIT:
+            raise HTTPException(402, "Upgrade to Pro for unlimited preparations")
+        user.preparation_count += 1
+        await user.save()
+    # ... rest of logic
+```
+
+**Checkpoint**: Free users can try preparation with limits
 
 ---
 
 ## Testing Strategy
 
 ### Unit Tests
-- **CoachOverlay**: Props validation, both usage patterns
-- **FirstSessionPrompt**: Render, actions, state management
-- **ContextualTooltip**: Visibility, positioning, accessibility
-- **HintHistoryPanel**: Hint list rendering, expansion toggle
+- **useSpeechSynthesis**: Mock speechSynthesis API, test speak/stop/pause
+- **useConversationMode**: Test state transitions, interrupt handling
+- **VoiceSettingsPanel**: Test voice selection, settings persistence
+- **ConversationIndicator**: Test rendering for each mode
 
 ### Integration Tests
-- Onboarding flow: Register → Welcome → First Session
-- Preparation flow with voice: Detective → Draft (dictation) → Practice (coaching)
-- Mentor hints accumulation and history display
+- Full conversation flow: mentor speaks → user responds → processing → mentor speaks
+- Voice settings persistence across sessions
+- Interrupt handling during mentor speech
+- Free tier usage limits and upgrade prompts
 
-### E2E Tests (Optional)
-- Full new user onboarding journey
-- Complete preparation session with voice input
+### E2E Tests
+- Complete detective stage with voice enabled
+- Voice settings configuration and persistence
+- Conversation mode toggle and flow
+
+### Cross-Browser Testing
+| Browser | TTS Support | Notes |
+|---------|-------------|-------|
+| Chrome | ✅ Full | Best voice selection |
+| Firefox | ✅ Full | Limited voices |
+| Safari | ✅ Full | Good macOS voices |
+| Edge | ✅ Full | Microsoft voices |
+| Mobile Safari | ⚠️ Limited | May require user gesture |
+| Mobile Chrome | ✅ Full | Works well |
 
 ---
 
 ## Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| CoachOverlay fix breaks InterviewPage | High | Test both usages before/after |
-| Voice dictation cursor placement issues | Medium | Start with append-only mode |
-| Tooltip positioning on mobile | Low | Use responsive positioning library |
-| Hint history memory usage | Low | Limit to last 20 hints per session |
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| TTS not supported in some browsers | Medium | Low | Graceful fallback to text mode |
+| Voice quality varies by OS/browser | Medium | High | Recommend best voices, allow customization |
+| Interrupts cause state confusion | High | Medium | Debounce transitions, clear state machine |
+| Auto-listen privacy concerns | Medium | Low | Default off, clear indicators |
+| Mobile TTS requires gesture | Medium | Medium | Add "Start Conversation" button |
+| Free tier abuse | Low | Medium | Rate limiting, monthly reset |
 
 ---
 
 ## Open Questions
 
-- [ ] Should hint history persist across sessions? (localStorage)
-- [ ] Tooltip dismiss behavior: click-outside vs explicit close?
-- [ ] Voice dictation: Show waveform visualization?
+- [x] Should conversation mode be opt-in or default? → **Opt-in with prominent toggle**
+- [ ] Show transcript of what mentor said? → Recommend yes for accessibility
+- [ ] Allow text input as alternative during conversation? → Yes, always fallback
+- [ ] Voice settings: per-session or global? → Global in user preferences
 
 ---
 
 ## Files Summary
 
-### New Files (4)
-1. `frontend/src/components/onboarding/FirstSessionPrompt.tsx`
-2. `frontend/src/components/common/ContextualTooltip.tsx`
-3. `frontend/src/components/interview/HintHistoryPanel.tsx`
-4. `frontend/src/components/common/__tests__/ContextualTooltip.test.tsx`
+### New Files (7)
+1. `frontend/src/hooks/useSpeechSynthesis.ts` - TTS hook
+2. `frontend/src/hooks/useConversationMode.ts` - State machine
+3. `frontend/src/hooks/useVoicePreferences.ts` - Settings persistence
+4. `frontend/src/components/interview/ConversationIndicator.tsx` - Turn indicator
+5. `frontend/src/components/settings/VoiceSettingsPanel.tsx` - Voice config UI
+6. `frontend/src/components/common/UpgradePrompt.tsx` - Upsell component
+7. `frontend/src/hooks/__tests__/useSpeechSynthesis.test.ts` - Tests
 
 ### Modified Files (5)
-1. `frontend/src/components/interview/CoachOverlay.tsx` - Fix interface
-2. `frontend/src/pages/PreparationPage.tsx` - Fix props, add voice dictation
-3. `frontend/src/hooks/useOnboarding.ts` - Add new tracking
-4. `frontend/src/pages/DashboardPage.tsx` - Add first-session prompt
-5. `frontend/src/components/onboarding/WelcomeModal.tsx` - Chain to first-session
+1. `frontend/src/pages/PreparationPage.tsx` - Add TTS, conversation mode
+2. `frontend/src/pages/QuestionsPage.tsx` - Enable prepare for free tier
+3. `frontend/src/pages/SettingsPage.tsx` - Add voice settings section
+4. `frontend/src/hooks/useSettings.ts` - Add voice preferences
+5. `backend/app/api/preparation.py` - Add usage tracking (Epic 4)
 
 ---
 
-## Estimated Timeline
+## Phase Summary
 
-| Phase | Effort | Dependencies |
-|-------|--------|--------------|
-| Phase 1: CoachOverlay Fix | 2h | None (CRITICAL) |
-| Phase 2: Draft Voice Dictation | 2.5h | Phase 1 |
-| Phase 3: Polish & Testing | 2h | Phase 2 |
-| Phase 4: First Session Flow | 4h | None |
-| Phase 5: Contextual Tooltips | 3h | Phase 4 |
-| Phase 6: Mentor Enhancements | 4h | Phase 1 |
-
-**Total Estimated Effort**: 17.5 hours
-
-**Parallel Execution**:
-- Phase 1 is critical and must be done first
-- Phase 4-5 (Onboarding) can run in parallel with Phase 6 (Mentor)
-- Phase 2-3 (Sprint 7 completion) depends on Phase 1
+| Phase | Epic | Focus | Tasks | Dependencies |
+|-------|------|-------|-------|--------------|
+| 1.1 | 1 | useSpeechSynthesis Hook | 5 | None |
+| 1.2 | 1 | TTS in Detective Stage | 5 | Phase 1.1 |
+| 1.3 | 1 | Voice Settings Panel | 6 | Phase 1.1 |
+| 2.1 | 2 | Conversation State Machine | 4 | Phase 1.2 |
+| 2.2 | 2 | Conversation UI Indicators | 5 | Phase 2.1 |
+| 2.3 | 2 | Auto-Listen Mode | 4 | Phase 2.2 |
+| 2.4 | 2 | Interrupt Handling | 4 | Phase 2.3 |
+| 3.1 | 3 | Voice Quality Assessment | 4 | Phase 1.3 |
+| 3.2 | 3 | External TTS (Optional) | 4 | Phase 3.1 |
+| 4.1 | 4 | Update Subscription Gating | 4 | None |
+| 4.2 | 4 | Usage Tracking | 4 | Phase 4.1 |
 
 ---
 
-## Previous Sprints Reference
+## Execution Order (Recommended)
 
-### Sprint 7: Voice-Enabled Practice Mode (80% Complete)
-- Phase 1-4: ✅ Complete (Speech hook, VoiceInput, Detective integration, Practice coaching)
-- Phase 5: ⏳ Draft Voice Dictation (this milestone)
-- Phase 6: ⏳ Polish & Cross-Browser Testing (this milestone)
+**Week 1: Core TTS**
+1. Phase 1.1: useSpeechSynthesis Hook
+2. Phase 1.2: TTS in Detective Stage
+3. Phase 1.3: Voice Settings Panel
 
-### Sprint 6: Production Readiness ✅ COMPLETE
-- Epic 1: Test Coverage ✅
-- Epic 2: Frontend Component Testing ✅
-- Epic 3: Production Security & Observability ✅
-- Epic 4: Performance & Polish ✅
+**Week 2: Conversation Mode**
+4. Phase 2.1: Conversation State Machine
+5. Phase 2.2: Conversation UI Indicators
+6. Phase 2.3: Auto-Listen Mode
+7. Phase 2.4: Interrupt Handling
+
+**Week 3: Polish & Free Tier**
+8. Phase 3.1: Voice Quality Assessment
+9. Phase 4.1: Update Subscription Gating
+10. Phase 4.2: Usage Tracking
+
+**Optional (Future)**
+- Phase 3.2: External TTS Integration
 
 ---
 
@@ -368,8 +722,24 @@ interface HintHistoryPanelProps {
 
 | Epic | Impact | Confidence | Ease | ICE Score |
 |------|--------|------------|------|-----------|
-| CoachOverlay Fix | 10 | 10 | 9 | **900** |
-| Sprint 7 Phase 5-6 | 8 | 9 | 7 | **504** |
-| First Session Flow | 8 | 8 | 7 | **448** |
-| Contextual Tooltips | 7 | 8 | 7 | **392** |
-| Mentor History Panel | 7 | 7 | 6 | **294** |
+| Epic 1: Voice Mentor TTS | 9 | 9 | 8 | **8.4** |
+| Epic 2: Conversational Mode | 9 | 8 | 7 | **7.2** |
+| Epic 4: Free Tier Prepare | 8 | 9 | 7 | **7.0** |
+| Epic 3: Premium Voice Quality | 6 | 6 | 6 | **5.4** |
+
+---
+
+## Previous Sprint Reference
+
+### Sprint 8: Onboarding & Mentor Enhancement ✅ COMPLETE
+- CoachOverlay props fix ✅
+- Draft Voice Dictation ✅
+- FirstSessionPrompt onboarding ✅
+- ContextualTooltip component ✅
+- HintHistoryPanel for coach hints ✅
+
+### Sprint 7: Voice-Enabled Practice Mode ✅ COMPLETE
+- Speech recognition hook ✅
+- VoiceInputButton component ✅
+- Detective Q&A voice integration ✅
+- Practice coaching voice integration ✅
