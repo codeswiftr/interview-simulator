@@ -2,8 +2,8 @@
 
 ## Current Status
 
-**Phase**: Soft Launch Ready + Epic 4 Complete
-**Last Updated**: 2025-12-20
+**Phase**: Soft Launch Ready + Sprint 8 Complete
+**Last Updated**: 2025-12-10
 
 ## What We're Working On
 
@@ -14,11 +14,11 @@
 - [x] Question bank data model + API (filtering, random selection)
 - [x] Interview session API (create, start, end, cancel)
 - [x] User authentication (JWT, PBKDF2 hashing, protected routes)
-- [x] Alembic migrations (2 versions applied)
+- [x] Alembic migrations (10+ versions applied)
 - [x] Docker Compose for Postgres + Redis
 - [x] Pre-commit hooks (ruff, mypy)
 - [x] Test infrastructure with pytest-asyncio
-- [x] Seed questions auto-load (50 questions)
+- [x] Seed questions auto-load (105 questions with 60 sample answers)
 - [x] Design System document created (CodeSwiftr branding)
 - [x] React + Vite + TailwindCSS frontend
 - [x] WebRTC audio capture with Safari compatibility
@@ -32,13 +32,26 @@
 - [x] Custom branded assets (logo, hero, favicons)
 - [x] OpenGraph meta tags
 - [x] Complete UI screen flow documentation
-- [x] Epic 4: Real-Time AI Coaching Hints (Complete 2025-12-20)
+- [x] Epic 4: Real-Time AI Coaching Hints (Complete)
+- [x] Epic 5: E2E Testing (4 Playwright suites)
+- [x] Epic 6: AI Ghostwriter MVP (Detective Q&A + Draft Generation)
+- [x] Sprint 7: Voice-Enabled Practice Mode
+- [x] Sprint 8: Onboarding & Mentor Mode Enhancement (Complete 2025-12-10)
 
 ### Active Tasks
 - None - Ready for soft launch!
-- Epic 4 complete: Real-time AI coaching hints with streaming support
+- Sprint 8 complete: Onboarding flow, contextual tooltips, mentor hint history
 
 ## Recent Decisions
+
+### 2025-12-10: Sprint 8 - Onboarding & Mentor Mode Enhancement
+- Fixed CoachOverlay dual-interface props (canonical + alias for PreparationPage)
+- Added Draft Voice Dictation with replace/append modes
+- Created FirstSessionPrompt modal for new user onboarding
+- Built ContextualTooltip component with hover/click/always triggers
+- Implemented HintHistoryPanel for coaching hint history
+- Extended useOnboarding hook with session tracking
+- All 6 phases complete, build passing
 
 ### 2025-12-02: Soft Launch Readiness
 - Completed comprehensive UI screen flow validation
@@ -51,7 +64,7 @@
 - **Primary**: Claude API (content analysis via OpenRouter/Groq)
 - **Transcription**: OpenAI Whisper
 - **Audio Analysis**: Librosa (local processing)
-- **Real-Time Coaching**: Gemini 2.0 Flash (via OpenRouter) - Epic 4 ✅
+- **Real-Time Coaching**: Gemini 2.5 Flash (via Google AI)
 
 ## Current Blockers
 
@@ -81,13 +94,18 @@ None - application is launch-ready.
 
 ## Files to Watch
 
-- `frontend/src/pages/` - All 10 UI screens
+- `frontend/src/pages/` - All 11 UI screens
 - `backend/app/main.py` - FastAPI application entry
 - `backend/app/ai/` - AI pipeline implementations
 - `backend/app/api/coaching.py` - Real-time coaching hints (Epic 4)
+- `backend/app/api/preparation.py` - Ghostwriter + practice APIs (Epic 6)
 - `frontend/src/hooks/useCoachingHint.ts` - Coaching hint hook (Epic 4)
+- `frontend/src/hooks/useSpeechRecognition.ts` - Voice input hook (Sprint 7)
+- `frontend/src/components/common/ContextualTooltip.tsx` - Tooltip component (Sprint 8)
+- `frontend/src/components/onboarding/FirstSessionPrompt.tsx` - Onboarding modal (Sprint 8)
+- `frontend/src/components/interview/HintHistoryPanel.tsx` - Hint history (Sprint 8)
 - `docs/UI_SCREEN_FLOW.md` - Complete screen validation
-- `docs/EPIC4_COMPLETION_SUMMARY.md` - Epic 4 completion details
+- `docs/PLAN.md` - Current milestone planning
 
 ## Launch Checklist
 

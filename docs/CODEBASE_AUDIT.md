@@ -150,18 +150,28 @@ frontend/src/
 │   ├── FeedbackPage.tsx          (8 tests) ✅
 │   ├── PreparationPage.tsx       (8 tests) ✅
 │   └── [7 other pages]
-├── components/       # 40+ components (5 directories)
+├── components/       # 45+ components (6 directories)
+│   ├── common/       (2 components - Sprint 8)
+│   │   ├── ContextualTooltip.tsx     (hover/click/always triggers)
+│   │   └── VoiceInputButton.tsx      (speech recognition)
 │   ├── dashboard/    (5 components)
 │   ├── feedback/     (7 components)
-│   ├── interview/    (10 components, 2 tested)
+│   ├── interview/    (12 components, 2 tested)
+│   │   ├── CoachOverlay.tsx          (dual-interface props)
+│   │   └── HintHistoryPanel.tsx      (Sprint 8)
 │   ├── layout/       (2 components)
+│   ├── onboarding/   (2 components - Sprint 8)
+│   │   ├── WelcomeModal.tsx
+│   │   └── FirstSessionPrompt.tsx
 │   ├── subscription/ (3 components)
 │   └── ui/           (4 components, 1 tested)
-├── hooks/            # 4 custom hooks (3 fully tested)
-│   ├── useAuth.tsx          (100% - 13 tests) ✅
-│   ├── useToast.tsx         (100% - 16 tests) ✅
-│   ├── useOnboarding.ts     (100% - 20 tests) ✅
-│   └── useAudioRecording.ts (46 tests) ✅
+├── hooks/            # 6 custom hooks (4 fully tested)
+│   ├── useAuth.tsx              (100% - 13 tests) ✅
+│   ├── useToast.tsx             (100% - 16 tests) ✅
+│   ├── useOnboarding.ts         (100% - 20 tests) ✅
+│   ├── useAudioRecording.ts     (46 tests) ✅
+│   ├── useSpeechRecognition.ts  (Sprint 7 - voice input)
+│   └── useCoachingHint.ts       (Epic 4 - real-time hints)
 ├── lib/              # API client, utilities
 ├── contexts/         # Theme context
 └── e2e/              # 4 Playwright test suites ✅
@@ -587,6 +597,24 @@ frontend/src/
 
 ## Completed Work (Recent)
 
+### Sprint 8: Onboarding & Mentor Mode Enhancement ✅ (Complete 2025-12-10)
+
+- ✅ CoachOverlay dual-interface props (canonical + alias for backward compatibility)
+- ✅ Draft Voice Dictation with replace selection and append modes
+- ✅ VoiceInputButton graceful degradation for unsupported browsers
+- ✅ FirstSessionPrompt onboarding modal
+- ✅ ContextualTooltip component (hover/click/always triggers, mobile-safe)
+- ✅ HintHistoryPanel for coaching hint history
+- ✅ useOnboarding hook extended with session tracking
+
+### Sprint 7: Voice-Enabled Practice Mode ✅ (Complete)
+
+- ✅ useSpeechRecognition hook (Web Speech API wrapper)
+- ✅ VoiceInputButton component with real-time transcription
+- ✅ Detective Q&A voice integration
+- ✅ Practice coaching voice input
+- ✅ Cross-browser support detection
+
 ### Sprint 6: Production Readiness ✅ (Mostly Complete)
 
 - ✅ Test infrastructure for useAudioRecording (46 tests)
@@ -652,8 +680,8 @@ The CareerSwiftr Interview Simulator is **production-ready** with a solid founda
 
 ---
 
-**Audit completed**: 2025-12-08
-**Previous audit**: 2025-12-07
+**Audit completed**: 2025-12-10
+**Previous audit**: 2025-12-08
 **Next audit recommended**: After fixing linting errors and verifying coverage
 
 ---
