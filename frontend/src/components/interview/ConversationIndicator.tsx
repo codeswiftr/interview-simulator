@@ -7,6 +7,7 @@ interface ConversationIndicatorProps {
   mentorName?: string;
   onInterrupt?: () => void;
   className?: string;
+  isListening?: boolean;  // True if mic is actively listening
 }
 
 /**
@@ -19,6 +20,7 @@ export function ConversationIndicator({
   mentorName = 'Mentor',
   onInterrupt,
   className,
+  isListening = false,
 }: ConversationIndicatorProps) {
   if (mode === 'idle') {
     return null;
@@ -62,12 +64,21 @@ export function ConversationIndicator({
       {mode === 'user_turn' && (
         <>
           <div className="relative">
-            <Mic className="w-8 h-8 text-green-500" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            <Mic className={cn('w-8 h-8', isListening ? 'text-status-error' : 'text-green-500')} />
+            {isListening && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-status-error rounded-full animate-ping" />
+            )}
+            {!isListening && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            )}
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-text-primary">Your turn to speak</p>
-            <p className="text-xs text-text-tertiary">Speak your answer clearly</p>
+            <p className="text-sm font-semibold text-text-primary">
+              {isListening ? 'Recording your answer...' : 'Your turn to speak'}
+            </p>
+            <p className="text-xs text-text-tertiary">
+              {isListening ? 'Speak clearly - click "Done speaking" when finished' : 'Click the button above to start speaking'}
+            </p>
           </div>
         </>
       )}

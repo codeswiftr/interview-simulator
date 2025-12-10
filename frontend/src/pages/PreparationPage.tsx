@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2, MessageCircle, Mic } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAudioRecording } from '../hooks/useAudioRecording';
@@ -771,6 +771,7 @@ export default function PreparationPage() {
                     mode={conversation.mode}
                     mentorName="AI Mentor"
                     onInterrupt={conversation.interrupt}
+                    isListening={stt.isListening}
                     className="mt-4"
                   />
                 )}
@@ -780,33 +781,85 @@ export default function PreparationPage() {
                     <label className="block text-sm font-medium text-text-primary">
                       Your Answer
                     </label>
-                    <VoiceInputButton
-                      onTranscript={(text) => {
-                        // Append to existing answer or replace if empty
-                        setCurrentAnswer((prev) =>
-                          prev.trim() ? `${prev} ${text}`.trim() : text
-                        );
-                        setInterimTranscript('');
-                      }}
-                      onInterim={(text) => {
-                        setInterimTranscript(text);
-                      }}
-                      disabled={isLoading}
-                      placeholder="Listening..."
-                      size="sm"
-                    />
+                    {/* Only show VoiceInputButton when NOT in conversation mode */}
+                    {!conversationModeEnabled && (
+                      <VoiceInputButton
+                        onTranscript={(text) => {
+                          // Append to existing answer or replace if empty
+                          setCurrentAnswer((prev) =>
+                            prev.trim() ? `${prev} ${text}`.trim() : text
+                          );
+                          setInterimTranscript('');
+                        }}
+                        onInterim={(text) => {
+                          setInterimTranscript(text);
+                        }}
+                        disabled={isLoading}
+                        placeholder="Listening..."
+                        size="sm"
+                      />
+                    )}
+                    {/* Show conversation mode listening status */}
+                    {conversationModeEnabled && voiceEnabled && (
+                      <div className="flex items-center gap-2">
+                        {stt.isListening ? (
+                          <>
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-status-error"></span>
+                            </span>
+                            <span className="text-sm text-status-error font-medium">Listening...</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Capture any in-progress transcript before stopping
+                                if (stt.transcript) {
+                                  setCurrentAnswer(stt.transcript);
+                                }
+                                stt.stopListening();
+                                conversation.transitionTo('processing');
+                              }}
+                              className="btn-ghost text-xs text-status-error"
+                            >
+                              Done speaking
+                            </button>
+                          </>
+                        ) : conversation.mode === 'user_turn' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              stt.startListening();
+                            }}
+                            className="btn-secondary text-xs flex items-center gap-1"
+                          >
+                            <Mic size={12} />
+                            Start speaking
+                          </button>
+                        ) : (
+                          <span className="text-sm text-text-tertiary">
+                            {conversation.mode === 'mentor_speaking' ? 'Mentor speaking...' : 'Waiting...'}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <textarea
                     value={currentAnswer}
                     onChange={(e) => setCurrentAnswer(e.target.value)}
-                    placeholder="Type your answer here or use voice input..."
+                    placeholder={conversationModeEnabled ? "Your spoken answer will appear here..." : "Type your answer here or use voice input..."}
                     className="w-full min-h-[120px] p-4 border border-border-light rounded-lg bg-surface-primary text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-electric-blue"
                     disabled={isLoading}
                   />
-                  {/* Interim transcript preview */}
-                  {interimTranscript && (
+                  {/* Interim transcript preview - for VoiceInputButton */}
+                  {!conversationModeEnabled && interimTranscript && (
                     <div className="mt-2 p-2 bg-electric-blue/10 border border-electric-blue/20 rounded text-sm text-text-secondary italic">
                       <span className="text-electric-blue">Preview:</span> {interimTranscript}
+                    </div>
+                  )}
+                  {/* Live transcript preview - for conversation mode */}
+                  {conversationModeEnabled && stt.isListening && stt.transcript && (
+                    <div className="mt-2 p-2 bg-electric-blue/10 border border-electric-blue/20 rounded text-sm text-text-secondary italic">
+                      <span className="text-electric-blue">Hearing:</span> {stt.transcript}
                     </div>
                   )}
                 </div>
