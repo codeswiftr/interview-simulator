@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, CheckCircle, AlertCircle, History, TrendingUp, BarChart3, Edit2, Save, X, RefreshCw, Wand2, MessageCircle } from 'lucide-react';
 import { preparationAPI, uploadAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useCoachingHint } from '../hooks/useCoachingHint';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useVoicePreferences } from '../hooks/useVoicePreferences';
+import { useConversationMode } from '../hooks/useConversationMode';
 import RecordingDeck from '../components/interview/RecordingDeck';
 import CoachOverlay from '../components/interview/CoachOverlay';
 import HintHistoryPanel from '../components/interview/HintHistoryPanel';
+import ConversationIndicator from '../components/interview/ConversationIndicator';
 import { VoiceInputButton } from '../components/common/VoiceInputButton';
 import ContextualTooltip from '../components/common/ContextualTooltip';
 import { getExtensionForMimeType } from '../lib/audio-utils';
@@ -79,6 +82,7 @@ export default function PreparationPage() {
   const { settings: voiceSettings, updateSettings: updateVoiceSettings } = useVoicePreferences();
   const [voiceEnabled, setVoiceEnabled] = useState(voiceSettings.enabled);
 
+  const tts = useSpeechSynthesis();
   const {
     speak,
     stop: stopSpeaking,
@@ -90,7 +94,34 @@ export default function PreparationPage() {
     setPitch,
     setVolume,
     voices,
-  } = useSpeechSynthesis();
+  } = tts;
+
+  // Speech recognition for conversation mode
+  const stt = useSpeechRecognition({
+    onResult: (transcript, isFinal) => {
+      if (isFinal && conversationModeEnabled && stage === 'detective') {
+        // Auto-submit answer when user finishes speaking in conversation mode
+        setCurrentAnswer(transcript);
+      }
+    },
+  });
+
+  // Conversation mode state
+  const [conversationModeEnabled, setConversationModeEnabled] = useState(false);
+
+  // Conversation mode hook for phone-like experience
+  const conversation = useConversationMode({
+    tts,
+    stt,
+    autoListen: voiceSettings.autoListen,
+    enabled: conversationModeEnabled && voiceEnabled && stage === 'detective',
+    onUserFinish: (transcript) => {
+      // When user finishes speaking, set their answer
+      if (transcript.trim()) {
+        setCurrentAnswer(transcript);
+      }
+    },
+  });
 
   // Audio recording hook
   const {
@@ -413,8 +444,14 @@ export default function PreparationPage() {
       return;
     }
 
-    speak(currentQuestion);
-  }, [stage, currentQuestion, voiceEnabled, isSpeechSupported, speak, stopSpeaking]);
+    // Use conversation mode if enabled, otherwise use regular speak
+    if (conversationModeEnabled) {
+      conversation.startConversation();
+      conversation.mentorSay(currentQuestion);
+    } else {
+      speak(currentQuestion);
+    }
+  }, [stage, currentQuestion, voiceEnabled, isSpeechSupported, speak, stopSpeaking, conversationModeEnabled, conversation]);
 
   // Cleanup TTS on unmount
   useEffect(() => () => stopSpeaking(), [stopSpeaking]);
@@ -679,6 +716,7 @@ export default function PreparationPage() {
                           updateVoiceSettings({ enabled: next });
                           if (!next) {
                             stopSpeaking();
+                            conversation.endConversation();
                           } else if (currentQuestion) {
                             speak(currentQuestion);
                           }
@@ -690,7 +728,25 @@ export default function PreparationPage() {
                     >
                       {voiceEnabled ? 'Mute mentor voice' : 'Enable mentor voice'}
                     </button>
-                    {isSpeaking && (
+                    {voiceEnabled && stt.isSupported && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConversationModeEnabled((prev) => {
+                            const next = !prev;
+                            if (!next) {
+                              conversation.endConversation();
+                            }
+                            return next;
+                          });
+                        }}
+                        className={`btn-ghost flex items-center gap-2 text-sm ${conversationModeEnabled ? 'text-electric-blue' : ''}`}
+                      >
+                        <MessageCircle size={14} />
+                        {conversationModeEnabled ? 'Conversation mode ON' : 'Conversation mode'}
+                      </button>
+                    )}
+                    {!conversationModeEnabled && isSpeaking && (
                       <span className="flex items-center gap-1 text-electric-blue text-sm">
                         <Loader2 size={14} className="animate-spin" />
                         Mentor is speaking
@@ -708,6 +764,16 @@ export default function PreparationPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Conversation Mode Indicator */}
+                {conversationModeEnabled && voiceEnabled && (
+                  <ConversationIndicator
+                    mode={conversation.mode}
+                    mentorName="AI Mentor"
+                    onInterrupt={conversation.interrupt}
+                    className="mt-4"
+                  />
+                )}
 
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
