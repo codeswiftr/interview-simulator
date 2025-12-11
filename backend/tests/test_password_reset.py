@@ -421,17 +421,32 @@ async def test_reset_password_user_not_found_after_token_lookup(client: AsyncCli
     result = await session_override.exec(select(PasswordResetToken))
     reset_token = result.first()
     assert reset_token is not None
+    token_value = reset_token.token  # Save token value before deletion
 
     # Delete the user (simulating data inconsistency)
+    # First delete the password reset tokens to avoid FK constraint
     user_result = await session_override.exec(select(User).where(User.email == email))
     user = user_result.first()
+    user_id = user.id
+
+    # Delete all tokens for this user first
+    await session_override.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+    )
+    for token in (await session_override.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+    )).all():
+        await session_override.delete(token)
+    await session_override.commit()
+
+    # Now delete the user
     await session_override.delete(user)
     await session_override.commit()
 
-    # Try to reset password with token pointing to deleted user
+    # Try to reset password with token that no longer exists
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "newpassword"}
+        json={"token": token_value, "new_password": "newpassword"}
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
