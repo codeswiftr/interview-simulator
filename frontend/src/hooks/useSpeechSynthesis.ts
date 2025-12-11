@@ -251,6 +251,7 @@ export function useSpeechSynthesis(
       rate,
       resume,
       selectedVoice,
+      setVoice,
       speak,
       stop,
       voices,

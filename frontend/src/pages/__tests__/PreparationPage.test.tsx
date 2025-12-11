@@ -3,10 +3,11 @@ import { renderPage, waitFor, screen } from '../../test/utils/pageTestUtils';
 import PreparationPage from '../PreparationPage';
 import { server } from '../../test/mocks/server';
 import { http, HttpResponse } from 'msw';
+import type { VoiceInputButtonProps } from '../../components/common/VoiceInputButton';
 
 // Mock VoiceInputButton to avoid speech recognition API in tests
 vi.mock('../../components/common/VoiceInputButton', () => ({
-  VoiceInputButton: ({ onTranscript, disabled }: any) => (
+  VoiceInputButton: ({ onTranscript, disabled }: VoiceInputButtonProps) => (
     <button
       onClick={() => onTranscript && onTranscript('Mocked transcript')}
       disabled={disabled}

@@ -521,6 +521,17 @@ export default function PreparationPage() {
     // Transcript handling can be added here if needed in future
   }, []);
 
+  // Load comparison data
+  const loadComparison = useCallback(async (preparationId: string, attemptId: string) => {
+    try {
+      const response = await preparationAPI.getComparison(preparationId, attemptId);
+      setComparisonData(response.data);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || 'Failed to load comparison');
+    }
+  }, []);
+
   // Rate delivery attempt
   const handleRateAttempt = useCallback(async (attemptId: string) => {
     if (!id) return;
@@ -549,18 +560,7 @@ export default function PreparationPage() {
     } finally {
       setIsRating(false);
     }
-  }, [id, toast]);
-
-  // Load comparison data
-  const loadComparison = useCallback(async (preparationId: string, attemptId: string) => {
-    try {
-      const response = await preparationAPI.getComparison(preparationId, attemptId);
-      setComparisonData(response.data);
-    } catch (err) {
-      const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to load comparison');
-    }
-  }, []);
+  }, [id, toast, loadComparison]);
 
   // View comparison for an attempt
   const handleViewComparison = useCallback(async (attemptId: string) => {

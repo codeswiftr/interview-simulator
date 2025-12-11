@@ -10,7 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../hooks/useAuth';
 import { ToastProvider } from '../../hooks/useToast';
 import { ThemeProvider } from '../../contexts/ThemeContext';
-import type { User } from '../../types';
+import type { User, InterviewSession } from '../../types';
 import { createMockUser } from '../utils';
 
 interface PageTestProvidersProps {
@@ -95,7 +95,7 @@ export const createPageTestUser = (overrides?: Partial<User>): User => ({
 /**
  * Common test data factories for pages
  */
-export const createMockInterviewSession = (overrides?: Partial<any>) => ({
+export const createMockInterviewSession = (overrides?: Partial<InterviewSession>) => ({
   id: 'test-interview-id',
   interview_type: 'behavioral',
   status: 'scheduled',
@@ -104,7 +104,14 @@ export const createMockInterviewSession = (overrides?: Partial<any>) => ({
   ...overrides,
 });
 
-export const createMockUserStats = (overrides?: Partial<any>) => ({
+interface UserStats {
+  total_sessions: number;
+  completed_sessions: number;
+  average_score: number;
+  total_practice_time_seconds: number;
+}
+
+export const createMockUserStats = (overrides?: Partial<UserStats>) => ({
   total_sessions: 10,
   completed_sessions: 8,
   average_score: 82,
