@@ -1503,3 +1503,269 @@ async def test_generate_session_feedback_invalid_session(client, session_overrid
     )
     assert gen_resp.status_code == 404
     assert "not found" in gen_resp.json()["detail"].lower()
+
+
+# Additional FeedbackService Error Path Tests for Coverage
+
+
+@pytest.mark.asyncio
+async def test_generate_feedback_response_not_found(session_override):
+    """Test FeedbackService.generate_feedback raises ValueError for non-existent response."""
+    service = FeedbackService()
+    fake_response_id = uuid4()
+
+    with pytest.raises(ValueError, match="not found"):
+        await service.generate_feedback(session_override, fake_response_id)
+
+
+# Note: test_generate_feedback_question_not_found skipped
+# Testing this requires complex mocking due to foreign key constraints
+# The error path is covered by integration tests
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_session_not_found(session_override):
+    """Test FeedbackService.generate_session_feedback raises ValueError for non-existent session."""
+    service = FeedbackService()
+    fake_session_id = uuid4()
+
+    with pytest.raises(ValueError, match="not found"):
+        await service.generate_session_feedback(session_override, fake_session_id)
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_already_exists(session_override, mock_content_metrics):
+    """Test FeedbackService.generate_session_feedback raises ValueError when feedback exists."""
+    from app.models.user import User
+    from app.security import hash_password
+
+    # Create user
+    user = User(email="session_exists@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.COMPLETED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    # Create existing session feedback
+    existing_feedback = SessionFeedback(
+        session_id=interview.id,
+        overall_score=85.0,
+        audio_score=80.0,
+        content_score=90.0,
+        top_strengths=["Good"],
+        top_improvements=["Better"],
+        recommended_practice_areas=["Practice"],
+    )
+    session_override.add(existing_feedback)
+    await session_override.commit()
+
+    service = FeedbackService()
+    with pytest.raises(ValueError, match="already exists"):
+        await service.generate_session_feedback(session_override, interview.id)
+
+
+@pytest.mark.asyncio
+async def test_generate_session_feedback_no_feedback_generated(session_override):
+    """Test FeedbackService.generate_session_feedback raises ValueError when no feedback can be generated."""
+    from app.models.user import User
+    from app.security import hash_password
+
+    # Create user
+    user = User(email="no_feedback@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create question
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create interview with response but no transcript (can't generate feedback)
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.COMPLETED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    # Create response without transcript
+    response = InterviewResponse(
+        session_id=interview.id,
+        question_id=question.id,
+        transcript=None,  # No transcript
+        duration_seconds=60,
+    )
+    session_override.add(response)
+    await session_override.commit()
+
+    service = FeedbackService()
+    with pytest.raises(ValueError, match="No feedback could be generated"):
+        await service.generate_session_feedback(session_override, interview.id)
+
+
+@pytest.mark.asyncio
+async def test_get_processing_summary(session_override):
+    """Test FeedbackService.get_processing_summary returns correct status counts."""
+    from app.models.user import User
+    from app.security import hash_password
+
+    # Create user
+    user = User(email="processing@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create question
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.IN_PROGRESS,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    # Create responses with different processing statuses
+    response1 = InterviewResponse(
+        session_id=interview.id,
+        question_id=question.id,
+        transcript="Response 1",
+        processing_status=ProcessingStatus.COMPLETED,
+    )
+    response2 = InterviewResponse(
+        session_id=interview.id,
+        question_id=question.id,
+        transcript="Response 2",
+        processing_status=ProcessingStatus.PENDING,
+    )
+    response3 = InterviewResponse(
+        session_id=interview.id,
+        question_id=question.id,
+        transcript="Response 3",
+        processing_status=ProcessingStatus.FAILED,
+    )
+    session_override.add(response1)
+    session_override.add(response2)
+    session_override.add(response3)
+    await session_override.commit()
+
+    service = FeedbackService()
+    summary = await service.get_processing_summary(session_override, interview.id)
+
+    assert summary["total_responses"] == 3
+    assert summary["status_counts"]["completed"] == 1
+    assert summary["status_counts"]["pending"] == 1
+    assert summary["status_counts"]["failed"] == 1
+    assert summary["all_processed"] is False
+    assert summary["has_session_feedback"] is False
+    assert "current_step" in summary
+
+
+@pytest.mark.asyncio
+async def test_get_user_progress_summary(session_override, mock_content_metrics):
+    """Test FeedbackService.get_user_progress_summary returns progress metrics."""
+    from app.models.user import User
+    from app.security import hash_password
+
+    # Create user
+    user = User(email="progress@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create completed interviews with feedback
+    interview1 = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.COMPLETED,
+    )
+    interview2 = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.TECHNICAL,
+        status=InterviewStatus.COMPLETED,
+    )
+    session_override.add(interview1)
+    session_override.add(interview2)
+    await session_override.commit()
+    await session_override.refresh(interview1)
+    await session_override.refresh(interview2)
+
+    # Create session feedbacks
+    feedback1 = SessionFeedback(
+        session_id=interview1.id,
+        overall_score=85.0,
+        audio_score=80.0,
+        content_score=90.0,
+        top_strengths=["Good"],
+        top_improvements=["Better"],
+        recommended_practice_areas=["Technical accuracy"],
+    )
+    feedback2 = SessionFeedback(
+        session_id=interview2.id,
+        overall_score=75.0,
+        audio_score=70.0,
+        content_score=80.0,
+        top_strengths=["Clear"],
+        top_improvements=["More detail"],
+        recommended_practice_areas=["Answer structure"],
+    )
+    session_override.add(feedback1)
+    session_override.add(feedback2)
+    await session_override.commit()
+
+    service = FeedbackService()
+    progress = await service.get_user_progress(session_override, user.id)
+
+    assert "recommended_practice_areas" in progress
+    assert "average_audio_score" in progress
+    assert "average_content_score" in progress
+    assert progress["average_audio_score"] == 75.0
+    assert progress["average_content_score"] == 85.0
+    assert len(progress["recommended_practice_areas"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_get_user_progress_summary_no_sessions(session_override):
+    """Test FeedbackService.get_user_progress returns empty metrics for new user."""
+    from app.models.user import User
+    from app.security import hash_password
+
+    # Create user with no sessions
+    user = User(email="new_user@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    service = FeedbackService()
+    progress = await service.get_user_progress(session_override, user.id)
+
+    assert progress["recommended_practice_areas"] == []
+    assert progress["average_audio_score"] is None
+    assert progress["average_content_score"] is None
