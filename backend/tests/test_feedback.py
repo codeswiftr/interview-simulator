@@ -1769,3 +1769,233 @@ async def test_get_user_progress_summary_no_sessions(session_override):
     assert progress["recommended_practice_areas"] == []
     assert progress["average_audio_score"] is None
     assert progress["average_content_score"] is None
+
+
+# InterviewService Unit Tests for Coverage
+
+
+@pytest.mark.asyncio
+async def test_interview_service_assign_specific_question_inactive_fails(session_override):
+    """Test InterviewService.assign_specific_question raises ValueError for inactive question."""
+    from app.models.user import User
+    from app.security import hash_password
+    from app.services.interview_service import InterviewService
+
+    # Create user
+    user = User(email="service_test@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create inactive question
+    question = Question(
+        content="Inactive question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        is_active=False,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    service = InterviewService()
+    with pytest.raises(ValueError, match="not found or is inactive"):
+        await service.assign_specific_question(session_override, interview, question.id)
+
+
+@pytest.mark.asyncio
+async def test_interview_service_assign_specific_question_nonexistent_fails(session_override):
+    """Test InterviewService.assign_specific_question raises ValueError for non-existent question."""
+    from app.models.user import User
+    from app.security import hash_password
+    from app.services.interview_service import InterviewService
+    from uuid import uuid4
+
+    # Create user
+    user = User(email="service_test2@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    service = InterviewService()
+    fake_question_id = uuid4()
+    with pytest.raises(ValueError, match="not found or is inactive"):
+        await service.assign_specific_question(session_override, interview, fake_question_id)
+
+
+@pytest.mark.asyncio
+async def test_interview_service_assign_specific_question_success(session_override):
+    """Test InterviewService.assign_specific_question successfully assigns question."""
+    from app.models.user import User
+    from app.security import hash_password
+    from app.services.interview_service import InterviewService
+
+    # Create user
+    user = User(email="service_test3@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create active question
+    question = Question(
+        content="Active question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        is_active=True,
+        expected_duration_seconds=180,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    service = InterviewService()
+    interview_question = await service.assign_specific_question(
+        session_override, interview, question.id
+    )
+
+    assert interview_question is not None
+    assert interview_question.session_id == interview.id
+    assert interview_question.question_id == question.id
+    assert interview_question.order == 1
+    assert interview_question.time_limit_seconds == 180
+
+
+@pytest.mark.asyncio
+async def test_interview_service_has_assigned_questions(session_override):
+    """Test InterviewService.has_assigned_questions returns correct boolean."""
+    from app.models.user import User
+    from app.security import hash_password
+    from app.services.interview_service import InterviewService
+
+    # Create user
+    user = User(email="has_questions@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create question
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    service = InterviewService()
+
+    # Initially no questions assigned
+    has_questions = await service.has_assigned_questions(session_override, interview.id)
+    assert has_questions is False
+
+    # Assign question
+    await service.assign_specific_question(session_override, interview, question.id)
+
+    # Now should have questions
+    has_questions = await service.has_assigned_questions(session_override, interview.id)
+    assert has_questions is True
+
+
+@pytest.mark.asyncio
+async def test_interview_service_get_interview_questions(session_override):
+    """Test InterviewService.get_interview_questions returns questions in order."""
+    from app.models.user import User
+    from app.security import hash_password
+    from app.services.interview_service import InterviewService
+
+    # Create user
+    user = User(email="get_questions@example.com", hashed_password=hash_password("password"))
+    session_override.add(user)
+    await session_override.commit()
+    await session_override.refresh(user)
+
+    # Create questions
+    question1 = Question(
+        content="Question 1",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    question2 = Question(
+        content="Question 2",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question1)
+    session_override.add(question2)
+    await session_override.commit()
+    await session_override.refresh(question1)
+    await session_override.refresh(question2)
+
+    # Create interview
+    interview = InterviewSession(
+        user_id=user.id,
+        interview_type=InterviewType.BEHAVIORAL,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session_override.add(interview)
+    await session_override.commit()
+    await session_override.refresh(interview)
+
+    service = InterviewService()
+
+    # Assign questions manually to control order
+    interview_question1 = InterviewQuestion(
+        session_id=interview.id,
+        question_id=question1.id,
+        order=1,
+    )
+    interview_question2 = InterviewQuestion(
+        session_id=interview.id,
+        question_id=question2.id,
+        order=2,
+    )
+    session_override.add(interview_question1)
+    session_override.add(interview_question2)
+    await session_override.commit()
+
+    # Get questions - should be in order
+    questions = await service.get_interview_questions(session_override, interview.id)
+    assert len(questions) == 2
+    assert questions[0].id == question1.id
+    assert questions[1].id == question2.id
