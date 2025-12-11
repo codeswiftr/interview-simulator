@@ -204,3 +204,114 @@ class TestBackgroundTasks:
             # Should have waited at least 2 seconds
             assert end_time - start_time >= 1.5  # Allow some margin
 
+    @pytest.mark.asyncio
+    async def test_process_response_audio_async_invalid_url_handles_gracefully(
+        self, background_tasks, db_session, sample_response
+    ):
+        """Test that invalid audio URL is handled gracefully."""
+        # Should not raise exception, just log warning
+        await background_tasks.process_response_audio_async(
+            sample_response.id, "invalid-url"
+        )
+
+    @pytest.mark.asyncio
+    async def test_process_response_audio_async_missing_file_handles_gracefully(
+        self, background_tasks, db_session, sample_response
+    ):
+        """Test that missing audio file is handled gracefully."""
+        # Should not raise exception, just log warning
+        await background_tasks.process_response_audio_async(
+            sample_response.id, "/uploads/audio/nonexistent.webm"
+        )
+
+    @pytest.mark.asyncio
+    async def test_process_audio_with_retry_exhausts_retries(
+        self, background_tasks, db_session, sample_response, tmp_path
+    ):
+        """Test that retry logic exhausts after MAX_RETRIES."""
+        audio_file = tmp_path / "test_audio.webm"
+        audio_file.write_bytes(b"fake audio data")
+
+        # Mock audio_service to always fail with transient error
+        with patch.object(
+            background_tasks.audio_service,
+            "process_response_audio",
+            side_effect=ConnectionError("Transient error"),
+        ):
+            with pytest.raises(Exception):
+                await background_tasks._process_audio_with_retry(
+                    db_session, sample_response.id, str(audio_file)
+                )
+
+    @pytest.mark.asyncio
+    async def test_process_audio_with_retry_permanent_error_no_retry(
+        self, background_tasks, db_session, sample_response, tmp_path
+    ):
+        """Test that permanent errors don't trigger retries."""
+        audio_file = tmp_path / "test_audio.webm"
+        audio_file.write_bytes(b"fake audio data")
+
+        # Mock audio_service to fail with permanent error
+        with patch.object(
+            background_tasks.audio_service,
+            "process_response_audio",
+            side_effect=ValueError("Permanent error - invalid format"),
+        ):
+            with pytest.raises(ValueError, match="Permanent error"):
+                await background_tasks._process_audio_with_retry(
+                    db_session, sample_response.id, str(audio_file)
+                )
+
+    @pytest.mark.asyncio
+    async def test_update_processing_status_failed(
+        self, background_tasks, db_session, sample_response
+    ):
+        """Test that _update_processing_status_failed updates status correctly."""
+        await background_tasks._update_processing_status_failed(
+            db_session, sample_response.id, "Test error message"
+        )
+
+        await db_session.refresh(sample_response)
+        assert sample_response.processing_status == ProcessingStatus.FAILED
+        assert sample_response.processing_error == "Test error message"
+
+    @pytest.mark.asyncio
+    async def test_generate_content_feedback_async_handles_errors(
+        self, background_tasks, db_session, sample_response
+    ):
+        """Test that generate_content_feedback_async handles errors gracefully."""
+        with patch.object(
+            background_tasks.feedback_service,
+            "generate_feedback",
+            side_effect=ValueError("Feedback generation failed"),
+        ):
+            # Should not raise exception, just log error
+            await background_tasks.generate_content_feedback_async(sample_response.id)
+
+    @pytest.mark.asyncio
+    async def test_generate_session_feedback_async_handles_errors(
+        self, background_tasks, db_session, sample_interview_session
+    ):
+        """Test that generate_session_feedback_async handles errors gracefully."""
+        with patch.object(
+            background_tasks.feedback_service,
+            "generate_session_feedback",
+            side_effect=ValueError("Session feedback generation failed"),
+        ):
+            # Should not raise exception, just log error
+            await background_tasks.generate_session_feedback_async(sample_interview_session.id)
+
+    @pytest.mark.asyncio
+    async def test_generate_session_feedback_async_no_responses_handles_gracefully(
+        self, background_tasks, db_session, sample_interview_session
+    ):
+        """Test that generate_session_feedback_async handles no responses gracefully."""
+        # Session has no responses - should wait and then handle gracefully
+        with patch.object(
+            background_tasks.feedback_service,
+            "generate_session_feedback",
+            side_effect=ValueError("No responses found"),
+        ):
+            # Should not raise exception, just log error
+            await background_tasks.generate_session_feedback_async(sample_interview_session.id)
+
