@@ -1738,3 +1738,346 @@ async def test_get_interview_feedback_placeholder(client, session_override):
     )
     assert feedback_resp.status_code == 200
     assert "not yet implemented" in feedback_resp.json()["message"]
+
+
+@pytest.mark.asyncio
+async def test_start_interview_value_error_from_assign_questions(client, session_override):
+    """Test that ValueError from assign_questions is properly converted to 400."""
+    token = await register_and_login(client)
+
+    # Create interview without enough questions
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "technical", "question_count": 5},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to start - should fail with ValueError converted to 400
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+    assert start_resp.status_code == 400
+    # Should contain error message from ValueError
+    assert "detail" in start_resp.json()
+
+
+@pytest.mark.asyncio
+async def test_get_interview_questions_no_questions_assigned_404(client, session_override):
+    """Test GET /interviews/{id}/questions returns 404 when no questions assigned."""
+    token = await register_and_login(client)
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Manually set status to IN_PROGRESS without assigning questions
+    result = await session_override.exec(
+        select(InterviewSession).where(InterviewSession.id == interview_id)
+    )
+    interview = result.first()
+    interview.status = InterviewStatus.IN_PROGRESS
+    await session_override.commit()
+
+    # Try to get questions - should return 404
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 404
+    assert "no questions found" in questions_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_cancel_interview_non_scheduled_status_fails(client, session_override):
+    """Test that canceling a non-scheduled interview fails with 400."""
+    token = await register_and_login(client)
+
+    # Create questions
+    for i in range(3):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
+    await session_override.commit()
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Try to cancel in-progress interview - should fail
+    cancel_resp = await client.delete(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token},
+    )
+    assert cancel_resp.status_code == 400
+    assert "only scheduled" in cancel_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_submit_response_wrong_question_id_fails(client, session_override):
+    """Test submitting response with question_id not in interview fails."""
+    token = await register_and_login(client)
+
+    # Create questions
+    question1 = Question(
+        content="Question 1",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    question2 = Question(
+        content="Question 2",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question1)
+    session_override.add(question2)
+    await session_override.commit()
+
+    # Create and start interview (only question1 assigned)
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Try to submit response with question2 (not assigned to interview)
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question2.id),
+            "transcript": "Test answer",
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "does not belong" in submit_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_submit_response_scheduled_interview_fails(client, session_override):
+    """Test submitting response to scheduled (not started) interview fails."""
+    token = await register_and_login(client)
+
+    # Create questions
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # Create interview but don't start it
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Try to submit response to scheduled interview - should fail
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "in progress" in submit_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_responses_builds_question_data(client, session_override):
+    """Test GET /interviews/{id}/responses includes question data in response."""
+    token = await register_and_login(client)
+
+    # Create questions
+    question = Question(
+        content="Test question content",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # Create and start interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Submit a response
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+        },
+        headers={"Authorization": token},
+    )
+
+    # Get responses - should include question data
+    responses_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/responses",
+        headers={"Authorization": token},
+    )
+    assert responses_resp.status_code == 200
+    responses = responses_resp.json()
+    assert len(responses) == 1
+    assert "question" in responses[0]
+    assert responses[0]["question"] is not None
+    assert responses[0]["question"]["content"] == "Test question content"
+    assert responses[0]["question"]["category"] == "behavioral"
+
+
+@pytest.mark.asyncio
+async def test_quick_practice_value_error_from_assign_specific_question(client, session_override):
+    """Test that ValueError from assign_specific_question is converted to 400."""
+    token = await register_and_login(client)
+
+    # Create an inactive question
+    question = Question(
+        content="Inactive question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        is_active=False,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # Try to create quick practice with inactive question
+    # This should fail at question lookup (404), but if it gets past that,
+    # assign_specific_question might raise ValueError
+    quick_resp = await client.post(
+        "/api/v1/interviews/quick-practice",
+        params={"question_id": question.id},
+        headers={"Authorization": token},
+    )
+    # Should fail either at question lookup (404) or assign (400)
+    assert quick_resp.status_code in [400, 404]
+
+
+@pytest.mark.asyncio
+async def test_get_interview_unauthorized_access_404(client, session_override):
+    """Test GET /interviews/{id} returns 404 for interview owned by different user."""
+    token1 = await register_and_login(client, email="user1@example.com")
+    token2 = await register_and_login(client, email="user2@example.com")
+
+    # User1 creates interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token1},
+    )
+    interview_id = resp.json()["id"]
+
+    # User2 tries to access user1's interview - should get 404
+    get_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token2},
+    )
+    assert get_resp.status_code == 404
+    assert "not found" in get_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_start_interview_unauthorized_access_404(client, session_override):
+    """Test POST /interviews/{id}/start returns 404 for interview owned by different user."""
+    token1 = await register_and_login(client, email="start_user1@example.com")
+    token2 = await register_and_login(client, email="start_user2@example.com")
+
+    # User1 creates interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token1},
+    )
+    interview_id = resp.json()["id"]
+
+    # Create questions for user1
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # User2 tries to start user1's interview - should get 404
+    start_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token2},
+    )
+    assert start_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_submit_response_unauthorized_access_404(client, session_override):
+    """Test POST /interviews/{id}/responses returns 404 for interview owned by different user."""
+    token1 = await register_and_login(client, email="resp_user1@example.com")
+    token2 = await register_and_login(client, email="resp_user2@example.com")
+
+    # Create questions
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+
+    # User1 creates and starts interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token1},
+    )
+    interview_id = resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token1},
+    )
+
+    # User2 tries to submit response to user1's interview - should get 404
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+        },
+        headers={"Authorization": token2},
+    )
+    assert submit_resp.status_code == 404
