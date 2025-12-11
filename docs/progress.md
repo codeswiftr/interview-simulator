@@ -74,6 +74,33 @@
 
 ## Completed Work
 
+### 2025-12-11: Sprint 10 - Code Quality & Test Coverage (Epic 1 & 2 COMPLETE)
+
+**Epic 1: Lint Cleanup & Code Quality**
+- Fixed 337 lint errors (206 backend + 131 frontend)
+- Backend: Applied `ruff check --fix --unsafe-fixes` for auto-fixes
+- Frontend: Fixed unused vars, missing hook deps, any types
+- Both backend and frontend now have zero lint errors
+
+**Epic 2: Test Coverage Improvement**
+- Achieved 69% overall backend coverage (up from 45.5%)
+- Service layer coverage: 78-87% (all services now well-tested)
+- Added 16+ new tests for API error paths and edge cases
+- Fixed failing tests: transcription no-filename (422 vs 400), password reset FK constraint
+- 378 passing tests with 4 skipped
+
+**Key Metrics:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Backend Coverage | 45.5% | 69% |
+| Service Layer | 58-69% | 78-87% |
+| Lint Errors | 337 | 0 |
+| Passing Tests | 292 | 378 |
+
+**Remaining Epics (not started):**
+- Epic 3: Video Analysis MVP (P2)
+- Epic 4: B2B Team Features (P2)
+
 ### 2025-12-10: Sprint 9 - Conversational Voice Mentor COMPLETE
 
 **Epic 1: Voice Mentor TTS Integration**
