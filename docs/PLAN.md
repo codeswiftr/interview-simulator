@@ -147,17 +147,17 @@ No new code - just tests for existing functionality.
 
 ### Implementation Plan
 
-#### Phase 2.1: API Endpoint Tests
+#### Phase 2.1: API Endpoint Tests 🔄 IN PROGRESS
 
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 2.1.1 | Add tests for `api/interviews.py` error paths | qa-test-guardian | 2h |
-| 2.1.2 | Add tests for `api/interviews.py` edge cases (cancel, duplicate) | qa-test-guardian | 1h |
-| 2.1.3 | Add tests for `api/feedback.py` missing feedback scenarios | qa-test-guardian | 1.5h |
-| 2.1.4 | Add tests for `api/auth.py` refresh token edge cases | qa-test-guardian | 1h |
-| 2.1.5 | Add tests for `api/auth.py` password reset flow | qa-test-guardian | 1h |
+| Task | Description | Agent/Skill | Est | Status |
+|------|-------------|-------------|-----|--------|
+| 2.1.1 | Add tests for `api/interviews.py` error paths | qa-test-guardian | 2h | 🔄 Partial (2 tests added) |
+| 2.1.2 | Add tests for `api/interviews.py` edge cases (cancel, duplicate) | qa-test-guardian | 1h | ⏳ Pending |
+| 2.1.3 | Add tests for `api/feedback.py` missing feedback scenarios | qa-test-guardian | 1.5h | ✅ Already covered |
+| 2.1.4 | Add tests for `api/auth.py` refresh token edge cases | qa-test-guardian | 1h | ✅ Already covered |
+| 2.1.5 | Add tests for `api/auth.py` password reset flow | qa-test-guardian | 1h | ✅ Already covered |
 
-**Checkpoint**: API coverage ≥ 65%
+**Checkpoint**: ⏳ API coverage currently ~40-44%, target ≥ 65%
 
 ---
 
