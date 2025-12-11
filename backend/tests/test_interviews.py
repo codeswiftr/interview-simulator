@@ -1691,3 +1691,50 @@ async def test_start_interview_cancelled_status_fails(client, session_override):
     )
     assert start_resp.status_code == 400
     assert "cannot start" in start_resp.json()["detail"].lower()
+
+
+# Additional Error Path Tests for Coverage Improvement
+
+
+@pytest.mark.asyncio
+async def test_end_interview_scheduled_status_allowed(client, session_override):
+    """Test that ending a scheduled interview is allowed (edge case)."""
+    token = await register_and_login(client)
+
+    # Create interview (scheduled status)
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # End scheduled interview (should be allowed per line 196)
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp.status_code == 200
+    assert end_resp.json()["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_get_interview_feedback_placeholder(client, session_override):
+    """Test GET /interviews/{id}/feedback returns placeholder."""
+    token = await register_and_login(client)
+
+    # Create interview
+    resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral"},
+        headers={"Authorization": token},
+    )
+    interview_id = resp.json()["id"]
+
+    # Get feedback (placeholder endpoint)
+    feedback_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/feedback",
+        headers={"Authorization": token},
+    )
+    assert feedback_resp.status_code == 200
+    assert "not yet implemented" in feedback_resp.json()["message"]
