@@ -1836,22 +1836,17 @@ async def test_submit_response_wrong_question_id_fails(client, session_override)
     """Test submitting response with question_id not in interview fails."""
     token = await register_and_login(client)
 
-    # Create questions
-    question1 = Question(
-        content="Question 1",
-        category=QuestionCategory.BEHAVIORAL,
-        difficulty=Difficulty.MEDIUM,
-    )
-    question2 = Question(
-        content="Question 2",
-        category=QuestionCategory.BEHAVIORAL,
-        difficulty=Difficulty.MEDIUM,
-    )
-    session_override.add(question1)
-    session_override.add(question2)
+    # Create questions for the interview
+    for i in range(3):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        session_override.add(question)
     await session_override.commit()
 
-    # Create and start interview (only question1 assigned)
+    # Create and start interview (will assign 1 question randomly)
     resp = await client.post(
         "/api/v1/interviews/",
         json={"interview_type": "behavioral", "question_count": 1},
@@ -1864,11 +1859,27 @@ async def test_submit_response_wrong_question_id_fails(client, session_override)
         headers={"Authorization": token},
     )
 
-    # Try to submit response with question2 (not assigned to interview)
+    # Get the question that was actually assigned
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assigned_question_id = questions_resp.json()[0]["id"]
+
+    # Create a new question AFTER interview started (definitely not assigned)
+    unassigned_question = Question(
+        content="Unassigned question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(unassigned_question)
+    await session_override.commit()
+
+    # Try to submit response with unassigned question - should fail
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json={
-            "question_id": str(question2.id),
+            "question_id": str(unassigned_question.id),
             "transcript": "Test answer",
         },
         headers={"Authorization": token},
