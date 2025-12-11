@@ -126,7 +126,7 @@ export function useCoachingHint({
                   return;
                 }
               }
-            } catch (e) {
+            } catch {
               // Ignore JSON parse errors for incomplete chunks
             }
           }

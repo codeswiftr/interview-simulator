@@ -1,6 +1,5 @@
 """Integration tests for full interview flow."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -9,8 +8,6 @@ from sqlmodel import SQLModel
 
 from app.db import SessionLocal, engine, get_session
 from app.main import app
-from app.models.interview import InterviewStatus, InterviewType
-from app.models.user import SubscriptionTier
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -147,7 +144,7 @@ async def test_quota_enforcement_integration(client, session_override):
         )
 
     # Create 3 interviews (should succeed)
-    for i in range(3):
+    for _ in range(3):
         resp = await client.post(
             "/api/v1/interviews/",
             headers={"Authorization": token},

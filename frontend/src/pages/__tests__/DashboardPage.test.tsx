@@ -134,7 +134,7 @@ describe('DashboardPage', () => {
 
       await waitFor(() => {
         // Upgrade prompts should be visible for free tier
-        const upgradeElements = screen.queryAllByText(/upgrade|pro|premium/i);
+        const _upgradeElements = screen.queryAllByText(/upgrade|pro|premium/i);
         // May not always show, depending on quota
       });
     });
@@ -155,7 +155,7 @@ describe('DashboardPage', () => {
 
       await waitFor(() => {
         // Welcome modal should appear
-        const welcomeElements = screen.queryAllByText(/welcome|get started/i);
+        const _welcomeElements = screen.queryAllByText(/welcome|get started/i);
         // May need to wait for modal animation
       }, { timeout: 2000 });
     });

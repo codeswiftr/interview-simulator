@@ -63,7 +63,7 @@ const createMockAudio = () => {
 const mockObjectURLs = new Map<string, string>();
 let urlCounter = 0;
 
-global.URL.createObjectURL = vi.fn((blob: Blob) => {
+global.URL.createObjectURL = vi.fn((_blob: Blob) => {
   const url = `blob:http://localhost:3000/${urlCounter++}`;
   mockObjectURLs.set(url, '');
   return url;

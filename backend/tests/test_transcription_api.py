@@ -1,17 +1,15 @@
 """Tests for transcription API endpoints."""
 
 from io import BytesIO
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel
 
 from app.db import SessionLocal, engine, get_session
 from app.main import app
-from app.models.user import User
 
 
 @pytest.fixture(scope="session", autouse=True)

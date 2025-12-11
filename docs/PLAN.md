@@ -1,748 +1,652 @@
-# Milestone: Conversational Voice Mentor
+# Milestone: Sprint 10 - Code Quality & Feature Expansion
 
-## Status: ✅ COMPLETE
-## Target: Sprint 9
+## Status: Ready
+## Target: Sprint 10 (Dec 2025)
 
 ---
 
 ## Overview
 
-Transform the text-based mentor Q&A into a conversational voice experience, like a phone call with a career coach. The mentor will speak questions aloud, listen to user responses, and guide the conversation naturally.
+Sprint 10 focuses on addressing accumulated technical debt before expanding features. With Sprint 9 (Conversational Voice Mentor) complete, we have 337 lint errors (206 backend + 131 frontend) and 38% test coverage that need attention before building new capabilities.
 
-**Current State**:
-- Detective stage: Text-based Q&A with voice INPUT only (user can speak, mentor displays text)
-- No Text-to-Speech (TTS) - mentor never "speaks"
-- Disconnected feel - reading text breaks conversational flow
+The sprint is organized into four epics:
+1. **Epic 1**: Lint Cleanup & Code Quality (P0 - blocking)
+2. **Epic 2**: Test Coverage Improvement (P1 - important)
+3. **Epic 3**: Video Analysis MVP (P2 - feature expansion)
+4. **Epic 4**: B2B Team Features (P2 - revenue expansion)
 
-**Target State**:
-- Mentor speaks questions aloud using Web Speech API
-- Continuous conversation flow: mentor speaks → user responds → mentor processes → mentor speaks
-- Phone-call-like experience with turn-taking indicators
-- Premium voice options for enhanced experience
+**Why This Order?**
+- Epic 1 unblocks CI/CD and enables clean commits
+- Epic 2 prevents regressions as we add features
+- Epic 3 delivers the "multimodal feedback" promise from project brief
+- Epic 4 opens higher-ARPU B2B revenue stream
 
 ---
 
 ## Success Criteria
 
-- [x] Mentor questions are spoken aloud using TTS
-- [x] Conversation flows naturally with clear turn indicators
-- [x] User can interrupt mentor while speaking
-- [x] Voice settings persist in user preferences
-- [x] Works across Chrome, Firefox, Safari, Edge
-- [x] Graceful fallback for unsupported browsers
-- [x] Free tier users can access basic preparation (Epic 4)
-- [x] All tests passing, no TypeScript errors
+- [ ] Zero lint errors (backend + frontend)
+- [ ] Backend test coverage ≥ 60% (currently 38%)
+- [ ] API endpoint coverage ≥ 65% (currently 41.2%)
+- [ ] Video analysis integrated into feedback pipeline
+- [ ] Team subscription tier functional with admin dashboard
 
 ---
 
-## Technical Design
+## Epic 1: Lint Cleanup & Code Quality ⭐ P0
 
-### Architecture Overview
+**ICE Score**: 9.0/10 (Impact: 9, Confidence: 10, Ease: 9)
+**Priority**: CRITICAL - Blocking CI/CD and clean commits
+**Rationale**: 337 lint errors create tech debt, block CI, and make code review harder. Most are auto-fixable.
+
+### Current State
+- Backend: 206 errors (169 auto-fixable with `--fix`)
+- Frontend: 131 errors (129 errors, 2 warnings)
+- Categories: whitespace, unused vars, missing hook deps, any types
+
+### Technical Design
+
+No architecture changes needed. This is pure cleanup work.
+
+**Backend (Ruff):**
+- W293: Blank line contains whitespace (auto-fix)
+- B007: Unused loop control variables (rename to `_`)
+- F541: F-string without placeholders (auto-fix)
+- F401: Unused imports (auto-fix)
+
+**Frontend (ESLint):**
+- `@typescript-eslint/no-unused-vars`: Unused variables in tests
+- `react-hooks/exhaustive-deps`: Missing hook dependencies
+- `@typescript-eslint/no-explicit-any`: Replace `any` with proper types
+
+### Implementation Plan
+
+#### Phase 1.1: Backend Auto-Fix
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 1.1.1 | Run `uv run ruff check --fix .` | - | 5m |
+| 1.1.2 | Run `uv run ruff check --fix --unsafe-fixes .` for remaining | - | 5m |
+| 1.1.3 | Manually fix remaining errors (loop vars, etc.) | - | 30m |
+| 1.1.4 | Verify with `uv run ruff check .` shows 0 errors | - | 5m |
+| 1.1.5 | Run `uv run pytest` to ensure no regressions | - | 5m |
+
+**Checkpoint**: `uv run ruff check .` shows 0 errors, all tests pass
+
+---
+
+#### Phase 1.2: Frontend Test File Cleanup
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 1.2.1 | Fix unused vars in `DashboardPage.test.tsx` | - | 15m |
+| 1.2.2 | Fix unused vars in `FeedbackPage.test.tsx` | - | 10m |
+| 1.2.3 | Fix unused vars in `InterviewPage.test.tsx` | - | 10m |
+| 1.2.4 | Fix unused vars in `PreparationPage.test.tsx` + any type | - | 15m |
+| 1.2.5 | Fix unused vars in `pageTestUtils.tsx` + any types | - | 15m |
+| 1.2.6 | Fix unused vars in `accessibility.test.tsx` | - | 5m |
+
+**Checkpoint**: Test file lint errors resolved
+
+---
+
+#### Phase 1.3: Frontend Source File Cleanup
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 1.3.1 | Fix unused `err` vars in `PreparationPage.tsx` (lines 188, 223) | - | 10m |
+| 1.3.2 | Fix missing `loadComparison` dependency in useCallback | - | 15m |
+| 1.3.3 | Fix remaining unused vars across components | - | 30m |
+| 1.3.4 | Verify with `npm run lint` shows 0 errors | - | 5m |
+| 1.3.5 | Run `npm run build` to ensure no TypeScript errors | - | 2m |
+
+**Checkpoint**: `npm run lint` shows 0 errors, build passes
+
+---
+
+### Testing Strategy
+- Run full test suite after backend fixes
+- Run frontend build after lint fixes
+- No new tests needed (cleanup only)
+
+### Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Auto-fix breaks tests | Medium | Run tests immediately after fix |
+| Hook dependency change affects behavior | Medium | Test affected components manually |
+
+---
+
+## Epic 2: Test Coverage Improvement (P1)
+
+**ICE Score**: 7.5/10 (Impact: 9, Confidence: 8, Ease: 6)
+**Priority**: HIGH - Prevents regressions, enables confident feature work
+**Rationale**: 38% coverage is too low. API endpoints at 41.2% average is the biggest gap.
+
+### Current State
+- Overall: 38% coverage (2980 lines, 1845 uncovered)
+- API modules: 40-44% average
+- Critical gaps: `feedback_service.py` (12%), `interview_service.py` (18%)
+
+### Target State
+- Overall: ≥ 60% coverage
+- API modules: ≥ 65% average
+- Services: ≥ 50% coverage
+
+### Technical Design
+
+No new code - just tests for existing functionality.
+
+**Priority Modules** (by uncovered lines):
+1. `api/interviews.py` - 148 lines, 40% → target 70%
+2. `api/feedback.py` - 148 lines, 44% → target 70%
+3. `api/auth.py` - 148 lines, 40% → target 70%
+4. `services/feedback_service.py` - 158 lines, 12% → target 50%
+5. `services/interview_service.py` - 67 lines, 18% → target 50%
+
+### Implementation Plan
+
+#### Phase 2.1: API Endpoint Tests
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 2.1.1 | Add tests for `api/interviews.py` error paths | qa-test-guardian | 2h |
+| 2.1.2 | Add tests for `api/interviews.py` edge cases (cancel, duplicate) | qa-test-guardian | 1h |
+| 2.1.3 | Add tests for `api/feedback.py` missing feedback scenarios | qa-test-guardian | 1.5h |
+| 2.1.4 | Add tests for `api/auth.py` refresh token edge cases | qa-test-guardian | 1h |
+| 2.1.5 | Add tests for `api/auth.py` password reset flow | qa-test-guardian | 1h |
+
+**Checkpoint**: API coverage ≥ 65%
+
+---
+
+#### Phase 2.2: Service Layer Tests
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 2.2.1 | Add tests for `feedback_service.py` error handling | qa-test-guardian | 2h |
+| 2.2.2 | Add tests for `feedback_service.py` async processing | qa-test-guardian | 1.5h |
+| 2.2.3 | Add tests for `interview_service.py` session management | qa-test-guardian | 1.5h |
+| 2.2.4 | Add tests for `background_tasks.py` failure scenarios | qa-test-guardian | 1h |
+
+**Checkpoint**: Service coverage ≥ 50%
+
+---
+
+#### Phase 2.3: Coverage Verification
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 2.3.1 | Run full coverage report | - | 10m |
+| 2.3.2 | Identify remaining gaps | - | 20m |
+| 2.3.3 | Document coverage in CODEBASE_AUDIT.md | - | 15m |
+
+**Checkpoint**: Overall coverage ≥ 60%
+
+### Testing Strategy
+- Use existing test infrastructure (pytest-asyncio, AsyncClient)
+- Mock AI services (ContentAnalyzer, Transcriber)
+- Database cleanup between tests (TRUNCATE CASCADE)
+- Test error paths and edge cases, not just happy paths
+
+### Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Tests take longer than estimated | Medium | Focus on highest-impact modules first |
+| Mock complexity increases | Low | Reuse existing mock patterns |
+
+---
+
+## Epic 3: Video Analysis MVP (P2)
+
+**ICE Score**: 7.2/10 (Impact: 8, Confidence: 7, Ease: 7)
+**Priority**: MEDIUM - Differentiating feature from project brief
+**Rationale**: Project promises "multimodal feedback (audio + video + content)". Video is the missing piece.
+
+### Current State
+- Audio analysis: ✅ Librosa for speech rate, filler words, confidence
+- Content analysis: ✅ Claude for technical accuracy, structure
+- Video analysis: ❌ Not implemented
+
+### Target State
+- Basic emotion detection (nervousness, confidence)
+- Eye contact tracking (looking at camera vs. away)
+- Video metrics integrated into overall feedback score
+
+### Technical Design
+
+#### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     Conversational Voice Flow                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  User enters Detective Stage                                                 │
-│       │                                                                      │
-│       v                                                                      │
-│  ┌─────────────┐     ┌──────────────┐     ┌─────────────┐                   │
-│  │ MENTOR      │ --> │ USER         │ --> │ PROCESSING  │                   │
-│  │ SPEAKING    │     │ TURN         │     │             │                   │
-│  │             │     │              │     │             │                   │
-│  │ TTS plays   │     │ Mic active   │     │ AI thinking │                   │
-│  │ question    │     │ User speaks  │     │ Next Q      │                   │
-│  │ Animated    │     │ STT captures │     │ Streaming   │                   │
-│  └─────────────┘     └──────────────┘     └─────────────┘                   │
-│       ^                                          │                           │
-│       └──────────────────────────────────────────┘                           │
-│                                                                              │
-│  State Machine: mentor_speaking → user_turn → processing → mentor_speaking   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Video Analysis Pipeline                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Frontend (WebRTC)          Backend (FastAPI)                   │
+│  ┌──────────────┐           ┌──────────────┐                   │
+│  │ Video        │  POST     │ /upload/     │                   │
+│  │ Capture      │ ───────── │ video        │                   │
+│  └──────────────┘           └──────┬───────┘                   │
+│                                    │                            │
+│                                    v                            │
+│                             ┌──────────────┐                   │
+│                             │ VideoAnalyzer│                   │
+│                             │ (EmotiEffLib)│                   │
+│                             └──────┬───────┘                   │
+│                                    │                            │
+│                                    v                            │
+│                             ┌──────────────┐                   │
+│                             │ VideoFeedback│                   │
+│                             │ Model        │                   │
+│                             └──────────────┘                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Data Models
+#### Data Models
 
-**ConversationState** (React state):
-```typescript
-type ConversationMode = 'mentor_speaking' | 'user_turn' | 'processing' | 'idle';
+```python
+# backend/app/models/video_feedback.py
+class VideoFeedback(SQLModel, table=True):
+    __tablename__ = "video_feedback"
 
-interface VoiceSettings {
-  enabled: boolean;
-  voiceName: string;         // Selected voice identifier
-  rate: number;              // Speech rate (0.5 - 2.0)
-  pitch: number;             // Voice pitch (0.5 - 2.0)
-  volume: number;            // Volume (0 - 1)
-  autoListen: boolean;       // Auto-start listening after mentor speaks
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    response_id: UUID = Field(foreign_key="interview_responses.id", unique=True)
+
+    # Emotion metrics (0-1 scale)
+    confidence_score: float = Field(default=0.0)
+    nervousness_score: float = Field(default=0.0)
+    engagement_score: float = Field(default=0.0)
+
+    # Eye contact metrics
+    eye_contact_percentage: float = Field(default=0.0)
+    looking_away_count: int = Field(default=0)
+
+    # Gesture metrics (future)
+    fidget_count: Optional[int] = None
+    hand_gesture_frequency: Optional[float] = None
+
+    # Processing
+    processing_duration_ms: int = Field(default=0)
+    frame_count: int = Field(default=0)
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+```
+
+#### API Contracts
+
+```
+POST /api/v1/upload/video
+Content-Type: multipart/form-data
+Body: { file: <video_file>, response_id: UUID }
+Response: { video_id: UUID, status: "processing" }
+
+GET /api/v1/feedback/video/{response_id}
+Response: {
+    confidence_score: 0.72,
+    nervousness_score: 0.35,
+    eye_contact_percentage: 0.68,
+    looking_away_count: 5,
+    recommendations: [
+        "Maintain more consistent eye contact",
+        "Good confidence level detected"
+    ]
 }
-
-interface ConversationState {
-  mode: ConversationMode;
-  isMentorSpeaking: boolean;
-  isUserSpeaking: boolean;
-  canInterrupt: boolean;
-  transcript: string;
-}
 ```
 
-**User Preferences** (localStorage + API):
-```typescript
-interface UserPreferences {
-  voiceSettings: VoiceSettings;
-  preferConversationalMode: boolean;
-}
-```
+### Implementation Plan
 
-### API Contracts
+#### Phase 3.1: Research & Setup
 
-No new backend endpoints required for TTS (browser-native).
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 3.1.1 | Research EmotiEffLib capabilities and requirements | - | 2h |
+| 3.1.2 | Evaluate alternative: OpenCV + face detection | - | 1h |
+| 3.1.3 | Set up video processing dependencies | - | 1h |
+| 3.1.4 | Create VideoFeedback model + migration | backend-engineer | 1h |
 
-**Optional Enhancement** (Epic 3 - Premium Voices):
-```
-POST /api/tts/generate
-Body: { text: string, voice_id: string }
-Response: { audio_url: string } // Signed URL to audio file
-```
+**Checkpoint**: Video analysis dependencies installed, model created
 
-### New Hooks
+---
 
-**useSpeechSynthesis** (Epic 1):
-```typescript
-interface UseSpeechSynthesisReturn {
-  speak: (text: string) => void;
-  stop: () => void;
-  pause: () => void;
-  resume: () => void;
-  isSpeaking: boolean;
-  isPaused: boolean;
-  voices: SpeechSynthesisVoice[];
-  selectedVoice: SpeechSynthesisVoice | null;
-  setVoice: (voice: SpeechSynthesisVoice) => void;
-  rate: number;
-  setRate: (rate: number) => void;
-  pitch: number;
-  setPitch: (pitch: number) => void;
-  isSupported: boolean;
-  error: string | null;
-}
-```
+#### Phase 3.2: Backend Video Analyzer
 
-**useConversationMode** (Epic 2):
-```typescript
-interface UseConversationModeReturn {
-  mode: ConversationMode;
-  startConversation: () => void;
-  endConversation: () => void;
-  transitionTo: (mode: ConversationMode) => void;
-  mentorSay: (text: string) => Promise<void>;  // Speaks and waits
-  onUserResponse: (callback: (text: string) => void) => void;
-  interrupt: () => void;
-  isActive: boolean;
-}
-```
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 3.2.1 | Create `ai/video_analyzer.py` base service | backend-engineer | 3h |
+| 3.2.2 | Implement emotion detection using EmotiEffLib | backend-engineer | 3h |
+| 3.2.3 | Implement eye contact tracking | backend-engineer | 2h |
+| 3.2.4 | Add error handling and fallback metrics | backend-engineer | 1h |
+| 3.2.5 | Write unit tests for video analyzer | qa-test-guardian | 2h |
+
+**Checkpoint**: Video analyzer service functional with tests
+
+---
+
+#### Phase 3.3: Backend API Integration
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 3.3.1 | Add video upload endpoint to `api/upload.py` | backend-engineer | 1.5h |
+| 3.3.2 | Add video feedback endpoint to `api/feedback.py` | backend-engineer | 1h |
+| 3.3.3 | Integrate video analysis into response processing | backend-engineer | 2h |
+| 3.3.4 | Add video feedback to overall feedback aggregation | backend-engineer | 1h |
+| 3.3.5 | Write API tests | qa-test-guardian | 1.5h |
+
+**Checkpoint**: Video upload and feedback APIs functional
+
+---
+
+#### Phase 3.4: Frontend Integration
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 3.4.1 | Add video recording to InterviewPage | frontend-builder | 3h |
+| 3.4.2 | Create VideoFeedbackCard component | frontend-builder | 2h |
+| 3.4.3 | Integrate video metrics into FeedbackPage | frontend-builder | 1.5h |
+| 3.4.4 | Add video toggle in interview settings | frontend-builder | 1h |
+| 3.4.5 | Write component tests | qa-test-guardian | 1.5h |
+
+**Checkpoint**: Video recording and feedback display working
+
+---
 
 ### Dependencies
 
-**Existing Components to Modify**:
-| Component | Location | Changes |
-|-----------|----------|---------|
-| `PreparationPage` | `pages/PreparationPage.tsx` | Add conversational mode, TTS integration |
-| `VoiceInputButton` | `components/common/VoiceInputButton.tsx` | Add auto-listen mode |
-| `useSettings` | `hooks/useSettings.ts` | Add voice preferences |
+**External:**
+- EmotiEffLib or OpenCV for video analysis
+- FFmpeg for video processing (already available in Python ecosystem)
 
-**New Components to Create**:
-| Component | Purpose |
-|-----------|---------|
-| `ConversationIndicator` | Visual feedback for who's turn (mentor/user) |
-| `VoiceSettingsPanel` | Configure voice preferences |
-| `MentorAvatar` | Animated avatar showing mentor state |
+**Internal:**
+- Existing upload endpoint pattern (`api/upload.py`)
+- Existing feedback aggregation (`services/feedback_service.py`)
+- WebRTC video capture (similar to audio)
 
-**New Hooks to Create**:
-| Hook | Purpose |
-|------|---------|
-| `useSpeechSynthesis` | Text-to-Speech wrapper |
-| `useConversationMode` | Conversation state machine |
-| `useVoicePreferences` | Persist voice settings |
+### Testing Strategy
+
+- **Unit Tests**: VideoAnalyzer service with sample video frames
+- **Integration Tests**: Upload → analyze → retrieve feedback flow
+- **E2E Tests**: Record interview with video → view video feedback
+
+### Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| EmotiEffLib not suitable | High | Evaluate OpenCV + fer as fallback |
+| Video processing too slow | Medium | Process async, show "processing" state |
+| Large video files | Medium | Compress on client, limit duration |
+| Privacy concerns | High | Document video usage, add opt-out |
 
 ---
 
-## Implementation Plan
+## Epic 4: B2B Team Features (P2)
 
-### Epic 1: Voice Mentor - TTS Integration (ICE 8.4/10)
+**ICE Score**: 6.5/10 (Impact: 8, Confidence: 7, Ease: 5)
+**Priority**: MEDIUM - Higher ARPU revenue stream
+**Rationale**: B2B tiers ($199-499/mo) are 3-7x higher than B2C ($29-79/mo). Opens enterprise market.
 
-**Priority: HIGH** - Core feature enabling mentor to speak
+### Current State
+- User model: Individual accounts only
+- Subscription: FREE, PRO, PREMIUM tiers (B2C)
+- No team/organization concept
 
-#### Phase 1.1: useSpeechSynthesis Hook
+### Target State
+- Team model with admin/member roles
+- Team subscription tier ($199/mo for 10 seats)
+- Admin dashboard with team usage stats
+- Member invitation flow
 
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.1.1 | Create `useSpeechSynthesis` hook with speak/stop/pause | 1h |
-| 1.1.2 | Add voice selection and listing | 0.5h |
-| 1.1.3 | Add rate/pitch/volume controls | 0.5h |
-| 1.1.4 | Add browser support detection | 0.5h |
-| 1.1.5 | Write unit tests for hook | 0.5h |
+### Technical Design
 
-**Implementation**:
-```typescript
-// frontend/src/hooks/useSpeechSynthesis.ts
-import { useState, useEffect, useCallback, useRef } from 'react';
+#### Architecture
 
-export function useSpeechSynthesis() {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [rate, setRate] = useState(1);
-  const [pitch, setPitch] = useState(1);
-  const [error, setError] = useState<string | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
-
-  useEffect(() => {
-    if (!isSupported) return;
-
-    const loadVoices = () => {
-      const available = speechSynthesis.getVoices();
-      setVoices(available);
-      // Default to first English voice
-      const englishVoice = available.find(v => v.lang.startsWith('en'));
-      if (englishVoice && !selectedVoice) {
-        setSelectedVoice(englishVoice);
-      }
-    };
-
-    loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
-
-    return () => {
-      speechSynthesis.onvoiceschanged = null;
-    };
-  }, [isSupported]);
-
-  const speak = useCallback((text: string) => {
-    if (!isSupported) {
-      setError('Speech synthesis not supported');
-      return;
-    }
-
-    // Cancel any ongoing speech
-    speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = selectedVoice;
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-    };
-    utterance.onerror = (e) => {
-      setError(e.error);
-      setIsSpeaking(false);
-    };
-
-    utteranceRef.current = utterance;
-    speechSynthesis.speak(utterance);
-  }, [isSupported, selectedVoice, rate, pitch]);
-
-  const stop = useCallback(() => {
-    speechSynthesis.cancel();
-    setIsSpeaking(false);
-    setIsPaused(false);
-  }, []);
-
-  const pause = useCallback(() => {
-    speechSynthesis.pause();
-    setIsPaused(true);
-  }, []);
-
-  const resume = useCallback(() => {
-    speechSynthesis.resume();
-    setIsPaused(false);
-  }, []);
-
-  return {
-    speak,
-    stop,
-    pause,
-    resume,
-    isSpeaking,
-    isPaused,
-    voices,
-    selectedVoice,
-    setVoice: setSelectedVoice,
-    rate,
-    setRate,
-    pitch,
-    setPitch,
-    isSupported,
-    error,
-  };
-}
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Team Subscription Model                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Organizations          Teams              Users                │
+│  ┌──────────┐          ┌──────────┐       ┌──────────┐         │
+│  │ Org      │ 1───────N│ Team     │N─────N│ User     │         │
+│  │          │          │          │       │          │         │
+│  │ - name   │          │ - name   │       │ - email  │         │
+│  │ - plan   │          │ - seats  │       │ - role   │         │
+│  └──────────┘          └──────────┘       └──────────┘         │
+│                                                                  │
+│  Team Roles: ADMIN, MEMBER                                      │
+│  Org Plans: TEAM ($199), ENTERPRISE ($499)                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Checkpoint**: Hook can speak text with configurable voice
+#### Data Models
 
----
-
-#### Phase 1.2: Integrate TTS into Detective Stage
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.2.1 | Import useSpeechSynthesis in PreparationPage | 0.5h |
-| 1.2.2 | Auto-speak questions when displayed | 0.5h |
-| 1.2.3 | Add mute/unmute toggle button | 0.5h |
-| 1.2.4 | Show speaking indicator animation | 0.5h |
-| 1.2.5 | Test TTS in detective flow | 0.5h |
-
-**Integration Point** (PreparationPage.tsx):
-```typescript
-// In detective stage rendering
-const { speak, stop, isSpeaking, isSupported } = useSpeechSynthesis();
-const [voiceEnabled, setVoiceEnabled] = useState(true);
-
-useEffect(() => {
-  if (currentQuestion && voiceEnabled && isSupported) {
-    speak(currentQuestion);
-  }
-}, [currentQuestion, voiceEnabled]);
-```
-
-**Checkpoint**: Mentor speaks questions in detective stage
-
----
-
-#### Phase 1.3: Voice Settings Panel
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 1.3.1 | Create VoiceSettingsPanel component | 1h |
-| 1.3.2 | Add voice selection dropdown | 0.5h |
-| 1.3.3 | Add rate/pitch sliders | 0.5h |
-| 1.3.4 | Add "Test Voice" button | 0.5h |
-| 1.3.5 | Persist settings to localStorage | 0.5h |
-| 1.3.6 | Add to Settings page | 0.5h |
-
-**Component Design**:
-```typescript
-interface VoiceSettingsPanelProps {
-  onSettingsChange?: (settings: VoiceSettings) => void;
-}
-```
-
-**Checkpoint**: Users can customize mentor voice
-
----
-
-### Epic 2: Conversational Mode - Phone-like Experience (ICE 7.2/10)
-
-**Priority: HIGH** - Transforms from Q&A to conversation
-
-#### Phase 2.1: Conversation State Machine
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.1.1 | Create useConversationMode hook | 1.5h |
-| 2.1.2 | Implement state transitions | 1h |
-| 2.1.3 | Add interrupt handling | 0.5h |
-| 2.1.4 | Write state machine tests | 0.5h |
-
-**State Machine Implementation**:
-```typescript
-// frontend/src/hooks/useConversationMode.ts
-type ConversationMode = 'idle' | 'mentor_speaking' | 'user_turn' | 'processing';
-
-interface ConversationActions {
-  mentorStartSpeaking: () => void;
-  mentorFinishSpeaking: () => void;
-  userStartSpeaking: () => void;
-  userFinishSpeaking: (transcript: string) => void;
-  startProcessing: () => void;
-  finishProcessing: () => void;
-  interrupt: () => void;
-  reset: () => void;
-}
-
-export function useConversationMode(
-  tts: ReturnType<typeof useSpeechSynthesis>,
-  stt: ReturnType<typeof useSpeechRecognition>
-): [ConversationMode, ConversationActions] {
-  const [mode, setMode] = useState<ConversationMode>('idle');
-
-  const actions: ConversationActions = useMemo(() => ({
-    mentorStartSpeaking: () => setMode('mentor_speaking'),
-    mentorFinishSpeaking: () => setMode('user_turn'),
-    userStartSpeaking: () => { /* already in user_turn */ },
-    userFinishSpeaking: () => setMode('processing'),
-    startProcessing: () => setMode('processing'),
-    finishProcessing: () => setMode('mentor_speaking'),
-    interrupt: () => {
-      tts.stop();
-      setMode('user_turn');
-    },
-    reset: () => {
-      tts.stop();
-      stt.stopListening();
-      setMode('idle');
-    },
-  }), [tts, stt]);
-
-  return [mode, actions];
-}
-```
-
-**Checkpoint**: State machine manages conversation flow
-
----
-
-#### Phase 2.2: Conversation UI Indicators
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.2.1 | Create ConversationIndicator component | 1h |
-| 2.2.2 | Add pulsing animation for mentor speaking | 0.5h |
-| 2.2.3 | Add microphone animation for user turn | 0.5h |
-| 2.2.4 | Add processing spinner | 0.5h |
-| 2.2.5 | Integrate indicators into PreparationPage | 0.5h |
-
-**Component Design**:
-```typescript
-// frontend/src/components/interview/ConversationIndicator.tsx
-interface ConversationIndicatorProps {
-  mode: ConversationMode;
-  mentorName?: string;
-}
-
-export function ConversationIndicator({ mode, mentorName = 'Mentor' }: ConversationIndicatorProps) {
-  return (
-    <div className="flex items-center gap-3 p-4 bg-surface-secondary rounded-lg">
-      {mode === 'mentor_speaking' && (
-        <>
-          <div className="w-10 h-10 rounded-full bg-electric-blue animate-pulse" />
-          <span className="text-text-primary">{mentorName} is speaking...</span>
-        </>
-      )}
-      {mode === 'user_turn' && (
-        <>
-          <Mic className="w-10 h-10 text-green-500 animate-pulse" />
-          <span className="text-text-primary">Your turn to speak</span>
-        </>
-      )}
-      {mode === 'processing' && (
-        <>
-          <Loader2 className="w-10 h-10 text-electric-blue animate-spin" />
-          <span className="text-text-primary">Thinking...</span>
-        </>
-      )}
-    </div>
-  );
-}
-```
-
-**Checkpoint**: Visual feedback shows conversation state
-
----
-
-#### Phase 2.3: Auto-Listen Mode
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.3.1 | Add auto-listen after TTS completes | 1h |
-| 2.3.2 | Add silence detection to end turn | 0.5h |
-| 2.3.3 | Add manual "I'm done" button fallback | 0.5h |
-| 2.3.4 | Test end-to-end conversation flow | 0.5h |
-
-**Integration**:
-```typescript
-// In PreparationPage
-useEffect(() => {
-  if (mode === 'user_turn' && autoListen && !isListening) {
-    startListening();
-  }
-}, [mode, autoListen]);
-
-// When TTS ends, transition to user turn
-useEffect(() => {
-  if (!isSpeaking && mode === 'mentor_speaking') {
-    actions.mentorFinishSpeaking();
-  }
-}, [isSpeaking, mode]);
-```
-
-**Checkpoint**: Conversation flows automatically
-
----
-
-#### Phase 2.4: Interrupt Handling
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 2.4.1 | Detect user starting to speak during mentor | 0.5h |
-| 2.4.2 | Stop TTS when interrupt detected | 0.5h |
-| 2.4.3 | Add visual feedback for interrupt | 0.5h |
-| 2.4.4 | Test interrupt scenarios | 0.5h |
-
-**Checkpoint**: User can interrupt mentor naturally
-
----
-
-### Epic 3: Premium Voice Quality (ICE 5.4/10)
-
-**Priority: MEDIUM** - Enhancement for paid tiers
-
-#### Phase 3.1: Voice Quality Assessment
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.1.1 | Analyze available browser voices | 0.5h |
-| 3.1.2 | Rank voices by quality/naturalness | 0.5h |
-| 3.1.3 | Create voice recommendation system | 1h |
-| 3.1.4 | Add "Premium Voice" badge in settings | 0.5h |
-
-**Voice Ranking Logic**:
-```typescript
-const PREMIUM_VOICES = [
-  'Google UK English Female',
-  'Google UK English Male',
-  'Microsoft Zira',
-  'Microsoft David',
-  'Samantha',  // macOS
-  'Daniel',    // macOS
-];
-
-function getVoiceQuality(voice: SpeechSynthesisVoice): 'premium' | 'standard' {
-  return PREMIUM_VOICES.some(name => voice.name.includes(name))
-    ? 'premium'
-    : 'standard';
-}
-```
-
-**Checkpoint**: Users see voice quality indicators
-
----
-
-#### Phase 3.2: External TTS Integration (Optional)
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 3.2.1 | Research ElevenLabs/Google Cloud TTS APIs | 1h |
-| 3.2.2 | Add backend endpoint for TTS generation | 2h |
-| 3.2.3 | Implement audio streaming to frontend | 1h |
-| 3.2.4 | Gate behind Pro subscription | 0.5h |
-
-**Note**: This phase is optional and can be deferred. Browser TTS is sufficient for MVP.
-
-**Checkpoint**: Premium users get high-quality voices
-
----
-
-### Epic 4: Enable Prepare for Free Tier (ICE 7.0/10)
-
-**Priority: HIGH** - Removes friction for new users
-
-#### Phase 4.1: Update Subscription Gating
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 4.1.1 | Modify QuestionsPage canPrepare logic | 0.5h |
-| 4.1.2 | Add usage limits for free tier | 1h |
-| 4.1.3 | Create upgrade prompt component | 1h |
-| 4.1.4 | Test free tier preparation flow | 0.5h |
-
-**Implementation**:
-```typescript
-// QuestionsPage.tsx - Before:
-const canPrepare = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
-
-// After:
-const canPrepare = true;  // All users can prepare
-
-// Add usage tracking
-const FREE_TIER_PREP_LIMIT = 3;  // 3 preparations per month
-const { prepCount, isLimitReached } = usePrepUsage();
-
-// Show upgrade prompt when approaching limit
-{isLimitReached && <UpgradePrompt feature="preparation" />}
-```
-
----
-
-#### Phase 4.2: Usage Tracking
-
-| Task | Description | Est |
-|------|-------------|-----|
-| 4.2.1 | Add preparation_count to user model | 0.5h |
-| 4.2.2 | Create API endpoint to track usage | 1h |
-| 4.2.3 | Reset count monthly (cron/scheduled task) | 0.5h |
-| 4.2.4 | Display usage in dashboard | 0.5h |
-
-**Backend Changes**:
 ```python
-# backend/app/models/user.py
-class User:
-    preparation_count: int = 0
-    preparation_reset_date: datetime
+# backend/app/models/team.py
+class Team(SQLModel, table=True):
+    __tablename__ = "teams"
 
-# backend/app/api/preparation.py
-@router.post("/sessions/{session_id}/prepare")
-async def start_preparation(...):
-    user = await get_current_user(...)
-    if user.subscription_tier == 'free':
-        if user.preparation_count >= FREE_TIER_LIMIT:
-            raise HTTPException(402, "Upgrade to Pro for unlimited preparations")
-        user.preparation_count += 1
-        await user.save()
-    # ... rest of logic
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    name: str = Field(max_length=100)
+    slug: str = Field(max_length=100, unique=True)
+
+    # Subscription
+    subscription_tier: str = Field(default="team")  # team, enterprise
+    max_seats: int = Field(default=10)
+    stripe_subscription_id: Optional[str] = None
+
+    # Settings
+    custom_questions_enabled: bool = Field(default=False)
+    sso_enabled: bool = Field(default=False)
+
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+class TeamMembership(SQLModel, table=True):
+    __tablename__ = "team_memberships"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    team_id: UUID = Field(foreign_key="teams.id")
+    user_id: UUID = Field(foreign_key="users.id")
+    role: str = Field(default="member")  # admin, member
+
+    invited_by: Optional[UUID] = Field(foreign_key="users.id")
+    invited_at: datetime
+    accepted_at: Optional[datetime]
+
+class TeamInvitation(SQLModel, table=True):
+    __tablename__ = "team_invitations"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    team_id: UUID = Field(foreign_key="teams.id")
+    email: str
+    role: str = Field(default="member")
+    token: str = Field(unique=True)
+
+    invited_by: UUID = Field(foreign_key="users.id")
+    created_at: datetime
+    expires_at: datetime
+    accepted_at: Optional[datetime]
 ```
 
-**Checkpoint**: Free users can try preparation with limits
+#### API Contracts
+
+```
+# Team Management
+POST /api/v1/teams
+Body: { name: string }
+Response: { id: UUID, name: string, slug: string }
+
+GET /api/v1/teams/{team_id}
+Response: { id, name, members: [...], usage: {...} }
+
+# Member Management
+POST /api/v1/teams/{team_id}/invitations
+Body: { email: string, role: "admin" | "member" }
+Response: { invitation_id: UUID, token: string }
+
+POST /api/v1/teams/invitations/{token}/accept
+Response: { team_id: UUID, role: string }
+
+DELETE /api/v1/teams/{team_id}/members/{user_id}
+Response: { success: true }
+
+# Admin Dashboard
+GET /api/v1/teams/{team_id}/usage
+Response: {
+    total_interviews: 150,
+    interviews_this_month: 45,
+    active_members: 8,
+    member_usage: [{ user_id, name, interviews: 12 }, ...]
+}
+```
+
+### Implementation Plan
+
+#### Phase 4.1: Data Models & Migration
+
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 4.1.1 | Create Team model in `models/team.py` | backend-engineer | 1h |
+| 4.1.2 | Create TeamMembership model | backend-engineer | 30m |
+| 4.1.3 | Create TeamInvitation model | backend-engineer | 30m |
+| 4.1.4 | Update User model with team relationship | backend-engineer | 30m |
+| 4.1.5 | Create Alembic migration | backend-engineer | 30m |
+| 4.1.6 | Write model tests | qa-test-guardian | 1h |
+
+**Checkpoint**: Team models created and migrated
 
 ---
 
-## Testing Strategy
+#### Phase 4.2: Backend Team API
 
-### Unit Tests
-- **useSpeechSynthesis**: Mock speechSynthesis API, test speak/stop/pause
-- **useConversationMode**: Test state transitions, interrupt handling
-- **VoiceSettingsPanel**: Test voice selection, settings persistence
-- **ConversationIndicator**: Test rendering for each mode
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 4.2.1 | Create `api/teams.py` router | backend-engineer | 2h |
+| 4.2.2 | Implement team CRUD endpoints | backend-engineer | 2h |
+| 4.2.3 | Implement invitation flow (create, accept, revoke) | backend-engineer | 3h |
+| 4.2.4 | Implement member management (add, remove, role change) | backend-engineer | 2h |
+| 4.2.5 | Add team permission decorators | backend-engineer | 1h |
+| 4.2.6 | Write API tests | qa-test-guardian | 2h |
 
-### Integration Tests
-- Full conversation flow: mentor speaks → user responds → processing → mentor speaks
-- Voice settings persistence across sessions
-- Interrupt handling during mentor speech
-- Free tier usage limits and upgrade prompts
-
-### E2E Tests
-- Complete detective stage with voice enabled
-- Voice settings configuration and persistence
-- Conversation mode toggle and flow
-
-### Cross-Browser Testing
-| Browser | TTS Support | Notes |
-|---------|-------------|-------|
-| Chrome | ✅ Full | Best voice selection |
-| Firefox | ✅ Full | Limited voices |
-| Safari | ✅ Full | Good macOS voices |
-| Edge | ✅ Full | Microsoft voices |
-| Mobile Safari | ⚠️ Limited | May require user gesture |
-| Mobile Chrome | ✅ Full | Works well |
+**Checkpoint**: Team API functional with tests
 
 ---
 
-## Risks & Mitigations
+#### Phase 4.3: Team Subscription Integration
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| TTS not supported in some browsers | Medium | Low | Graceful fallback to text mode |
-| Voice quality varies by OS/browser | Medium | High | Recommend best voices, allow customization |
-| Interrupts cause state confusion | High | Medium | Debounce transitions, clear state machine |
-| Auto-listen privacy concerns | Medium | Low | Default off, clear indicators |
-| Mobile TTS requires gesture | Medium | Medium | Add "Start Conversation" button |
-| Free tier abuse | Low | Medium | Rate limiting, monthly reset |
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 4.3.1 | Add team tier to Stripe products | - | 30m |
+| 4.3.2 | Create team checkout endpoint | backend-engineer | 2h |
+| 4.3.3 | Update webhook handler for team subscriptions | backend-engineer | 1.5h |
+| 4.3.4 | Implement seat-based quota enforcement | backend-engineer | 1.5h |
+| 4.3.5 | Write subscription tests | qa-test-guardian | 1h |
 
----
-
-## Open Questions
-
-- [x] Should conversation mode be opt-in or default? → **Opt-in with prominent toggle**
-- [ ] Show transcript of what mentor said? → Recommend yes for accessibility
-- [ ] Allow text input as alternative during conversation? → Yes, always fallback
-- [ ] Voice settings: per-session or global? → Global in user preferences
+**Checkpoint**: Team subscriptions working with Stripe
 
 ---
 
-## Files Summary
+#### Phase 4.4: Admin Dashboard API
 
-### New Files (7)
-1. `frontend/src/hooks/useSpeechSynthesis.ts` - TTS hook
-2. `frontend/src/hooks/useConversationMode.ts` - State machine
-3. `frontend/src/hooks/useVoicePreferences.ts` - Settings persistence
-4. `frontend/src/components/interview/ConversationIndicator.tsx` - Turn indicator
-5. `frontend/src/components/settings/VoiceSettingsPanel.tsx` - Voice config UI
-6. `frontend/src/components/common/UpgradePrompt.tsx` - Upsell component
-7. `frontend/src/hooks/__tests__/useSpeechSynthesis.test.ts` - Tests
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 4.4.1 | Create `api/teams.py` usage endpoint | backend-engineer | 1.5h |
+| 4.4.2 | Implement team usage aggregation service | backend-engineer | 2h |
+| 4.4.3 | Add member activity tracking | backend-engineer | 1h |
+| 4.4.4 | Write usage API tests | qa-test-guardian | 1h |
 
-### Modified Files (5)
-1. `frontend/src/pages/PreparationPage.tsx` - Add TTS, conversation mode
-2. `frontend/src/pages/QuestionsPage.tsx` - Enable prepare for free tier
-3. `frontend/src/pages/SettingsPage.tsx` - Add voice settings section
-4. `frontend/src/hooks/useSettings.ts` - Add voice preferences
-5. `backend/app/api/preparation.py` - Add usage tracking (Epic 4)
+**Checkpoint**: Admin usage API functional
 
 ---
 
-## Phase Summary
+#### Phase 4.5: Frontend Team Management
 
-| Phase | Epic | Focus | Tasks | Dependencies |
-|-------|------|-------|-------|--------------|
-| 1.1 | 1 | useSpeechSynthesis Hook | 5 | None |
-| 1.2 | 1 | TTS in Detective Stage | 5 | Phase 1.1 |
-| 1.3 | 1 | Voice Settings Panel | 6 | Phase 1.1 |
-| 2.1 | 2 | Conversation State Machine | 4 | Phase 1.2 |
-| 2.2 | 2 | Conversation UI Indicators | 5 | Phase 2.1 |
-| 2.3 | 2 | Auto-Listen Mode | 4 | Phase 2.2 |
-| 2.4 | 2 | Interrupt Handling | 4 | Phase 2.3 |
-| 3.1 | 3 | Voice Quality Assessment | 4 | Phase 1.3 |
-| 3.2 | 3 | External TTS (Optional) | 4 | Phase 3.1 |
-| 4.1 | 4 | Update Subscription Gating | 4 | None |
-| 4.2 | 4 | Usage Tracking | 4 | Phase 4.1 |
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 4.5.1 | Create TeamDashboardPage | frontend-builder | 3h |
+| 4.5.2 | Create MemberList component | frontend-builder | 2h |
+| 4.5.3 | Create InviteMemberModal | frontend-builder | 1.5h |
+| 4.5.4 | Create TeamUsageChart component | frontend-builder | 2h |
+| 4.5.5 | Add team routes and navigation | frontend-builder | 1h |
+| 4.5.6 | Write component tests | qa-test-guardian | 1.5h |
+
+**Checkpoint**: Team dashboard functional
 
 ---
 
-## Execution Order (Recommended)
+#### Phase 4.6: Invitation Flow UI
 
-**Week 1: Core TTS**
-1. Phase 1.1: useSpeechSynthesis Hook
-2. Phase 1.2: TTS in Detective Stage
-3. Phase 1.3: Voice Settings Panel
+| Task | Description | Agent/Skill | Est |
+|------|-------------|-------------|-----|
+| 4.6.1 | Create AcceptInvitationPage | frontend-builder | 2h |
+| 4.6.2 | Add invitation email templates | backend-engineer | 1h |
+| 4.6.3 | Integrate with email service (Resend) | backend-engineer | 1h |
+| 4.6.4 | Write E2E tests for invitation flow | qa-test-guardian | 1.5h |
 
-**Week 2: Conversation Mode**
-4. Phase 2.1: Conversation State Machine
-5. Phase 2.2: Conversation UI Indicators
-6. Phase 2.3: Auto-Listen Mode
-7. Phase 2.4: Interrupt Handling
-
-**Week 3: Polish & Free Tier**
-8. Phase 3.1: Voice Quality Assessment
-9. Phase 4.1: Update Subscription Gating
-10. Phase 4.2: Usage Tracking
-
-**Optional (Future)**
-- Phase 3.2: External TTS Integration
+**Checkpoint**: Full invitation flow working
 
 ---
 
-## Appendix: ICE-Scored Epic Priorities
+### Dependencies
 
-| Epic | Impact | Confidence | Ease | ICE Score |
-|------|--------|------------|------|-----------|
-| Epic 1: Voice Mentor TTS | 9 | 9 | 8 | **8.4** |
-| Epic 2: Conversational Mode | 9 | 8 | 7 | **7.2** |
-| Epic 4: Free Tier Prepare | 8 | 9 | 7 | **7.0** |
-| Epic 3: Premium Voice Quality | 6 | 6 | 6 | **5.4** |
+**External:**
+- Stripe Team product/price configuration
+- Resend email templates for invitations
+
+**Internal:**
+- Existing auth system
+- Existing subscription infrastructure
+- Existing email service
+
+### Testing Strategy
+
+- **Unit Tests**: Team model validation, permission checks
+- **Integration Tests**: Team creation → invite → accept → usage flow
+- **E2E Tests**: Full team admin journey
+
+### Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Complex permission model | High | Start simple (admin/member), expand later |
+| Seat counting edge cases | Medium | Clear rules: pending invites don't count |
+| SSO requirement for enterprise | Low | Defer SSO to later sprint |
+
+---
+
+## Sprint 10 Summary
+
+### Total Estimated Effort
+
+| Epic | Effort | Priority |
+|------|--------|----------|
+| Epic 1: Lint Cleanup | ~4 hours | P0 - Critical |
+| Epic 2: Test Coverage | ~15 hours | P1 - High |
+| Epic 3: Video Analysis | ~35 hours | P2 - Medium |
+| Epic 4: B2B Features | ~45 hours | P2 - Medium |
+
+**Recommended Sprint Scope:**
+- Epic 1 + Epic 2 = ~19 hours (1 sprint)
+- Epic 3 or Epic 4 = ~35-45 hours (separate sprint)
+
+### Execution Order
+
+1. **Week 1**: Epic 1 (Lint) + Epic 2 Phase 2.1 (API tests)
+2. **Week 2**: Epic 2 Phase 2.2-2.3 (Service tests, verification)
+3. **Week 3-4**: Epic 3 OR Epic 4 (choose based on business priority)
+
+### Open Questions
+
+- [ ] Video analysis: EmotiEffLib vs OpenCV + fer - which is more suitable?
+- [ ] B2B: Should enterprise tier include SSO from day 1?
+- [ ] B2B: Do we need team-specific question banks?
 
 ---
 
 ## Previous Sprint Reference
-
-### Sprint 8: Onboarding & Mentor Enhancement ✅ COMPLETE
-- CoachOverlay props fix ✅
-- Draft Voice Dictation ✅
-- FirstSessionPrompt onboarding ✅
-- ContextualTooltip component ✅
-- HintHistoryPanel for coach hints ✅
-
-### Sprint 7: Voice-Enabled Practice Mode ✅ COMPLETE
-- Speech recognition hook ✅
-- VoiceInputButton component ✅
-- Detective Q&A voice integration ✅
-- Practice coaching voice integration ✅
 
 ### Sprint 9: Conversational Voice Mentor ✅ COMPLETE (Dec 2025)
 
@@ -767,24 +671,16 @@ async def start_preparation(...):
 - Phase 4.2: usePrepUsage hook (3/month limit, localStorage) ✅
 - QuestionCard shows remaining preparations ✅
 
-#### New Files Created:
-- `frontend/src/hooks/useSpeechSynthesis.ts`
-- `frontend/src/hooks/useConversationMode.ts`
-- `frontend/src/hooks/useVoicePreferences.ts`
-- `frontend/src/hooks/usePrepUsage.ts`
-- `frontend/src/lib/voice-quality.ts`
-- `frontend/src/components/interview/ConversationIndicator.tsx`
-- `frontend/src/components/settings/VoiceSettingsPanel.tsx`
-
-#### Files Modified:
-- `frontend/src/pages/PreparationPage.tsx` - TTS + conversation mode
-- `frontend/src/pages/QuestionsPage.tsx` - Free tier prepare access
-- `frontend/src/pages/SettingsPage.tsx` - Voice settings section
-- `frontend/src/components/questions/QuestionCard.tsx` - Usage badge
-
 #### Post-Sprint Fixes:
-- **Conversation Mode STT Conflict** (d5fc412): Fixed dual speech recognition issue where VoiceInputButton and conversation mode had competing STT instances
-  - Hide VoiceInputButton when conversation mode is active
-  - Added Start/Done speaking buttons for conversation mode
-  - Live transcript preview during recording
-  - ConversationIndicator shows isListening state
+- **Conversation Mode STT Conflict** (d5fc412): Fixed dual speech recognition issue
+- **TTS Canceled Error** (37cfd24): Fixed error handling for intentional cancellation
+- **Transcript Persistence** (37cfd24): Transcript now persists until answer submitted
+
+---
+
+## References
+
+- [CODEBASE_AUDIT.md](./CODEBASE_AUDIT.md) - Current code quality metrics
+- [project-brief.md](./project-brief.md) - Product vision and features
+- [progress.md](./progress.md) - Sprint history and milestones
+- [active-context.md](./active-context.md) - Current focus areas

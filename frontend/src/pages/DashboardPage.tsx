@@ -128,7 +128,7 @@ export default function DashboardPage() {
         const response = await preparationAPI.getAll();
         setPreparations(response.data.preparations);
       }
-    } catch (err) {
+    } catch {
       // Silently fail - user might not have access
     }
   }, [user?.subscription_tier]);

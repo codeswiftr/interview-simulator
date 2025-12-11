@@ -1,6 +1,7 @@
 """Tests for subscription API endpoints."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -12,7 +13,6 @@ from sqlmodel import SQLModel, select
 from app.db import SessionLocal, engine, get_session
 from app.main import app
 from app.models.user import SubscriptionTier, User
-from app.security import hash_password
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -228,7 +228,7 @@ async def test_webhook_subscription_deleted_downgrades_user(client, session_over
         # Mock webhook signature verification
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
-        response = await client.post(
+        await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
@@ -259,10 +259,10 @@ async def test_checkout_with_invalid_price_id(client, session_override):
         mock_customer = MagicMock()
         mock_customer.id = "cus_test123"
         mock_stripe.Customer.create.return_value = mock_customer
-        
+
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
-        
+
         # Then mock checkout error - use real exception class
         error = stripe.error.InvalidRequestError(
             message="No such price: price_invalid",
@@ -300,7 +300,7 @@ async def test_checkout_with_already_subscribed_user(client, session_override):
         mock_settings.stripe_secret_key = "sk_test_xxx"
         mock_settings.cors_origins = ["http://localhost:3000"]
         mock_settings.frontend_url = "http://localhost:3000"
-        
+
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
 
@@ -325,10 +325,10 @@ async def test_webhook_invalid_signature(client, session_override):
     with patch("app.api.subscriptions.settings") as mock_settings, \
          patch("app.api.subscriptions.stripe") as mock_stripe:
         mock_settings.stripe_webhook_secret = "whsec_test"
-        
+
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
-        
+
         # Mock signature verification failure
         error = stripe.error.SignatureVerificationError(
             message="Invalid signature",
@@ -385,8 +385,8 @@ async def test_get_subscription_status_expired(client, session_override):
         result = await session.exec(select(User).where(User.id == user_id))
         user = result.first()
         user.subscription_tier = SubscriptionTier.PRO
-        from datetime import datetime, timedelta, timezone
-        user.subscription_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        from datetime import datetime, timedelta
+        user.subscription_expires_at = datetime.now(UTC) - timedelta(days=1)
         await session.commit()
 
     response = await client.get(
@@ -450,11 +450,11 @@ async def test_portal_error_handling(client, session_override):
 
     # Get the real exception class before patching
     StripeError = stripe.error.InvalidRequestError
-    
+
     with patch("app.api.subscriptions.settings") as mock_settings, \
          patch("app.api.subscriptions.stripe") as mock_stripe:
         mock_settings.stripe_secret_key = "sk_test_xxx"
-        
+
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
 
@@ -532,7 +532,7 @@ async def test_cancel_already_cancelled_subscription(client, session_override):
 
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
-        
+
         # Mock subscription already cancelled - use proper exception
         error = stripe.error.InvalidRequestError(
             message="Subscription already cancelled",
@@ -622,10 +622,10 @@ async def test_webhook_invalid_payload(client, session_override):
     with patch("app.api.subscriptions.settings") as mock_settings, \
          patch("app.api.subscriptions.stripe") as mock_stripe:
         mock_settings.stripe_webhook_secret = "whsec_test"
-        
+
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
-        
+
         # Mock ValueError for invalid payload
         mock_stripe.Webhook.construct_event.side_effect = ValueError("Invalid payload")
 
@@ -855,10 +855,10 @@ async def test_get_subscription_status_sync_error_handled(client, session_overri
         await session.commit()
 
     with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe, \
+         patch("app.api.subscriptions.stripe"), \
          patch("app.api.subscriptions._sync_subscription_from_stripe") as mock_sync:
         mock_settings.stripe_secret_key = "sk_test_xxx"
-        
+
         # Mock sync failure
         mock_sync.side_effect = Exception("Stripe API error")
 
@@ -889,10 +889,10 @@ async def test_cancel_subscription_stripe_error(client, session_override):
     with patch("app.api.subscriptions.settings") as mock_settings, \
          patch("app.api.subscriptions.stripe") as mock_stripe:
         mock_settings.stripe_secret_key = "sk_test_xxx"
-        
+
         # Preserve the error module in the mock
         mock_stripe.error = stripe.error
-        
+
         # Mock Stripe error
         error = stripe.error.InvalidRequestError(
             message="Subscription not found",

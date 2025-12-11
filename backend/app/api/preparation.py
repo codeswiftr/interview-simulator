@@ -203,19 +203,19 @@ async def list_preparations(
     session: AsyncSession = Depends(get_session),
 ) -> PreparationsListResponse:
     """List all preparation sessions for the current user.
-    
+
     Returns preparations ordered by most recently updated first.
-    
+
     Args:
         current_user: Authenticated user
         session: Database session
-        
+
     Returns:
         PreparationsListResponse with list of user's preparations
     """
     # Check tier
     check_preparation_tier(current_user)
-    
+
     # Get all preparations for user
     result = await session.exec(
         select(AnswerPreparation)
@@ -223,7 +223,7 @@ async def list_preparations(
         .order_by(AnswerPreparation.updated_at.desc())
     )
     preparations = list(result.all())
-    
+
     # Fetch question content for each preparation
     preparation_items = []
     for prep in preparations:
@@ -231,7 +231,7 @@ async def list_preparations(
             select(Question).where(Question.id == prep.question_id)
         )
         question = question_result.first()
-        
+
         preparation_items.append(
             PreparationListItem(
                 id=prep.id,
@@ -243,7 +243,7 @@ async def list_preparations(
                 updated_at=prep.updated_at,
             )
         )
-    
+
     return PreparationsListResponse(preparations=preparation_items)
 
 

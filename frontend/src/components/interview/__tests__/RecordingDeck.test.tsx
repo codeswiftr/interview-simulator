@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@/test/utils';
 import userEvent from '@testing-library/user-event';
 import RecordingDeck from '../RecordingDeck';
-import type { RecordingState } from '../../../hooks/useAudioRecording';
 
 // Mock Web Audio API
 class MockAudioContext {
@@ -450,7 +449,7 @@ describe('RecordingDeck', () => {
     });
 
     it('should create analyser and source nodes', async () => {
-      const mockAudioContext = new MockAudioContext();
+      const _mockAudioContext = new MockAudioContext();
 
       render(
         <RecordingDeck

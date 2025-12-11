@@ -142,7 +142,7 @@ export function useSpeechRecognition(
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch (e) {
+        } catch {
           // Ignore errors when stopping
         }
         recognitionRef.current = null;
@@ -190,7 +190,7 @@ export function useSpeechRecognition(
     try {
       recognitionRef.current.stop();
       setIsListening(false);
-    } catch (err) {
+    } catch {
       // Ignore errors when stopping
       setIsListening(false);
     }

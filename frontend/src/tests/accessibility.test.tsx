@@ -1,6 +1,6 @@
 import { render, act } from '@testing-library/react';
 import { axe } from 'vitest-axe';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import FeedbackPage from '../pages/FeedbackPage';
 

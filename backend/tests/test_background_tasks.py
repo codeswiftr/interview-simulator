@@ -1,14 +1,12 @@
 """Tests for background task service."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import text
 from sqlmodel import SQLModel
 
 from app.db import SessionLocal, engine
-from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
 from app.models.interview import (
     InterviewResponse,
     InterviewSession,
@@ -80,7 +78,6 @@ async def sample_interview_session(db_session, sample_user):
 @pytest.fixture
 async def sample_response(db_session, sample_interview_session):
     """Create a test interview response with transcript."""
-    from app.models.question import Question, QuestionCategory
 
     question = Question(
         content="Tell me about yourself",

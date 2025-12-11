@@ -1035,7 +1035,7 @@ async def test_get_session_processing_status_with_feedback(client, session_overr
         },
         headers={"Authorization": token},
     )
-    r2_id = resp2.json()["id"]
+    resp2.json()["id"]
 
     # Manually create feedback for first response and session
     content_fb = ContentFeedback(
@@ -1280,7 +1280,7 @@ async def test_generate_session_feedback_endpoint(client, session_override, mock
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_no_responses(client, session_override):
+async def test_generate_session_feedback_no_responses_api(client, session_override):
     """Test generate session feedback returns 400 when no responses exist."""
     token = await register_and_login(client, email="gen_no_resp@example.com")
 
@@ -1491,7 +1491,6 @@ async def test_generate_session_feedback_already_exists(client, session_override
 @pytest.mark.asyncio
 async def test_generate_session_feedback_invalid_session(client, session_override):
     """Test generate session feedback with invalid session ID returns 404."""
-    from uuid import uuid4
 
     token = await register_and_login(client, email="gen_invalid@example.com")
 

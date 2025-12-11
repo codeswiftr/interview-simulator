@@ -87,7 +87,7 @@ describe('FeedbackPage', () => {
 
       await waitFor(() => {
         // No processing indicators when complete
-        const processingElements = screen.queryAllByText(/processing|analyzing/i);
+        const _processingElements = screen.queryAllByText(/processing|analyzing/i);
         // May still show status, but should indicate completion
       });
     });

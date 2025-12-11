@@ -1,5 +1,7 @@
 """API integration tests for auth, questions, and interviews."""
 
+from datetime import UTC
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -422,8 +424,8 @@ async def test_audio_upload(client: AsyncClient, session_override):
 @pytest.mark.asyncio
 async def test_audio_upload_invalid_session(client: AsyncClient):
     """Test upload fails for non-existent session."""
-    from io import BytesIO
     import uuid
+    from io import BytesIO
 
     token = await register_and_login(client, email="invalid@example.com")
 
@@ -657,10 +659,12 @@ async def test_refresh_with_invalid_token_fails(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_refresh_with_expired_token_fails(client: AsyncClient):
     """Test that an expired refresh token is rejected."""
-    from app.models.user import User
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
+
     from sqlmodel import select
+
     from app.db import SessionLocal
+    from app.models.user import User
 
     # Create user and login
     await client.post(
@@ -680,7 +684,7 @@ async def test_refresh_with_expired_token_fails(client: AsyncClient):
         )
         user = result.first()
         assert user is not None
-        user.refresh_token_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
         await session.commit()
 
     # Try to refresh with expired token
@@ -816,7 +820,10 @@ async def test_user_progress_empty(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_update_profile_email(client: AsyncClient):
-    """Test updating email via profile."""
+    """Test updating email via profile.
+
+    Note: Email updates return 202 Accepted because they trigger email verification.
+    """
     token = await register_and_login(client, email="update_email@example.com")
 
     resp = await client.patch(
@@ -824,8 +831,8 @@ async def test_update_profile_email(client: AsyncClient):
         json={"email": "new_email@example.com"},
         headers={"Authorization": token}
     )
-    assert resp.status_code == 200
-    assert resp.json()["email"] == "new_email@example.com"
+    assert resp.status_code == 202  # Accepted - email verification initiated
+    assert "verification" in resp.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
@@ -901,9 +908,10 @@ async def test_change_password_weak_password(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_delete_account_cascade_cleanup(client: AsyncClient):
     """Test DELETE /users/me cleans up related data (interviews, responses, feedback)."""
-    from app.models.user import User
-    from app.models.interview import InterviewSession
     from sqlmodel import select
+
+    from app.models.interview import InterviewSession
+    from app.models.user import User
 
     token = await register_and_login(client, email="cascade_delete@example.com")
 
@@ -1294,9 +1302,9 @@ async def test_create_interview_with_all_optional_fields(client: AsyncClient):
             headers={"Authorization": token},
         )
 
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
 
-    scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    scheduled_at = (datetime.now(UTC) + timedelta(days=1)).isoformat()
 
     create_resp = await client.post(
         "/api/v1/interviews/",

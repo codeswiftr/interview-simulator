@@ -77,8 +77,9 @@ async def test_health_detailed_includes_db_status(client):
     data = response.json()
     assert "database" in data
     assert "status" in data
-    # Database should be "ok" if connection works
-    assert data["database"] in ["ok", "error"]
+    # Database returns a dict with status and response_time_ms
+    assert isinstance(data["database"], dict)
+    assert data["database"]["status"] in ["ok", "error"]
 
 
 @pytest.mark.asyncio
@@ -89,8 +90,9 @@ async def test_health_detailed_handles_db_failure_gracefully(client):
     assert response.status_code == 200
     data = response.json()
     assert "database" in data
-    # Should return status map, not raise exception
-    assert isinstance(data["database"], str)
+    # Should return status map with status field
+    assert isinstance(data["database"], dict)
+    assert "status" in data["database"]
 
 
 @pytest.mark.asyncio
@@ -102,7 +104,7 @@ async def test_health_detailed_shows_degraded_when_db_fails(client):
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "degraded"
-        assert data["database"] == "error"
+        assert data["database"]["status"] == "error"
 
 
 @pytest.mark.asyncio

@@ -6,10 +6,10 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel
 
+from alembic import context
 from app.config import settings
 
 # Ensure backend package is on path for model imports

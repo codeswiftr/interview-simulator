@@ -1,7 +1,8 @@
 """Tests for answer preparation endpoints."""
 
-import pytest
 from uuid import UUID
+
+import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlmodel import SQLModel, select
@@ -60,7 +61,6 @@ async def client(session_override):
 
 async def register_and_login_pro(client: AsyncClient, session_override, email: str = "user@example.com") -> str:
     """Register Pro tier user and return bearer token."""
-    from app.models.user import SubscriptionTier, User
 
     await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
     resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
@@ -115,7 +115,7 @@ async def test_start_preparation_requires_pro_tier(client, session_override):
 async def test_list_preparations(client, session_override):
     """Test listing user's preparations."""
     token = await register_and_login_pro(client, session_override, email="list@example.com")
-    
+
     # Create a question
     question = Question(
         content="Test question for listing",
@@ -125,12 +125,11 @@ async def test_list_preparations(client, session_override):
     session_override.add(question)
     await session_override.commit()
     await session_override.refresh(question)
-    
+
     # Create a preparation
-    from app.models.user import User
     result = await session_override.exec(select(User).where(User.email == "list@example.com"))
     user = result.first()
-    
+
     preparation = AnswerPreparation(
         user_id=user.id,
         question_id=question.id,
@@ -140,13 +139,13 @@ async def test_list_preparations(client, session_override):
     session_override.add(preparation)
     await session_override.commit()
     await session_override.refresh(preparation)
-    
+
     # List preparations
     response = await client.get(
         "/api/v1/preparation/",
         headers={"Authorization": token},
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "preparations" in data
@@ -199,7 +198,6 @@ async def test_get_detective_question(client, session_override):
     await session_override.refresh(question)
 
     # Get user ID
-    from app.models.user import User
     result = await session_override.exec(select(User).where(User.email == "detective@example.com"))
     user = result.first()
 
@@ -240,7 +238,6 @@ async def test_submit_detective_answer(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
     result = await session_override.exec(select(User).where(User.email == "answer@example.com"))
     user = result.first()
 
@@ -291,7 +288,6 @@ async def test_generate_draft(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
     result = await session_override.exec(select(User).where(User.email == "draft@example.com"))
     user = result.first()
 
@@ -349,7 +345,6 @@ async def test_get_draft(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
     result = await session_override.exec(select(User).where(User.email == "getdraft@example.com"))
     user = result.first()
 
@@ -393,7 +388,6 @@ async def test_start_practice_success(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(select(User).where(User.email == "practice@example.com"))
     user = result.first()
@@ -443,7 +437,6 @@ async def test_start_practice_requires_draft(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(select(User).where(User.email == "nodraft@example.com"))
     user = result.first()
@@ -483,7 +476,6 @@ async def test_start_practice_requires_pro_tier(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "freepractice@example.com")
@@ -527,7 +519,6 @@ async def test_submit_practice_success(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(select(User).where(User.email == "submit@example.com"))
     user = result.first()
@@ -606,7 +597,6 @@ async def test_submit_practice_creates_attempt_if_missing(client, session_overri
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "autoattempt@example.com")
@@ -677,7 +667,6 @@ async def test_submit_practice_audio_not_found(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "invalidaudio@example.com")
@@ -720,7 +709,6 @@ async def test_get_attempts_success(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(select(User).where(User.email == "attempts@example.com"))
     user = result.first()
@@ -780,7 +768,6 @@ async def test_get_attempts_empty(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "noattempts@example.com")
@@ -812,7 +799,7 @@ async def test_get_attempts_empty(client, session_override):
 @pytest.mark.asyncio
 async def test_get_attempts_unauthorized(client, session_override):
     """Test that users cannot access other users' attempts."""
-    token1 = await register_and_login_pro(client, session_override, email="user1@example.com")
+    await register_and_login_pro(client, session_override, email="user1@example.com")
     token2 = await register_and_login_pro(client, session_override, email="user2@example.com")
 
     # User 1 creates preparation
@@ -825,7 +812,6 @@ async def test_get_attempts_unauthorized(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(select(User).where(User.email == "user1@example.com"))
     user1 = result.first()
@@ -869,7 +855,6 @@ async def test_rate_delivery_success(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(select(User).where(User.email == "rate@example.com"))
     user = result.first()
@@ -944,7 +929,6 @@ async def test_rate_delivery_no_transcript(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "notranscript@example.com")
@@ -996,7 +980,6 @@ async def test_get_comparison_success(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "comparison@example.com")
@@ -1041,7 +1024,7 @@ async def test_get_comparison_success(client, session_override):
 @pytest.mark.asyncio
 async def test_get_comparison_unauthorized(client, session_override):
     """Test that users cannot access other users' comparisons."""
-    token1 = await register_and_login_pro(client, session_override, email="user1comp@example.com")
+    await register_and_login_pro(client, session_override, email="user1comp@example.com")
     token2 = await register_and_login_pro(client, session_override, email="user2comp@example.com")
 
     # User 1 creates preparation
@@ -1054,7 +1037,6 @@ async def test_get_comparison_unauthorized(client, session_override):
     await session_override.commit()
     await session_override.refresh(question)
 
-    from app.models.user import User
 
     result = await session_override.exec(
         select(User).where(User.email == "user1comp@example.com")

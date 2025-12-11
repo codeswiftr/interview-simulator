@@ -1,6 +1,5 @@
 """Tests for transcription service and API."""
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,7 +20,7 @@ class TestTranscriber:
     def test_supported_formats(self, transcriber):
         """Test supported audio formats."""
         expected_formats = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
-        assert transcriber.SUPPORTED_FORMATS == expected_formats
+        assert expected_formats == transcriber.SUPPORTED_FORMATS
 
     def test_max_file_size(self, transcriber):
         """Test max file size limit."""

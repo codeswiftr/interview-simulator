@@ -19,5 +19,21 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Allow setState in effects for state machine patterns (intentional in conversation hooks)
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
+  // Relaxed rules for test files
+  {
+    files: ['**/*.test.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}', '**/test/**/*.{ts,tsx}', 'e2e/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',  // Allow `any` in test mocks
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
+      'react-hooks/rules-of-hooks': 'off',  // Allow hooks in test utilities
+    },
   },
 ])

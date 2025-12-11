@@ -67,6 +67,10 @@ ignore = [
     "B008",   # Do not perform function call in argument defaults (FastAPI Depends pattern)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["N806"]  # Allow PascalCase Mock variable names in tests (common pattern)
+"alembic/env.py" = ["E402"]  # Module imports not at top (required for Alembic)
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

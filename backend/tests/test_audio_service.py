@@ -1,8 +1,6 @@
 """Tests for audio processing service."""
 
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import text
@@ -204,11 +202,10 @@ class TestAudioService:
         """Test that transcription failures are handled gracefully."""
         with patch.object(
             audio_service.transcriber, "transcribe", side_effect=ValueError("Transcription failed")
-        ):
-            with pytest.raises(ValueError, match="Failed to process audio"):
-                await audio_service.process_response_audio(
-                    db_session, sample_response.id, mock_audio_file
-                )
+        ), pytest.raises(ValueError, match="Failed to process audio"):
+            await audio_service.process_response_audio(
+                db_session, sample_response.id, mock_audio_file
+            )
 
     @pytest.mark.asyncio
     async def test_process_response_audio_handles_analysis_failure(
@@ -221,11 +218,10 @@ class TestAudioService:
             audio_service.transcriber, "transcribe", return_value=mock_transcript
         ), patch.object(
             audio_service.analyzer, "analyze", side_effect=ValueError("Analysis failed")
-        ):
-            with pytest.raises(ValueError, match="Failed to process audio"):
-                await audio_service.process_response_audio(
-                    db_session, sample_response.id, mock_audio_file
-                )
+        ), pytest.raises(ValueError, match="Failed to process audio"):
+            await audio_service.process_response_audio(
+                db_session, sample_response.id, mock_audio_file
+            )
 
     @pytest.mark.asyncio
     async def test_save_audio_feedback_calculates_scores(

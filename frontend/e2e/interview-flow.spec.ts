@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { registerUser, createInterview, waitForApiResponse, clearLocalStorage } from './helpers';
+import { registerUser, clearLocalStorage } from './helpers';
 
 /**
  * E2E Test: Login → Create Interview → Record → Feedback

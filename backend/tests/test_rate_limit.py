@@ -1,7 +1,5 @@
 """Tests for rate limiting middleware."""
 
-import time
-from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -96,7 +94,7 @@ async def test_rate_limit_exceeds_per_minute(client, session_override):
     # Note: Rate limit is 60/min, but we'll test with a lower threshold
     # to avoid making 60+ requests in tests
     responses = []
-    for i in range(5):
+    for _i in range(5):
         resp = await client.get(
             "/api/v1/users/me",
             headers={"Authorization": token},
@@ -123,7 +121,6 @@ async def test_rate_limit_headers_in_response(client, session_override):
     )
 
     # Check for rate limit headers (may not be present if not rate limited)
-    headers = resp.headers
     # Headers may include X-RateLimit-* if rate limiting is active
     # This test verifies headers are set when rate limiting is enabled
     assert resp.status_code in [200, 429]
@@ -221,13 +218,13 @@ async def register_and_login(client: AsyncClient, email: str = "user@example.com
 @pytest.mark.asyncio
 async def test_rate_limiter_allows_requests_within_limit():
     """Test that RateLimiter allows requests within the limit."""
-    from app.middleware.rate_limit import RateLimiter, RateLimitConfig
+    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
 
     limiter = RateLimiter(RateLimitConfig(requests_per_minute=5, requests_per_hour=100))
     key = "test_client"
 
     # First 5 requests should be allowed
-    for i in range(5):
+    for _i in range(5):
         allowed, headers = limiter.is_allowed(key)
         assert allowed is True
         assert "X-RateLimit-Limit" in headers
@@ -237,13 +234,13 @@ async def test_rate_limiter_allows_requests_within_limit():
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_requests_over_minute_limit():
     """Test that RateLimiter blocks requests exceeding per-minute limit."""
-    from app.middleware.rate_limit import RateLimiter, RateLimitConfig
+    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
 
     limiter = RateLimiter(RateLimitConfig(requests_per_minute=3, requests_per_hour=100))
     key = "test_client"
 
     # First 3 requests allowed
-    for i in range(3):
+    for _i in range(3):
         allowed, _ = limiter.is_allowed(key)
         assert allowed is True
 
@@ -257,13 +254,13 @@ async def test_rate_limiter_blocks_requests_over_minute_limit():
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_requests_over_hour_limit():
     """Test that RateLimiter blocks requests exceeding per-hour limit."""
-    from app.middleware.rate_limit import RateLimiter, RateLimitConfig
+    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
 
     limiter = RateLimiter(RateLimitConfig(requests_per_minute=100, requests_per_hour=5))
     key = "test_client"
 
     # First 5 requests allowed
-    for i in range(5):
+    for _i in range(5):
         allowed, _ = limiter.is_allowed(key)
         assert allowed is True
 
@@ -276,7 +273,7 @@ async def test_rate_limiter_blocks_requests_over_hour_limit():
 @pytest.mark.asyncio
 async def test_rate_limiter_cleans_old_requests():
     """Test that RateLimiter cleans up old requests."""
-    from app.middleware.rate_limit import RateLimiter, RateLimitConfig
+    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
 
     limiter = RateLimiter(RateLimitConfig(requests_per_minute=2, requests_per_hour=10))
     key = "test_client"
@@ -303,10 +300,12 @@ async def test_rate_limiter_cleans_old_requests():
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_excludes_health_paths():
     """Test that middleware excludes specified paths."""
-    from fastapi import Request
     from unittest.mock import AsyncMock, MagicMock
-    from app.middleware.rate_limit import RateLimitMiddleware, RateLimitConfig
+
+    from fastapi import Request
     from starlette.applications import Starlette
+
+    from app.middleware.rate_limit import RateLimitConfig
 
     app = Starlette()
     middleware = RateLimitMiddleware(
@@ -322,17 +321,19 @@ async def test_rate_limit_middleware_excludes_health_paths():
     call_next = AsyncMock(return_value=MagicMock(headers={}))
 
     # Should not apply rate limiting
-    response = await middleware.dispatch(request, call_next)
+    await middleware.dispatch(request, call_next)
     assert call_next.called
 
 
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_uses_forwarded_header():
     """Test that middleware extracts IP from X-Forwarded-For header."""
-    from fastapi import Request
     from unittest.mock import MagicMock
-    from app.middleware.rate_limit import RateLimitMiddleware, RateLimitConfig
+
+    from fastapi import Request
     from starlette.applications import Starlette
+
+    from app.middleware.rate_limit import RateLimitConfig
 
     app = Starlette()
     middleware = RateLimitMiddleware(app, config=RateLimitConfig())
@@ -348,10 +349,12 @@ async def test_rate_limit_middleware_uses_forwarded_header():
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_uses_client_host():
     """Test that middleware falls back to client host when no forwarded header."""
-    from fastapi import Request
     from unittest.mock import MagicMock
-    from app.middleware.rate_limit import RateLimitMiddleware, RateLimitConfig
+
+    from fastapi import Request
     from starlette.applications import Starlette
+
+    from app.middleware.rate_limit import RateLimitConfig
 
     app = Starlette()
     middleware = RateLimitMiddleware(app, config=RateLimitConfig())
@@ -369,10 +372,12 @@ async def test_rate_limit_middleware_uses_client_host():
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_handles_no_client():
     """Test that middleware handles requests with no client info."""
-    from fastapi import Request
     from unittest.mock import MagicMock
-    from app.middleware.rate_limit import RateLimitMiddleware, RateLimitConfig
+
+    from fastapi import Request
     from starlette.applications import Starlette
+
+    from app.middleware.rate_limit import RateLimitConfig
 
     app = Starlette()
     middleware = RateLimitMiddleware(app, config=RateLimitConfig())
@@ -389,10 +394,12 @@ async def test_rate_limit_middleware_handles_no_client():
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_returns_429_with_headers():
     """Test that middleware returns 429 with proper headers when blocked."""
-    from fastapi import Request, Response
     from unittest.mock import AsyncMock, MagicMock
-    from app.middleware.rate_limit import RateLimitMiddleware, RateLimitConfig
+
+    from fastapi import Request
     from starlette.applications import Starlette
+
+    from app.middleware.rate_limit import RateLimitConfig
 
     app = Starlette()
     middleware = RateLimitMiddleware(
@@ -410,7 +417,7 @@ async def test_rate_limit_middleware_returns_429_with_headers():
     call_next = AsyncMock()
 
     # First request should succeed
-    response1 = await middleware.dispatch(request, call_next)
+    await middleware.dispatch(request, call_next)
     assert call_next.called
 
     # Second request should be blocked
@@ -423,10 +430,12 @@ async def test_rate_limit_middleware_returns_429_with_headers():
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_adds_headers_to_success_response():
     """Test that middleware adds rate limit headers to successful responses."""
-    from fastapi import Request, Response
     from unittest.mock import AsyncMock, MagicMock
-    from app.middleware.rate_limit import RateLimitMiddleware, RateLimitConfig
+
+    from fastapi import Request, Response
     from starlette.applications import Starlette
+
+    from app.middleware.rate_limit import RateLimitConfig
 
     app = Starlette()
     middleware = RateLimitMiddleware(

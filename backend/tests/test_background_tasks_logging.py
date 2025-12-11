@@ -1,15 +1,20 @@
 """Tests for background task logging with correlation fields."""
 
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import text
 from sqlmodel import SQLModel
 
 from app.db import SessionLocal, engine
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType, ProcessingStatus
+from app.models.interview import (
+    InterviewResponse,
+    InterviewSession,
+    InterviewStatus,
+    InterviewType,
+    ProcessingStatus,
+)
 from app.models.question import Question, QuestionCategory
 from app.models.user import User
 from app.security import hash_password
@@ -102,7 +107,7 @@ async def sample_response(db_session, sample_interview_session):
 async def test_background_tasks_log_correlation_fields(caplog, sample_response, tmp_path):
     """Test that background tasks log correlation fields (response_id, task_name)."""
     background_tasks = BackgroundTaskService()
-    
+
     # Create audio file in the expected location
     from pathlib import Path
     audio_dir = Path("backend/uploads/audio")
@@ -112,22 +117,21 @@ async def test_background_tasks_log_correlation_fields(caplog, sample_response, 
     audio_url = f"/uploads/audio/{audio_file.name}"
 
     try:
-        with caplog.at_level(logging.INFO):
-            with patch.object(
-                background_tasks.audio_service,
-                "process_response_audio",
-                return_value=("Test transcript", MagicMock()),
-            ), patch.object(
-                background_tasks.audio_service, "save_audio_feedback", return_value=MagicMock()
-            ), patch.object(
-                background_tasks, "generate_content_feedback_async", return_value=None
-            ):
-                await background_tasks.process_response_audio_async(sample_response.id, audio_url)
+        with caplog.at_level(logging.INFO), patch.object(
+            background_tasks.audio_service,
+            "process_response_audio",
+            return_value=("Test transcript", MagicMock()),
+        ), patch.object(
+            background_tasks.audio_service, "save_audio_feedback", return_value=MagicMock()
+        ), patch.object(
+            background_tasks, "generate_content_feedback_async", return_value=None
+        ):
+            await background_tasks.process_response_audio_async(sample_response.id, audio_url)
 
         # Check that logs contain correlation fields
         log_records = [record for record in caplog.records if "Successfully processed audio" in record.getMessage()]
         assert len(log_records) > 0
-        
+
         # Verify correlation fields are present in log extra
         for record in log_records:
             # Check if fields are in extra dict or as attributes

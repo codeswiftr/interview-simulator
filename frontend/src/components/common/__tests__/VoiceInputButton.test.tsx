@@ -183,7 +183,7 @@ describe('VoiceInputButton', () => {
 
     it('should call onInterim with interim transcript', async () => {
       const onInterim = vi.fn();
-      const onResult = vi.fn();
+      const _onResult = vi.fn();
 
       // Mock the hook to call onResult callback
       let resultCallback: ((text: string, isFinal: boolean) => void) | undefined;
@@ -206,7 +206,7 @@ describe('VoiceInputButton', () => {
 
     it('should not call onInterim for final results', async () => {
       const onInterim = vi.fn();
-      const onResult = vi.fn();
+      const _onResult = vi.fn();
 
       let resultCallback: ((text: string, isFinal: boolean) => void) | undefined;
       vi.mocked(speechRecognitionModule.useSpeechRecognition).mockImplementation((options) => {

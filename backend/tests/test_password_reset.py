@@ -1,6 +1,6 @@
 """Tests for password reset functionality."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -78,7 +78,7 @@ async def test_forgot_password_generates_token(client: AsyncClient, session_over
 
     # Verify token properties
     assert token.used is False
-    assert token.expires_at > datetime.now(timezone.utc)
+    assert token.expires_at > datetime.now(UTC)
     assert len(token.token) > 0
 
 
@@ -158,7 +158,7 @@ async def test_reset_password_rejects_expired_token(client: AsyncClient, session
     assert reset_token is not None
 
     # Manually set token to expired (2 hours ago)
-    reset_token.expires_at = datetime.now(timezone.utc) - timedelta(hours=2)
+    reset_token.expires_at = datetime.now(UTC) - timedelta(hours=2)
     await session_override.commit()
 
     # Try to reset password with expired token
@@ -261,7 +261,7 @@ async def test_forgot_password_multiple_requests(client: AsyncClient, session_ov
     # Both tokens should be valid (not used, not expired)
     for token in tokens:
         assert token.used is False
-        assert token.expires_at > datetime.now(timezone.utc)
+        assert token.expires_at > datetime.now(UTC)
 
 
 @pytest.mark.asyncio
@@ -271,7 +271,7 @@ async def test_forgot_password_rate_limiting(client: AsyncClient, session_overri
 
     # Make multiple rapid requests (more than typical rate limit)
     responses = []
-    for i in range(10):
+    for _i in range(10):
         resp = await client.post(
             "/api/v1/auth/forgot-password",
             json={"email": email}
@@ -366,7 +366,7 @@ async def test_refresh_token_expired_token(client: AsyncClient, session_override
     # Manually expire the refresh token
     user_result = await session_override.exec(select(User).where(User.email == email))
     user = user_result.first()
-    user.refresh_token_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
     await session_override.commit()
 
     # Try to refresh with expired token
@@ -394,7 +394,7 @@ async def test_refresh_token_clears_expired_token(client: AsyncClient, session_o
     # Manually expire the refresh token
     user_result = await session_override.exec(select(User).where(User.email == email))
     user = user_result.first()
-    user.refresh_token_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
     await session_override.commit()
 
     # Try to refresh with expired token

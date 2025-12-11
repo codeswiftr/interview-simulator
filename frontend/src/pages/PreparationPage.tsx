@@ -185,7 +185,7 @@ export default function PreparationPage() {
         } else {
           setCurrentQuestion('');
         }
-      } catch (err) {
+      } catch {
         // Fall back to fetching the next question to keep flow alive
         setQuestionContext(null);
         try {
@@ -220,7 +220,7 @@ export default function PreparationPage() {
       try {
         const response = await preparationAPI.getAttempts(id);
         setAttempts(response.data.attempts);
-      } catch (err) {
+      } catch {
         // Silently fail - attempts might not exist yet
       }
     };

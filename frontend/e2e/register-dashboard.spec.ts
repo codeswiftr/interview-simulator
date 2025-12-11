@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { registerUser, clearLocalStorage } from './helpers';
+import { clearLocalStorage } from './helpers';
 
 /**
  * E2E Test: Register → Dashboard

@@ -11,7 +11,6 @@ from app.models.interview import (
     InterviewQuestion,
     InterviewSession,
     InterviewStatus,
-    InterviewType,
 )
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import SubscriptionTier, User
@@ -109,7 +108,7 @@ async def test_list_interviews_with_status_filter(client, session_override):
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
-    interview_id2 = resp2.json()["id"]
+    resp2.json()["id"]
 
     # Start one interview
     await client.post(
@@ -135,7 +134,7 @@ async def test_list_interviews_with_pagination(client, session_override):
     token = await register_and_login(client)
 
     # Create multiple interviews
-    for i in range(5):
+    for _i in range(5):
         await client.post(
             "/api/v1/interviews/",
             json={"interview_type": "behavioral"},
@@ -781,7 +780,7 @@ async def test_create_interview_with_all_options(client, session_override):
     await session_override.commit()
 
     # Create interview with all options
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 
     scheduled_at = datetime.now(UTC)
     resp = await client.post(
@@ -920,7 +919,7 @@ async def test_quota_enforcement_free_tier_limit(client, session_override):
     await session_override.commit()
 
     # Create 3 interviews (the limit)
-    for i in range(3):
+    for _ in range(3):
         resp = await client.post(
             "/api/v1/interviews/",
             json={"interview_type": "behavioral", "question_count": 1},
@@ -964,7 +963,7 @@ async def test_quota_enforcement_pro_tier_unlimited(client, session_override):
     await session_override.commit()
 
     # Create 5 interviews (should all succeed)
-    for i in range(5):
+    for _ in range(5):
         resp = await client.post(
             "/api/v1/interviews/",
             json={"interview_type": "behavioral", "question_count": 1},
@@ -1218,7 +1217,8 @@ async def test_submit_response_interview_not_started_fails(client, session_overr
 @pytest.mark.asyncio
 async def test_quota_reset_monthly(client, session_override):
     """Test that interview quota resets monthly based on user creation date."""
-    from datetime import datetime, timedelta, UTC
+    from datetime import UTC, datetime, timedelta
+
     from app.security import hash_password
 
     # Create user with old created_at date (different month)

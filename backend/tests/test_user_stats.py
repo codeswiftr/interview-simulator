@@ -10,7 +10,6 @@ from app.main import app
 from app.models.feedback import SessionFeedback
 from app.models.interview import InterviewSession, InterviewStatus, InterviewType
 from app.models.user import User
-from app.security import hash_password
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -65,16 +64,16 @@ async def register_and_login(client: AsyncClient, email: str = "user@example.com
 async def test_get_my_stats_returns_counts_and_average_score(client, session_override):
     """Test that user stats endpoint returns counts and average score."""
     token = await register_and_login(client, email="stats@example.com")
-    
+
     # Get user ID
     user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
     user_id = user_resp.json()["id"]
-    
+
     # Create some interview sessions
     from sqlmodel import select
     result = await session_override.exec(select(User).where(User.id == user_id))
     user = result.first()
-    
+
     session1 = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.BEHAVIORAL,
@@ -98,10 +97,10 @@ async def test_get_my_stats_returns_counts_and_average_score(client, session_ove
     session_override.add(session2)
     session_override.add(session3)
     await session_override.commit()
-    
+
     # Get stats
     stats_resp = await client.get("/api/v1/users/me/stats", headers={"Authorization": token})
-    
+
     assert stats_resp.status_code == 200
     data = stats_resp.json()
     assert data["total_sessions"] == 3
@@ -114,16 +113,16 @@ async def test_get_my_stats_returns_counts_and_average_score(client, session_ove
 async def test_get_my_progress_returns_trend_and_recommendations(client, session_override):
     """Test that user progress endpoint returns trend data and practice recommendations."""
     token = await register_and_login(client, email="progress@example.com")
-    
+
     # Get user ID
     user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
     user_id = user_resp.json()["id"]
-    
+
     # Create completed sessions with feedback
     from sqlmodel import select
     result = await session_override.exec(select(User).where(User.id == user_id))
     user = result.first()
-    
+
     session1 = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.BEHAVIORAL,
@@ -139,7 +138,7 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, session
     await session_override.commit()
     await session_override.refresh(session1)
     await session_override.refresh(session2)
-    
+
     # Create session feedbacks
     feedback1 = SessionFeedback(
         session_id=session1.id,
@@ -162,10 +161,10 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, session
     session_override.add(feedback1)
     session_override.add(feedback2)
     await session_override.commit()
-    
+
     # Get progress
     progress_resp = await client.get("/api/v1/users/me/progress", headers={"Authorization": token})
-    
+
     assert progress_resp.status_code == 200
     data = progress_resp.json()
     assert "score_trend" in data
@@ -219,7 +218,7 @@ async def test_readiness_score_calculates_from_last_5_sessions(client, session_o
 
     # Create 7 sessions (only last 5 should be used)
     scores = [60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 90.0]  # Will use 70, 75, 80, 85, 90
-    for i, score in enumerate(scores):
+    for _i, score in enumerate(scores):
         session = InterviewSession(
             user_id=user.id,
             interview_type=InterviewType.BEHAVIORAL,

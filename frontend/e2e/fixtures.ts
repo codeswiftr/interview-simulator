@@ -13,7 +13,7 @@ export interface TestUser {
 export const test = base.extend<{
   testUser: TestUser;
 }>({
-  testUser: async ({ page }, use) => {
+  testUser: async ({ page: _page }, use) => {
     // Generate unique test user
     const timestamp = Date.now();
     const testUser: TestUser = {

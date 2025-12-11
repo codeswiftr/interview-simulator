@@ -94,7 +94,7 @@ describe('InterviewPage', () => {
 
       // Submission progress indicators should appear
       await waitFor(() => {
-        const progressElements = screen.queryAllByText(/uploading|processing|submitting/i);
+        const _progressElements = screen.queryAllByText(/uploading|processing|submitting/i);
         // May appear during submission
       }, { timeout: 2000 });
     });

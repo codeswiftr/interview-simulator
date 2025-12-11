@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useSpeechRecognition } from '../useSpeechRecognition';
 import type { SpeechRecognition, SpeechRecognitionEvent } from '../../types/speech';
 
@@ -31,7 +31,7 @@ function createMockSpeechEvent(
   transcripts: Array<{ text: string; isFinal: boolean }>,
   resultIndex = 0
 ): SpeechRecognitionEvent {
-  const results = transcripts.map((t, i) => ({
+  const results = transcripts.map((t, _i) => ({
     isFinal: t.isFinal,
     0: { transcript: t.text, confidence: 0.9 },
     length: 1,
