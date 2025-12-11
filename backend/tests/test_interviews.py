@@ -2093,3 +2093,227 @@ async def test_submit_response_unauthorized_access_404(client, session_override)
         headers={"Authorization": token2},
     )
     assert submit_resp.status_code == 404
+
+
+# Additional API Coverage Tests for Uncovered Paths
+
+
+@pytest.mark.asyncio
+async def test_get_interview_questions_scheduled_status_fails(client, session_override):
+    """Test GET /interviews/{id}/questions fails for scheduled (not started) interview."""
+    token = await register_and_login(client, email="questions_scheduled@example.com")
+
+    # Create scheduled interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Try to get questions before starting
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 400
+    assert "not been started" in questions_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_end_interview_cancelled_status_fails(client, session_override):
+    """Test ending a cancelled interview fails."""
+    token = await register_and_login(client, email="end_cancelled@example.com")
+
+    # Create and cancel interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    # Cancel it
+    await client.delete(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token},
+    )
+
+    # Try to end cancelled interview
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp.status_code == 400
+    assert "Cannot end interview" in end_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_end_interview_completed_status_fails(client, session_override):
+    """Test ending an already completed interview fails."""
+    token = await register_and_login(client, email="end_completed@example.com")
+
+    # Create, start, and end interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 3},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+
+    # Try to end again
+    end_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+    assert end_resp.status_code == 400
+    assert "Cannot end interview" in end_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_response_completed_interview_fails(client, session_override):
+    """Test submitting response to completed interview fails."""
+    token = await register_and_login(client, email="submit_completed@example.com")
+
+    # Create question first
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Create, start, and end interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/end",
+        headers={"Authorization": token},
+    )
+
+    # Try to submit response to completed interview
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "in progress" in submit_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_response_cancelled_interview_fails(client, session_override):
+    """Test submitting response to cancelled interview fails."""
+    token = await register_and_login(client, email="submit_cancelled@example.com")
+
+    # Create and cancel interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    await client.delete(
+        f"/api/v1/interviews/{interview_id}",
+        headers={"Authorization": token},
+    )
+
+    # Create a question to use
+    question = Question(
+        content="Test question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Try to submit response to cancelled interview
+    submit_resp = await client.post(
+        f"/api/v1/interviews/{interview_id}/responses",
+        json={
+            "question_id": str(question.id),
+            "transcript": "Test answer",
+        },
+        headers={"Authorization": token},
+    )
+    assert submit_resp.status_code == 400
+    assert "in progress" in submit_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_get_responses_empty_question_ids_handles_gracefully(client, session_override):
+    """Test GET /interviews/{id}/responses handles empty responses gracefully."""
+    token = await register_and_login(client, email="empty_responses@example.com")
+
+    # Create and start interview
+    interview_resp = await client.post(
+        "/api/v1/interviews/",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    interview_id = interview_resp.json()["id"]
+
+    await client.post(
+        f"/api/v1/interviews/{interview_id}/start",
+        headers={"Authorization": token},
+    )
+
+    # Get responses (should be empty)
+    responses_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/responses",
+        headers={"Authorization": token},
+    )
+    assert responses_resp.status_code == 200
+    assert responses_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_quick_practice_assign_specific_question_error_handled(client, session_override):
+    """Test quick practice handles ValueError from assign_specific_question."""
+    token = await register_and_login(client, email="quick_error@example.com")
+
+    # Create an inactive question
+    question = Question(
+        content="Inactive question",
+        category=QuestionCategory.BEHAVIORAL,
+        difficulty=Difficulty.MEDIUM,
+        is_active=False,
+    )
+    session_override.add(question)
+    await session_override.commit()
+    await session_override.refresh(question)
+
+    # Try quick practice with inactive question
+    resp = await client.post(
+        f"/api/v1/interviews/quick-practice?question_id={question.id}",
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
