@@ -80,10 +80,6 @@ CareerSwiftr Team
         Returns:
             bool: True if email sent successfully, False otherwise
         """
-        # Debug: Ensure this function is being called
-        print(f"[EMAIL SERVICE] send_password_reset called for {email}", flush=True)
-        logger.warning(f"[EMAIL SERVICE] send_password_reset called for {email}")
-
         subject = "Reset Your Interview Simulator Password"
 
         # Load HTML template
@@ -103,7 +99,6 @@ CareerSwiftr Team
             return True
 
         # Try Resend first (preferred)
-        logger.info(f"Email service: resend_api_key configured: {bool(self.resend_api_key)}")
         if self.resend_api_key:
             try:
                 import resend
@@ -115,8 +110,6 @@ CareerSwiftr Team
                 from_email = settings.resend_from_email if settings.resend_from_email else "hello@codeswiftr.com"
                 from_name = settings.resend_from_name if settings.resend_from_name else "Interview Simulator"
                 from_header = f"{from_name} <{from_email}>"
-
-                logger.info(f"Sending password reset email via Resend: from={from_header}, to={email}")
 
                 # Resend SDK v2+ uses dict instead of Params class
                 email_response = resend.Emails.send({

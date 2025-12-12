@@ -208,6 +208,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         else:
             logger.warning("Anthropic API key not configured - feedback generation will fail")
 
+    # Email service configuration validation
+    if settings.resend_api_key:
+        from_email = settings.resend_from_email
+        # Validate from_email is not sandbox/test email
+        if not from_email or "resend.dev" in from_email:
+            logger.error(
+                f"CRITICAL: RESEND_FROM_EMAIL is set to sandbox value '{from_email}'. "
+                "Password reset emails will fail. Set to a verified domain like 'hello@codeswiftr.com'"
+            )
+        elif "@" not in from_email:
+            logger.error(f"CRITICAL: RESEND_FROM_EMAIL '{from_email}' is not a valid email address")
+        else:
+            logger.info(f"Email configured: Resend (from: {from_email})")
+    else:
+        logger.warning("RESEND_API_KEY not configured - password reset emails will not be sent")
+
     # Seed data in debug/local environments
     if settings.debug:
         async with SessionLocal() as session:
