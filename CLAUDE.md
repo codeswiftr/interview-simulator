@@ -29,10 +29,12 @@ cd frontend && npm install && npm run dev
 
 ## Testing Commands
 ```bash
-cd backend && uv run pytest                    # All tests (71 tests, ~73% coverage)
+cd backend && uv run pytest                    # All tests (385 tests, 38% line coverage)
 cd backend && uv run pytest --cov=app --cov-report=html  # With coverage
 cd frontend && npm run build                   # Build check
 ```
+
+**Note**: High test count (385) with moderate line coverage (38%). Focus areas for coverage improvement: `interview_service.py` (18%), `video_service.py` (46%).
 
 ## Project Structure
 ```
