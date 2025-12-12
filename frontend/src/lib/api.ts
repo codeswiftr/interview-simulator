@@ -163,10 +163,10 @@ export const authAPI = {
   getCurrentUser: () => api.get('/users/me/'),
 
   forgotPassword: (email: string) =>
-    api.post('/auth/forgot-password/', { email }),
+    api.post('/auth/forgot-password', { email }),
 
   resetPassword: (token: string, newPassword: string) =>
-    api.post('/auth/reset-password/', { token, new_password: newPassword }),
+    api.post('/auth/reset-password', { token, new_password: newPassword }),
 };
 
 // Interview Sessions API
