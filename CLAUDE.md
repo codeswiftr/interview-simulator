@@ -105,6 +105,56 @@ Optional: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`
 ## Current Sprint
 See `docs/PLAN.md` for active tasks and blockers.
 
+---
+
+## Production Deployment
+
+### Infrastructure
+- **Backend**: Railway (`interview-simulator-api-production.up.railway.app`)
+- **Frontend**: Cloudflare Pages (`interview-simulator-4bo.pages.dev`)
+- **Custom Domain**: `app.codeswiftr.com`
+
+### Deploying Frontend
+
+**CRITICAL**: Vite inlines env vars at build time. Always ensure `.env.production` exists:
+
+```bash
+# frontend/.env.production (already committed)
+VITE_API_URL=https://interview-simulator-api-production.up.railway.app/api/v1
+```
+
+Deploy steps:
+```bash
+cd frontend
+npm run build                    # Uses .env.production automatically
+wrangler pages deploy dist --project-name=interview-simulator --branch=main
+```
+
+### Deploying Backend
+
+```bash
+cd backend
+railway up                       # Deploys from current directory
+```
+
+After changing env vars:
+```bash
+railway variables --service interview-simulator-api --set 'KEY=value'
+railway redeploy --service interview-simulator-api -y
+```
+
+### Common Deployment Issues
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| CORS 302 errors | Frontend using `http://` | Check `.env.production` uses `https://` |
+| API not responding | Railway deployment pending | `railway deployment list` to check status |
+| Changes not live | CDN cache | Wait 2-3 min or clear Cloudflare cache |
+
+See [Deployment Troubleshooting](../../docs/DEPLOYMENT_TROUBLESHOOTING.md) for detailed debugging.
+
+---
+
 ## Human Gates (Required)
 1. **AI Prompts**: Changes to feedback generation prompts
 2. **Scoring Logic**: Changes to evaluation algorithms
