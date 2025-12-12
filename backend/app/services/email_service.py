@@ -110,8 +110,9 @@ CareerSwiftr Team
                 from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
 
                 # Resend SDK v2+ uses dict instead of Params class
+                # Use from_ key to match SDK expectations
                 email_response = resend.Emails.send({
-                    "from": f"{from_name} <{from_email}>",
+                    "from_": f"{from_name} <{from_email}>",
                     "to": [email],
                     "subject": subject,
                     "html": html_content,
@@ -236,8 +237,9 @@ CareerSwiftr Team
                 from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
 
                 # Resend SDK v2+ uses dict instead of Params class
+                # Use from_ key to match SDK expectations
                 email_response = resend.Emails.send({
-                    "from": f"{from_name} <{from_email}>",
+                    "from_": f"{from_name} <{from_email}>",
                     "to": [email],
                     "subject": subject,
                     "html": html_content,

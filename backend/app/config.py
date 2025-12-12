@@ -75,8 +75,10 @@ class Settings(BaseSettings):
     smtp_from_email: str = "noreply@careerswiftr.com"
 
     # Resend (preferred email provider)
+    # Note: Domain must be verified in Resend dashboard
+    # Use hello@codeswiftr.com as it's the verified sender
     resend_api_key: str = ""
-    resend_from_email: str = "noreply@codeswiftr.com"
+    resend_from_email: str = "hello@codeswiftr.com"
     resend_from_name: str = "Interview Simulator"
 
     # Frontend URL for email links
