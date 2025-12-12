@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     # Frontend URL for email links
     frontend_url: str = "http://localhost:5173"
 
+    # Feature flags (soft-launch defaults)
+    video_features_enabled: bool = False
+
     @property
     def async_database_url(self) -> str:
         """Get async database URL."""

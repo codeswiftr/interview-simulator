@@ -8,11 +8,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_session
 from app.dependencies import get_current_user
+from app.feature_flags import require_video_features_enabled
 from app.models.feedback import (
     ContentFeedback,
     ContentFeedbackRead,
     SessionFeedback,
     SessionFeedbackRead,
+    VideoFeedbackRead,
 )
 from app.models.interview import InterviewResponse, InterviewSession
 from app.models.user import User
@@ -112,7 +114,10 @@ async def get_session_feedback(
     if not feedback:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Feedback not yet generated for this session. Use POST /api/v1/feedback/generate/{session_id} to generate it.",
+            detail=(
+                "Feedback not yet generated for this session. "
+                "Use POST /api/v1/feedback/generate/{session_id} to generate it."
+            ),
         )
 
     return feedback
@@ -186,6 +191,28 @@ async def get_response_feedback(
     return feedback
 
 
+@router.get("/video/{response_id}", response_model=VideoFeedbackRead)
+async def get_video_feedback(
+    response_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> VideoFeedbackRead:
+    """Get video feedback for a single interview response."""
+    require_video_features_enabled()
+    await _verify_response_ownership(session, response_id, current_user.id)
+
+    feedback_service = FeedbackService()
+    feedback = await feedback_service.get_video_feedback(session, response_id)
+
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video feedback not yet generated for this response.",
+        )
+
+    return feedback
+
+
 @router.post(
     "/generate/response/{response_id}",
     response_model=ContentFeedbackRead,
@@ -218,6 +245,28 @@ async def generate_response_feedback(
     feedback_service = FeedbackService()
     try:
         feedback = await feedback_service.generate_feedback(session, response_id)
+        return feedback
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@router.post(
+    "/generate/video/{response_id}",
+    response_model=VideoFeedbackRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_video_feedback(
+    response_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> VideoFeedbackRead:
+    """Generate video feedback for a single interview response."""
+    require_video_features_enabled()
+    await _verify_response_ownership(session, response_id, current_user.id)
+
+    feedback_service = FeedbackService()
+    try:
+        feedback = await feedback_service.generate_video_feedback(session, response_id)
         return feedback
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

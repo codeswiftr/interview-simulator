@@ -1,13 +1,14 @@
 """Feedback generation service for interview responses."""
 
 from collections import Counter
+from pathlib import Path
 from uuid import UUID
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.content_analyzer import ContentAnalyzer
-from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback
+from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, VideoFeedback
 from app.models.interview import (
     InterviewResponse,
     InterviewSession,
@@ -16,6 +17,7 @@ from app.models.interview import (
 )
 from app.models.question import Question
 from app.models.user import User
+from app.services.video_service import VideoService
 
 
 class FeedbackService:
@@ -30,6 +32,7 @@ class FeedbackService:
     def __init__(self) -> None:
         """Initialize feedback service with content analyzer."""
         self.content_analyzer = ContentAnalyzer()
+        self.video_service = VideoService()
 
     async def generate_feedback(self, session: AsyncSession, response_id: UUID) -> ContentFeedback:
         """Generate feedback for a single interview response.
@@ -281,6 +284,48 @@ class FeedbackService:
             select(ContentFeedback).where(ContentFeedback.response_id == response_id)
         )
         return result.first()
+
+    async def get_video_feedback(
+        self, session: AsyncSession, response_id: UUID
+    ) -> VideoFeedback | None:
+        """Retrieve video feedback for a specific response."""
+        result = await session.exec(
+            select(VideoFeedback).where(VideoFeedback.response_id == response_id)
+        )
+        return result.first()
+
+    async def generate_video_feedback(
+        self, session: AsyncSession, response_id: UUID
+    ) -> VideoFeedback:
+        """Analyze stored video and create VideoFeedback."""
+        # Verify response exists and has a video attached
+        response_result = await session.exec(
+            select(InterviewResponse).where(InterviewResponse.id == response_id)
+        )
+        response = response_result.first()
+        if not response:
+            raise ValueError(f"Response {response_id} not found")
+        if not response.video_url:
+            raise ValueError("Response has no video attached")
+
+        existing = await session.exec(
+            select(VideoFeedback).where(VideoFeedback.response_id == response_id)
+        )
+        if existing.first():
+            raise ValueError(f"Video feedback already exists for response {response_id}")
+
+        video_path = Path(response.video_url.lstrip("/"))
+        if not video_path.exists():
+            backend_relative = Path("backend") / video_path
+            if backend_relative.exists():
+                video_path = backend_relative
+            else:
+                raise ValueError(f"Video file not found at {response.video_url}")
+
+        feedback = await self.video_service.process_response_video(
+            session, response_id, str(video_path)
+        )
+        return feedback
 
     async def get_session_feedback(
         self, session: AsyncSession, session_id: UUID

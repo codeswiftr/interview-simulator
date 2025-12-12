@@ -103,6 +103,36 @@ class SessionFeedback(SQLModel, table=True):
     created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
+class VideoFeedback(SQLModel, table=True):
+    """Video analysis feedback for a response."""
+
+    __tablename__ = "video_feedback"
+
+    now_utc = AudioFeedback.now_utc
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    response_id: UUID = Field(foreign_key="interview_responses.id", unique=True)
+
+    # Emotion metrics (0-1 scale)
+    confidence_score: float = Field(default=0.0)
+    nervousness_score: float = Field(default=0.0)
+    engagement_score: float = Field(default=0.0)
+
+    # Eye contact metrics
+    eye_contact_percentage: float = Field(default=0.0)
+    looking_away_count: int = Field(default=0)
+
+    # Gesture metrics (future-facing)
+    fidget_count: int | None = None
+    hand_gesture_frequency: float | None = None
+
+    # Processing metadata
+    processing_duration_ms: int = Field(default=0)
+    frame_count: int = Field(default=0)
+
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
+
+
 class AudioFeedbackRead(SQLModel):
     """Schema for audio feedback response."""
 
@@ -135,3 +165,17 @@ class SessionFeedbackRead(SQLModel):
     top_strengths: list[str]
     top_improvements: list[str]
     recommended_practice_areas: list[str]
+
+
+class VideoFeedbackRead(SQLModel):
+    """Schema for video feedback response."""
+
+    confidence_score: float
+    nervousness_score: float
+    engagement_score: float
+    eye_contact_percentage: float
+    looking_away_count: int
+    fidget_count: int | None = None
+    hand_gesture_frequency: float | None = None
+    processing_duration_ms: int
+    frame_count: int
