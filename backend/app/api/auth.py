@@ -59,12 +59,22 @@ async def forgot_password(
     }
 
     # Look up user by email
+    import logging
+    auth_logger = logging.getLogger(__name__)
+    print(f"[AUTH] Looking up user: {payload.email.lower()}", flush=True)
+    auth_logger.warning(f"[AUTH] Looking up user: {payload.email.lower()}")
+
     result = await session.exec(select(User).where(User.email == payload.email.lower()))
     user = result.first()
 
     if not user:
         # Don't reveal that user doesn't exist - just return success
+        print(f"[AUTH] User NOT found: {payload.email.lower()}", flush=True)
+        auth_logger.warning(f"[AUTH] User NOT found: {payload.email.lower()}")
         return response
+
+    print(f"[AUTH] User FOUND: {user.email}", flush=True)
+    auth_logger.warning(f"[AUTH] User FOUND: {user.email}")
 
     # Generate secure token
     token = secrets.token_urlsafe(32)

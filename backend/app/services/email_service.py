@@ -80,6 +80,10 @@ CareerSwiftr Team
         Returns:
             bool: True if email sent successfully, False otherwise
         """
+        # Debug: Ensure this function is being called
+        print(f"[EMAIL SERVICE] send_password_reset called for {email}", flush=True)
+        logger.warning(f"[EMAIL SERVICE] send_password_reset called for {email}")
+
         subject = "Reset Your Interview Simulator Password"
 
         # Load HTML template
