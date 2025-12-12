@@ -59,4 +59,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENV PORT=8000
 
 # Run the application using shell form to expand PORT
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+# --proxy-headers: Trust X-Forwarded-Proto from Railway's proxy (fixes HTTPS redirects)
+# --forwarded-allow-ips='*': Trust forwarded headers from Railway's load balancer
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
