@@ -80,7 +80,7 @@ CareerSwiftr Team
         Returns:
             bool: True if email sent successfully, False otherwise
         """
-        subject = "Reset Your CareerSwiftr Password"
+        subject = "Reset Your Interview Simulator Password"
 
         # Load HTML template
         html_content, plain_text = self._load_html_template(
