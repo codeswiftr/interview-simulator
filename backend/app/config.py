@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     # Feature flags (soft-launch defaults)
     video_features_enabled: bool = False
 
+    # Analytics (PostHog)
+    posthog_api_key: str = ""
+    posthog_host: str = "https://app.posthog.com"
+
     @property
     def async_database_url(self) -> str:
         """Get async database URL."""

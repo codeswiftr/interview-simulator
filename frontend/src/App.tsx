@@ -5,6 +5,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './hooks/useToast';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { usePageTracking } from './hooks/usePageTracking';
 import { Loader2 } from 'lucide-react';
 
 // Eager load lightweight pages (core auth, home)
@@ -33,6 +34,9 @@ const PageLoadingFallback = () => (
 );
 
 function App() {
+  // Track page views on route changes
+  usePageTracking();
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

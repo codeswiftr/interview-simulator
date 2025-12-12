@@ -7,6 +7,7 @@ import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useToast } from '../hooks/useToast';
 import { useCoachingHint } from '../hooks/useCoachingHint';
 import { getExtensionForMimeType } from '../lib/audio-utils';
+import { analytics, Events } from '../lib/analytics';
 import Timer from '../components/interview/Timer';
 import QuestionDisplay from '../components/interview/QuestionDisplay';
 import AudioPreview from '../components/interview/AudioPreview';
@@ -98,6 +99,18 @@ export default function InterviewPage() {
     setLiveTranscript(transcript);
   }, []);
 
+  // Track question viewed
+  useEffect(() => {
+    if (currentQuestion && session) {
+      analytics.track(Events.QUESTION_VIEWED, {
+        interview_id: session.id,
+        question_id: currentQuestion.id,
+        question_order: currentQuestionIndex + 1,
+        category: currentQuestion.category,
+      });
+    }
+  }, [currentQuestion, currentQuestionIndex, session]);
+
   // Warn user before leaving with unsaved progress
   useEffect(() => {
     const hasUnsavedProgress = isRecording || isPreviewMode || currentQuestionIndex > 0;
@@ -136,6 +149,13 @@ export default function InterviewPage() {
 
         const questionsResponse = await interviewsAPI.getQuestions(id);
         setQuestions(questionsResponse.data);
+
+        // Track interview started
+        analytics.track(Events.INTERVIEW_STARTED, {
+          interview_id: sessionData.id,
+          category: sessionData.category,
+          question_count: questionsResponse.data.length,
+        });
       } catch (err) {
         const error = err as { response?: { data?: { message?: string } } };
         setError(error.response?.data?.message || 'Failed to load interview');
@@ -215,6 +235,13 @@ export default function InterviewPage() {
   const handleStartRecording = async () => {
     try {
       await startRecording();
+      // Track recording started
+      if (session && currentQuestion) {
+        analytics.track(Events.RECORDING_STARTED, {
+          interview_id: session.id,
+          question_id: currentQuestion.id,
+        });
+      }
     } catch (err) {
       const error = err as { message?: string };
       setError(error.message || 'Failed to start recording');
@@ -318,6 +345,13 @@ export default function InterviewPage() {
         duration_seconds: duration,
       });
 
+      // Track recording completed
+      analytics.track(Events.RECORDING_COMPLETED, {
+        interview_id: session.id,
+        question_id: currentQuestion.id,
+        duration_seconds: Math.round(duration),
+      });
+
       const responseData = submitResponse.data;
       setSubmittedResponses(prev => [...prev, {
         id: responseData.id,
@@ -382,6 +416,17 @@ export default function InterviewPage() {
     if (!id) return;
     try {
       await interviewsAPI.end(id);
+
+      // Track interview completed
+      if (session && sessionStartTime) {
+        analytics.track(Events.INTERVIEW_COMPLETED, {
+          interview_id: session.id,
+          total_duration_seconds: Math.round((Date.now() - sessionStartTime) / 1000),
+          questions_answered: submittedResponses.length,
+          total_questions: questions.length,
+        });
+      }
+
       navigate(`/interview/${id}/feedback`);
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
@@ -393,6 +438,17 @@ export default function InterviewPage() {
   const cancelExit = () => setShowExitModal(false);
   const confirmExit = async () => {
     if (!id) return;
+
+    // Track interview abandoned
+    if (session && sessionStartTime) {
+      analytics.track(Events.INTERVIEW_ABANDONED, {
+        interview_id: session.id,
+        questions_completed: currentQuestionIndex,
+        total_questions: questions.length,
+        duration_seconds: Math.round((Date.now() - sessionStartTime) / 1000),
+      });
+    }
+
     try {
       await interviewsAPI.end(id);
       navigate('/dashboard');

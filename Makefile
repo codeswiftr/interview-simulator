@@ -1,11 +1,14 @@
 # Interview Simulator Development Commands
 # Usage: make <target>
 
-.PHONY: help install dev test lint clean db-up db-down db-reset seed migrate backend frontend
+.PHONY: help context install dev test lint clean db-up db-down db-reset seed migrate backend frontend
 
 # Default target
 help:
 	@echo "Interview Simulator - Development Commands"
+	@echo ""
+	@echo "Context:"
+	@echo "  make context     Print repo context (docs + git)"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install     Install all dependencies (backend + frontend)"
@@ -35,6 +38,27 @@ help:
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean       Remove generated files and caches"
+
+# =============================================================================
+# Context
+# =============================================================================
+
+context:
+	@{ set +e; trap '' PIPE; \
+		echo "=== Repo ==="; \
+		echo "Path: $$(pwd)"; \
+		echo "Branch: $$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')"; \
+		echo "Commit: $$(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')"; \
+		echo ""; \
+		echo "=== Active Context (docs/active-context.md) ==="; \
+		sed -n '1,240p' docs/active-context.md 2>/dev/null || echo "Missing: docs/active-context.md"; \
+		echo ""; \
+		echo "=== Tech Context (docs/tech-context.md) ==="; \
+		sed -n '1,240p' docs/tech-context.md 2>/dev/null || echo "Missing: docs/tech-context.md"; \
+		echo ""; \
+		echo "=== Plan (docs/PLAN.md) ==="; \
+		sed -n '1,120p' docs/PLAN.md 2>/dev/null || echo "Missing: docs/PLAN.md"; \
+		exit 0; } 2>/dev/null
 
 # =============================================================================
 # Setup

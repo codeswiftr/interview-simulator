@@ -26,6 +26,7 @@ import ProcessingStatus from '../components/feedback/ProcessingStatus';
 import { Skeleton, SkeletonScoreRing, SkeletonText } from '../components/ui/Skeleton';
 import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { analytics, Events } from '../lib/analytics';
 import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback } from '../types';
 
 interface FeedbackState {
@@ -133,6 +134,17 @@ export default function FeedbackPage() {
     loadFeedback();
   }, [loadFeedback]);
 
+  // Track feedback page view
+  useEffect(() => {
+    if (feedbackState.session && feedbackState.sessionFeedback) {
+      analytics.track(Events.FEEDBACK_VIEWED, {
+        interview_id: feedbackState.session.id,
+        overall_score: feedbackState.sessionFeedback.overall_score,
+        has_responses: feedbackState.responses.length > 0,
+      });
+    }
+  }, [feedbackState.session, feedbackState.sessionFeedback, feedbackState.responses.length]);
+
   const handleGenerateFeedback = async () => {
     if (!id) return;
 
@@ -141,6 +153,13 @@ export default function FeedbackPage() {
       setError(null);
 
       await feedbackAPI.generateForSession(id);
+
+      // Track feedback generated
+      if (feedbackState.session) {
+        analytics.track(Events.FEEDBACK_GENERATED, {
+          interview_id: feedbackState.session.id,
+        });
+      }
 
       // Reload feedback data
       await loadFeedback();

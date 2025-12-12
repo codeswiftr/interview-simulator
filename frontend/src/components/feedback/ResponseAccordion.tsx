@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, CheckCircle, AlertTriangle, Play, Lightbulb } from 'lucide-react';
 import AudioPlayer from './AudioPlayer';
 import SampleAnswerModal from './SampleAnswerModal';
+import { analytics, Events } from '../../lib/analytics';
 
 interface ResponseAccordionProps {
   question: string;
@@ -134,7 +135,12 @@ export default function ResponseAccordion({
           {sampleAnswer && (
             <div className="pt-4 border-t border-border-light dark:border-white/5">
               <button
-                onClick={() => setShowSampleModal(true)}
+                onClick={() => {
+                  analytics.track(Events.SAMPLE_ANSWER_VIEWED, {
+                    question_number: questionNumber,
+                  });
+                  setShowSampleModal(true);
+                }}
                 className="btn-secondary w-full flex items-center justify-center gap-2 hover:bg-white dark:hover:bg-white/5 transition-all"
               >
                 <Lightbulb size={18} className="text-yellow-500" />

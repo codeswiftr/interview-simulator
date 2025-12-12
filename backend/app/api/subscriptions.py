@@ -14,6 +14,7 @@ from app.config import settings
 from app.db import get_session
 from app.dependencies import get_current_user
 from app.models.user import SubscriptionTier, User
+from app.services.analytics import Events, get_analytics
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,18 @@ async def _handle_checkout_completed(session_obj: dict, db_session: AsyncSession
         await db_session.commit()
         logger.info(f"Upgraded user {user_id} to {tier.value}")
 
+        # Track subscription created event
+        get_analytics().capture(
+            user_id=user_id,
+            event=Events.SUBSCRIPTION_CREATED,
+            properties={
+                "tier": tier.value,
+                "subscription_id": subscription_id,
+                "amount": subscription.get("plan", {}).get("amount"),
+                "currency": subscription.get("plan", {}).get("currency"),
+            },
+        )
+
 
 async def _handle_subscription_updated(subscription_obj: dict, db_session: AsyncSession) -> None:
     """Handle customer.subscription.updated event."""
@@ -270,6 +283,15 @@ async def _handle_subscription_deleted(subscription_obj: dict, db_session: Async
 
     await db_session.commit()
     logger.info(f"Downgraded user {user.id} to free tier")
+
+    # Track subscription canceled event
+    get_analytics().capture(
+        user_id=str(user.id),
+        event=Events.SUBSCRIPTION_CANCELED,
+        properties={
+            "previous_tier": user.subscription_tier.value if user.subscription_tier else "unknown",
+        },
+    )
 
 
 def _get_tier_from_price(price_id: str) -> SubscriptionTier:

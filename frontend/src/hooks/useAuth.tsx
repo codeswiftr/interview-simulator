@@ -3,6 +3,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../lib/api';
+import { analytics, Events } from '../lib/analytics';
 import type { User, ExperienceLevel } from '../types';
 
 interface AuthContextType {
@@ -30,7 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token) {
         try {
           const response = await authAPI.getCurrentUser();
-          setUser(response.data);
+          const userData = response.data;
+          setUser(userData);
+
+          // Identify returning user for analytics
+          analytics.identify(String(userData.id), {
+            email: userData.email,
+            tier: userData.subscription_tier || 'free',
+          });
         } catch {
           // Token is invalid, clear it
           localStorage.removeItem('access_token');
@@ -55,7 +63,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Fetch user data after storing token
     const userResponse = await authAPI.getCurrentUser();
-    setUser(userResponse.data);
+    const userData = userResponse.data;
+    setUser(userData);
+
+    // Track login event
+    analytics.identify(String(userData.id), {
+      email: userData.email,
+      tier: userData.subscription_tier || 'free',
+    });
+    analytics.track(Events.USER_LOGGED_IN, {
+      login_method: 'email',
+    });
 
     // Navigate to intended destination or default to dashboard
     navigate(redirectTo || '/dashboard');
@@ -76,12 +94,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Fetch user data
     const userResponse = await authAPI.getCurrentUser();
-    setUser(userResponse.data);
+    const userData = userResponse.data;
+    setUser(userData);
+
+    // Track registration event
+    analytics.identify(String(userData.id), {
+      email: userData.email,
+      tier: 'free', // New users start on free tier
+    });
+    analytics.track(Events.USER_REGISTERED, {
+      signup_method: 'email',
+      experience_level: experience_level || 'unknown',
+    });
 
     navigate('/dashboard');
   };
 
   const logout = () => {
+    // Track logout before resetting analytics
+    analytics.track(Events.USER_LOGGED_OUT);
+    analytics.reset();
+
     authAPI.logout();
     setUser(null);
     navigate('/login');

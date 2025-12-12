@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../lib/api';
+import { analytics, Events } from '../lib/analytics';
 
 export interface UseCoachingHintOptions {
   question: string;
@@ -137,6 +138,12 @@ export function useCoachingHint({
         lastHintRef.current = accumulatedHint;
         transcriptRef.current = transcript;
         setIsStreaming(false);
+
+        // Track coaching hint usage
+        analytics.track(Events.COACHING_HINT_USED, {
+          question_type: questionType,
+          transcript_word_count: countWords(transcript),
+        });
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {

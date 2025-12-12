@@ -22,6 +22,7 @@ from app.models.user import (
     UserUpdate,
 )
 from app.security import create_access_token, create_refresh_token, hash_password, verify_password
+from app.services.analytics import Events, get_analytics
 from app.services.email_service import EmailService
 from app.services.feedback_service import FeedbackService
 
@@ -46,6 +47,26 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
     session.add(user)
     await session.commit()
     await session.refresh(user)
+
+    # Track user registration event and identify user
+    analytics = get_analytics()
+    analytics.identify(
+        user_id=str(user.id),
+        properties={
+            "email": user.email,
+            "tier": "free",
+            "experience_level": user.experience_level.value if user.experience_level else None,
+        },
+    )
+    analytics.capture(
+        user_id=str(user.id),
+        event=Events.USER_REGISTERED,
+        properties={
+            "signup_method": "email",
+            "experience_level": user.experience_level.value if user.experience_level else None,
+        },
+    )
+
     return user
 
 

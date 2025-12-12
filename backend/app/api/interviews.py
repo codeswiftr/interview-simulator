@@ -24,6 +24,7 @@ from app.models.interview import (
 )
 from app.models.question import Question, QuestionRead
 from app.models.user import User
+from app.services.analytics import Events, get_analytics
 from app.services.background_tasks import background_tasks
 from app.services.interview_service import InterviewService
 
@@ -84,6 +85,20 @@ async def create_interview(
 
     await session.commit()
     await session.refresh(interview)
+
+    # Track interview created event
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_CREATED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": interview.interview_type.value,
+            "question_count": interview.question_count,
+            "difficulty": interview.difficulty,
+            "company_style": interview.company_style,
+        },
+    )
+
     return interview
 
 
