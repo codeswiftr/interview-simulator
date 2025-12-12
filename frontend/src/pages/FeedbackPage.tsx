@@ -293,8 +293,29 @@ export default function FeedbackPage() {
             />
           )}
 
+          {/* No Responses State */}
+          {!hasFeedback && responses.length === 0 && (
+            <div className="card-glass p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
+              <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-amber-500/5">
+                <MessageSquare className="w-10 h-10 text-amber-500" />
+              </div>
+              <h2 className="heading-section mb-4 text-[var(--fg-primary)]">No Responses Recorded</h2>
+              <p className="body-large text-text-secondary dark:text-text-tertiary mb-8 max-w-2xl mx-auto">
+                This interview session doesn't have any recorded answers yet.
+                Complete the interview to get AI-powered feedback on your performance.
+              </p>
+              <Link
+                to="/dashboard"
+                className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-lg shadow-lg hover:shadow-electric-blue/30 transition-all duration-300 transform hover:scale-105"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Back to Dashboard
+              </Link>
+            </div>
+          )}
+
           {/* Generate Feedback Call-to-Action */}
-          {!hasFeedback && (
+          {!hasFeedback && responses.length > 0 && (
             <div className="card-glass p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
               <div className="w-20 h-20 rounded-full bg-electric-blue/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-electric-blue/5">
                 <Sparkles className="w-10 h-10 text-electric-blue" />
@@ -306,7 +327,7 @@ export default function FeedbackPage() {
               </p>
               <button
                 onClick={handleGenerateFeedback}
-                disabled={generating || responses.length === 0}
+                disabled={generating}
                 className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-lg shadow-lg hover:shadow-electric-blue/30 transition-all duration-300 transform hover:scale-105"
               >
                 {generating ? (
@@ -321,11 +342,6 @@ export default function FeedbackPage() {
                   </>
                 )}
               </button>
-              {responses.length === 0 && (
-                <p className="body-small text-text-tertiary mt-4">
-                  No responses found for this interview session.
-                </p>
-              )}
             </div>
           )}
 
