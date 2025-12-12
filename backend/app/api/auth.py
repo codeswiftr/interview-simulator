@@ -84,9 +84,14 @@ async def forgot_password(
     # Build reset URL
     reset_url = f"{settings.frontend_url}/reset-password?token={token}"
 
-    # Send email
+    # Send email (errors are logged but don't affect response for security)
     email_service = EmailService()
-    await email_service.send_password_reset(user.email, reset_url)
+    try:
+        await email_service.send_password_reset(user.email, reset_url)
+    except Exception as e:
+        # Log error but don't expose to user (security best practice)
+        import logging
+        logging.getLogger(__name__).error(f"Failed to send password reset email: {e}")
 
     return response
 

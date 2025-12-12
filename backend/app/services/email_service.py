@@ -106,12 +106,14 @@ CareerSwiftr Team
                 resend.api_key = self.resend_api_key
 
                 # Use codeswiftr.com domain (verified in Resend)
-                from_email = getattr(settings, 'resend_from_email', None) or "noreply@codeswiftr.com"
-                from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
+                # Always use validated defaults - never send empty from field
+                from_email = settings.resend_from_email if settings.resend_from_email else "hello@codeswiftr.com"
+                from_name = settings.resend_from_name if settings.resend_from_name else "Interview Simulator"
+                from_header = f"{from_name} <{from_email}>"
 
                 # Resend SDK v2+ uses dict instead of Params class
                 email_response = resend.Emails.send({
-                    "from": f"{from_name} <{from_email}>",
+                    "from": from_header,
                     "to": [email],
                     "subject": subject,
                     "html": html_content,
@@ -232,12 +234,14 @@ CareerSwiftr Team
                 resend.api_key = self.resend_api_key
 
                 # Use codeswiftr.com domain (verified in Resend)
-                from_email = getattr(settings, 'resend_from_email', None) or "noreply@codeswiftr.com"
-                from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
+                # Always use validated defaults - never send empty from field
+                from_email = settings.resend_from_email if settings.resend_from_email else "hello@codeswiftr.com"
+                from_name = settings.resend_from_name if settings.resend_from_name else "Interview Simulator"
+                from_header = f"{from_name} <{from_email}>"
 
                 # Resend SDK v2+ uses dict instead of Params class
                 email_response = resend.Emails.send({
-                    "from": f"{from_name} <{from_email}>",
+                    "from": from_header,
                     "to": [email],
                     "subject": subject,
                     "html": html_content,
