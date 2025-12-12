@@ -105,8 +105,12 @@ CareerSwiftr Team
 
                 resend.api_key = self.resend_api_key
 
+                # Use codeswiftr.com domain (verified in Resend)
+                from_email = getattr(settings, 'resend_from_email', None) or "noreply@codeswiftr.com"
+                from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
+
                 params = resend.Emails.Params(
-                    from_="CareerSwiftr <noreply@careerswiftr.com>",
+                    from_=f"{from_name} <{from_email}>",
                     to=[email],
                     subject=subject,
                     html=html_content,
@@ -227,8 +231,12 @@ CareerSwiftr Team
 
                 resend.api_key = self.resend_api_key
 
+                # Use codeswiftr.com domain (verified in Resend)
+                from_email = getattr(settings, 'resend_from_email', None) or "noreply@codeswiftr.com"
+                from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
+
                 params = resend.Emails.Params(
-                    from_="CareerSwiftr <noreply@careerswiftr.com>",
+                    from_=f"{from_name} <{from_email}>",
                     to=[email],
                     subject=subject,
                     html=html_content,

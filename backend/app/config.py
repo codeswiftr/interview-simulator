@@ -76,6 +76,8 @@ class Settings(BaseSettings):
 
     # Resend (preferred email provider)
     resend_api_key: str = ""
+    resend_from_email: str = "noreply@codeswiftr.com"
+    resend_from_name: str = "Interview Simulator"
 
     # Frontend URL for email links
     frontend_url: str = "http://localhost:5173"
