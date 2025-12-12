@@ -74,6 +74,13 @@
 
 ## Completed Work
 
+### 2025-12-11: Video Analysis MVP Kick-off (Epic 3 - Backend scaffolding)
+
+- Added `VideoFeedback` model + Alembic migration to persist video metrics
+- Implemented lightweight `VideoAnalyzer` with OpenCV fallback and `VideoService` for persistence
+- Exposed `/api/v1/upload/video`, `/api/v1/feedback/video/{response_id}`, and generation endpoint
+- Added tests for video upload validation and video feedback persistence (`uv run pytest tests/test_video_feedback.py -q`)
+
 ### 2025-12-11: Sprint 10 - Code Quality & Test Coverage (Epic 1 & 2 COMPLETE)
 
 **Epic 1: Lint Cleanup & Code Quality**
