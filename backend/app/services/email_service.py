@@ -109,16 +109,16 @@ CareerSwiftr Team
                 from_email = getattr(settings, 'resend_from_email', None) or "noreply@codeswiftr.com"
                 from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
 
-                params = resend.Emails.Params(
-                    from_=f"{from_name} <{from_email}>",
-                    to=[email],
-                    subject=subject,
-                    html=html_content,
-                    text=plain_text,
-                )
+                # Resend SDK v2+ uses dict instead of Params class
+                email_response = resend.Emails.send({
+                    "from": f"{from_name} <{from_email}>",
+                    "to": [email],
+                    "subject": subject,
+                    "html": html_content,
+                    "text": plain_text,
+                })
 
-                email_response = resend.Emails.send(params)
-                email_id = getattr(email_response, "id", None)
+                email_id = email_response.get("id") if isinstance(email_response, dict) else getattr(email_response, "id", None)
                 if email_id:
                     logger.info(
                         f"Password reset email sent via Resend to {email} (email_id: {email_id})"
@@ -235,16 +235,16 @@ CareerSwiftr Team
                 from_email = getattr(settings, 'resend_from_email', None) or "noreply@codeswiftr.com"
                 from_name = getattr(settings, 'resend_from_name', None) or "Interview Simulator"
 
-                params = resend.Emails.Params(
-                    from_=f"{from_name} <{from_email}>",
-                    to=[email],
-                    subject=subject,
-                    html=html_content,
-                    text=plain_text,
-                )
+                # Resend SDK v2+ uses dict instead of Params class
+                email_response = resend.Emails.send({
+                    "from": f"{from_name} <{from_email}>",
+                    "to": [email],
+                    "subject": subject,
+                    "html": html_content,
+                    "text": plain_text,
+                })
 
-                email_response = resend.Emails.send(params)
-                email_id = getattr(email_response, "id", None)
+                email_id = email_response.get("id") if isinstance(email_response, dict) else getattr(email_response, "id", None)
                 if email_id:
                     logger.info(f"Email verification sent via Resend to {email} (email_id: {email_id})")
                 else:
