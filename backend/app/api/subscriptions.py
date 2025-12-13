@@ -289,7 +289,7 @@ async def _handle_subscription_deleted(subscription_obj: dict, db_session: Async
         user_id=str(user.id),
         event=Events.SUBSCRIPTION_CANCELED,
         properties={
-            "previous_tier": user.subscription_tier.value if user.subscription_tier else "unknown",
+            "previous_tier": str(user.subscription_tier) if user.subscription_tier else "unknown",
         },
     )
 

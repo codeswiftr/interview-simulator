@@ -92,7 +92,7 @@ async def create_interview(
         event=Events.INTERVIEW_CREATED,
         properties={
             "interview_id": str(interview.id),
-            "interview_type": interview.interview_type.value,
+            "interview_type": str(interview.interview_type),
             "question_count": interview.question_count,
             "difficulty": interview.difficulty,
             "company_style": interview.company_style,

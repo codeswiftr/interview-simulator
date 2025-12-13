@@ -87,17 +87,11 @@ class FeedbackService:
             user = user_result.first()
             if user and user.experience_level:
                 # Handle both enum and string values
-                experience_level = (
-                    user.experience_level.value
-                    if hasattr(user.experience_level, "value")
-                    else user.experience_level
-                )
+                experience_level = str(user.experience_level)
 
         # Analyze content using Claude
-        # Note: question.category is already a string, not an enum
-        question_type = (
-            question.category.value if hasattr(question.category, "value") else question.category
-        )
+        # Note: question.category comes from DB as string
+        question_type = str(question.category) if question.category else "behavioral"
         metrics = await self.content_analyzer.analyze(
             question=question.content,
             transcript=response.transcript,

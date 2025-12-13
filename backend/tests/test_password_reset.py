@@ -97,7 +97,11 @@ async def test_forgot_password_unknown_email_returns_success(client: AsyncClient
 
 @pytest.mark.asyncio
 async def test_forgot_password_email_service_failure(client: AsyncClient, session_override):
-    """Test that email service failures surface as server errors."""
+    """Test that email service failures are handled gracefully (security best practice).
+
+    The endpoint should return 200 even if email sending fails to not reveal
+    whether the email exists in the system.
+    """
     email = await create_test_user(client, email="email_failure@example.com")
 
     # Patch EmailService in auth module to raise on send
@@ -105,11 +109,12 @@ async def test_forgot_password_email_service_failure(client: AsyncClient, sessio
         instance = MockEmailService.return_value
         instance.send_password_reset = AsyncMock(side_effect=Exception("Email provider failure"))
 
-        with pytest.raises(Exception) as exc_info:
-            await client.post("/api/v1/auth/forgot-password", json={"email": email})
+        # Request should succeed (200) even though email sending failed
+        response = await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    # Document current behavior: exception from email provider is not swallowed.
-    assert "Email provider failure" in str(exc_info.value)
+    # Endpoint returns success for security (don't reveal email existence)
+    assert response.status_code == 200
+    assert "sent" in response.json()["message"].lower()
 
 
 @pytest.mark.asyncio

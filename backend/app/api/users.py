@@ -55,7 +55,7 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
         properties={
             "email": user.email,
             "tier": "free",
-            "experience_level": user.experience_level.value if user.experience_level else None,
+            "experience_level": str(user.experience_level) if user.experience_level else None,
         },
     )
     analytics.capture(
@@ -63,7 +63,7 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
         event=Events.USER_REGISTERED,
         properties={
             "signup_method": "email",
-            "experience_level": user.experience_level.value if user.experience_level else None,
+            "experience_level": str(user.experience_level) if user.experience_level else None,
         },
     )
 

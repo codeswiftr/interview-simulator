@@ -31,7 +31,10 @@ router = APIRouter()
 
 def get_stage_value(stage: PreparationStage | str) -> str:
     """Get string value from stage (handles both enum and string from DB)."""
-    return stage.value if hasattr(stage, "value") else stage
+    if not stage:
+        return "detective"
+    # If it's an enum, get .value; if it's already a string, return as-is
+    return stage.value if hasattr(stage, "value") else str(stage)
 
 # Initialize OpenRouter client for Gemini 2.0 Flash (detective) and Claude Haiku 4.5 (ghostwriter)
 _preparation_client: AsyncOpenAI | None = None
@@ -455,11 +458,7 @@ async def get_detective_question(
     existing_qna = list(qna_result.all())
 
     # Check cache for similar question patterns
-    exp_level = (
-        current_user.experience_level.value
-        if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
-        else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
-    )
+    exp_level = str(current_user.experience_level) if current_user.experience_level else "mid"
     cache_key = f"{preparation.question_id}:{exp_level}:{len(existing_qna)}"
 
     # Try cache first (only for similar question counts)
@@ -520,11 +519,7 @@ async def get_detective_question(
 
         # Build prompt (optimized for token efficiency)
         q_type = question.category if question else "behavioral"
-        exp_level = (
-            current_user.experience_level.value
-            if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
-            else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
-        )
+        exp_level = str(current_user.experience_level) if current_user.experience_level else "mid"
 
         prompt = f"""Interview coach: Ask ONE clarifying question.
 
@@ -778,11 +773,7 @@ async def generate_draft(
             client = get_preparation_client()
 
             q_type = question.category if question else "behavioral"
-            exp_level = (
-                current_user.experience_level.value
-                if hasattr(current_user, "experience_level") and hasattr(current_user.experience_level, "value")
-                else (current_user.experience_level if hasattr(current_user, "experience_level") else "mid")
-            )
+            exp_level = str(current_user.experience_level) if current_user.experience_level else "mid"
 
             # Optimized prompt for token efficiency
             prompt = f"""Draft STAR answer.
