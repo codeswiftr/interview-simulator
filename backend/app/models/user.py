@@ -88,6 +88,22 @@ class UserCreate(SQLModel):
     full_name: str | None = None
     experience_level: ExperienceLevel | None = None  # Optional during registration
 
+    def model_post_init(self, __context: Any) -> None:
+        """Validate password after model initialization."""
+        from app.utils.password_validation import validate_password
+
+        errors = validate_password(
+            self.password,
+            username=self.full_name if self.full_name else None,
+            email=self.email
+        )
+        if errors:
+            from pydantic import ValidationError
+            raise ValidationError.from_exception_data(
+                "UserCreate",
+                [{"type": "value_error", "loc": ("password",), "msg": "\n".join(errors)}]
+            )
+
 
 class UserLogin(SQLModel):
     """Schema for user login."""
@@ -136,3 +152,15 @@ class PasswordChange(SQLModel):
 
     current_password: str
     new_password: str
+
+    def model_post_init(self, __context: Any) -> None:
+        """Validate new password after model initialization."""
+        from app.utils.password_validation import validate_password
+
+        errors = validate_password(self.new_password)
+        if errors:
+            from pydantic import ValidationError
+            raise ValidationError.from_exception_data(
+                "PasswordChange",
+                [{"type": "value_error", "loc": ("new_password",), "msg": "\n".join(errors)}]
+            )

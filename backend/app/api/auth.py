@@ -35,6 +35,18 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+    def model_post_init(self, __context: Any) -> None:
+        """Validate new password after model initialization."""
+        from app.utils.password_validation import validate_password
+
+        errors = validate_password(self.new_password)
+        if errors:
+            from pydantic import ValidationError
+            raise ValidationError.from_exception_data(
+                "ResetPasswordRequest",
+                [{"type": "value_error", "loc": ("new_password",), "msg": "\n".join(errors)}]
+            )
+
 
 @router.post("/forgot-password")
 async def forgot_password(
