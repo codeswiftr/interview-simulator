@@ -99,6 +99,11 @@ async def create_checkout_session(
                 )
 
         # Create checkout session
+        subscription_data = {"metadata": {"user_id": str(current_user.id)}}
+        trial_days = getattr(settings, "stripe_trial_days", 0)
+        if isinstance(trial_days, int) and trial_days > 0:
+            subscription_data["trial_period_days"] = trial_days
+
         checkout_session = stripe.checkout.Session.create(
             customer=customer_id,
             payment_method_types=["card"],
@@ -112,6 +117,7 @@ async def create_checkout_session(
             success_url=f"{settings.frontend_url}/settings?success=true",
             cancel_url=f"{settings.frontend_url}/settings?canceled=true",
             metadata={"user_id": str(current_user.id)},
+            subscription_data=subscription_data,
         )
 
         return CheckoutSessionResponse(url=checkout_session.url)
@@ -331,12 +337,12 @@ async def get_subscription_status(
     # Determine interview limit based on tier
     interviews_limit = None
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        interviews_limit = 3
+        interviews_limit = 5
     # Pro and Team have unlimited
 
     can_create_interview = True
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        can_create_interview = current_user.interviews_this_month < 3
+        can_create_interview = current_user.interviews_this_month < 5
 
     return SubscriptionStatus(
         tier=current_user.subscription_tier,

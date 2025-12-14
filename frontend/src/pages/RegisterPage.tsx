@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
 import { PasswordStrengthIndicator } from '../components/ui/PasswordStrengthIndicator';
@@ -9,6 +9,7 @@ import type { AxiosError } from 'axios';
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +17,15 @@ export default function RegisterPage() {
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('mid');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Preserve pricing intent from marketing pages (e.g. /register?plan=pro)
+  // so we can open the upgrade flow immediately after signup.
+  useEffect(() => {
+    const plan = searchParams.get('plan');
+    if (plan) {
+      sessionStorage.setItem('pending_plan', plan);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

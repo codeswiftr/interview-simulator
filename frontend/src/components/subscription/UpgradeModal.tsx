@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Check, Crown, Loader2 } from 'lucide-react';
 import { subscriptionsAPI } from '../../lib/api';
+import { analytics, Events } from '../../lib/analytics';
 import type { AxiosError } from 'axios';
 
 interface UpgradeModalProps {
@@ -31,6 +32,12 @@ export default function UpgradeModal({
     }
   }, [isOpen, priceId]);
 
+  // Track upgrade intent
+  useEffect(() => {
+    if (!isOpen) return;
+    analytics.track(Events.UPGRADE_MODAL_OPENED, { surface: 'upgrade_modal' });
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleUpgrade = async () => {
@@ -44,9 +51,11 @@ export default function UpgradeModal({
         return;
       }
 
+      analytics.track(Events.UPGRADE_CTA_CLICKED, { surface: 'upgrade_modal', plan: 'pro' });
       const response = await subscriptionsAPI.createCheckout(priceId);
       const checkoutUrl = response.data.url;
 
+      analytics.track(Events.CHECKOUT_STARTED, { plan: 'pro' });
       // Redirect to Stripe checkout
       window.location.href = checkoutUrl;
     } catch (err) {
@@ -97,7 +106,7 @@ export default function UpgradeModal({
             <ul className="space-y-2">
               <li className="flex items-center gap-2 text-text-secondary">
                 <Check className="w-4 h-4" />
-                <span className="body-small">3 interviews/month</span>
+                <span className="body-small">5 interviews/month</span>
               </li>
               <li className="flex items-center gap-2 text-text-secondary">
                 <Check className="w-4 h-4" />
@@ -157,4 +166,3 @@ export default function UpgradeModal({
     </div>
   );
 }
-

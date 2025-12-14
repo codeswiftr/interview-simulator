@@ -21,7 +21,14 @@ from app.models.user import (
     UserRead,
     UserUpdate,
 )
-from app.security import create_access_token, create_refresh_token, hash_password, verify_password
+from app.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    migrate_password_hash,
+    needs_rehash,
+    verify_password,
+)
 from app.services.analytics import Events, get_analytics
 from app.services.email_service import EmailService
 from app.services.feedback_service import FeedbackService
@@ -72,11 +79,22 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
 
 @router.post("/login", response_model=Token)
 async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)) -> Token:
-    """Authenticate user and return access and refresh tokens."""
+    """Authenticate user and return access and refresh tokens.
+
+    Implements lazy migration from pbkdf2_sha256 to bcrypt for improved security.
+    """
     result = await session.exec(select(User).where(User.email == payload.email.lower()))
     user = result.first()
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    # Check if password needs migration (lazy migration)
+    # This will be True for pbkdf2_sha256 hashes, False for bcrypt
+    if needs_rehash(user.hashed_password):
+        # Password verified successfully but needs migration
+        # Rehash with bcrypt and save
+        user.hashed_password = migrate_password_hash(payload.password)
+        # Note: We commit this change below with the refresh token
 
     # Generate access token
     access_token = create_access_token({"sub": str(user.id)})
@@ -85,6 +103,9 @@ async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)
     refresh_token, refresh_expires = create_refresh_token()
     user.refresh_token = refresh_token
     user.refresh_token_expires_at = refresh_expires
+
+    # Update user's last login time and commit all changes (including migrated password if applicable)
+    user.last_login_at = datetime.now(UTC)
     await session.commit()
 
     return Token(access_token=access_token, refresh_token=refresh_token)
@@ -239,14 +260,15 @@ async def change_password(
     """Change user password.
 
     Requires current password for verification.
+    New passwords will be hashed with bcrypt for improved security.
     """
-    # Verify current password
+    # Verify current password (supports both bcrypt and legacy pbkdf2 hashes)
     if not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect"
         )
 
-    # Hash and set new password
+    # Hash new password with bcrypt (always uses bcrypt for new passwords)
     current_user.hashed_password = hash_password(payload.new_password)
     await session.commit()
 

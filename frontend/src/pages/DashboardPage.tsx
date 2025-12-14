@@ -70,19 +70,31 @@ export default function DashboardPage() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showFirstSessionPrompt, setShowFirstSessionPrompt] = useState(false);
 
+  // If the user came from a pricing CTA (e.g. /register?plan=pro), open the upgrade modal on first login.
+  useEffect(() => {
+    const pendingPlan = sessionStorage.getItem('pending_plan');
+    if (!pendingPlan) return;
+
+    sessionStorage.removeItem('pending_plan');
+
+    if (pendingPlan === 'pro' && user?.subscription_tier === 'free') {
+      setShowUpgradeModal(true);
+    }
+  }, [user?.subscription_tier]);
+
   // Show welcome modal for new users after data loads
   useEffect(() => {
-    if (!isLoading && shouldShowWelcome && sessions.length === 0) {
+    if (!isLoading && !showUpgradeModal && shouldShowWelcome && sessions.length === 0) {
       setShowWelcomeModal(true);
     }
-  }, [isLoading, shouldShowWelcome, sessions.length]);
+  }, [isLoading, shouldShowWelcome, sessions.length, showUpgradeModal]);
 
   // Show first session prompt after welcome is seen
   useEffect(() => {
-    if (!isLoading && shouldShowFirstSessionPrompt && sessions.length === 0) {
+    if (!isLoading && !showUpgradeModal && shouldShowFirstSessionPrompt && sessions.length === 0) {
       setShowFirstSessionPrompt(true);
     }
-  }, [isLoading, shouldShowFirstSessionPrompt, sessions.length]);
+  }, [isLoading, shouldShowFirstSessionPrompt, sessions.length, showUpgradeModal]);
 
   const handleWelcomeClose = () => {
     markWelcomeSeen();

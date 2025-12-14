@@ -314,3 +314,10 @@
 | Whisper API latency | Medium | Medium | Batch processing, progress UI |
 | Claude cost at scale | Medium | Low | Caching, prompt optimization |
 | WebRTC browser issues | Low | High | Fallback audio upload |
+
+## 2025-12-14 - Validation Instrumentation
+
+- Fixed pricing CTA flow: `/register?plan=pro` now triggers Pro upgrade modal after signup/login.
+- Added upgrade funnel analytics events: `upgrade_modal_opened`, `upgrade_cta_clicked`, `checkout_started`.
+- Updated free tier messaging + enforcement to `5 interviews/month` and enabled configurable Stripe trial days.
+- Added `docs/VALIDATION_SCOREBOARD_14_DAY.md` with pass/fail gates for a 14-day validation sprint.

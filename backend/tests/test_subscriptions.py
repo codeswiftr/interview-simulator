@@ -79,7 +79,7 @@ async def test_get_subscription_status_returns_correct_tier(client, session_over
     assert data["tier"] == "free"
     assert "interviews_this_month" in data
     assert "interviews_limit" in data
-    assert data["interviews_limit"] == 3
+    assert data["interviews_limit"] == 5
     assert "can_create_interview" in data
 
 
@@ -951,4 +951,3 @@ async def test_checkout_reuses_existing_customer(client, session_override):
         mock_stripe.checkout.Session.create.assert_called_once()
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
         assert call_kwargs["customer"] == "cus_existing123"
-

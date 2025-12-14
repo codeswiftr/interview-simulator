@@ -13,6 +13,11 @@ export const Events = {
   // Page events
   PAGE_VIEWED: 'page_viewed',
 
+  // Upgrade / billing funnel events
+  UPGRADE_MODAL_OPENED: 'upgrade_modal_opened',
+  UPGRADE_CTA_CLICKED: 'upgrade_cta_clicked',
+  CHECKOUT_STARTED: 'checkout_started',
+
   // Interview lifecycle events
   INTERVIEW_CREATED: 'interview_created',
   INTERVIEW_STARTED: 'interview_started',

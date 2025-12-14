@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_id_pro_monthly: str = ""
     stripe_price_id_pro_annual: str = ""
+    stripe_trial_days: int = 7
 
     # CORS - allow all localhost ports in development
     cors_origins: list[str] = [

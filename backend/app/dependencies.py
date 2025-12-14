@@ -45,7 +45,7 @@ async def check_interview_quota(
 ) -> User:
     """Check if user can create a new interview based on subscription tier.
 
-    Free tier: 3 interviews per month
+    Free tier: 5 interviews per month
     Pro/Team tier: Unlimited
 
     Args:
@@ -78,7 +78,7 @@ async def check_interview_quota(
     # Check quota based on tier
     if (
         current_user.subscription_tier == SubscriptionTier.FREE
-        and current_user.interviews_this_month >= 3
+        and current_user.interviews_this_month >= 5
     ):
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
