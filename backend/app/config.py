@@ -47,7 +47,9 @@ class Settings(BaseSettings):
     stripe_price_id_pro_annual: str = ""
     stripe_trial_days: int = 7
 
-    # CORS - allow all localhost ports in development
+    # CORS origins - can be overridden by environment variable
+    # In development, allow localhost ports
+    # In production, set to specific domains via CORS_ORIGINS env var
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -59,6 +61,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5174",
         "http://127.0.0.1:5175",
         "http://127.0.0.1:5176",
+        "https://app.codeswiftr.com",
+        "https://interview-simulator-4bo.pages.dev",
     ]
 
     # Storage
@@ -108,6 +112,7 @@ class Settings(BaseSettings):
             return
 
         missing_vars = []
+        security_issues = []
 
         # Critical database
         if not self.database_url or self.database_url.startswith(
@@ -125,6 +130,22 @@ class Settings(BaseSettings):
         if not self.secret_key or self.secret_key == "change-me-in-production":
             missing_vars.append("SECRET_KEY")
 
+        # CORS security validation
+        if "*" in self.cors_origins or any("*" in origin for origin in self.cors_origins):
+            security_issues.append(
+                "CORS origins contain wildcards. This is a security risk. "
+                "Please set CORS_ORIGINS environment variable to specific domains."
+            )
+
+        # Ensure HTTPS origins in production
+        for origin in self.cors_origins:
+            if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+                continue  # Allow localhost for development/testing
+            if not origin.startswith("https://"):
+                security_issues.append(
+                    f"CORS origin '{origin}' should use HTTPS in production"
+                )
+
         # Stripe (required for subscriptions, but allow if not using)
         # We'll only warn, not fail, for Stripe
 
@@ -132,6 +153,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"Missing required environment variables for production: {', '.join(missing_vars)}. "
                 "Please set these in your environment or .env file."
+            )
+
+        if security_issues:
+            raise ValueError(
+                f"Security configuration issues detected: {'; '.join(security_issues)}"
             )
 
 

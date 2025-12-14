@@ -252,13 +252,21 @@ app.add_middleware(CorrelationIDMiddleware)
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS configuration
+# CORS configuration - restricted for security
+# Validate origins in production to prevent wildcards
+origins = settings.cors_origins
+if not settings.debug:
+    # In production, ensure no wildcard origins
+    if "*" in origins or "http://*" in origins or "https://*" in origins:
+        logger.error("CORS origins contain wildcards in production - this is a security risk")
+        raise ValueError("Wildcard CORS origins are not allowed in production")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Requested-With"],
 )
 
 # Rate limiting (only in production)
