@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../lib/api';
 import { analytics, Events } from '../lib/analytics';
+import { getStoredUTM } from '../lib/utm';
 import type { User, ExperienceLevel } from '../types';
 
 interface AuthContextType {
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     analytics.track(Events.USER_LOGGED_IN, {
       login_method: 'email',
+      ...getStoredUTM(),
     });
 
     // Navigate to intended destination or default to dashboard
@@ -105,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     analytics.track(Events.USER_REGISTERED, {
       signup_method: 'email',
       experience_level: experience_level || 'unknown',
+      ...getStoredUTM(),
     });
 
     navigate('/dashboard');

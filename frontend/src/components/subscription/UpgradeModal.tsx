@@ -18,6 +18,8 @@ export default function UpgradeModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [priceId, setPriceId] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<string>('');
+  const [upgradeReasonDetails, setUpgradeReasonDetails] = useState<string>('');
 
   // Fetch pricing configuration when modal opens
   useEffect(() => {
@@ -40,6 +42,18 @@ export default function UpgradeModal({
 
   if (!isOpen) return null;
 
+  const submitUpgradeReason = () => {
+    const reason = upgradeReason.trim();
+    const details = upgradeReasonDetails.trim();
+    if (!reason && !details) return;
+
+    analytics.track(Events.UPGRADE_REASON_SUBMITTED, {
+      surface: 'upgrade_modal',
+      reason: reason || 'unspecified',
+      details_len: details.length,
+    });
+  };
+
   const handleUpgrade = async () => {
     try {
       setLoading(true);
@@ -50,6 +64,9 @@ export default function UpgradeModal({
         setLoading(false);
         return;
       }
+
+      // Optional (non-blocking) intent signal before redirect
+      submitUpgradeReason();
 
       analytics.track(Events.UPGRADE_CTA_CLICKED, { surface: 'upgrade_modal', plan: 'pro' });
       const response = await subscriptionsAPI.createCheckout(priceId);
@@ -136,6 +153,42 @@ export default function UpgradeModal({
         </div>
 
         {/* Action Buttons */}
+        <div className="card p-4 mb-6 border-border-light">
+          <p className="body-small text-text-secondary mb-3">
+            Optional: what made you click upgrade? (helps improve the product)
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <select
+              className="btn-secondary"
+              value={upgradeReason}
+              onChange={(e) => setUpgradeReason(e.target.value)}
+            >
+              <option value="">Select a reason…</option>
+              <option value="unlimited_sessions">Unlimited sessions</option>
+              <option value="better_feedback">Better feedback quality</option>
+              <option value="interview_soon">Interview soon</option>
+              <option value="company_specific">Company-specific questions</option>
+              <option value="other">Other</option>
+            </select>
+            <input
+              className="btn-secondary md:col-span-2"
+              placeholder="Optional detail (one sentence)"
+              value={upgradeReasonDetails}
+              onChange={(e) => setUpgradeReasonDetails(e.target.value)}
+            />
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={submitUpgradeReason}
+              disabled={!upgradeReason.trim() && !upgradeReasonDetails.trim()}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+
         <div className="flex gap-4">
           <button onClick={onClose} className="btn-secondary flex-1" disabled={loading}>
             Cancel

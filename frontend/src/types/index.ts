@@ -89,6 +89,7 @@ export interface SessionFeedback {
   top_strengths: string[];
   top_improvements: string[];
   recommended_practice_areas: string[];
+  created_at?: string;
 }
 
 // Legacy Feedback type for compatibility

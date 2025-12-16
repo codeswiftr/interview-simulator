@@ -28,7 +28,7 @@ from app.api import (
 from app.config import settings
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal, check_db_connection, close_db_connections
-from app.middleware.rate_limit import RateLimitConfig, RateLimitMiddleware
+from app.middleware.rate_limit import RateLimitConfig, SecureRateLimitMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 
 
@@ -269,15 +269,18 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Requested-With"],
 )
 
-# Rate limiting (only in production)
+# Secure rate limiting (only in production)
 if not settings.debug:
     app.add_middleware(
-        RateLimitMiddleware,
+        SecureRateLimitMiddleware,
         config=RateLimitConfig(
             requests_per_minute=60,
             requests_per_hour=1000,
+            user_requests_per_minute=120,
+            user_requests_per_hour=2000,
         ),
-        exclude_paths=["/api/v1/health", "/docs", "/openapi.json", "/"],
+        exclude_paths=["/api/v1/health", "/docs", "/openapi.json", "/", "/favicon.ico", "/static"],
+        enable_ddos_headers=True,
     )
 
 # Include routers

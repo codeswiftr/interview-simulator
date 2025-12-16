@@ -17,6 +17,7 @@ export const Events = {
   UPGRADE_MODAL_OPENED: 'upgrade_modal_opened',
   UPGRADE_CTA_CLICKED: 'upgrade_cta_clicked',
   CHECKOUT_STARTED: 'checkout_started',
+  UPGRADE_REASON_SUBMITTED: 'upgrade_reason_submitted',
 
   // Interview lifecycle events
   INTERVIEW_CREATED: 'interview_created',

@@ -137,10 +137,13 @@ export default function FeedbackPage() {
   // Track feedback page view
   useEffect(() => {
     if (feedbackState.session && feedbackState.sessionFeedback) {
+      const createdAt = feedbackState.sessionFeedback.created_at;
+      const latencyMs = createdAt ? Date.now() - new Date(createdAt).getTime() : undefined;
       analytics.track(Events.FEEDBACK_VIEWED, {
         interview_id: feedbackState.session.id,
         overall_score: feedbackState.sessionFeedback.overall_score,
         has_responses: feedbackState.responses.length > 0,
+        latency_ms: typeof latencyMs === 'number' && Number.isFinite(latencyMs) ? Math.max(0, Math.round(latencyMs)) : undefined,
       });
     }
   }, [feedbackState.session, feedbackState.sessionFeedback, feedbackState.responses.length]);

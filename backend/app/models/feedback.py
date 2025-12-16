@@ -165,6 +165,7 @@ class SessionFeedbackRead(SQLModel):
     top_strengths: list[str]
     top_improvements: list[str]
     recommended_practice_areas: list[str]
+    created_at: datetime
 
 
 class VideoFeedbackRead(SQLModel):
