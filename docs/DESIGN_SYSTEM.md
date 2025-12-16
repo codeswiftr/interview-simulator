@@ -1,943 +1,493 @@
-# CareerSwiftr Interview Simulator - Design System
+# Interview Simulator Design System (v2)
 
-## Brand Identity
+This document describes the v2 UI implementation using React 19, Vite, TailwindCSS v4, and shadcn/ui-style components.
 
-### Brand Positioning
-- **Product**: AI-powered interview simulator for software engineers
-- **Parent Brand**: CodeSwiftr
-- **Positioning**: "Simulator, not Copilot" - We train candidates, not cheat for them
-- **Tone**: Technical, precise, trustworthy, encouraging
+## Overview
 
-### Brand Values
-1. **Technical Excellence** - Professional tools for professionals
-2. **Honest Feedback** - Direct, actionable insights without sugar-coating
-3. **Privacy First** - Your practice sessions are yours alone
-4. **Continuous Improvement** - Track progress over time
+- **Stack**: React 19 + Vite + TailwindCSS v4 + shadcn/ui (Radix primitives)
+- **Architecture**: Component-based with mobile-first responsive design
+- **Theme**: Dark mode (CSS variables)
+- **Typography**: Outfit (headings), Inter (body), JetBrains Mono (mono)
 
 ---
 
-## Color System
+## Brand Colors (CodeSwiftr)
 
-### Brand Identity Colors (Unified)
+The design system uses CodeSwiftr brand colors via CSS variables:
+
 ```css
-/* Brand Identity - The Core Palette */
---color-brand-primary: #FF6B9D;    /* Pink/Magenta - The "Soul" (brand identity) */
---color-brand-product: #38BDF8;    /* Electric Blue - The "Utility" (product/CTAs) */
---color-brand-accent: #00D9FF;     /* Cyan/Teal - The "Future/AI" (tech elements) */
-
-/* Usage Guidelines */
-/* - Brand Primary (Pink): Logo, brand moments, Pro badges, success states */
-/* - Brand Product (Blue): Primary CTAs, interactive elements, functional UI */
-/* - Brand Accent (Cyan): AI indicators, tech highlights, futuristic elements */
+/* Brand Colors */
+--electric-blue: 197 91% 60%;  /* #38BDF8 - Product CTAs, primary actions */
+--brand-pink: 343 94% 70%;     /* #FF6B9D - Brand identity, success states */
+--brand-accent: 188 100% 50%;  /* #00D9FF - Tech/AI elements */
 ```
 
-### Primary Palette (CodeSwiftr)
-```css
-/* Core Brand Colors */
---color-charcoal: #111827;        /* Primary dark - backgrounds, text */
---color-electric-blue: #38BDF8;   /* Primary accent - CTAs, highlights (alias for --color-brand-product) */
---color-clean-white: #F8FAFC;     /* Light backgrounds */
---color-black-pure: #050505;      /* Marketing dark background */
+### Usage Guidelines
 
-/* RGB variants for opacity */
---color-charcoal-rgb: 17, 24, 39;
---color-electric-blue-rgb: 56, 189, 248;
---color-brand-primary-rgb: 255, 107, 157;
+- **Electric Blue**: Primary CTAs, interactive elements, focus states
+- **Brand Pink**: Brand moments, achievements, success indicators
+- **Brand Accent**: AI/tech indicators, futuristic UI elements
+
+---
+
+## CSS Variables (Theme System)
+
+All theme values are defined as HSL in CSS variables for easy theming:
+
+```css
+:root {
+  /* Brand Colors */
+  --electric-blue: 197 91% 60%;
+  --brand-pink: 343 94% 70%;
+  --brand-accent: 188 100% 50%;
+  
+  /* Theme Colors (Dark) */
+  --background: 220 15% 8%;
+  --foreground: 210 40% 98%;
+  --primary: var(--electric-blue);
+  --primary-foreground: 220 15% 8%;
+  --muted: 220 15% 16%;
+  --muted-foreground: 213 31% 80%;
+  --border: 220 15% 18%;
+  --input: 220 15% 16%;
+  --ring: var(--electric-blue);
+}
 ```
 
-### Extended Palette
-```css
-/* Surface Colors */
---surface-primary: #F8FAFC;       /* Main background */
---surface-secondary: #F1F5F9;     /* Cards, sections */
---surface-tertiary: #E2E8F0;      /* Hover states */
---surface-dark: #111827;          /* Dark mode / headers */
---surface-dark-alt: #1F2937;      /* Dark mode cards */
+**Location**: `src/styles.css`
 
-/* Text Colors */
---text-primary: #111827;          /* Main text */
---text-secondary: #475569;        /* Subdued text */
---text-tertiary: #94A3B8;         /* Placeholder, hints */
---text-inverse: #F8FAFC;          /* Text on dark bg */
-
-/* Border Colors */
---border-light: #E2E8F0;
---border-medium: #CBD5E1;
---border-focus: #38BDF8;
-```
-
-### Semantic Colors
-```css
-/* Feedback Scores */
---score-excellent: #10B981;       /* 90-100 - Emerald */
---score-good: #22C55E;            /* 75-89 - Green */
---score-average: #EAB308;         /* 60-74 - Yellow */
---score-needs-work: #F97316;      /* 40-59 - Orange */
---score-poor: #EF4444;            /* 0-39 - Red */
-
-/* Status Colors */
---status-success: #10B981;
---status-warning: #F59E0B;
---status-error: #EF4444;
---status-info: #38BDF8;
-
-/* Interview States */
---state-scheduled: #6366F1;       /* Indigo */
---state-in-progress: #38BDF8;     /* Electric Blue */
---state-completed: #10B981;       /* Emerald */
---state-cancelled: #94A3B8;       /* Slate */
-```
-
-### Gradients
-```css
-/* Primary Gradient - CTAs and highlights */
---gradient-primary: linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%);
-
-/* Dark Gradient - Headers and hero */
---gradient-dark: linear-gradient(180deg, #111827 0%, #1F2937 100%);
-
-/* Surface Gradient - Subtle depth */
---gradient-surface: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
-
-/* Score Gradients - Visual feedback */
---gradient-excellent: linear-gradient(135deg, #10B981 0%, #059669 100%);
---gradient-poor: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-
-/* Glow Effects */
---glow-blue: 0 0 20px rgba(56, 189, 248, 0.3);
---glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
-```
+**Color Space Note**: This design system uses HSL color space. OKLCH (a modern color space with better perceptual uniformity) is a future consideration but would require migrating all color values. HSL is chosen for its simplicity, wide support, and ease of understanding. See `vite-app/` reference implementation for an OKLCH-based approach.
 
 ---
 
 ## Typography
 
-### Font Stack (Unified)
-```css
-/* Headings - Modern, technical feel */
---font-heading: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-/* ⚠️ DEPRECATED: Space Grotesk - No longer used. Use Outfit instead. */
+### Font Families
 
-/* Body - Highly readable */
---font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-/* ⚠️ DEPRECATED: Plus Jakarta Sans - No longer used. Use Inter instead. */
+Configured in `tailwind.config.js`:
 
-/* Code/Technical - For code snippets, scores */
---font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-/* ✅ Consistent across all touchpoints */
-```
+- **Headings**: `font-heading` → Outfit (system fallbacks)
+- **Body**: `font-body` → Inter (system fallbacks)
+- **Mono**: `font-mono` → JetBrains Mono, Fira Code (system fallbacks)
 
-### Typography Migration Notes
-- **Legacy fonts** (Space Grotesk, Plus Jakarta Sans) are deprecated
-- **Current standard**: Outfit for headings, Inter for body text
-- All new components should use the unified font stack
-- Marketing site updated to match product/app typography
+Fonts are loaded via Google Fonts in `index.html`.
 
 ### Type Scale
-```css
-/* Headings */
---text-4xl: 2.25rem;    /* 36px - Hero headlines */
---text-3xl: 1.875rem;   /* 30px - Page titles */
---text-2xl: 1.5rem;     /* 24px - Section headers */
---text-xl: 1.25rem;     /* 20px - Card titles */
---text-lg: 1.125rem;    /* 18px - Subtitles */
 
-/* Body */
---text-base: 1rem;      /* 16px - Body text */
---text-sm: 0.875rem;    /* 14px - Secondary text */
---text-xs: 0.75rem;     /* 12px - Captions, labels */
-
-/* Line Heights */
---leading-tight: 1.25;
---leading-normal: 1.5;
---leading-relaxed: 1.75;
-
-/* Font Weights */
---font-normal: 400;
---font-medium: 500;
---font-semibold: 600;
---font-bold: 700;
-```
-
-### Typography Classes (Tailwind)
-```css
-/* Preset typography styles */
-.heading-hero { @apply font-heading text-4xl font-bold leading-tight; }
-.heading-page { @apply font-heading text-3xl font-bold leading-tight; }
-.heading-section { @apply font-heading text-2xl font-semibold leading-tight; }
-.heading-card { @apply font-heading text-xl font-semibold leading-tight; }
-.body-large { @apply font-body text-lg leading-relaxed; }
-.body-default { @apply font-body text-base leading-normal; }
-.body-small { @apply font-body text-sm leading-normal; }
-.label { @apply font-body text-xs font-medium uppercase tracking-wide; }
-.score-display { @apply font-mono text-3xl font-bold; }
-```
-
-### Brand Color Usage Guidelines
-
-#### Brand Primary (Pink #FF6B9D)
-**Use for:**
-- Logo and brand identity elements
-- Pro/premium tier badges and indicators
-- Success states and achievements
-- Celebration moments
-- Brand reminders (subtle accents)
-
-**Don't use for:**
-- Primary CTAs (use Electric Blue)
-- Error states (use red)
-- Body text (low contrast)
-
-#### Brand Product (Electric Blue #38BDF8)
-**Use for:**
-- Primary call-to-action buttons
-- Interactive elements (links, hover states)
-- Functional UI indicators
-- Progress indicators
-- Focus states
-
-#### Brand Accent (Cyan #00D9FF)
-**Use for:**
-- AI/tech indicators
-- Futuristic UI elements
-- Special highlights
-- Marketing site AI illustration accents
-
-### Context-Specific Usage
-
-| Context | Primary Color | Accent Color | Background |
-|---------|--------------|--------------|------------|
-| **Marketing Site** | Pink (#FF6B9D) | Cyan (#00D9FF) | Black (#050505) |
-| **Product Landing** | Electric Blue (#38BDF8) | Pink (subtle) | Light (#F8FAFC) |
-| **Application** | Electric Blue (#38BDF8) | Pink (minimal) | Light/Dark |
+Tailwind's default type scale is used:
+- `text-xs` (12px), `text-sm` (14px), `text-base` (16px)
+- `text-lg` (18px), `text-xl` (20px), `text-2xl` (24px), `text-3xl` (30px)
 
 ---
 
-## Spacing & Layout
+## Component Inventory
 
-### Spacing Scale (8px base)
-```css
---space-0: 0;
---space-1: 0.25rem;   /* 4px */
---space-2: 0.5rem;    /* 8px */
---space-3: 0.75rem;   /* 12px */
---space-4: 1rem;      /* 16px */
---space-5: 1.25rem;   /* 20px */
---space-6: 1.5rem;    /* 24px */
---space-8: 2rem;      /* 32px */
---space-10: 2.5rem;   /* 40px */
---space-12: 3rem;     /* 48px */
---space-16: 4rem;     /* 64px */
---space-20: 5rem;     /* 80px */
---space-24: 6rem;     /* 96px */
-```
+### UI Primitives (`src/components/ui/`)
 
-### Container Widths
-```css
---container-xs: 20rem;   /* 320px - Modals */
---container-sm: 24rem;   /* 384px - Small cards */
---container-md: 28rem;   /* 448px - Forms */
---container-lg: 32rem;   /* 512px - Standard cards */
---container-xl: 36rem;   /* 576px - Wide cards */
---container-2xl: 42rem;  /* 672px - Content area */
---container-3xl: 48rem;  /* 768px - Main content */
---container-4xl: 56rem;  /* 896px - Wide content */
---container-5xl: 64rem;  /* 1024px - Dashboard */
---container-max: 80rem;  /* 1280px - Maximum width */
-```
+#### Button
+**File**: `button.tsx`
 
-### Grid System
-```css
-/* Interview Dashboard Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  gap: var(--space-6);
-}
+Variants:
+- `default` - Primary action (uses `--primary` color)
+- `outline` - Secondary action with border
+- `ghost` - Tertiary action, transparent background
+- `subtle` - Muted background variant
 
-/* Question Grid */
-.question-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-4);
-}
+Sizes:
+- `sm`, `default`, `lg`, `icon`, `fab`
 
-/* Feedback Grid */
-.feedback-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
-}
-```
+The `fab` size creates a Floating Action Button (56x56px, rounded-full) for thumb-zone placement.
 
-### Responsive Breakpoints
-```css
---breakpoint-sm: 640px;   /* Mobile landscape */
---breakpoint-md: 768px;   /* Tablets */
---breakpoint-lg: 1024px;  /* Small laptops */
---breakpoint-xl: 1280px;  /* Desktops */
---breakpoint-2xl: 1536px; /* Large screens */
-```
+#### Card
+**File**: `card.tsx`
 
----
+Composed of:
+- `Card` - Container
+- `CardHeader` - Header section
+- `CardTitle` - Title (h3)
+- `CardContent` - Main content area
 
-## Components
+Uses `bg-muted/40` with border for subtle elevation.
 
-### Buttons
+#### Input
+**File**: `input.tsx`
 
-#### Primary Button
-```css
-.btn-primary {
-  @apply px-6 py-3 rounded-lg font-semibold text-white
-         bg-gradient-to-r from-electric-blue to-sky-500
-         hover:from-sky-400 hover:to-electric-blue
-         active:scale-[0.98] transition-all duration-200
-         shadow-md hover:shadow-lg hover:shadow-electric-blue/25;
-}
-```
+Styled text input with focus ring using `--ring` color. Supports all standard input types and HTML input attributes.
 
-#### Secondary Button
-```css
-.btn-secondary {
-  @apply px-6 py-3 rounded-lg font-semibold
-         bg-surface-secondary text-text-primary
-         border border-border-light
-         hover:bg-surface-tertiary hover:border-border-medium
-         active:scale-[0.98] transition-all duration-200;
-}
-```
+#### Dialog
+**File**: `dialog.tsx`
 
-#### Ghost Button
-```css
-.btn-ghost {
-  @apply px-6 py-3 rounded-lg font-semibold
-         text-electric-blue hover:bg-electric-blue/10
-         active:scale-[0.98] transition-all duration-200;
-}
-```
+Modal dialog component built on Radix Dialog primitives. Use for confirmations, forms, and important interactions.
 
-#### Button Sizes
-```css
-.btn-sm { @apply px-4 py-2 text-sm; }
-.btn-md { @apply px-6 py-3 text-base; }
-.btn-lg { @apply px-8 py-4 text-lg; }
-```
+#### Drawer (Bottom Sheet)
+**File**: `drawer.tsx`
 
-### Cards
+Bottom sheet component built on Radix Dialog. Optimized for mobile interactions. Use for:
+- Contextual actions
+- Q&A panels (Preparation mentor)
+- Settings panels (Voice preferences)
+- Hints (Interview Room)
 
-#### Base Card
-```css
-.card {
-  @apply bg-white rounded-xl border border-border-light
-         shadow-sm hover:shadow-md transition-shadow duration-200;
-}
-```
+Components: `Drawer`, `DrawerTrigger`, `DrawerContent`, `DrawerHeader`, `DrawerTitle`, `DrawerDescription`
 
-#### Glass Card (Premium feel)
-```css
-.card-glass {
-  @apply rounded-xl backdrop-blur-lg
-         bg-white/70 border border-white/50
-         shadow-lg;
-}
-```
+#### Progress
+**File**: `progress.tsx`
 
-#### Interactive Card
-```css
-.card-interactive {
-  @apply bg-white rounded-xl border border-border-light
-         shadow-sm cursor-pointer
-         hover:shadow-md hover:border-electric-blue/50
-         hover:translate-y-[-2px] transition-all duration-200;
-}
-```
+Linear progress bar component. Props:
+- `value` (number): Current value
+- `max` (number, default 100): Maximum value
 
-#### Score Card
-```css
-.card-score {
-  @apply rounded-xl p-6 text-center
-         bg-gradient-to-br from-surface-secondary to-white
-         border border-border-light;
-}
-```
+Displays as a horizontal bar with animated fill.
 
-### Form Inputs
+#### ScoreRing
+**File**: `score-ring.tsx`
 
-#### Text Input
-```css
-.input {
-  @apply w-full px-4 py-3 rounded-lg
-         bg-surface-primary border border-border-light
-         text-text-primary placeholder:text-text-tertiary
-         focus:outline-none focus:ring-2 focus:ring-electric-blue/50 focus:border-electric-blue
-         transition-all duration-200;
-}
-```
+Circular score visualization with color-coded rings based on score ranges:
+- 90-100: Emerald (excellent)
+- 75-89: Green (good)
+- 60-74: Yellow (average)
+- 40-59: Orange (needs work)
+- 0-39: Red (poor)
+
+Props:
+- `value` (number): Score value
+- `max` (number, default 100)
+- `label` (string, optional): Label below score
+- `size`: `"sm"` (80px), `"md"` (120px), `"lg"` (160px)
+
+Used in FeedbackPage for Overall, Content, and Delivery scores.
+
+#### Switch
+**File**: `switch.tsx`
+
+Toggle switch component. Props:
+- `checked` (boolean): Current state
+- `onCheckedChange` (function): Callback when toggled
+
+Used in SettingsPage for preferences.
+
+#### Textarea
+**File**: `textarea.tsx`
+
+Styled textarea component with focus ring. Supports all standard textarea attributes. Used for multi-line text input.
+
+Used in PreparationPage for draft answer input.
 
 #### Select
-```css
-.select {
-  @apply w-full px-4 py-3 rounded-lg appearance-none
-         bg-surface-primary border border-border-light
-         text-text-primary cursor-pointer
-         focus:outline-none focus:ring-2 focus:ring-electric-blue/50 focus:border-electric-blue
-         transition-all duration-200
-         bg-[url('data:image/svg+xml,...')] bg-no-repeat bg-[right_1rem_center];
-}
-```
+**File**: `select.tsx`
 
-### Badges & Tags
+Dropdown select component built on Radix UI Select primitives. Components:
+- `Select` - Root component (replaces native `<select>`)
+- `SelectTrigger` - The button that opens the dropdown
+- `SelectValue` - Displays selected value
+- `SelectContent` - Dropdown menu container
+- `SelectItem` - Individual option
+- `SelectLabel` - Optional group label
+- `SelectSeparator` - Visual separator
 
-#### Category Badges
-```css
-.badge-behavioral { @apply bg-indigo-100 text-indigo-700 border border-indigo-200; }
-.badge-technical { @apply bg-emerald-100 text-emerald-700 border border-emerald-200; }
-.badge-system-design { @apply bg-amber-100 text-amber-700 border border-amber-200; }
-```
+Used in SettingsPage for voice and speech rate selection.
 
-#### Difficulty Badges
-```css
-.badge-easy { @apply bg-green-100 text-green-700; }
-.badge-medium { @apply bg-yellow-100 text-yellow-700; }
-.badge-hard { @apply bg-red-100 text-red-700; }
-```
+**Note**: Uses Radix UI for accessibility and mobile support. Portal-based rendering ensures proper z-index stacking.
 
-#### Status Badges
-```css
-.badge-status {
-  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
-}
-.badge-scheduled { @apply bg-indigo-100 text-indigo-700; }
-.badge-in-progress { @apply bg-blue-100 text-blue-700; }
-.badge-completed { @apply bg-green-100 text-green-700; }
+#### Label
+**File**: `label.tsx`
+
+Styled label component for form inputs. Provides consistent typography and spacing. Supports peer-disabled styling for disabled inputs.
+
+Used in SettingsPage for form field labels.
+
+#### Badge
+**File**: `badge.tsx`
+
+Badge component for status indicators, categories, and tags. Variants:
+- `default` - Primary color background
+- `secondary` - Secondary color background
+- `destructive` - Error/destructive color
+- `outline` - Border only
+
+Future use cases: Question categories, session status, score indicators.
+
+---
+
+## Layout Components
+
+### AppShell
+**File**: `src/shell/AppShell.tsx`
+
+Main application layout wrapper. Provides:
+- Header (sticky, top)
+- Main content area (with max-width constraint)
+- BottomNav (fixed, bottom)
+- React Router integration
+
+Routes:
+- `/dashboard` - DashboardPage
+- `/practice` - PreparationPage
+- `/progress` - ProgressPage
+- `/interview/:id` - InterviewPage
+- `/feedback/:id` - FeedbackPage
+- `/settings` - SettingsPage
+- `/auth` - AuthPage
+
+### BottomNav
+**File**: `src/components/navigation/BottomNav.tsx`
+
+Mobile-first bottom navigation bar. Fixed at bottom with:
+- Home (dashboard)
+- Practice
+- Progress
+- Settings
+
+Uses `NavLink` from react-router-dom for active state styling.
+
+---
+
+## Pages/Views (`src/views/`)
+
+### DashboardPage
+- Welcome section
+- Stats cards (Readiness score, This week)
+- Recent sessions list
+- FAB (Fixed Action Button) for "Start new practice"
+
+### InterviewPage
+- Question display (large, readable)
+- Timer + progress bar (when recording)
+- Recording controls (thumb-zone, bottom-center)
+- Mentor hints (Drawer/bottom sheet)
+- Full-screen focus mode when recording
+
+### PreparationPage
+- Mentor Q&A (Drawer)
+- Question display
+- Draft textarea
+- Voice controls (fixed bottom bar, thumb-zone)
+
+### FeedbackPage
+- Swipeable score cards with ScoreRing components
+- Progressive disclosure (details/summary) for strengths/improvements
+- Fixed bottom CTA ("Practice Again")
+
+### ProgressPage
+- Stats cards (Average score, Total sessions)
+- Session history list
+
+### SettingsPage
+- Account section (email, notifications toggle)
+- Voice preferences (toggles, Drawer for detailed settings)
+- Appearance section
+
+### AuthPage
+- Sign in form (email, password inputs)
+- Primary CTA button
+
+---
+
+## State Management
+
+### useInterviewStateMachine
+**File**: `src/hooks/useInterviewStateMachine.ts`
+
+React hook using `useReducer` to manage interview recording flow.
+
+**States**:
+- `idle` - Initial state
+- `requesting_permission` - Requesting microphone permission
+- `ready` - Permission granted, ready to record
+- `recording` - Actively recording
+- `processing` - Processing audio
+- `complete` - Session complete
+- `error` - Error occurred
+
+**Actions**:
+- `requestPermission()` - Request mic permission
+- `grantPermission()` - Grant permission (called after getUserMedia succeeds)
+- `denyPermission()` - Deny permission
+- `startRecording()` - Start recording
+- `stopRecording()` - Stop recording
+- `completeProcessing()` - Mark processing complete
+- `reset()` - Reset to idle
+- `setError(error)` - Set error state
+
+**Returned values**:
+- `state` - Current state
+- `error` - Error message (if any)
+- `canRecord`, `canStop`, `canReset` - Boolean flags for UI control
+
+**State Machine Diagram**:
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> requesting_permission: REQUEST_PERMISSION
+    requesting_permission --> ready: PERMISSION_GRANTED
+    requesting_permission --> error: PERMISSION_DENIED
+    ready --> recording: START_RECORDING
+    recording --> processing: STOP_RECORDING
+    processing --> complete: PROCESSING_COMPLETE
+    complete --> idle: RESET
+    error --> idle: RESET
 ```
 
 ---
 
-## Interview-Specific Components
+## Mobile Interaction Patterns
 
-### Recording Indicator
-```css
-.recording-indicator {
-  @apply flex items-center gap-2 px-4 py-2 rounded-full
-         bg-red-500 text-white font-medium;
-}
+### Bottom Sheet (Drawer)
+Used for contextual actions that don't require full-screen focus:
+- Mentor Q&A in PreparationPage
+- Mentor hints in InterviewPage
+- Voice settings in SettingsPage
 
-.recording-indicator::before {
-  content: '';
-  @apply w-3 h-3 rounded-full bg-white animate-pulse;
-}
-```
+### FAB (Floating Action Button)
+Fixed-position circular button in thumb-zone (bottom-right). Used for primary actions:
+- "Start new practice" on DashboardPage
 
-### Timer Display
-```css
-.timer-display {
-  @apply font-mono text-4xl font-bold text-text-primary
-         tabular-nums tracking-tight;
-}
+### Thumb-Zone Controls
+Critical controls placed in bottom-center area (easy thumb reach):
+- Recording start/stop buttons (InterviewPage)
+- Voice controls bar (PreparationPage)
 
-.timer-warning { @apply text-amber-500; }
-.timer-danger { @apply text-red-500; }
-```
+### Full-Screen Focus Mode
+When recording (InterviewPage), the UI enters full-screen focus:
+- Hides navigation
+- Timer/progress bar fixed at top
+- Recording controls in thumb-zone
 
-### Audio Waveform Container
-```css
-.waveform-container {
-  @apply h-24 rounded-lg bg-surface-secondary
-         border border-border-light overflow-hidden;
-}
-```
+### Progressive Disclosure
+Expandable sections using HTML `<details>`:
+- Strengths/Improvements in FeedbackPage
 
-### Score Ring
-```css
-.score-ring {
-  @apply relative w-32 h-32;
-  /* SVG-based circular progress indicator */
-}
+---
 
-.score-ring-excellent { --ring-color: var(--score-excellent); }
-.score-ring-good { --ring-color: var(--score-good); }
-.score-ring-average { --ring-color: var(--score-average); }
-.score-ring-needs-work { --ring-color: var(--score-needs-work); }
-.score-ring-poor { --ring-color: var(--score-poor); }
-```
+## Utility Functions
 
-### Progress Bar
-```css
-.progress-bar {
-  @apply h-2 rounded-full bg-surface-secondary overflow-hidden;
-}
+### cn (className utility)
+**File**: `src/lib/cn.ts`
 
-.progress-bar-fill {
-  @apply h-full rounded-full transition-all duration-500 ease-out;
-  background: var(--gradient-primary);
-}
-```
+Merges Tailwind classes using `clsx` and `tailwind-merge`. Ensures correct class precedence and deduplication.
 
-### Question Card (Interview Room)
-```css
-.question-card {
-  @apply bg-gradient-to-br from-charcoal to-gray-800
-         rounded-2xl p-8 text-white shadow-xl;
-}
+```tsx
+import { cn } from "../lib/cn";
 
-.question-card-header {
-  @apply flex items-center justify-between mb-6;
-}
-
-.question-card-content {
-  @apply text-xl font-medium leading-relaxed;
-}
-```
-
-### Feedback Metric Card
-```css
-.metric-card {
-  @apply bg-white rounded-xl p-6 border border-border-light;
-}
-
-.metric-card-header {
-  @apply flex items-center justify-between mb-4;
-}
-
-.metric-card-value {
-  @apply font-mono text-3xl font-bold;
-}
-
-.metric-card-label {
-  @apply text-sm text-text-secondary mt-1;
-}
+<div className={cn("base-classes", condition && "conditional-classes")} />
 ```
 
 ---
 
-## Page Layouts
+## Responsive Breakpoints
 
-### Landing Page
-```
-┌─────────────────────────────────────────────────────┐
-│  Navigation (fixed, glass effect)                   │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  Hero Section                                       │
-│  - Headline + subheadline                           │
-│  - CTA buttons                                      │
-│  - Hero illustration                                │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│  Features Grid (3 columns)                          │
-├─────────────────────────────────────────────────────┤
-│  How It Works (steps)                               │
-├─────────────────────────────────────────────────────┤
-│  Pricing Cards                                      │
-├─────────────────────────────────────────────────────┤
-│  Testimonials                                       │
-├─────────────────────────────────────────────────────┤
-│  Final CTA                                          │
-├─────────────────────────────────────────────────────┤
-│  Footer                                             │
-└─────────────────────────────────────────────────────┘
-```
+Tailwind default breakpoints:
+- `sm`: 640px (mobile landscape)
+- `md`: 768px (tablets)
+- `lg`: 1024px (small laptops)
+- `xl`: 1280px (desktops)
+- `2xl`: 1536px (large screens)
 
-### Dashboard Layout
-```
-┌─────────────────────────────────────────────────────┐
-│  Top Bar (logo, search, user menu)                  │
-├──────────┬──────────────────────────┬───────────────┤
-│          │                          │               │
-│  Sidebar │  Main Content            │  Quick Stats  │
-│          │                          │               │
-│  - Home  │  - Interview History     │  - Score avg  │
-│  - Start │  - Recent Sessions       │  - Sessions   │
-│  - History│  - Recommendations      │  - Streak     │
-│  - Progress│                        │               │
-│  - Settings│                        │               │
-│          │                          │               │
-└──────────┴──────────────────────────┴───────────────┘
-```
-
-### Interview Room Layout
-```
-┌─────────────────────────────────────────────────────┐
-│  Timer                              Exit Button     │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│                                                     │
-│              Question Display Card                  │
-│              (centered, prominent)                  │
-│                                                     │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│              Waveform / Recording Area              │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│  [Skip]              Status           [Submit/Next] │
-└─────────────────────────────────────────────────────┘
-```
-
-### Feedback View Layout
-```
-┌─────────────────────────────────────────────────────┐
-│  Back to Dashboard         Session Info             │
-├──────────────────────┬──────────────────────────────┤
-│                      │                              │
-│  Overall Score       │  Detailed Breakdown          │
-│  (large circular)    │                              │
-│                      │  - Content Analysis          │
-│  [Share] [Retry]     │  - Audio Analysis            │
-│                      │  - Improvement Tips          │
-│                      │                              │
-├──────────────────────┴──────────────────────────────┤
-│                                                     │
-│  Transcript with Annotations                        │
-│  (expandable)                                       │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│  Similar Questions to Practice                      │
-└─────────────────────────────────────────────────────┘
-```
+**Current implementation**: Mobile-first with desktop support via responsive classes.
 
 ---
 
-## Animations & Transitions
+## Accessibility
 
-### Duration Scale
-```css
---duration-instant: 0ms;
---duration-fast: 150ms;
---duration-normal: 200ms;
---duration-slow: 300ms;
---duration-slower: 500ms;
-```
+### Focus Management
+- All interactive elements have visible focus states (`focus-visible:ring-2`)
+- Focus ring uses `--ring` color (Electric Blue)
 
-### Easing Functions
-```css
---ease-default: cubic-bezier(0.4, 0, 0.2, 1);
---ease-in: cubic-bezier(0.4, 0, 1, 1);
---ease-out: cubic-bezier(0, 0, 0.2, 1);
---ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-```
-
-### Standard Animations
-```css
-/* Fade In */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Slide Up */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Scale In */
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* Recording Pulse */
-@keyframes recordingPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* Score Count Up */
-@keyframes countUp {
-  from { opacity: 0; transform: scale(0.5); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* Progress Fill */
-@keyframes progressFill {
-  from { width: 0; }
-  to { width: var(--progress); }
-}
-```
-
-### Utility Classes
-```css
-.animate-fade-in { animation: fadeIn var(--duration-normal) var(--ease-out); }
-.animate-slide-up { animation: slideUp var(--duration-slow) var(--ease-out); }
-.animate-scale-in { animation: scaleIn var(--duration-normal) var(--ease-bounce); }
-.animate-recording { animation: recordingPulse 1.5s infinite; }
-```
-
----
-
-## Shadows & Effects
-
-### Shadow Scale
-```css
---shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
---shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
---shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
---shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
---shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-
-/* Colored Shadows */
---shadow-blue: 0 10px 40px -10px rgba(56, 189, 248, 0.4);
---shadow-success: 0 10px 40px -10px rgba(16, 185, 129, 0.4);
-```
-
-### Glassmorphism
-```css
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-.glass-dark {
-  background: rgba(17, 24, 39, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-```
-
----
-
-## Border Radius
-```css
---radius-none: 0;
---radius-sm: 0.25rem;    /* 4px */
---radius-md: 0.5rem;     /* 8px */
---radius-lg: 0.75rem;    /* 12px */
---radius-xl: 1rem;       /* 16px */
---radius-2xl: 1.5rem;    /* 24px */
---radius-full: 9999px;   /* Pill shape */
-```
-
----
-
-## Icons
-
-### Recommended Icon Set
-**Lucide React** - Modern, consistent, MIT licensed
-- Clean stroke-based icons
-- Good technical/professional feel
-- Excellent React integration
-
-### Key Icons Needed
-| Purpose | Icon Name | Usage |
-|---------|-----------|-------|
-| Recording | `Mic` / `MicOff` | Audio capture state |
-| Timer | `Clock` | Session timing |
-| Play/Pause | `Play` / `Pause` | Audio playback |
-| Questions | `MessageSquare` | Question bank |
-| Feedback | `BarChart2` | Analysis results |
-| Progress | `TrendingUp` | Performance tracking |
-| Settings | `Settings` | User preferences |
-| User | `User` | Profile menu |
-| Check | `Check` / `CheckCircle` | Success states |
-| Warning | `AlertTriangle` | Warnings |
-| Error | `XCircle` | Errors |
-| Info | `Info` | Information |
-| Categories | `Code` / `Users` / `Server` | Question types |
-
----
-
-## Dark Mode Considerations
-
-While MVP will be light mode only, design with dark mode in mind:
-
-```css
-/* CSS Variables for easy theming */
-:root {
-  --bg-primary: var(--surface-primary);
-  --bg-secondary: var(--surface-secondary);
-  --text-primary: var(--text-primary);
-  --text-secondary: var(--text-secondary);
-}
-
-/* Dark mode (future) */
-:root.dark {
-  --bg-primary: #111827;
-  --bg-secondary: #1F2937;
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-}
-```
-
----
-
-## Accessibility Guidelines
-
-### Color Contrast
-- Text on light bg: minimum 4.5:1 ratio (WCAG AA)
-- Large text: minimum 3:1 ratio
-- Interactive elements: clearly distinguishable
-
-### Focus States
-```css
-*:focus-visible {
-  outline: 2px solid var(--color-electric-blue);
-  outline-offset: 2px;
-}
-```
+### ARIA
+- Switch component uses `role="switch"` with `aria-checked`
+- Select component uses Radix UI primitives with full ARIA support
+- Button components properly labeled with `aria-label` where needed
+- Label components properly associated with form inputs via `htmlFor`
 
 ### Touch Targets
-- Minimum 44x44px for interactive elements
-- Adequate spacing between clickable items
+- FAB buttons: 56x56px (≥44px WCAG recommendation)
+- Bottom nav items: Adequate spacing for thumb navigation
 
-### Motion
-```css
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
+### Color Contrast
+- Text on background meets WCAG AA standards
+- Score colors chosen for sufficient contrast
 
 ---
 
-## Tailwind Configuration
+## Testing
 
-```javascript
-// tailwind.config.js
-export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      colors: {
-        charcoal: '#111827',
-        'electric-blue': '#38BDF8',
-        'clean-white': '#F8FAFC',
-        surface: {
-          primary: '#F8FAFC',
-          secondary: '#F1F5F9',
-          tertiary: '#E2E8F0',
-        },
-        score: {
-          excellent: '#10B981',
-          good: '#22C55E',
-          average: '#EAB308',
-          'needs-work': '#F97316',
-          poor: '#EF4444',
-        },
-      },
-      fontFamily: {
-        heading: ['Outfit', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.2s ease-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'scale-in': 'scaleIn 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-        'recording-pulse': 'recordingPulse 1.5s infinite',
-      },
-      boxShadow: {
-        'blue-glow': '0 10px 40px -10px rgba(56, 189, 248, 0.4)',
-        'success-glow': '0 10px 40px -10px rgba(16, 185, 129, 0.4)',
-      },
-    },
-  },
-  plugins: [],
-}
-```
+### E2E Tests
+**File**: `tests/e2e/mobile-flows.spec.ts`
 
----
+Playwright tests covering:
+- Navigation flows
+- Bottom nav visibility
+- Interview Room state machine
+- Preparation bottom sheet
+- Feedback score cards
+- Dashboard FAB accessibility
 
-## Component Library Recommendation
-
-### Primary: shadcn/ui
-- Accessible by default (Radix primitives)
-- Tailwind-based, fully customizable
-- Copy-paste model (no dependency lock-in)
-- Professional look out of the box
-
-### Components to Use
-- `Button`, `Input`, `Select` - Forms
-- `Card` - Content containers
-- `Dialog`, `Sheet` - Modals
-- `DropdownMenu` - Navigation
-- `Progress` - Visual indicators
-- `Tabs` - Section navigation
-- `Tooltip` - Contextual help
-- `Toast` - Notifications
-
----
-
-## Implementation Priority
-
-### Phase 1: Core Components
-1. Button variants
-2. Input/Select forms
-3. Cards (base, interactive, score)
-4. Navigation (header, sidebar)
-5. Typography system
-
-### Phase 2: Interview Components
-1. Question display card
-2. Timer display
-3. Recording indicator
-4. Waveform visualization
-5. Submit/navigation buttons
-
-### Phase 3: Feedback Components
-1. Score ring/circle
-2. Progress bars
-3. Metric cards
-4. Transcript viewer
-5. Improvement tips
-
-### Phase 4: Dashboard
-1. Session history list
-2. Quick stats cards
-3. Progress charts
-4. Recommendation cards
+**Viewport**: iPhone SE (375x667) for mobile-first testing
 
 ---
 
 ## File Structure
 
 ```
-frontend/src/
-├── styles/
-│   ├── globals.css       # CSS variables, base styles
-│   └── tailwind.css      # Tailwind imports
+src/
 ├── components/
-│   ├── ui/               # Base components (shadcn)
+│   ├── ui/              # shadcn-style primitives
+│   │   ├── badge.tsx
 │   │   ├── button.tsx
 │   │   ├── card.tsx
+│   │   ├── dialog.tsx
+│   │   ├── drawer.tsx
 │   │   ├── input.tsx
-│   │   └── ...
-│   ├── interview/        # Interview-specific
-│   │   ├── QuestionCard.tsx
-│   │   ├── Timer.tsx
-│   │   ├── RecordingIndicator.tsx
-│   │   └── Waveform.tsx
-│   ├── feedback/         # Feedback components
-│   │   ├── ScoreRing.tsx
-│   │   ├── MetricCard.tsx
-│   │   └── TranscriptViewer.tsx
-│   └── layout/           # Layout components
-│       ├── Header.tsx
-│       ├── Sidebar.tsx
-│       └── PageContainer.tsx
-└── lib/
-    └── utils.ts          # cn() helper, etc.
+│   │   ├── label.tsx
+│   │   ├── progress.tsx
+│   │   ├── score-ring.tsx
+│   │   ├── select.tsx
+│   │   ├── switch.tsx
+│   │   └── textarea.tsx
+│   └── navigation/
+│       └── BottomNav.tsx
+├── hooks/
+│   └── useInterviewStateMachine.ts
+├── lib/
+│   └── cn.ts            # className utility
+├── shell/
+│   └── AppShell.tsx     # Main layout + routing
+├── styles.css           # Global styles + CSS variables
+└── views/               # Page components
+    ├── AuthPage.tsx
+    ├── DashboardPage.tsx
+    ├── FeedbackPage.tsx
+    ├── InterviewPage.tsx
+    ├── PreparationPage.tsx
+    ├── ProgressPage.tsx
+    └── SettingsPage.tsx
 ```
 
 ---
 
-## Design Review Checklist
+## Future Enhancements
 
-Before shipping any screen:
-- [ ] Colors match brand palette
-- [ ] Typography follows scale
-- [ ] Spacing is consistent (8px grid)
-- [ ] Interactive elements have hover/focus states
-- [ ] Loading states defined
-- [ ] Error states designed
-- [ ] Empty states considered
-- [ ] Mobile responsive
-- [ ] Accessible (contrast, focus, labels)
-- [ ] Animations smooth and purposeful
+### Planned Components
+- `Toast` - Notification system
+- `Skeleton` - Loading states
+- `Tabs` - Tab navigation
+- `DropdownMenu` - Context menus
+- `AlertDialog` - Confirmation dialogs
+
+### Theme Support
+- Dark mode toggle (currently dark-only)
+- Light mode variant
+
+### PWA Features
+- Offline support (deferred)
+- Install prompt (deferred)
+
+---
+
+## References
+
+- [TailwindCSS v4 Documentation](https://tailwindcss.com)
+- [shadcn/ui Components](https://ui.shadcn.com)
+- [Radix UI Primitives](https://www.radix-ui.com)
+- [Lucide Icons](https://lucide.dev)

@@ -1,0 +1,67 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "tailwind.config.js"
+      - "package.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "tailwind.config.js"
+      - "package.json"
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@latest
+
+      - name: Start preview server
+        run: npm run preview &
+        env:
+          PORT: 4173
+
+      - name: Wait for server
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:4173; do sleep 1; done'
+
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun --collect.url=http://localhost:4173 \
+            --collect.numberOfRuns=3 \
+            --collect.settings.preset=mobile \
+            --collect.settings.emulatedFormFactor=mobile \
+            --collect.settings.screenEmulation.width=375 \
+            --collect.settings.screenEmulation.height=667 \
+            --collect.settings.screenEmulation.deviceScaleFactor=2 \
+            --assert.assertions.performance=85 \
+            --assert.assertions.accessibility=95 \
+            --assert.assertions."best-practices"=85 \
+            --assert.assertions.seo=80 \
+            --upload.target=temporary-public-storage
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
