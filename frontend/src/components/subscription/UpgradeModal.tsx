@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, Check, Crown, Loader2 } from 'lucide-react';
 import { subscriptionsAPI } from '../../lib/api';
 import { analytics, Events } from '../../lib/analytics';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Card } from '../ui/Card';
 import type { AxiosError } from 'axios';
 
 interface UpgradeModalProps {
@@ -20,6 +22,11 @@ export default function UpgradeModal({
   const [priceId, setPriceId] = useState<string | null>(null);
   const [upgradeReason, setUpgradeReason] = useState<string>('');
   const [upgradeReasonDetails, setUpgradeReasonDetails] = useState<string>('');
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const containerRef = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   // Fetch pricing configuration when modal opens
   useEffect(() => {
@@ -52,6 +59,7 @@ export default function UpgradeModal({
       reason: reason || 'unspecified',
       details_len: details.length,
     });
+    setFeedbackSent(true);
   };
 
   const handleUpgrade = async () => {
@@ -92,32 +100,40 @@ export default function UpgradeModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
-      <div className="card p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <Card
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-modal-title"
+        className="p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Crown className="w-6 h-6 text-[#FF6B9D]" />
-            <h2 className="heading-section">Upgrade to Pro</h2>
+            <Crown className="w-6 h-6 text-[#FF6B9D]" aria-hidden="true" />
+            <h2 id="upgrade-modal-title" className="heading-section">Upgrade to Pro</h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-text-tertiary hover:text-text-primary transition-colors"
+            aria-label="Close dialog"
+            className="text-text-tertiary hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 rounded-lg p-1"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6" aria-hidden="true" />
           </button>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="card p-4 mb-6 border-status-error bg-status-error/10">
+          <Card className="p-4 mb-6 border-status-error bg-status-error/10">
             <p className="text-status-error">{error}</p>
-          </div>
+          </Card>
         )}
 
         {/* Pricing Comparison */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Free Plan */}
-          <div className="card p-6 border-2 border-border-light">
+          <Card className="p-6 border-2 border-border-light">
             <h3 className="heading-card mb-2">Free</h3>
             <div className="text-3xl font-bold mb-4">$0<span className="text-lg">/month</span></div>
             <ul className="space-y-2">
@@ -130,10 +146,10 @@ export default function UpgradeModal({
                 <span className="body-small">Basic feedback</span>
               </li>
             </ul>
-          </div>
+          </Card>
 
           {/* Pro Plan */}
-          <div className="card p-6 border-2 border-[#FF6B9D] bg-[#FF6B9D]/5">
+          <Card className="p-6 border-2 border-[#FF6B9D] bg-[#FF6B9D]/5">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="heading-card">Pro</h3>
               <span className="badge bg-[#FF6B9D]/10 text-[#FF6B9D] border border-[#FF6B9D]/20">Recommended</span>
@@ -149,11 +165,11 @@ export default function UpgradeModal({
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         </div>
 
         {/* Action Buttons */}
-        <div className="card p-4 mb-6 border-border-light">
+        <Card className="p-4 mb-6 border-border-light">
           <p className="body-small text-text-secondary mb-3">
             Optional: what made you click upgrade? (helps improve the product)
           </p>
@@ -178,16 +194,22 @@ export default function UpgradeModal({
             />
           </div>
           <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={submitUpgradeReason}
-              disabled={!upgradeReason.trim() && !upgradeReasonDetails.trim()}
-            >
-              Send
-            </button>
+            {feedbackSent ? (
+              <span className="text-status-success body-small flex items-center gap-1">
+                <Check className="w-4 h-4" /> Thanks for your feedback!
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={submitUpgradeReason}
+                disabled={!upgradeReason.trim() && !upgradeReasonDetails.trim()}
+              >
+                Send
+              </button>
+            )}
           </div>
-        </div>
+        </Card>
 
         <div className="flex gap-4">
           <button onClick={onClose} className="btn-secondary flex-1" disabled={loading}>
@@ -215,7 +237,7 @@ export default function UpgradeModal({
         <p className="body-small text-text-tertiary text-center mt-4">
           You'll be redirected to Stripe to complete your payment
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

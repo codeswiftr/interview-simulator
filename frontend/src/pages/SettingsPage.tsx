@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2 } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2, Calendar, Target } from 'lucide-react';
 import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../contexts/ThemeContext';
+import { Card } from '../components/ui/Card';
 import SubscriptionCard from '../components/subscription/SubscriptionCard';
 import BillingInfo from '../components/subscription/BillingInfo';
 import UpgradeModal from '../components/subscription/UpgradeModal';
@@ -256,14 +257,70 @@ export default function SettingsPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="card p-4 mb-8 border-status-error bg-status-error/10">
+          <Card className="p-4 mb-8 border-status-error bg-status-error/10">
             <p className="text-status-error">{error}</p>
-          </div>
+          </Card>
         )}
 
         <div className="space-y-8">
+          {/* Account Summary */}
+          {user && (
+            <Card className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <User className="w-5 h-5 text-electric-blue" />
+                <h2 className="heading-section">Account Overview</h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
+                    <User className="w-5 h-5 text-electric-blue" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-tertiary">Name</p>
+                    <p className="font-medium text-text-primary">{user.full_name || 'Not set'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-electric-blue" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-tertiary">Member since</p>
+                    <p className="font-medium text-text-primary">
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
+                    <Target className="w-5 h-5 text-electric-blue" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-tertiary">Total interviews</p>
+                    <p className="font-medium text-text-primary">{user.total_interviews || 0}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-electric-blue">
+                      {user.subscription_tier === 'pro' ? '★' : user.subscription_tier === 'team' ? '★★' : '○'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-tertiary">Plan</p>
+                    <p className="font-medium text-text-primary capitalize">{user.subscription_tier || 'Free'}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Profile Section */}
-          <div className="card p-6">
+          <Card className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <User className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Profile</h2>
@@ -326,10 +383,10 @@ export default function SettingsPage() {
                 )}
               </button>
             </form>
-          </div>
+          </Card>
 
           {/* Theme Section */}
-          <div className="card p-6">
+          <Card className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <Palette className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Appearance</h2>
@@ -338,10 +395,12 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div>
                 <label className="label mb-3 block">Theme</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Theme selection">
                   <button
+                    type="button"
                     onClick={() => setTheme('light')}
-                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'light'
+                    aria-pressed={theme === 'light'}
+                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'light'
                       ? 'border-electric-blue bg-electric-blue/10'
                       : 'border-border-light hover:border-electric-blue/50'
                       }`}
@@ -356,8 +415,10 @@ export default function SettingsPage() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setTheme('dark')}
-                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'dark'
+                    aria-pressed={theme === 'dark'}
+                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'dark'
                       ? 'border-electric-blue bg-electric-blue/10'
                       : 'border-border-light hover:border-electric-blue/50'
                       }`}
@@ -372,8 +433,10 @@ export default function SettingsPage() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setTheme('system')}
-                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'system'
+                    aria-pressed={theme === 'system'}
+                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'system'
                       ? 'border-electric-blue bg-electric-blue/10'
                       : 'border-border-light hover:border-electric-blue/50'
                       }`}
@@ -389,10 +452,10 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Voice & Conversation */}
-          <div className="card p-6">
+          <Card className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <Volume2 className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Voice & Conversation</h2>
@@ -414,10 +477,10 @@ export default function SettingsPage() {
             <div className="mt-4 text-xs text-text-tertiary">
               Current: {voiceSummary}
             </div>
-          </div>
+          </Card>
 
           {/* Password Section */}
-          <div className="card p-6">
+          <Card className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <Lock className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Change Password</h2>
@@ -475,7 +538,7 @@ export default function SettingsPage() {
                 )}
               </button>
             </form>
-          </div>
+          </Card>
 
           {/* Subscription Section */}
           {subscription && (
@@ -486,7 +549,7 @@ export default function SettingsPage() {
           )}
 
           {/* Danger Zone */}
-          <div className="card p-6 border-status-error/20">
+          <Card className="p-6 border-status-error/20">
             <div className="flex items-center gap-3 mb-6">
               <AlertTriangle className="w-5 h-5 text-status-error" />
               <h2 className="heading-section text-status-error">Danger Zone</h2>
@@ -560,7 +623,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Upgrade Modal */}

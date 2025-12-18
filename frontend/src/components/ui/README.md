@@ -165,6 +165,75 @@ function InterviewModal() {
 </Modal>
 ```
 
+### Card
+
+A flexible container component with Shadcn-style slots for consistent layouts.
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `variant` | `'default' \| 'glass' \| 'interactive' \| 'elevated' \| 'outline'` | `'default'` | Visual style variant |
+| `className` | `string` | - | Additional CSS classes |
+
+#### Slot Components
+
+- **Card**: Base container with rounded corners and transitions
+- **CardHeader**: Header section with vertical spacing (p-6)
+- **CardTitle**: h3 heading with proper typography
+- **CardDescription**: Muted text description
+- **CardContent**: Main content area (p-6 pt-0)
+- **CardFooter**: Footer with flex alignment (p-6 pt-0)
+
+#### Variants
+
+| Variant | Description |
+|---------|-------------|
+| `default` | White/dark background with border and shadow |
+| `glass` | Glassmorphism effect with backdrop blur |
+| `interactive` | Hover effects for clickable cards |
+| `elevated` | Stronger shadow for emphasis |
+| `outline` | Transparent with border only |
+
+#### Examples
+
+```tsx
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui';
+import { Button } from '@/components/ui';
+
+// Simple card
+<Card className="p-6">
+  <h3>Simple Card</h3>
+  <p>Basic content without slots</p>
+</Card>
+
+// Full slot composition
+<Card>
+  <CardHeader>
+    <CardTitle>Interview Practice</CardTitle>
+    <CardDescription>Complete your daily practice</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p>Your content here...</p>
+  </CardContent>
+  <CardFooter>
+    <Button>Start Practice</Button>
+  </CardFooter>
+</Card>
+
+// Interactive card
+<Card variant="interactive" className="cursor-pointer">
+  <CardContent>
+    <p>Click me for more details</p>
+  </CardContent>
+</Card>
+
+// Glass effect (for overlays)
+<Card variant="glass" className="p-6">
+  <p>Translucent glassmorphism card</p>
+</Card>
+```
+
 ### Toast
 
 Toast notification system for displaying temporary messages (already exists, included for completeness).

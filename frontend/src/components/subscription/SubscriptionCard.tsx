@@ -1,4 +1,5 @@
 import { Crown, Check, X } from 'lucide-react';
+import { Card } from '../ui/Card';
 import type { SubscriptionStatus } from '../../types';
 
 interface SubscriptionCardProps {
@@ -28,7 +29,7 @@ export default function SubscriptionCard({ subscription, onUpgrade }: Subscripti
     interviews_limit !== null ? (interviews_this_month / interviews_limit) * 100 : 0;
 
   return (
-    <div className="card p-6">
+    <Card className="p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -102,7 +103,7 @@ export default function SubscriptionCard({ subscription, onUpgrade }: Subscripti
           <span className="body-small text-text-secondary">Priority support</span>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
