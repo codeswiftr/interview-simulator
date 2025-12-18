@@ -172,89 +172,45 @@ export default function Header() {
               )}
             </nav>
 
-            {/* Mobile Menu Button */}
-            <div className="flex items-center gap-3 md:hidden">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
-                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={isMobileMenuOpen}
-              >
-                {isMobileMenuOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Menu className="w-6 h-6" />
-                )}
-              </button>
-            </div>
+            {/* Mobile Menu Button - Only show when not authenticated (no BottomNav) */}
+            {!isAuthenticated && (
+              <div className="flex items-center gap-3 md:hidden">
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors"
+                  aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                  aria-expanded={isMobileMenuOpen}
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Menu className="w-6 h-6" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Mobile Menu */}
-          {isMobileMenuOpen && (
+          {/* Mobile Menu - Only show when not authenticated (authenticated users use BottomNav) */}
+          {isMobileMenuOpen && !isAuthenticated && (
             <nav className="md:hidden mt-4 pb-4 border-t border-border-light pt-4 animate-slide-up">
-              {isAuthenticated ? (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-surface-secondary mb-2">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-electric-blue to-indigo-500 flex items-center justify-center text-white font-bold">
-                      {user?.full_name?.charAt(0) || 'U'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">{user?.full_name}</p>
-                      <p className="text-xs text-text-secondary">{user?.email}</p>
-                    </div>
-                  </div>
-
-                  <Link
-                    to="/dashboard"
-                    className="px-3 py-3 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    to="/questions"
-                    className="px-3 py-3 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium"
-                  >
-                    Questions
-                  </Link>
-                  <Link
-                    to="/settings"
-                    className="px-3 py-3 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium"
-                  >
-                    Settings
-                  </Link>
-
-                  <div className="px-3 py-3">
-                    <p className="text-xs font-medium text-text-tertiary mb-2 uppercase">Theme</p>
-                    <ThemeSlider />
-                  </div>
-
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-3 py-3 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-2"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span className="text-sm font-medium">Logout</span>
-                  </button>
+              <div className="flex flex-col gap-4">
+                <div className="px-3">
+                  <ThemeSlider />
                 </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="px-3">
-                    <ThemeSlider />
-                  </div>
-                  <Link
-                    to="/login"
-                    className="px-3 py-3 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium text-center border border-border-light"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="btn-primary text-center"
-                  >
-                    Get Started
-                  </Link>
-                </div>
-              )}
+                <Link
+                  to="/login"
+                  className="px-3 py-3 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium text-center border border-border-light"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="btn-primary text-center"
+                >
+                  Get Started
+                </Link>
+              </div>
             </nav>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
+import { BottomNav } from './components/layout/BottomNav';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './hooks/useToast';
@@ -22,6 +23,7 @@ const InterviewPage = lazy(() => import('./pages/InterviewPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PreparationPage = lazy(() => import('./pages/PreparationPage'));
+const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 
 // Loading fallback component
 const PageLoadingFallback = () => (
@@ -43,7 +45,7 @@ function App() {
         <ToastProvider>
           <div className="min-h-screen bg-surface-primary">
             <Header />
-            <main id="main-content">
+            <main id="main-content" className="pb-16 md:pb-0">
               <Suspense fallback={<PageLoadingFallback />}>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
@@ -64,6 +66,23 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <QuestionsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* /practice route - same as /questions, for mobile nav consistency */}
+                  <Route
+                    path="/practice"
+                    element={
+                      <ProtectedRoute>
+                        <QuestionsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/progress"
+                    element={
+                      <ProtectedRoute>
+                        <ProgressPage />
                       </ProtectedRoute>
                     }
                   />
@@ -102,6 +121,7 @@ function App() {
                 </Routes>
               </Suspense>
             </main>
+            <BottomNav />
           </div>
         </ToastProvider>
       </ThemeProvider>
