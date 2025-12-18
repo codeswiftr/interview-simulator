@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, TrendingUp, CheckCircle, XCircle, Mic, BarChart2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboardModals } from '../hooks/useDashboardModals';
 import { interviewsAPI, userAPI, preparationAPI } from '../lib/api';
@@ -252,13 +252,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-surface-primary pb-12">
-      {/* Background decoration */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-electric-blue/5 blur-[100px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-500/5 blur-[100px]" />
-      </div>
-
-      <div className="container mx-auto px-6 py-8 max-w-7xl relative z-10">
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -278,7 +272,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Overview */}
-        <div className="mb-8 animate-fade-in">
+        <div className="mb-8">
           <StatsOverview
             totalSessions={stats.totalInterviews}
             completedSessions={stats.completedInterviews}
@@ -290,7 +284,7 @@ export default function DashboardPage() {
 
         {/* Activity Heatmap */}
         {sessions.length > 0 && (
-          <Card variant="glass" className="p-6 mb-8 animate-slide-up">
+          <Card className="p-6 mb-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-emerald-500/10">
                 <Activity className="w-5 h-5 text-emerald-500" />
@@ -303,9 +297,9 @@ export default function DashboardPage() {
 
         {/* Skills & Progress Grid */}
         {sessions.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-slide-up">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Skills Radar */}
-            <Card variant="glass" className="p-6 lg:col-span-1 relative">
+            <Card className="p-6 lg:col-span-1 relative">
               <ComingSoonBadge text="Preview" />
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-indigo-500/10">
@@ -317,7 +311,7 @@ export default function DashboardPage() {
             </Card>
 
             {/* Progress Chart */}
-            <Card variant="glass" className="p-6 lg:col-span-2">
+            <Card className="p-6 lg:col-span-2">
               <h3 className="heading-card mb-6">Performance Trend</h3>
               <ProgressChart
                 data={userProgress?.score_trend || []}
@@ -329,7 +323,7 @@ export default function DashboardPage() {
 
         {/* Improvements by Criteria (New Section) */}
         {sessions.length > 0 && (
-          <Card variant="glass" className="p-6 mb-8 animate-slide-up relative">
+          <Card className="p-6 mb-8 relative">
             <ComingSoonBadge text="Preview" />
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-amber-500/10">
@@ -398,7 +392,7 @@ export default function DashboardPage() {
 
         {/* Category Breakdown */}
         {sessions.length > 0 && (
-          <Card variant="glass" className="p-6 mb-8 animate-slide-up">
+          <Card className="p-6 mb-8">
             <h3 className="heading-card mb-6">Category Breakdown</h3>
             <CategoryBreakdown data={categoryBreakdown} />
           </Card>
@@ -406,7 +400,7 @@ export default function DashboardPage() {
 
         {/* Progress Section - Practice Recommendations */}
         {userProgress && userProgress.recommended_practice_areas.length > 0 && (
-          <Card variant="glass" className="p-6 mb-8 border-l-4 border-l-electric-blue animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <Card className="p-6 mb-8 border-l-4 border-l-electric-blue">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg bg-electric-blue/10">
                 <Lightbulb className="w-5 h-5 text-electric-blue" />
@@ -428,48 +422,64 @@ export default function DashboardPage() {
 
         {/* Onboarding Panel - Show for new users */}
         {!isLoading && sessions.length === 0 && (
-          <Card variant="glass" className="p-8 mb-8 border-2 border-electric-blue/20 bg-gradient-to-br from-white to-electric-blue/5 dark:from-surface-dark dark:to-electric-blue/10 animate-scale-in">
-            <div className="flex items-center gap-3 mb-4">
-              <Sparkles className="w-6 h-6 text-electric-blue" />
-              <h2 className="heading-section">Get Started</h2>
-            </div>
-            <p className="body-default text-text-secondary mb-8 max-w-2xl">
-              Complete these steps to start improving your interview skills. Our AI coach will guide you through your first session.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <Card className="relative p-6">
-                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-electric-blue text-white flex items-center justify-center font-bold shadow-lg">1</div>
-                <h3 className="heading-card mb-2">Create Interview</h3>
-                <p className="body-small text-text-secondary">Choose your topic and difficulty level to customize your practice.</p>
-              </Card>
-
-              <Card className="relative p-6">
-                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">2</div>
-                <h3 className="heading-card mb-2">Record Answers</h3>
-                <p className="body-small text-text-secondary">Speak naturally. We'll record and transcribe your responses.</p>
-              </Card>
-
-              <Card className="relative p-6">
-                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">3</div>
-                <h3 className="heading-card mb-2">Get Feedback</h3>
-                <p className="body-small text-text-secondary">Receive instant AI analysis on your content and delivery.</p>
-              </Card>
+          <Card className="p-8 mb-8">
+            <div className="text-center mb-8">
+              <div className="w-14 h-14 rounded-full bg-electric-blue/10 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-7 h-7 text-electric-blue" />
+              </div>
+              <h2 className="heading-section mb-2">Welcome to Interview Simulator</h2>
+              <p className="body-default text-text-secondary max-w-lg mx-auto">
+                Practice your interview skills with AI-powered feedback. Get started in 3 simple steps.
+              </p>
             </div>
 
-            <button
-              onClick={openNewInterview}
-              className="btn-primary inline-flex items-center justify-center gap-2 px-8 py-3 text-lg"
-            >
-              <Plus size={24} />
-              Create Your First Interview
-            </button>
+            <div className="grid md:grid-cols-3 gap-4 mb-8">
+              <div className="flex items-start gap-4 p-4 rounded-lg bg-surface-secondary/50">
+                <div className="w-10 h-10 rounded-lg bg-electric-blue/10 flex items-center justify-center shrink-0">
+                  <Target className="w-5 h-5 text-electric-blue" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-text-primary mb-1">Choose Topic</h3>
+                  <p className="text-sm text-text-secondary">Select behavioral, technical, or system design</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 rounded-lg bg-surface-secondary/50">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Mic className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-text-primary mb-1">Record Answer</h3>
+                  <p className="text-sm text-text-secondary">Speak naturally, we transcribe for you</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 rounded-lg bg-surface-secondary/50">
+                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+                  <BarChart2 className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-text-primary mb-1">Get Feedback</h3>
+                  <p className="text-sm text-text-secondary">AI analysis of content and delivery</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={openNewInterview}
+                className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3"
+              >
+                <Plus size={20} />
+                Start Your First Interview
+              </button>
+            </div>
           </Card>
         )}
 
         {/* Preparation Sessions (Pro/Team only) */}
         {!isLoading && preparations.length > 0 && (
-          <div className="animate-slide-up mb-8" style={{ animationDelay: '0.15s' }}>
+          <div className="mb-8">
             <div className="flex items-center gap-2 mb-6">
               <h2 className="heading-section">Answer Preparations</h2>
               <ContextualTooltip
@@ -516,7 +526,7 @@ export default function DashboardPage() {
 
         {/* Interview History */}
         {!isLoading && sessions.length > 0 && (
-          <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div>
             <div className="flex items-center gap-2 mb-6">
               <h2 className="heading-section">Recent Interviews</h2>
               <ContextualTooltip

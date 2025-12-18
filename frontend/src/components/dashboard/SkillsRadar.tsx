@@ -5,8 +5,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   ResponsiveContainer,
-  Tooltip,
-  Legend
+  Tooltip
 } from 'recharts';
 
 interface SkillData {
@@ -31,47 +30,35 @@ const defaultData: SkillData[] = [
 
 export default function SkillsRadar({ data = defaultData }: SkillsRadarProps) {
   return (
-    <div className="w-full h-[300px]">
+    <div className="w-full h-[240px]">
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-          <PolarGrid stroke="var(--color-border-light)" />
-          <PolarAngleAxis 
-            dataKey="subject" 
-            tick={{ fill: 'var(--color-text-secondary)', fontSize: 11, fontWeight: 500 }}
+        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+          <PolarGrid stroke="var(--color-border-light)" strokeOpacity={0.5} />
+          <PolarAngleAxis
+            dataKey="subject"
+            tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }}
           />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-          
-          {/* Target / Goal Area (Background) */}
-          <Radar
-            name="Target Goal"
-            dataKey="target"
-            stroke="var(--color-text-tertiary)"
-            strokeDasharray="4 4"
-            strokeWidth={1}
-            fill="var(--color-surface-tertiary)"
-            fillOpacity={0.2}
-          />
 
-          {/* Current Skills (Foreground) */}
+          {/* Current Skills */}
           <Radar
-            name="Current Level"
+            name="Score"
             dataKey="current"
             stroke="var(--color-electric-blue)"
             strokeWidth={2}
             fill="var(--color-electric-blue)"
-            fillOpacity={0.4}
+            fillOpacity={0.3}
           />
 
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'var(--bg-primary)', 
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'var(--bg-primary)',
               borderColor: 'var(--border-color)',
-              borderRadius: '0.5rem',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              borderRadius: '0.375rem',
+              fontSize: '12px'
             }}
             itemStyle={{ color: 'var(--color-text-primary)' }}
           />
-          <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
         </RadarChart>
       </ResponsiveContainer>
     </div>

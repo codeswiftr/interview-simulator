@@ -99,17 +99,17 @@ export default function ActivityHeatmap({ data = [] }: ActivityHeatmapProps) {
 
   return (
     <div className="w-full overflow-x-auto pb-2">
-      <div className="min-w-[700px]">
-        <div className="flex gap-1">
+      <div className="min-w-[600px]">
+        <div className="flex gap-0.5">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="flex flex-col gap-1">
+            <div key={weekIndex} className="flex flex-col gap-0.5">
               {week.map((day, dayIndex) => {
-                if (!day) return <div key={`empty-${dayIndex}`} className="w-3 h-3" />;
-                
+                if (!day) return <div key={`empty-${dayIndex}`} className="w-2.5 h-2.5" />;
+
                 return (
                   <div
                     key={day.date}
-                    className={`w-3 h-3 rounded-sm ${getColor(day.count, day.trend)} transition-colors hover:ring-2 hover:ring-offset-1 hover:ring-electric-blue cursor-pointer`}
+                    className={`w-2.5 h-2.5 rounded-sm ${getColor(day.count, day.trend)} transition-colors hover:ring-1 hover:ring-electric-blue cursor-pointer`}
                     data-tooltip-id="activity-tooltip"
                     data-tooltip-content={`${day.date}: ${day.count} sessions${day.trend ? ` (${day.trend})` : ''}`}
                   />
@@ -118,24 +118,18 @@ export default function ActivityHeatmap({ data = [] }: ActivityHeatmapProps) {
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-end gap-4 mt-3 text-xs text-text-tertiary">
-          <div className="flex items-center gap-2">
-             <span>Improvement</span>
-             <div className="flex gap-1">
-               <div className="w-3 h-3 rounded-sm bg-emerald-400" />
-               <div className="w-3 h-3 rounded-sm bg-emerald-600" />
-             </div>
+        <div className="flex items-center justify-end gap-3 mt-2 text-xs text-text-tertiary">
+          <div className="flex items-center gap-1.5">
+             <span>Improving</span>
+             <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
           </div>
-          <div className="flex items-center gap-2">
-             <span>Regression</span>
-             <div className="flex gap-1">
-               <div className="w-3 h-3 rounded-sm bg-orange-400" />
-               <div className="w-3 h-3 rounded-sm bg-orange-600" />
-             </div>
+          <div className="flex items-center gap-1.5">
+             <span>Regressing</span>
+             <div className="w-2.5 h-2.5 rounded-sm bg-orange-500" />
           </div>
         </div>
       </div>
-      <Tooltip id="activity-tooltip" className="z-50 !bg-surface-dark !text-white !px-3 !py-2 !rounded-lg !text-xs !opacity-100" />
+      <Tooltip id="activity-tooltip" className="z-50 !bg-surface-dark !text-white !px-2 !py-1.5 !rounded-lg !text-xs !opacity-100" />
     </div>
   );
 }
