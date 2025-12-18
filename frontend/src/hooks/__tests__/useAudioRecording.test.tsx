@@ -122,15 +122,20 @@ describe('useAudioRecording', () => {
       (global.window as any).navigator = global.navigator;
     }
 
-    // Mock Audio constructor - always return the same mock instance
+    // Mock Audio constructor - must use a function (not arrow) for 'new' keyword
     originalAudio = global.Audio;
-    // Use a proper constructor function instead of vi.fn() to avoid warnings
-    function AudioConstructor(this: any) {
+    // Create a constructor function that can be tracked and called with 'new'
+    function AudioConstructor(this: any, _src?: string) {
+      // Copy all properties from mockAudio to 'this'
+      Object.assign(this, mockAudio);
+      // Also store reference so we can access the same mock
       return mockAudio;
     }
-    global.Audio = AudioConstructor as unknown as typeof Audio;
+    // Add spy functionality by wrapping in vi.fn
+    const AudioSpy = vi.fn(AudioConstructor);
+    global.Audio = AudioSpy as unknown as typeof Audio;
     if ((global as any).window) {
-      (global.window as any).Audio = AudioConstructor;
+      (global.window as any).Audio = AudioSpy;
     }
   });
 
@@ -324,7 +329,7 @@ describe('useAudioRecording', () => {
         expect(result.current.recordingState).toBe('preview');
       });
 
-      expect(mockMediaRecorder.stop).toHaveBeenCalled();
+      expect(mockMediaRecorderInstance.stop).toHaveBeenCalled();
       expect(result.current.audioBlob).toBeTruthy();
       expect(result.current.audioUrl).toBeTruthy();
       expect(result.current.isPreviewMode).toBe(true);
@@ -649,8 +654,8 @@ describe('useAudioRecording', () => {
         expect(result.current.isPreviewMode).toBe(true);
       });
 
-      // Mock play error
-      (mockAudio.play as any).mockRejectedValueOnce(new Error('Play failed'));
+      // Mock play error - the implementation uses error.message or fallback
+      (mockAudio.play as any).mockRejectedValueOnce(new Error('Failed to play audio'));
 
       await act(() => {
         result.current.playPreview();
@@ -857,7 +862,8 @@ describe('useAudioRecording', () => {
 
   describe('Timer functionality', () => {
     it('should increment duration during recording', async () => {
-      vi.useFakeTimers();
+      // Use fake timers with shouldAdvanceTime to allow async operations
+      vi.useFakeTimers({ shouldAdvanceTime: true });
       const { result } = renderHook(() => useAudioRecording());
 
       await act(async () => {
@@ -868,22 +874,22 @@ describe('useAudioRecording', () => {
         expect(result.current.recordingState).toBe('recording');
       });
 
-      // Advance time
-      act(() => {
+      // Advance time using runOnlyPendingTimersAsync for proper async handling
+      await act(async () => {
         vi.advanceTimersByTime(2100); // 2.1 seconds
+        await vi.runOnlyPendingTimersAsync();
       });
 
       // Duration should be approximately 2 seconds (floored)
-      await waitFor(() => {
-        expect(result.current.duration).toBeGreaterThanOrEqual(2);
-      });
+      expect(result.current.duration).toBeGreaterThanOrEqual(2);
       expect(result.current.duration).toBeLessThan(3);
 
       vi.useRealTimers();
     });
 
     it('should pause duration timer when paused', async () => {
-      vi.useFakeTimers();
+      // Use fake timers with shouldAdvanceTime to allow async operations
+      vi.useFakeTimers({ shouldAdvanceTime: true });
       const { result } = renderHook(() => useAudioRecording());
 
       await act(async () => {
@@ -895,18 +901,17 @@ describe('useAudioRecording', () => {
       });
 
       // Record for 1 second
-      act(() => {
+      await act(async () => {
         vi.advanceTimersByTime(1000);
+        await vi.runOnlyPendingTimersAsync();
       });
 
-      await waitFor(() => {
-        expect(result.current.duration).toBeGreaterThanOrEqual(1);
-      });
+      expect(result.current.duration).toBeGreaterThanOrEqual(1);
 
       const durationBeforePause = result.current.duration;
 
       // Pause
-      await act(() => {
+      await act(async () => {
         result.current.pauseRecording();
       });
 
@@ -915,14 +920,13 @@ describe('useAudioRecording', () => {
       });
 
       // Advance time while paused
-      act(() => {
+      await act(async () => {
         vi.advanceTimersByTime(2000);
+        await vi.runOnlyPendingTimersAsync();
       });
 
       // Duration should not increase while paused
-      await waitFor(() => {
-        expect(result.current.duration).toBe(durationBeforePause);
-      });
+      expect(result.current.duration).toBe(durationBeforePause);
 
       vi.useRealTimers();
     });
