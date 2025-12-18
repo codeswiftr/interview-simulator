@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Mic, BarChart2, TrendingUp, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { Card } from '../components/ui/Card';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
@@ -93,7 +94,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
+            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
               <div className="w-14 h-14 rounded-2xl bg-electric-blue/10 flex items-center justify-center mb-6">
                 <Mic className="w-7 h-7 text-electric-blue" />
               </div>
@@ -101,9 +102,9 @@ export default function HomePage() {
               <p className="body-small text-text-secondary leading-relaxed">
                 Practice your answers out loud. Our advanced audio capture simulates real interview conditions.
               </p>
-            </div>
+            </Card>
 
-            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
+            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
               <div className="w-14 h-14 rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center mb-6">
                 <BarChart2 className="w-7 h-7 text-[#FF6B9D]" />
               </div>
@@ -111,9 +112,9 @@ export default function HomePage() {
               <p className="body-small text-text-secondary leading-relaxed">
                 Get instant, detailed analysis of your content, delivery, and structure with actionable tips.
               </p>
-            </div>
+            </Card>
 
-            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300">
+            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300">
               <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
                 <TrendingUp className="w-7 h-7 text-amber-500" />
               </div>
@@ -121,9 +122,9 @@ export default function HomePage() {
               <p className="body-small text-text-secondary leading-relaxed">
                 Monitor your improvement over time with detailed analytics and performance metrics.
               </p>
-            </div>
+            </Card>
 
-            <div className="card-glass p-8 hover:translate-y-[-4px] transition-transform duration-300">
+            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300">
               <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6">
                 <MessageSquare className="w-7 h-7 text-indigo-500" />
               </div>
@@ -131,7 +132,7 @@ export default function HomePage() {
               <p className="body-small text-text-secondary leading-relaxed">
                 Access hundreds of real interview questions across multiple categories and difficulty levels.
               </p>
-            </div>
+            </Card>
           </div>
         </div>
       </section>

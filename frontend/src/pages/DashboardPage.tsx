@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, TrendingUp, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useOnboarding } from '../hooks/useOnboarding';
+import { useDashboardModals } from '../hooks/useDashboardModals';
 import { interviewsAPI, userAPI, preparationAPI } from '../lib/api';
 import StatsOverview from '../components/dashboard/StatsOverview';
 import ProgressChart from '../components/dashboard/ProgressChart';
@@ -17,8 +17,10 @@ import FirstSessionPrompt from '../components/onboarding/FirstSessionPrompt';
 import ContextualTooltip from '../components/common/ContextualTooltip';
 import ComingSoonBadge from '../components/ui/ComingSoonBadge';
 import { Skeleton, SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
+import { Card } from '../components/ui/Card';
 import type { InterviewSession, CreateInterviewFormData } from '../types';
 import type { AxiosError } from 'axios';
+import { useEffect } from 'react';
 
 interface UserStats {
   total_sessions: number;
@@ -44,12 +46,6 @@ interface ReadinessScore {
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const {
-    shouldShowWelcome,
-    markWelcomeSeen,
-    shouldShowFirstSessionPrompt,
-    markFirstSessionCreated,
-  } = useOnboarding();
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [preparations, setPreparations] = useState<Array<{
     id: string;
@@ -65,59 +61,26 @@ export default function DashboardPage() {
   const [readinessScore, setReadinessScore] = useState<ReadinessScore | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [showFirstSessionPrompt, setShowFirstSessionPrompt] = useState(false);
 
-  // If the user came from a pricing CTA (e.g. /register?plan=pro), open the upgrade modal on first login.
-  useEffect(() => {
-    const pendingPlan = sessionStorage.getItem('pending_plan');
-    if (!pendingPlan) return;
-
-    sessionStorage.removeItem('pending_plan');
-
-    if (pendingPlan === 'pro' && user?.subscription_tier === 'free') {
-      setShowUpgradeModal(true);
-    }
-  }, [user?.subscription_tier]);
-
-  // Show welcome modal for new users after data loads
-  useEffect(() => {
-    if (!isLoading && !showUpgradeModal && shouldShowWelcome && sessions.length === 0) {
-      setShowWelcomeModal(true);
-    }
-  }, [isLoading, shouldShowWelcome, sessions.length, showUpgradeModal]);
-
-  // Show first session prompt after welcome is seen
-  useEffect(() => {
-    if (!isLoading && !showUpgradeModal && shouldShowFirstSessionPrompt && sessions.length === 0) {
-      setShowFirstSessionPrompt(true);
-    }
-  }, [isLoading, shouldShowFirstSessionPrompt, sessions.length, showUpgradeModal]);
-
-  const handleWelcomeClose = () => {
-    markWelcomeSeen();
-    setShowWelcomeModal(false);
-  };
-
-  const handleWelcomeComplete = () => {
-    markWelcomeSeen();
-    setShowWelcomeModal(false);
-    // Show first session prompt after welcome
-    setShowFirstSessionPrompt(true);
-  };
-
-  const handleFirstSessionCreate = () => {
-    markFirstSessionCreated();
-    setShowFirstSessionPrompt(false);
-    setIsModalOpen(true);
-  };
-
-  const handleFirstSessionSkip = () => {
-    markFirstSessionCreated();
-    setShowFirstSessionPrompt(false);
-  };
+  // Centralized modal state management
+  const {
+    isNewInterviewOpen,
+    isUpgradeOpen,
+    isWelcomeOpen,
+    isFirstSessionPromptOpen,
+    openNewInterview,
+    closeNewInterview,
+    openUpgrade,
+    closeUpgrade,
+    closeWelcome,
+    completeWelcome,
+    createFirstSession,
+    skipFirstSession,
+  } = useDashboardModals({
+    sessionsCount: sessions.length,
+    isDataLoaded: !isLoading,
+    userSubscriptionTier: user?.subscription_tier,
+  });
 
   const loadInterviews = useCallback(async () => {
     try {
@@ -184,17 +147,13 @@ export default function DashboardPage() {
     try {
       const response = await interviewsAPI.create(data);
       const newSession = response.data;
-      // Mark first session as created if this is the first one
-      if (sessions.length === 0) {
-        markFirstSessionCreated();
-      }
       await loadInterviews();
-      setIsModalOpen(false);
+      closeNewInterview();
       navigate(`/interview/${newSession.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
       if (axiosError.response?.status === 402) {
-        setShowUpgradeModal(true);
+        openUpgrade();
         setError('Free tier limit reached. Upgrade to Pro for unlimited interviews.');
       } else {
         setError(axiosError.response?.data?.message || 'Failed to create interview');
@@ -309,7 +268,7 @@ export default function DashboardPage() {
 
           {!isLoading && sessions.length > 0 && (
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={openNewInterview}
               className="btn-primary flex items-center justify-center gap-2 shadow-lg hover:shadow-electric-blue/25"
             >
               <Plus size={20} />
@@ -331,7 +290,7 @@ export default function DashboardPage() {
 
         {/* Activity Heatmap */}
         {sessions.length > 0 && (
-          <div className="card-glass p-6 mb-8 animate-slide-up">
+          <Card variant="glass" className="p-6 mb-8 animate-slide-up">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-emerald-500/10">
                 <Activity className="w-5 h-5 text-emerald-500" />
@@ -339,14 +298,14 @@ export default function DashboardPage() {
               <h3 className="heading-card">Practice Activity</h3>
             </div>
             <ActivityHeatmap data={heatmapData} />
-          </div>
+          </Card>
         )}
 
         {/* Skills & Progress Grid */}
         {sessions.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-slide-up">
             {/* Skills Radar */}
-            <div className="card-glass p-6 lg:col-span-1 relative">
+            <Card variant="glass" className="p-6 lg:col-span-1 relative">
               <ComingSoonBadge text="Preview" />
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-indigo-500/10">
@@ -355,22 +314,22 @@ export default function DashboardPage() {
                 <h3 className="heading-card">Skills Gap Analysis</h3>
               </div>
               <SkillsRadar data={radarData} />
-            </div>
+            </Card>
 
             {/* Progress Chart */}
-            <div className="card-glass p-6 lg:col-span-2">
+            <Card variant="glass" className="p-6 lg:col-span-2">
               <h3 className="heading-card mb-6">Performance Trend</h3>
               <ProgressChart
                 data={userProgress?.score_trend || []}
                 height={260}
               />
-            </div>
+            </Card>
           </div>
         )}
 
         {/* Improvements by Criteria (New Section) */}
         {sessions.length > 0 && (
-          <div className="card-glass p-6 mb-8 animate-slide-up relative">
+          <Card variant="glass" className="p-6 mb-8 animate-slide-up relative">
             <ComingSoonBadge text="Preview" />
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-amber-500/10">
@@ -434,20 +393,20 @@ export default function DashboardPage() {
                 </ul>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Category Breakdown */}
         {sessions.length > 0 && (
-          <div className="card-glass p-6 mb-8 animate-slide-up">
+          <Card variant="glass" className="p-6 mb-8 animate-slide-up">
             <h3 className="heading-card mb-6">Category Breakdown</h3>
             <CategoryBreakdown data={categoryBreakdown} />
-          </div>
+          </Card>
         )}
 
         {/* Progress Section - Practice Recommendations */}
         {userProgress && userProgress.recommended_practice_areas.length > 0 && (
-          <div className="card-glass p-6 mb-8 border-l-4 border-l-electric-blue animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <Card variant="glass" className="p-6 mb-8 border-l-4 border-l-electric-blue animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg bg-electric-blue/10">
                 <Lightbulb className="w-5 h-5 text-electric-blue" />
@@ -464,12 +423,12 @@ export default function DashboardPage() {
                 </span>
               ))}
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Onboarding Panel - Show for new users */}
         {!isLoading && sessions.length === 0 && (
-          <div className="card-glass p-8 mb-8 border-2 border-electric-blue/20 bg-gradient-to-br from-white to-electric-blue/5 dark:from-surface-dark dark:to-electric-blue/10 animate-scale-in">
+          <Card variant="glass" className="p-8 mb-8 border-2 border-electric-blue/20 bg-gradient-to-br from-white to-electric-blue/5 dark:from-surface-dark dark:to-electric-blue/10 animate-scale-in">
             <div className="flex items-center gap-3 mb-4">
               <Sparkles className="w-6 h-6 text-electric-blue" />
               <h2 className="heading-section">Get Started</h2>
@@ -479,33 +438,33 @@ export default function DashboardPage() {
             </p>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
+              <Card className="relative p-6">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-electric-blue text-white flex items-center justify-center font-bold shadow-lg">1</div>
                 <h3 className="heading-card mb-2">Create Interview</h3>
                 <p className="body-small text-text-secondary">Choose your topic and difficulty level to customize your practice.</p>
-              </div>
+              </Card>
 
-              <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
+              <Card className="relative p-6">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">2</div>
                 <h3 className="heading-card mb-2">Record Answers</h3>
                 <p className="body-small text-text-secondary">Speak naturally. We'll record and transcribe your responses.</p>
-              </div>
+              </Card>
 
-              <div className="relative p-6 rounded-xl bg-white dark:bg-surface-secondary border border-border-light dark:border-border-medium shadow-sm">
+              <Card className="relative p-6">
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-surface-tertiary text-text-secondary flex items-center justify-center font-bold border border-border-medium">3</div>
                 <h3 className="heading-card mb-2">Get Feedback</h3>
                 <p className="body-small text-text-secondary">Receive instant AI analysis on your content and delivery.</p>
-              </div>
+              </Card>
             </div>
 
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={openNewInterview}
               className="btn-primary inline-flex items-center justify-center gap-2 px-8 py-3 text-lg"
             >
               <Plus size={24} />
               Create Your First Interview
             </button>
-          </div>
+          </Card>
         )}
 
         {/* Preparation Sessions (Pro/Team only) */}
@@ -612,35 +571,35 @@ export default function DashboardPage() {
 
       {/* New Interview Modal */}
       <NewInterviewModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isNewInterviewOpen}
+        onClose={closeNewInterview}
         onSubmit={handleCreateInterview}
       />
 
       {/* Upgrade Modal */}
       <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
+        isOpen={isUpgradeOpen}
+        onClose={closeUpgrade}
         currentTier="free"
         onSuccess={() => {
-          setShowUpgradeModal(false);
+          closeUpgrade();
           setError(null);
         }}
       />
 
       {/* Welcome Modal for New Users */}
       <WelcomeModal
-        isOpen={showWelcomeModal}
-        onClose={handleWelcomeClose}
-        onStartInterview={handleWelcomeComplete}
+        isOpen={isWelcomeOpen}
+        onClose={closeWelcome}
+        onStartInterview={completeWelcome}
         userName={user?.full_name?.split(' ')[0]}
       />
 
       {/* First Session Prompt */}
       <FirstSessionPrompt
-        isOpen={showFirstSessionPrompt}
-        onCreateSession={handleFirstSessionCreate}
-        onSkip={handleFirstSessionSkip}
+        isOpen={isFirstSessionPromptOpen}
+        onCreateSession={createFirstSession}
+        onSkip={skipFirstSession}
       />
     </div>
   );

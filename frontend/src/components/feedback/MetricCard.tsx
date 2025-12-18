@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { Card } from '../ui/Card';
 
 interface MetricCardProps {
   title: string;
@@ -45,7 +46,7 @@ export default function MetricCard({
   const scoreBgColor = getScoreBgColor(score);
 
   return (
-    <div className="card p-6 hover:shadow-lg transition-all dark:bg-surface-secondary/40 dark:border-white/5 hover:scale-[1.02] duration-300">
+    <Card className="p-6 hover:shadow-lg transition-all dark:bg-surface-secondary/40 dark:border-white/5 hover:scale-[1.02] duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className={`p-3 rounded-lg ${scoreBgColor}`}>
           <Icon className={`w-6 h-6 ${scoreColor}`} />
@@ -63,6 +64,6 @@ export default function MetricCard({
       </div>
 
       <p className="body-small text-text-secondary">{description}</p>
-    </div>
+    </Card>
   );
 }

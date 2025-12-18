@@ -1,5 +1,6 @@
 import { Clock, Target, Award, Gauge } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Card } from '../ui/Card';
 
 interface ReadinessScore {
   readiness_score: number | null;
@@ -120,7 +121,7 @@ export default function StatsOverview({
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div key={stat.label} className="card p-4">
+          <Card key={stat.label} className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div className={cn('p-2 rounded-lg', stat.color)}>
                 <Icon size={20} />
@@ -133,7 +134,7 @@ export default function StatsOverview({
             {stat.subtitle && (
               <div className="text-xs text-text-tertiary mt-1">{stat.subtitle}</div>
             )}
-          </div>
+          </Card>
         );
       })}
     </div>

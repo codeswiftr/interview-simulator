@@ -24,6 +24,7 @@ import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
 import ProcessingStatus from '../components/feedback/ProcessingStatus';
 import { Skeleton, SkeletonScoreRing, SkeletonText } from '../components/ui/Skeleton';
+import { Card } from '../components/ui/Card';
 import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { analytics, Events } from '../lib/analytics';
@@ -70,6 +71,7 @@ export default function FeedbackPage() {
     contentFeedbacks: [],
   });
   const [comparison, setComparison] = useState<ComparisonData | null>(null);
+  const [processingComplete, setProcessingComplete] = useState(false);
 
   const loadFeedback = useCallback(async () => {
     if (!id) return;
@@ -122,6 +124,10 @@ export default function FeedbackPage() {
         responses,
         contentFeedbacks,
       });
+
+      // Check if all responses have been transcribed (for page refresh case)
+      const allTranscribed = responses.length > 0 && responses.every((r: InterviewResponse) => r.transcript);
+      setProcessingComplete(allTranscribed);
     } catch (err) {
       setError('Failed to load interview data');
       console.error('Error loading feedback:', err);
@@ -310,6 +316,7 @@ export default function FeedbackPage() {
             <ProcessingStatus
               sessionId={id}
               onComplete={() => {
+                setProcessingComplete(true);
                 loadFeedback();
               }}
             />
@@ -317,7 +324,7 @@ export default function FeedbackPage() {
 
           {/* No Responses State */}
           {!hasFeedback && responses.length === 0 && (
-            <div className="card-glass p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
+            <Card variant="glass" className="p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
               <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-amber-500/5">
                 <MessageSquare className="w-10 h-10 text-amber-500" />
               </div>
@@ -333,12 +340,12 @@ export default function FeedbackPage() {
                 <ArrowLeft className="w-5 h-5" />
                 Back to Dashboard
               </Link>
-            </div>
+            </Card>
           )}
 
-          {/* Generate Feedback Call-to-Action */}
-          {!hasFeedback && responses.length > 0 && (
-            <div className="card-glass p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
+          {/* Generate Feedback Call-to-Action - only show when transcription is complete */}
+          {!hasFeedback && responses.length > 0 && processingComplete && (
+            <Card variant="glass" className="p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
               <div className="w-20 h-20 rounded-full bg-electric-blue/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-electric-blue/5">
                 <Sparkles className="w-10 h-10 text-electric-blue" />
               </div>
@@ -364,14 +371,14 @@ export default function FeedbackPage() {
                   </>
                 )}
               </button>
-            </div>
+            </Card>
           )}
 
           {/* Feedback Content */}
           {hasFeedback && (
             <div className="animate-slide-up space-y-8">
               {/* Overall Score Hero */}
-              <div className="card-glass p-8 sm:p-12 text-center relative overflow-hidden dark:bg-surface-secondary/40 dark:border-white/10">
+              <Card variant="glass" className="p-8 sm:p-12 text-center relative overflow-hidden dark:bg-surface-secondary/40 dark:border-white/10">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-electric-blue to-indigo-500"></div>
 
                 <h2 className="heading-section mb-2 text-[var(--fg-primary)]">Overall Performance</h2>
@@ -412,7 +419,7 @@ export default function FeedbackPage() {
                     </span>
                   </div>
                 )}
-              </div>
+              </Card>
 
               {/* Score Breakdown */}
               <div>
@@ -481,7 +488,7 @@ export default function FeedbackPage() {
 
               {/* Recommended Practice Areas */}
               {sessionFeedback.recommended_practice_areas.length > 0 && (
-                <div className="card-glass p-6 dark:bg-surface-secondary/40 dark:border-white/10">
+                <Card variant="glass" className="p-6 dark:bg-surface-secondary/40 dark:border-white/10">
                   <h3 className="heading-card mb-4 flex items-center gap-2 text-[var(--fg-primary)]">
                     <Sparkles className="w-5 h-5 text-electric-blue" />
                     Recommended Practice Areas
@@ -493,7 +500,7 @@ export default function FeedbackPage() {
                       </span>
                     ))}
                   </div>
-                </div>
+                </Card>
               )}
 
               {/* Questions & Responses */}
@@ -522,7 +529,7 @@ export default function FeedbackPage() {
               )}
 
               {/* Action Section */}
-              <div className="card-glass p-8 text-center bg-gradient-to-br from-white to-surface-secondary dark:from-surface-secondary dark:to-surface-tertiary dark:border-white/10">
+              <Card variant="glass" className="p-8 text-center bg-gradient-to-br from-white to-surface-secondary dark:from-surface-secondary dark:to-surface-tertiary dark:border-white/10">
                 <h2 className="heading-section mb-4 text-[var(--fg-primary)]">What's Next?</h2>
                 <p className="body-default text-text-secondary dark:text-text-tertiary mb-8">
                   Continue improving your skills with more practice sessions
@@ -551,7 +558,7 @@ export default function FeedbackPage() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           )}
         </div>

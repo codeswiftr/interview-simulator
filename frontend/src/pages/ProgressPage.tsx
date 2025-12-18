@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart2, Clock, Target, TrendingUp, Calendar, ChevronRight, AlertCircle } from 'lucide-react';
 import { userAPI, interviewsAPI } from '../lib/api';
 import { Skeleton } from '../components/ui/Skeleton';
+import { Card } from '../components/ui/Card';
 import { formatRelativeTime, formatDuration, getScoreColor } from '../lib/utils';
 import type { InterviewSession } from '../types';
 import type { AxiosError } from 'axios';
@@ -70,14 +71,14 @@ export default function ProgressPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="card-glass p-6 text-center">
+        <Card variant="glass" className="p-6 text-center">
           <AlertCircle className="w-12 h-12 text-status-error mx-auto mb-4" />
           <h2 className="heading-card text-text-primary mb-2">Failed to Load Progress</h2>
           <p className="text-text-secondary mb-4">{error}</p>
           <button onClick={loadData} className="btn-primary">
             Try Again
           </button>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -104,7 +105,7 @@ export default function ProgressPage() {
         ) : (
           <>
             {/* Average Score */}
-            <div className="card-glass p-5">
+            <Card variant="glass" className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-electric-blue/10">
                   <Target className="w-4 h-4 text-electric-blue" />
@@ -117,10 +118,10 @@ export default function ProgressPage() {
               <p className="text-xs text-text-tertiary mt-1">
                 {stats?.average_score != null ? 'out of 100' : 'Complete sessions to see'}
               </p>
-            </div>
+            </Card>
 
             {/* Total Sessions */}
-            <div className="card-glass p-5">
+            <Card variant="glass" className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-status-success/10">
                   <BarChart2 className="w-4 h-4 text-status-success" />
@@ -133,10 +134,10 @@ export default function ProgressPage() {
               <p className="text-xs text-text-tertiary mt-1">
                 completed
               </p>
-            </div>
+            </Card>
 
             {/* Practice Time */}
-            <div className="card-glass p-5">
+            <Card variant="glass" className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-status-warning/10">
                   <Clock className="w-4 h-4 text-status-warning" />
@@ -149,10 +150,10 @@ export default function ProgressPage() {
               <p className="text-xs text-text-tertiary mt-1">
                 total
               </p>
-            </div>
+            </Card>
 
             {/* Score Trend */}
-            <div className="card-glass p-5">
+            <Card variant="glass" className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 rounded-lg bg-state-scheduled/10">
                   <TrendingUp className="w-4 h-4 text-state-scheduled" />
@@ -185,7 +186,7 @@ export default function ProgressPage() {
                   <p className="text-xs text-text-tertiary mt-1">need 2+ sessions</p>
                 </>
               )}
-            </div>
+            </Card>
           </>
         )}
       </section>
@@ -196,7 +197,7 @@ export default function ProgressPage() {
           <h2 className="text-sm font-medium text-text-tertiary uppercase tracking-wide mb-3">
             Recommended Focus Areas
           </h2>
-          <div className="card-glass p-4">
+          <Card variant="glass" className="p-4">
             <div className="flex flex-wrap gap-2">
               {progress.recommended_practice_areas.map((area, index) => (
                 <span
@@ -207,7 +208,7 @@ export default function ProgressPage() {
                 </span>
               ))}
             </div>
-          </div>
+          </Card>
         </section>
       )}
 
@@ -223,7 +224,7 @@ export default function ProgressPage() {
             <Skeleton className="h-20 rounded-xl" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="card-glass p-8 text-center">
+          <Card variant="glass" className="p-8 text-center">
             <Calendar className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
             <h3 className="heading-card text-text-primary mb-2">No Sessions Yet</h3>
             <p className="text-text-secondary mb-4">
@@ -235,37 +236,40 @@ export default function ProgressPage() {
             >
               Start Practicing
             </button>
-          </div>
+          </Card>
         ) : (
           <div className="space-y-3">
             {sessions.map((session) => (
-              <button
+              <Card
                 key={session.id}
+                variant="interactive"
+                className="p-4 cursor-pointer"
                 onClick={() => navigate(`/interview/${session.id}/feedback`)}
-                className="w-full card-interactive p-4 flex items-center justify-between text-left"
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
-                    session.overall_score != null && session.overall_score >= 70
-                      ? 'bg-status-success/10 text-status-success'
-                      : session.overall_score != null
-                      ? 'bg-status-warning/10 text-status-warning'
-                      : 'bg-surface-tertiary text-text-tertiary'
-                  }`}>
-                    {session.overall_score != null ? Math.round(session.overall_score) : '—'}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                      session.overall_score != null && session.overall_score >= 70
+                        ? 'bg-status-success/10 text-status-success'
+                        : session.overall_score != null
+                        ? 'bg-status-warning/10 text-status-warning'
+                        : 'bg-surface-tertiary text-text-tertiary'
+                    }`}>
+                      {session.overall_score != null ? Math.round(session.overall_score) : '—'}
+                    </div>
+                    <div>
+                      <p className="font-medium text-text-primary capitalize">
+                        {session.interview_type.replace('_', ' ')} Interview
+                      </p>
+                      <p className="text-sm text-text-tertiary">
+                        {formatRelativeTime(session.created_at)} • {session.question_count} question{session.question_count !== 1 ? 's' : ''}
+                        {session.duration_seconds && ` • ${formatDuration(session.duration_seconds)}`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-text-primary capitalize">
-                      {session.interview_type.replace('_', ' ')} Interview
-                    </p>
-                    <p className="text-sm text-text-tertiary">
-                      {formatRelativeTime(session.created_at)} • {session.question_count} question{session.question_count !== 1 ? 's' : ''}
-                      {session.duration_seconds && ` • ${formatDuration(session.duration_seconds)}`}
-                    </p>
-                  </div>
+                  <ChevronRight className="w-5 h-5 text-text-tertiary" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-text-tertiary" />
-              </button>
+              </Card>
             ))}
           </div>
         )}
