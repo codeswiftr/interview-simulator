@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./design-tokens.css";
 
 @theme {
   /* Brand Identity Colors */
@@ -79,27 +80,18 @@
 }
 
 @layer base {
-  /* Light mode - default */
+  /* Light mode - default (using HSL from design-tokens.css) */
   :root {
-    --bg-primary: #F8FAFC;
-    --bg-secondary: #F1F5F9;
-    --bg-tertiary: #E2E8F0;
-    --fg-primary: #111827;
-    --fg-secondary: #475569;
-    --fg-tertiary: #94A3B8;
-    --border-color: #E2E8F0;
+    --bg-primary: hsl(var(--background));
+    --bg-secondary: hsl(var(--muted));
+    --bg-tertiary: hsl(var(--muted) / 0.8);
+    --fg-primary: hsl(var(--foreground));
+    --fg-secondary: hsl(var(--muted-foreground));
+    --fg-tertiary: hsl(var(--muted-foreground) / 0.7);
+    --border-color: hsl(var(--border));
   }
 
-  /* Dark mode */
-  .dark {
-    --bg-primary: #0F172A;
-    --bg-secondary: #1E293B;
-    --bg-tertiary: #334155;
-    --fg-primary: #F8FAFC;
-    --fg-secondary: #CBD5E1;
-    --fg-tertiary: #94A3B8;
-    --border-color: #334155;
-  }
+  /* Dark mode overrides applied via design-tokens.css .dark class */
 
   * {
     border-color: var(--border-color);
@@ -310,59 +302,52 @@
     letter-spacing: -0.03em;
   }
 
-  /* Button Styles */
+  /* Button Styles - Using HSL tokens */
   .btn-primary {
     padding: 0.75rem 1.5rem;
     border-radius: 0.75rem;
     font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, var(--color-electric-blue) 0%, #0284C7 100%);
-    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+    color: hsl(var(--primary-foreground));
+    background: hsl(var(--primary));
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.25);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-  }
-
-  .btn-primary::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-    opacity: 0;
-    transition: opacity 0.3s;
+    border: none;
+    cursor: pointer;
   }
 
   .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
-  }
-
-  .btn-primary:hover::after {
-    opacity: 1;
+    box-shadow: 0 8px 20px hsl(var(--primary) / 0.35);
+    opacity: 0.9;
   }
 
   .btn-primary:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2);
+    box-shadow: 0 2px 8px hsl(var(--primary) / 0.2);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 
   .btn-secondary {
     padding: 0.75rem 1.5rem;
     border-radius: 0.75rem;
     font-weight: 600;
-    background-color: white;
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-light);
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     transition: all 0.2s;
+    cursor: pointer;
   }
 
   .btn-secondary:hover {
-    background-color: var(--color-surface-primary);
-    border-color: var(--color-border-medium);
+    background-color: hsl(var(--muted));
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   }
@@ -375,31 +360,29 @@
     padding: 0.75rem 1.5rem;
     border-radius: 0.75rem;
     font-weight: 600;
-    color: var(--color-text-secondary);
+    color: hsl(var(--muted-foreground));
+    background: transparent;
+    border: none;
     transition: all 0.2s;
+    cursor: pointer;
   }
 
   .btn-ghost:hover {
-    background-color: rgba(56, 189, 248, 0.08);
-    color: var(--color-electric-blue);
+    background-color: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
   }
 
   .btn-ghost:active {
     transform: scale(0.98);
   }
 
-  /* Card Styles */
+  /* Card Styles - Using HSL tokens */
   .card {
-    background-color: white;
+    background-color: hsl(var(--card));
     border-radius: 1rem;
-    border: 1px solid var(--color-border-light);
+    border: 1px solid hsl(var(--border));
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
     transition: all 0.3s ease;
-  }
-
-  .dark .card {
-    background-color: var(--color-dark-surface-secondary);
-    border-color: var(--color-dark-border-light);
   }
 
   .card:hover {
@@ -407,22 +390,17 @@
   }
 
   .card-interactive {
-    background-color: white;
+    background-color: hsl(var(--card));
     border-radius: 1rem;
-    border: 1px solid var(--color-border-light);
+    border: 1px solid hsl(var(--border));
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .dark .card-interactive {
-    background-color: var(--color-dark-surface-secondary);
-    border-color: var(--color-dark-border-light);
-  }
-
   .card-interactive:hover {
-    box-shadow: 0 12px 24px -8px rgba(56, 189, 248, 0.15);
-    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 12px 24px -8px hsl(var(--primary) / 0.15);
+    border-color: hsl(var(--primary) / 0.4);
     transform: translateY(-3px);
   }
 
@@ -430,47 +408,39 @@
     border-radius: 1rem;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--color-border-light);
+    background: hsl(var(--card) / 0.9);
+    border: 1px solid hsl(var(--border) / 0.5);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   }
 
   .dark .card-glass {
-    background: rgba(30, 41, 59, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: hsl(var(--muted) / 0.7);
+    border: 1px solid hsl(var(--border) / 0.3);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 
-  /* Input Styles */
+  /* Input Styles - Using HSL tokens */
   .input {
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
-    background-color: white;
-    border: 1px solid var(--color-border-light);
-    color: var(--color-text-primary);
+    background-color: hsl(var(--input));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
     transition: all 0.2s;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  }
-
-  .dark .input {
-    background-color: var(--color-dark-surface-secondary);
-    border-color: var(--color-dark-border-light);
-    color: var(--color-dark-text-primary);
+    font-family: inherit;
+    font-size: 1rem;
   }
 
   .input::placeholder {
-    color: var(--color-text-tertiary);
-  }
-
-  .dark .input::placeholder {
-    color: var(--color-dark-text-tertiary);
+    color: hsl(var(--muted-foreground) / 0.7);
   }
 
   .input:focus {
     outline: none;
-    border-color: var(--color-electric-blue);
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.15);
   }
 
   /* Badge Styles */
@@ -573,30 +543,19 @@
     transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Glass Effects */
+  /* Glass Effects - Using HSL tokens */
   .glass {
-    background: rgba(255, 255, 255, 0.65);
+    background: hsl(var(--card) / 0.65);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid hsl(var(--border) / 0.5);
   }
 
   .dark .glass {
-    background: rgba(17, 24, 39, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: hsl(var(--background) / 0.65);
+    border: 1px solid hsl(var(--border) / 0.3);
   }
 }
 
-/* Dark Mode Button Overrides */
-@layer utilities {
-  .dark .btn-secondary {
-    background-color: var(--color-dark-surface-tertiary);
-    color: var(--color-dark-text-primary);
-    border-color: var(--color-dark-border-light);
-  }
-
-  .dark .btn-secondary:hover {
-    background-color: var(--color-dark-surface-dark);
-    border-color: var(--color-dark-border-medium);
-  }
-}
+/* Dark mode styles are now handled via HSL variables in design-tokens.css
+   The .dark class automatically switches the CSS variable values */

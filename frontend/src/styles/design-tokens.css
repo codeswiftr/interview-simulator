@@ -1,0 +1,125 @@
+/**
+ * Design Tokens - HSL Color System
+ *
+ * This file defines all color tokens using HSL format without the hsl() wrapper.
+ * Usage: color: hsl(var(--color-name));
+ *
+ * Benefits:
+ * - Easy programmatic manipulation
+ * - Consistent theming across light/dark modes
+ * - Better contrast ratio control
+ */
+
+:root {
+  /* ==========================================
+   * Brand Colors
+   * ========================================== */
+  --electric-blue: 197 91% 60%;     /* #38BDF8 - Primary CTAs, product utility */
+  --brand-pink: 343 94% 70%;        /* #FF6B9D - Brand identity, success */
+  --brand-accent: 188 100% 50%;     /* #00D9FF - Tech/AI elements */
+
+  /* ==========================================
+   * Semantic Theme Colors
+   * ========================================== */
+  --primary: var(--electric-blue);
+  --primary-foreground: 220 15% 8%;
+
+  /* ==========================================
+   * Light Mode Colors (Default)
+   * ========================================== */
+  --background: 210 40% 98%;        /* #F8FAFC - Clean white */
+  --foreground: 220 15% 8%;         /* #111827 - Charcoal */
+
+  --muted: 217 33% 92%;             /* #E2E8F0 - Soft gray */
+  --muted-foreground: 217 19% 35%;  /* #475569 - Secondary text */
+
+  --card: 0 0% 100%;                /* White card backgrounds */
+  --card-foreground: 220 15% 8%;
+
+  --border: 217 33% 88%;            /* #CBD5E1 - Subtle borders */
+  --input: 217 33% 92%;             /* Input backgrounds */
+  --ring: var(--electric-blue);     /* Focus rings */
+
+  /* ==========================================
+   * Status Colors
+   * ========================================== */
+  --status-success: 160 84% 39%;    /* #10B981 - Emerald */
+  --status-warning: 38 92% 50%;     /* #F59E0B - Amber */
+  --status-error: 0 84% 60%;        /* #EF4444 - Red */
+  --status-info: var(--electric-blue);
+
+  /* ==========================================
+   * Score Colors (for feedback visualization)
+   * ========================================== */
+  --score-excellent: 160 84% 39%;   /* #10B981 - Emerald (90-100) */
+  --score-good: 142 71% 45%;        /* #22C55E - Green (75-89) */
+  --score-average: 48 96% 53%;      /* #EAB308 - Yellow (60-74) */
+  --score-needs-work: 25 95% 53%;   /* #F97316 - Orange (40-59) */
+  --score-poor: 0 84% 60%;          /* #EF4444 - Red (0-39) */
+
+  /* ==========================================
+   * State Colors
+   * ========================================== */
+  --state-scheduled: 239 84% 67%;   /* #6366F1 - Indigo */
+  --state-in-progress: var(--electric-blue);
+  --state-completed: var(--status-success);
+  --state-cancelled: 217 19% 62%;   /* #94A3B8 - Gray */
+
+  /* ==========================================
+   * Score Ring Background
+   * ========================================== */
+  --score-ring-bg: 217 33% 92%;
+}
+
+/* ==========================================
+ * Dark Mode Overrides
+ * ========================================== */
+.dark {
+  --background: 220 15% 8%;         /* #0F172A - Deep blue-black */
+  --foreground: 210 40% 98%;        /* #F8FAFC - Light text */
+
+  --muted: 220 15% 16%;             /* #1E293B - Dark surface */
+  --muted-foreground: 213 31% 80%; /* #CBD5E1 - Muted text */
+
+  --card: 220 15% 12%;              /* Slightly lighter than background */
+  --card-foreground: 210 40% 98%;
+
+  --border: 220 15% 18%;            /* #334155 - Dark borders */
+  --input: 220 15% 16%;
+
+  --score-ring-bg: 220 15% 20%;
+}
+
+/* ==========================================
+ * CSS Variables for Components
+ * (Legacy compatibility layer)
+ * ========================================== */
+:root {
+  /* Surface colors - light mode */
+  --surface-primary: hsl(var(--background));
+  --surface-secondary: hsl(var(--muted));
+  --surface-tertiary: hsl(var(--muted) / 0.8);
+
+  /* Text colors - light mode */
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-tertiary: hsl(var(--muted-foreground) / 0.7);
+
+  /* Border colors */
+  --border-light: hsl(var(--border) / 0.5);
+  --border-medium: hsl(var(--border));
+  --border-focus: hsl(var(--ring));
+}
+
+.dark {
+  --surface-primary: hsl(var(--background));
+  --surface-secondary: hsl(var(--muted));
+  --surface-tertiary: hsl(var(--muted) / 1.2);
+
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-tertiary: hsl(var(--muted-foreground) / 0.7);
+
+  --border-light: hsl(var(--border) / 0.5);
+  --border-medium: hsl(var(--border));
+}

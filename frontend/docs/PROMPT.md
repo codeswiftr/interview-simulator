@@ -18,7 +18,8 @@
 - ✅ Completed Epic 4: Fixed broken tests after refactoring (useOnboarding, page tests)
 - ✅ Created comprehensive Frontend Design Assessment (`docs/FRONTEND_DESIGN_ASSESSMENT.md`)
 - ✅ Created detailed implementation plan for Epics 5-9 (`docs/PLAN.md`)
-- 🔄 Ready to start Epic 6: Navigation Modernization
+- ✅ **Completed Epic 6: Navigation Modernization** (BottomNav, ProgressPage, /practice & /progress routes)
+- 🔄 Ready to start Epic 5: Design Token Unification
 
 ### Current Focus
 **Frontend Design System Unification** - Merging best practices from two parallel frontend implementations:
@@ -27,22 +28,24 @@
 
 ### Blockers/Issues
 - 7 pre-existing test failures in `useAudioRecording.test.tsx` (timing issues, not blocking)
-- 255 tests passing, build succeeds
+- 263 tests passing, build succeeds
 
 ---
 
 ## Active Plan
 **Plan File**: `docs/PLAN.md`
-**Current Phase**: Phase 1: Navigation Modernization (Epic 6)
-**Current Task**: Task 6.1: Create BottomNav component
+**Current Phase**: Phase 2: Design Token Unification (Epic 5)
+**Current Task**: Task 5.1: Create design-tokens.css
 **Status**: Ready to start
 
 ### Immediate Next Steps
-1. Create `BottomNav.tsx` in `/frontend/src/components/layout/` (port from v2 UI)
-2. Create `ProgressPage.tsx` in `/frontend/src/pages/`
-3. Add `/progress` and `/practice` routes to `App.tsx`
-4. Add responsive logic to show BottomNav on mobile only
-5. Commit: `feat(frontend): add mobile bottom navigation and progress page`
+1. Create `design-tokens.css` with HSL variables from v2 styles.css
+2. Update globals.css to import and use HSL tokens
+3. Update button classes (.btn-primary, etc) to use HSL
+4. Update card classes (.card, .card-glass) to use HSL
+5. Update input/form classes to use HSL
+6. Run visual regression check on all pages
+7. Commit: `feat(frontend): migrate to HSL design tokens`
 
 ---
 
