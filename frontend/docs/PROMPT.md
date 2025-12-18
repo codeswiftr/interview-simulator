@@ -19,7 +19,8 @@
 - ✅ Created comprehensive Frontend Design Assessment (`docs/FRONTEND_DESIGN_ASSESSMENT.md`)
 - ✅ Created detailed implementation plan for Epics 5-9 (`docs/PLAN.md`)
 - ✅ **Completed Epic 6: Navigation Modernization** (BottomNav, ProgressPage, /practice & /progress routes)
-- 🔄 Ready to start Epic 5: Design Token Unification
+- ✅ **Completed Epic 5: Design Token Unification** (HSL color system, design-tokens.css)
+- 🔄 Ready to start Epic 7: Component API Migration
 
 ### Current Focus
 **Frontend Design System Unification** - Merging best practices from two parallel frontend implementations:
@@ -34,18 +35,19 @@
 
 ## Active Plan
 **Plan File**: `docs/PLAN.md`
-**Current Phase**: Phase 2: Design Token Unification (Epic 5)
-**Current Task**: Task 5.1: Create design-tokens.css
+**Current Phase**: Phase 3: Component API Migration (Epic 7)
+**Current Task**: Task 7.1: Create Shadcn-style Card components
 **Status**: Ready to start
 
 ### Immediate Next Steps
-1. Create `design-tokens.css` with HSL variables from v2 styles.css
-2. Update globals.css to import and use HSL tokens
-3. Update button classes (.btn-primary, etc) to use HSL
-4. Update card classes (.card, .card-glass) to use HSL
-5. Update input/form classes to use HSL
-6. Run visual regression check on all pages
-7. Commit: `feat(frontend): migrate to HSL design tokens`
+1. Create Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter components
+2. Update StatsOverview to use new Card components
+3. Update StatsCard in dashboard to use new Card components
+4. Update InterviewCard to use new Card components
+5. Update QuestionCard to use new Card components
+6. Update remaining card usages (grep for "card-glass")
+7. Remove deprecated card CSS classes
+8. Commit: `refactor(frontend): adopt Shadcn-style Card API`
 
 ---
 

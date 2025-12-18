@@ -11,3 +11,6 @@ export { Toast, ToastContainer } from './Toast';
 export type { ToastData, ToastType } from './Toast';
 
 export * from './Skeleton';
+
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
+export type { CardProps, CardVariant } from './Card';

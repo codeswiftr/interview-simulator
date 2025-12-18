@@ -1,4 +1,5 @@
 import { Calendar, Building2 } from 'lucide-react';
+import { Card, CardContent } from '../ui/Card';
 import type { InterviewSession } from '../../types';
 
 const companyLabels: Record<string, string> = {
@@ -65,47 +66,50 @@ export default function InterviewCard({ session, onClick }: InterviewCardProps) 
   };
 
   return (
-    <div
-      className={`card-interactive p-6 ${onClick ? 'cursor-pointer' : ''}`}
+    <Card
+      variant="interactive"
+      className={onClick ? 'cursor-pointer' : ''}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="heading-card mb-2">{typeLabel}</h3>
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <span>{session.question_count} questions</span>
-            {session.duration_seconds && (
-              <>
-                <span className="text-text-tertiary">•</span>
-                <span>{Math.floor(session.duration_seconds / 60)} min</span>
-              </>
-            )}
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="heading-card mb-2">{typeLabel}</h3>
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span>{session.question_count} questions</span>
+              {session.duration_seconds && (
+                <>
+                  <span className="text-text-tertiary">•</span>
+                  <span>{Math.floor(session.duration_seconds / 60)} min</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className={`badge ${statusInfo.className}`}>
+            {statusInfo.label}
           </div>
         </div>
-        <div className={`badge ${statusInfo.className}`}>
-          {statusInfo.label}
-        </div>
-      </div>
 
-      <div className="flex items-center gap-4 text-sm text-text-secondary flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Calendar size={16} />
-          <span>{formatDate(session.created_at)}</span>
-        </div>
-
-        {session.target_company && (
-          <div className="flex items-center gap-1.5 text-electric-blue">
-            <Building2 size={16} />
-            <span>{companyLabels[session.target_company] || session.target_company}</span>
+        <div className="flex items-center gap-4 text-sm text-text-secondary flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Calendar size={16} />
+            <span>{formatDate(session.created_at)}</span>
           </div>
-        )}
 
-        {session.overall_score !== null && session.overall_score !== undefined && (
-          <div className="flex items-center gap-1.5 text-electric-blue font-semibold">
-            <span>Score: {Math.round(session.overall_score)}/100</span>
-          </div>
-        )}
-      </div>
-    </div>
+          {session.target_company && (
+            <div className="flex items-center gap-1.5 text-electric-blue">
+              <Building2 size={16} />
+              <span>{companyLabels[session.target_company] || session.target_company}</span>
+            </div>
+          )}
+
+          {session.overall_score !== null && session.overall_score !== undefined && (
+            <div className="flex items-center gap-1.5 text-electric-blue font-semibold">
+              <span>Score: {Math.round(session.overall_score)}/100</span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
