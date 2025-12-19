@@ -42,11 +42,7 @@ class ResetPasswordRequest(BaseModel):
 
         errors = validate_password(self.new_password)
         if errors:
-            from pydantic import ValidationError
-            raise ValidationError.from_exception_data(
-                "ResetPasswordRequest",
-                [{"type": "value_error", "loc": ("new_password",), "msg": "\n".join(errors)}]
-            )
+            raise ValueError(f"Password validation failed: {'; '.join(errors)}")
 
 
 @router.post("/forgot-password")

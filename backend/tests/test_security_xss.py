@@ -219,7 +219,7 @@ class TestMarkdownSanitization:
         # Code Example
 
         ```javascript
-        // This should be escaped, not executed
+        / This should be escaped, not executed
         alert('This is code, not executable');
         ```
 
@@ -300,7 +300,7 @@ class TestInputValidationXSS:
             "<script>alert('XSS')</script>",
             "javascript:alert('XSS')",
             "<img src=x onerror=alert('XSS')>",
-            "';alert('XSS');//",
+            "';alert('XSS');/",
             "<svg onload=alert('XSS')>",
         ]
 
@@ -458,7 +458,7 @@ class TestXSSIntegrationTests:
         """Test search functionality handles XSS."""
         xss_queries = [
             "<script>alert('XSS')</script>",
-            "';alert('XSS');//",
+            "';alert('XSS');/",
             "<svg onload=alert('XSS')>",
         ]
 

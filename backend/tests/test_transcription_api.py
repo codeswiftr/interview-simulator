@@ -4,61 +4,18 @@ from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel
+from httpx import AsyncClient
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
-
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
 async def create_test_user_and_login(client: AsyncClient, email: str = "test@example.com") -> str:
     """Create a test user, login, and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
+    await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
+    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
     token = resp.json()["access_token"]
     return f"Bearer {token}"
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_success(client: AsyncClient):
@@ -94,7 +51,6 @@ async def test_transcribe_audio_success(client: AsyncClient):
         assert data["language"] == "en"
         assert data["estimated_cost"] == 0.003
 
-
 @pytest.mark.asyncio
 async def test_transcribe_audio_no_filename(client: AsyncClient):
     """Test transcription with no filename returns 422 (FastAPI validation error)."""
@@ -111,7 +67,6 @@ async def test_transcribe_audio_no_filename(client: AsyncClient):
 
     # FastAPI returns 422 for validation errors on file uploads without filenames
     assert response.status_code == 422
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_file_too_large(client: AsyncClient):
@@ -130,7 +85,6 @@ async def test_transcribe_audio_file_too_large(client: AsyncClient):
 
     assert response.status_code == 413
     assert "too large" in response.json()["detail"].lower()
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_unsupported_format_error(client: AsyncClient):
@@ -154,7 +108,6 @@ async def test_transcribe_audio_unsupported_format_error(client: AsyncClient):
 
         assert response.status_code == 422
         assert "unsupported" in response.json()["detail"].lower()
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_with_timestamps(client: AsyncClient):
@@ -186,7 +139,6 @@ async def test_transcribe_audio_with_timestamps(client: AsyncClient):
         data = response.json()
         assert data["segments"] is not None
         assert len(data["segments"]) == 1
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_with_language_hint(client: AsyncClient):
@@ -220,7 +172,6 @@ async def test_transcribe_audio_with_language_hint(client: AsyncClient):
         call_args = mock_transcriber_instance.transcribe.call_args
         assert call_args.kwargs.get("language") == "fr"
 
-
 @pytest.mark.asyncio
 async def test_transcribe_audio_general_exception(client: AsyncClient):
     """Test transcription handles general exceptions and returns 500."""
@@ -242,7 +193,6 @@ async def test_transcribe_audio_general_exception(client: AsyncClient):
         assert response.status_code == 500
         assert "transcription failed" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
 async def test_transcribe_audio_requires_authentication(client: AsyncClient):
     """Test transcription endpoint requires authentication."""
@@ -256,7 +206,6 @@ async def test_transcribe_audio_requires_authentication(client: AsyncClient):
 
     assert response.status_code == 401
 
-
 @pytest.mark.asyncio
 async def test_get_supported_formats(client: AsyncClient):
     """Test getting supported formats list."""
@@ -269,7 +218,6 @@ async def test_get_supported_formats(client: AsyncClient):
     assert "cost_per_minute_usd" in data
     assert data["max_file_size_mb"] == 25
     assert data["cost_per_minute_usd"] == 0.006
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_file_not_found_error(client: AsyncClient):
@@ -293,7 +241,6 @@ async def test_transcribe_audio_file_not_found_error(client: AsyncClient):
         )
 
         assert response.status_code == 400
-
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_content_type_handling(client: AsyncClient):

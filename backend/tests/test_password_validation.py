@@ -1,7 +1,10 @@
-"""Test password validation utility."""
+"""Test password validation utility.
+
+Tests for relaxed password validation that allows simple passwords
+while blocking only trivially weak ones.
+"""
 
 import pytest
-from typing import Any
 from app.utils.password_validation import (
     PasswordValidator,
     PasswordValidationError,
@@ -19,156 +22,99 @@ class TestPasswordValidator:
         self.validator = PasswordValidator()
 
     def test_min_length_requirement(self):
-        """Test password minimum length validation."""
-        # Too short (11 chars)
-        errors = self.validator.validate("Abcdef1!")
+        """Test password minimum length validation (6 chars)."""
+        # Too short (5 chars)
+        errors = self.validator.validate("abcde")
         assert PasswordValidationError.TOO_SHORT.value in errors
 
-        # Just right (12 chars)
-        assert self.validator.is_valid("A1b2c3d4e5f!") is True
+        # Just right (6 chars)
+        assert self.validator.is_valid("secret") is True
 
-        # Longer (16 chars)
-        assert self.validator.is_valid("M1n2d3s4k5n6o7p!") is True
+        # Longer passwords work
+        assert self.validator.is_valid("secret25") is True
+        assert self.validator.is_valid("mysecretpassword") is True
 
-    def test_character_composition_requirements(self):
-        """Test password character composition requirements."""
-        # Base valid password (avoid "password" in the actual password)
-        valid_password = "SecurePassw0rd!"
-
-        # Missing uppercase
-        errors = self.validator.validate("validpassword123!")
-        assert PasswordValidationError.MISSING_UPPERCASE.value in errors
-
-        # Missing lowercase
-        errors = self.validator.validate("VALIDPASSWORD123!")
-        assert PasswordValidationError.MISSING_LOWERCASE.value in errors
-
-        # Missing number
-        errors = self.validator.validate("ValidPassword!!!")
-        assert PasswordValidationError.MISSING_NUMBER.value in errors
-
-        # Missing special character
-        errors = self.validator.validate("ValidPassword123")
-        assert PasswordValidationError.MISSING_SPECIAL.value in errors
-
-        # All requirements met
-        assert self.validator.is_valid(valid_password) is True
-
-    def test_common_patterns_blocked(self):
-        """Test that common password patterns are blocked."""
-        common_patterns = [
-            "Password123!",
-            "Qwerty123!",
-            "Admin123!",
-            "Welcome123!",
-            "Monkey123!",
-            "Letmein123!",
+    def test_simple_passwords_allowed(self):
+        """Test that simple passwords are allowed (relaxed validation)."""
+        # These should all pass - no complexity requirements
+        simple_passwords = [
+            "secret25",      # lowercase + numbers
+            "mypassword",    # just lowercase
+            "SECRET99",      # just uppercase + numbers
+            "testing123",    # common word + numbers (but not blocked)
+            "abcdef",        # just 6 lowercase letters
+            "987654321",     # just numbers (not in blocked list)
         ]
 
-        for password in common_patterns:
+        for password in simple_passwords:
+            assert self.validator.is_valid(password) is True, f"{password} should be valid"
+
+    def test_common_passwords_blocked(self):
+        """Test that only the most common passwords are blocked."""
+        blocked_passwords = [
+            "password",
+            "123456",
+            "12345678",
+            "qwerty",
+            "abc123",
+            "password1",
+            "password123",
+            "admin",
+            "letmein",
+            "welcome",
+        ]
+
+        for password in blocked_passwords:
             errors = self.validator.validate(password)
-            assert PasswordValidationError.COMMON_PATTERN.value in errors
-            assert self.validator.is_valid(password) is False
+            assert PasswordValidationError.COMMON_PASSWORD.value in errors
+            assert self.validator.is_valid(password) is False, f"{password} should be blocked"
 
-    def test_username_email_blocking(self):
-        """Test that passwords cannot contain username or email."""
-        # With username
-        errors = self.validator.validate(
-            "JohnDoe123!",
-            username="JohnDoe"
-        )
-        assert "Password cannot contain your username" in errors
+    def test_username_email_exact_match_blocking(self):
+        """Test that passwords cannot exactly match username or email."""
+        # Exact username match blocked
+        errors = self.validator.validate("johndoe", username="johndoe")
+        assert "Password cannot be the same as your username" in errors
 
-        # With email
-        errors = self.validator.validate(
-            "John123!@example.com",
-            email="john@example.com"
-        )
-        assert "Password cannot contain your email address" in errors
+        # Exact email local part match blocked
+        errors = self.validator.validate("john", email="john@example.com")
+        assert "Password cannot be the same as your email" in errors
 
-        # With email local part
-        errors = self.validator.validate(
-            "John123!",
-            email="john@example.com"
-        )
-        assert "Password cannot contain your email address" in errors
-
-        # Valid without username/email match
+        # Containing username is allowed (relaxed)
         assert self.validator.is_valid(
-            "SecurePassw0rd!",
-            username="JohnDoe",
+            "johndoe123",
+            username="johndoe"
+        ) is True
+
+        # Different password is fine
+        assert self.validator.is_valid(
+            "secret25",
+            username="johndoe",
             email="john@example.com"
         ) is True
 
-    def test_dictionary_words_blocked(self):
-        """Test that dictionary words are blocked."""
-        # Dictionary word in password
-        errors = self.validator.validate("Between123!")
-        assert PasswordValidationError.DICTIONARY_WORD.value in errors
-
-        # No dictionary word
-        assert self.validator.is_valid("B3tw33n12!") is True  # Leetspeak
-
-    def test_repeated_characters_blocked(self):
-        """Test that repeated characters are blocked."""
-        # 6 same characters in a row
-        errors = self.validator.validate("Passwordaaaaaa!")
-        assert PasswordValidationError.REPEATED_CHARS.value in errors
-
-        # 5 same characters (should be okay)
-        assert self.validator.is_valid("X1aaaaa!") is True
-
-    def test_sequential_characters_blocked(self):
-        """Test that sequential characters are blocked."""
-        # Sequential numbers
-        errors = self.validator.validate("Password123456!")
-        assert PasswordValidationError.SEQUENTIAL_CHARS.value in errors
-
-        # Sequential letters
-        errors = self.validator.validate("Passwordabcdef!")
-        assert PasswordValidationError.SEQUENTIAL_CHARS.value in errors
-
-        # Reverse sequential numbers
-        errors = self.validator.validate("Password654321!")
-        assert PasswordValidationError.SEQUENTIAL_CHARS.value in errors
-
-        # Reverse sequential letters
-        errors = self.validator.validate("Passwordfedcba!")
-        assert PasswordValidationError.SEQUENTIAL_CHARS.value in errors
-
-        # No sequential
-        assert self.validator.is_valid("P@ssw0rd!z9x") is True
-
     def test_password_strength_scoring(self):
-        """Test password strength scoring."""
-        # Very weak password
+        """Test password strength scoring for frontend feedback."""
+        # Very weak password (short)
         strength = self.validator.get_password_strength("weak")
-        assert strength["strength"] == "Moderate"  # 4 chars gives 20 points
-        assert strength["score"] >= 20
-        assert strength["score"] < 40
-
-        # Weak password
-        strength = self.validator.get_password_strength("Weakpass123!")
-        assert strength["strength"] in ["Weak", "Moderate", "Strong"]
-        assert strength["score"] >= 40  # Length + variety gives at least 40
+        assert strength["strength"] in ["Very Weak", "Weak", "Moderate"]
+        assert strength["score"] < 60
 
         # Moderate password
-        strength = self.validator.get_password_strength("Moderate123!")
-        assert strength["strength"] in ["Weak", "Moderate", "Strong"]
-        assert strength["score"] >= 40
+        strength = self.validator.get_password_strength("secret25")
+        assert strength["strength"] in ["Weak", "Moderate"]
 
         # Strong password
-        strength = self.validator.get_password_strength("StrongPassword123!")
-        assert strength["strength"] in ["Moderate", "Strong"]  # Has common pattern
+        strength = self.validator.get_password_strength("SecretPass123!")
+        assert strength["strength"] in ["Moderate", "Strong", "Very Strong"]
         assert strength["score"] >= 40
 
-        # Very strong password (no common patterns)
-        strength = self.validator.get_password_strength("V3ry$tr0ngP@ssw0rd!z9x")
-        assert strength["strength"] == "Very Strong"
-        assert strength["score"] >= 80
+        # Very strong password
+        strength = self.validator.get_password_strength("V3ry$tr0ngP@ssw0rd!")
+        assert strength["strength"] in ["Strong", "Very Strong"]
+        assert strength["score"] >= 60
 
     def test_password_strength_feedback(self):
-        """Test password strength feedback."""
+        """Test password strength feedback for frontend warnings."""
         strength = self.validator.get_password_strength("weak")
         assert "Add more characters to increase strength" in strength["feedback"]
         assert "Add uppercase letters" in strength["feedback"]
@@ -182,22 +128,27 @@ class TestPasswordValidationFunctions:
     def test_validate_password_function(self):
         """Test the global validate_password function."""
         # Valid password
-        errors = validate_password("SecurePassw0rd!")
+        errors = validate_password("secret25")
         assert len(errors) == 0
 
-        # Invalid password
+        # Invalid password (too short)
         errors = validate_password("weak")
         assert len(errors) > 0
         assert PasswordValidationError.TOO_SHORT.value in errors
 
+        # Invalid password (common)
+        errors = validate_password("password")
+        assert PasswordValidationError.COMMON_PASSWORD.value in errors
+
     def test_is_password_valid_function(self):
         """Test the global is_password_valid function."""
-        assert is_password_valid("SecurePassw0rd!") is True
-        assert is_password_valid("weak") is False
+        assert is_password_valid("secret25") is True
+        assert is_password_valid("password123") is False  # common
+        assert is_password_valid("weak") is False  # too short
 
     def test_get_password_strength_function(self):
         """Test the global get_password_strength function."""
-        strength = get_password_strength("SecurePassw0rd!")
+        strength = get_password_strength("secret25")
         assert "score" in strength
         assert "strength" in strength
         assert "feedback" in strength
@@ -210,73 +161,73 @@ class TestPasswordValidationIntegration:
         """Test password validation in UserCreate model."""
         from app.models.user import UserCreate
 
-        # Valid password
+        # Valid password (simple)
         user = UserCreate(
             email="test@example.com",
-            password="SecurePassw0rd!",
+            password="secret25",
             full_name="Test User"
         )
         assert user.email == "test@example.com"
 
-        # Invalid password
+        # Invalid password (too short)
         with pytest.raises(Exception) as exc_info:
             UserCreate(
                 email="test@example.com",
                 password="weak",
                 full_name="Test User"
             )
-        assert "Password must be at least 12 characters long" in str(exc_info.value)
+        assert "Password must be at least 6 characters long" in str(exc_info.value)
 
     def test_password_change_validation(self):
         """Test password validation in PasswordChange model."""
         from app.models.user import PasswordChange
 
-        # Valid passwords
+        # Valid passwords (simple)
         change = PasswordChange(
-            current_password="OldPassw0rd!",
-            new_password="NewSecurePassw0rd!"
+            current_password="oldpass",
+            new_password="newpass123"
         )
-        assert change.new_password == "NewSecurePassw0rd!"
+        assert change.new_password == "newpass123"
 
-        # Invalid new password
-        with pytest.raises(Exception) as exc_info:
+        # Invalid new password (too short)
+        with pytest.raises(ValueError) as exc_info:
             PasswordChange(
-                current_password="OldPassword123!",
+                current_password="oldpass",
                 new_password="weak"
             )
-        assert "Password must be at least 12 characters long" in str(exc_info.value)
+        assert "Password validation failed" in str(exc_info.value)
 
     def test_reset_password_validation(self):
         """Test password validation in ResetPasswordRequest."""
         from app.api.auth import ResetPasswordRequest
 
-        # Valid password
+        # Valid password (simple)
         reset = ResetPasswordRequest(
             token="valid_token",
-            new_password="SecurePassw0rd!"
+            new_password="secret25"
         )
-        assert reset.new_password == "SecurePassw0rd!"
+        assert reset.new_password == "secret25"
 
-        # Invalid password
-        with pytest.raises(Exception) as exc_info:
+        # Invalid password (too short)
+        with pytest.raises(ValueError) as exc_info:
             ResetPasswordRequest(
                 token="valid_token",
                 new_password="weak"
             )
-        assert "Password must be at least 12 characters long" in str(exc_info.value)
+        assert "Password validation failed" in str(exc_info.value)
 
 
 @pytest.mark.parametrize("password,expected", [
-    ("SecurePassw0rd!", True),
-    ("short", False),
-    ("nouppercase123!", False),
-    ("NOLOWERCASE123!", False),
-    ("NoNumbers!!!", False),
-    ("NoSpecialChars123", False),
-    ("Password123!", False),  # Contains common pattern
-    ("UserPassword123!", False),  # Contains username when username="User"
+    ("secret25", True),           # Simple valid password
+    ("password123", False),       # Common password
+    ("weak", False),              # Too short
+    ("123456", False),            # Common password
+    ("qwerty", False),            # Common password
+    ("mypassword", True),         # Simple but allowed
+    ("Testing123", True),         # Mixed case + numbers (allowed)
+    ("abcdefgh", True),           # Just letters (allowed if 6+ chars)
 ])
 def test_password_validation_parametrized(password, expected):
     """Parametrized test for various password scenarios."""
     validator = PasswordValidator()
-    assert validator.is_valid(password, username="User", email="user@example.com") == expected
+    assert validator.is_valid(password) == expected

@@ -3,12 +3,9 @@
 from uuid import UUID
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
+from httpx import AsyncClient
 from sqlmodel import SQLModel, select
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.preparation import (
     AnswerPreparation,
     DeliveryAttempt,
@@ -18,74 +15,35 @@ from app.models.preparation import (
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import SubscriptionTier, User
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login_pro(client: AsyncClient, session_override, email: str = "user@example.com") -> str:
+async def register_and_login_pro(client: AsyncClient, db_session, email: str = "user@example.com") -> str:
     """Register Pro tier user and return bearer token."""
 
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
+    await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
+    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
     token = resp.json()["access_token"]
 
     # Upgrade to Pro tier for preparation access
-    result = await session_override.exec(select(User).where(User.email == email))
+    result = await db_session.exec(select(User).where(User.email == email))
     user = result.first()
     if user:
         user.subscription_tier = SubscriptionTier.PRO
-        await session_override.commit()
+        await db_session.commit()
 
     return f"Bearer {token}"
-
 
 async def register_and_login_free(client: AsyncClient, email: str = "user@example.com") -> str:
     """Register Free tier user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
+    await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
+    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
     token = resp.json()["access_token"]
     return f"Bearer {token}"
 
-
 @pytest.mark.asyncio
-async def test_start_preparation_requires_pro_tier(client, session_override):
+async def test_start_preparation_requires_pro_tier(client, db_session):
     """Test that preparation requires Pro/Premium tier."""
     # Register as Free tier user
     token = await register_and_login_free(client, email="free@example.com")
@@ -96,9 +54,9 @@ async def test_start_preparation_requires_pro_tier(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Try to start preparation
     response = await client.post(
@@ -110,11 +68,10 @@ async def test_start_preparation_requires_pro_tier(client, session_override):
     assert response.status_code == 402  # Payment Required
     assert "upgrade" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_list_preparations(client, session_override):
+async def test_list_preparations(client, db_session):
     """Test listing user's preparations."""
-    token = await register_and_login_pro(client, session_override, email="list@example.com")
+    token = await register_and_login_pro(client, db_session, email="list@example.com")
 
     # Create a question
     question = Question(
@@ -122,12 +79,12 @@ async def test_list_preparations(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create a preparation
-    result = await session_override.exec(select(User).where(User.email == "list@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "list@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -136,9 +93,9 @@ async def test_list_preparations(client, session_override):
         stage=PreparationStage.DRAFT,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # List preparations
     response = await client.get(
@@ -153,11 +110,10 @@ async def test_list_preparations(client, session_override):
     assert data["preparations"][0]["id"] == str(preparation.id)
     assert data["preparations"][0]["question_content"] == "Test question for listing"
 
-
 @pytest.mark.asyncio
-async def test_start_preparation_success(client, session_override):
+async def test_start_preparation_success(client, db_session):
     """Test successful preparation start."""
-    token = await register_and_login_pro(client, session_override, email="pro@example.com")
+    token = await register_and_login_pro(client, db_session, email="pro@example.com")
 
     # Create a question
     question = Question(
@@ -165,9 +121,9 @@ async def test_start_preparation_success(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Start preparation
     response = await client.post(
@@ -181,11 +137,10 @@ async def test_start_preparation_success(client, session_override):
     assert "preparation_id" in data
     assert data["stage"] == "detective"
 
-
 @pytest.mark.asyncio
-async def test_get_detective_question(client, session_override):
+async def test_get_detective_question(client, db_session):
     """Test getting detective question."""
-    token = await register_and_login_pro(client, session_override, email="detective@example.com")
+    token = await register_and_login_pro(client, db_session, email="detective@example.com")
 
     # Create question and preparation
     question = Question(
@@ -193,12 +148,12 @@ async def test_get_detective_question(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Get user ID
-    result = await session_override.exec(select(User).where(User.email == "detective@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "detective@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -206,9 +161,9 @@ async def test_get_detective_question(client, session_override):
         question_id=question.id,
         stage=PreparationStage.DETECTIVE,
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Get detective question
     response = await client.post(
@@ -222,11 +177,10 @@ async def test_get_detective_question(client, session_override):
     assert data["order"] == 1
     assert isinstance(data["is_complete"], bool)
 
-
 @pytest.mark.asyncio
-async def test_submit_detective_answer(client, session_override):
+async def test_submit_detective_answer(client, db_session):
     """Test submitting detective answer."""
-    token = await register_and_login_pro(client, session_override, email="answer@example.com")
+    token = await register_and_login_pro(client, db_session, email="answer@example.com")
 
     # Create question and preparation
     question = Question(
@@ -234,11 +188,11 @@ async def test_submit_detective_answer(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-    result = await session_override.exec(select(User).where(User.email == "answer@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "answer@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -246,9 +200,9 @@ async def test_submit_detective_answer(client, session_override):
         question_id=question.id,
         stage=PreparationStage.DETECTIVE,
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create a question first
     qna = PreparationQnA(
@@ -257,8 +211,8 @@ async def test_submit_detective_answer(client, session_override):
         answer="",
         order=1,
     )
-    session_override.add(qna)
-    await session_override.commit()
+    db_session.add(qna)
+    await db_session.commit()
 
     # Submit answer
     response = await client.post(
@@ -272,11 +226,10 @@ async def test_submit_detective_answer(client, session_override):
     assert "stage" in data
     assert isinstance(data["is_complete"], bool)
 
-
 @pytest.mark.asyncio
-async def test_generate_draft(client, session_override):
+async def test_generate_draft(client, db_session):
     """Test generating draft answer."""
-    token = await register_and_login_pro(client, session_override, email="draft@example.com")
+    token = await register_and_login_pro(client, db_session, email="draft@example.com")
 
     # Create question and preparation with Q&A
     question = Question(
@@ -284,11 +237,11 @@ async def test_generate_draft(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-    result = await session_override.exec(select(User).where(User.email == "draft@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "draft@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -296,9 +249,9 @@ async def test_generate_draft(client, session_override):
         question_id=question.id,
         stage=PreparationStage.DRAFT,
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Add some Q&A
     qna1 = PreparationQnA(
@@ -313,9 +266,9 @@ async def test_generate_draft(client, session_override):
         answer="Implemented caching and load balancing",
         order=2,
     )
-    session_override.add(qna1)
-    session_override.add(qna2)
-    await session_override.commit()
+    db_session.add(qna1)
+    db_session.add(qna2)
+    await db_session.commit()
 
     # Generate draft
     response = await client.post(
@@ -329,11 +282,10 @@ async def test_generate_draft(client, session_override):
     assert len(data["draft_answer"]) > 0
     assert data["stage"] == "practice"
 
-
 @pytest.mark.asyncio
-async def test_get_draft(client, session_override):
+async def test_get_draft(client, db_session):
     """Test getting draft answer."""
-    token = await register_and_login_pro(client, session_override, email="getdraft@example.com")
+    token = await register_and_login_pro(client, db_session, email="getdraft@example.com")
 
     # Create question and preparation with draft
     question = Question(
@@ -341,11 +293,11 @@ async def test_get_draft(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-    result = await session_override.exec(select(User).where(User.email == "getdraft@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "getdraft@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -354,9 +306,9 @@ async def test_get_draft(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="**Situation**: Test situation\n**Task**: Test task\n**Action**: Test action\n**Result**: Test result",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Get draft
     response = await client.get(
@@ -369,14 +321,12 @@ async def test_get_draft(client, session_override):
     assert data["draft_answer"] == preparation.draft_answer
     assert "STAR" in data["draft_answer"] or "Situation" in data["draft_answer"]
 
-
 # Practice Endpoints Tests
 
-
 @pytest.mark.asyncio
-async def test_start_practice_success(client, session_override):
+async def test_start_practice_success(client, db_session):
     """Test starting a practice session."""
-    token = await register_and_login_pro(client, session_override, email="practice@example.com")
+    token = await register_and_login_pro(client, db_session, email="practice@example.com")
 
     # Create question and preparation with draft
     question = Question(
@@ -384,12 +334,11 @@ async def test_start_practice_success(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(select(User).where(User.email == "practice@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "practice@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -398,9 +347,9 @@ async def test_start_practice_success(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft answer for practice",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Start practice
     response = await client.post(
@@ -414,18 +363,17 @@ async def test_start_practice_success(client, session_override):
     assert data["stage"] == "practice"
 
     # Verify attempt was created
-    attempt_result = await session_override.exec(
+    attempt_result = await db_session.exec(
         select(DeliveryAttempt).where(DeliveryAttempt.preparation_id == preparation.id)
     )
     attempt = attempt_result.first()
     assert attempt is not None
     assert attempt.id == UUID(data["attempt_id"])
 
-
 @pytest.mark.asyncio
-async def test_start_practice_requires_draft(client, session_override):
+async def test_start_practice_requires_draft(client, db_session):
     """Test that starting practice requires a draft."""
-    token = await register_and_login_pro(client, session_override, email="nodraft@example.com")
+    token = await register_and_login_pro(client, db_session, email="nodraft@example.com")
 
     # Create question and preparation without draft
     question = Question(
@@ -433,12 +381,11 @@ async def test_start_practice_requires_draft(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(select(User).where(User.email == "nodraft@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "nodraft@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -447,9 +394,9 @@ async def test_start_practice_requires_draft(client, session_override):
         stage=PreparationStage.DRAFT,
         draft_answer=None,  # No draft
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Try to start practice
     response = await client.post(
@@ -460,9 +407,8 @@ async def test_start_practice_requires_draft(client, session_override):
     assert response.status_code == 400
     assert "draft" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_start_practice_requires_pro_tier(client, session_override):
+async def test_start_practice_requires_pro_tier(client, db_session):
     """Test that practice requires Pro/Premium tier."""
     token = await register_and_login_free(client, email="freepractice@example.com")
 
@@ -472,12 +418,11 @@ async def test_start_practice_requires_pro_tier(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "freepractice@example.com")
     )
     user = result.first()
@@ -488,9 +433,9 @@ async def test_start_practice_requires_pro_tier(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Try to start practice
     response = await client.post(
@@ -500,14 +445,13 @@ async def test_start_practice_requires_pro_tier(client, session_override):
 
     assert response.status_code == 402  # Payment Required
 
-
 @pytest.mark.asyncio
-async def test_submit_practice_success(client, session_override):
+async def test_submit_practice_success(client, db_session):
     """Test submitting a practice attempt with audio."""
     from pathlib import Path
     from unittest.mock import AsyncMock, MagicMock, patch
 
-    token = await register_and_login_pro(client, session_override, email="submit@example.com")
+    token = await register_and_login_pro(client, db_session, email="submit@example.com")
 
     # Create question and preparation with draft
     question = Question(
@@ -515,12 +459,11 @@ async def test_submit_practice_success(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(select(User).where(User.email == "submit@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "submit@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -529,17 +472,17 @@ async def test_submit_practice_success(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft answer",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create a practice attempt
     attempt = DeliveryAttempt(
         preparation_id=preparation.id,
     )
-    session_override.add(attempt)
-    await session_override.commit()
-    await session_override.refresh(attempt)
+    db_session.add(attempt)
+    await db_session.commit()
+    await db_session.refresh(attempt)
 
     # Create a mock audio file
     audio_dir = Path("uploads/audio")
@@ -571,21 +514,20 @@ async def test_submit_practice_success(client, session_override):
         assert data["stage"] == "practice"
 
         # Verify attempt was updated
-        await session_override.refresh(attempt)
+        await db_session.refresh(attempt)
         assert attempt.audio_url == audio_url
         assert attempt.transcript == "This is a test transcript of my practice delivery."
 
     # Cleanup
     audio_file.unlink(missing_ok=True)
 
-
 @pytest.mark.asyncio
-async def test_submit_practice_creates_attempt_if_missing(client, session_override):
+async def test_submit_practice_creates_attempt_if_missing(client, db_session):
     """Test that submit creates an attempt if none exists."""
     from pathlib import Path
     from unittest.mock import AsyncMock, MagicMock, patch
 
-    token = await register_and_login_pro(client, session_override, email="autoattempt@example.com")
+    token = await register_and_login_pro(client, db_session, email="autoattempt@example.com")
 
     # Create question and preparation with draft
     question = Question(
@@ -593,12 +535,11 @@ async def test_submit_practice_creates_attempt_if_missing(client, session_overri
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "autoattempt@example.com")
     )
     user = result.first()
@@ -609,9 +550,9 @@ async def test_submit_practice_creates_attempt_if_missing(client, session_overri
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create mock audio file
     audio_dir = Path("uploads/audio")
@@ -640,7 +581,7 @@ async def test_submit_practice_creates_attempt_if_missing(client, session_overri
         assert "attempt_id" in data
 
         # Verify attempt was created
-        attempt_result = await session_override.exec(
+        attempt_result = await db_session.exec(
             select(DeliveryAttempt).where(DeliveryAttempt.preparation_id == preparation.id)
         )
         attempt = attempt_result.first()
@@ -651,11 +592,10 @@ async def test_submit_practice_creates_attempt_if_missing(client, session_overri
     # Cleanup
     audio_file.unlink(missing_ok=True)
 
-
 @pytest.mark.asyncio
-async def test_submit_practice_audio_not_found(client, session_override):
+async def test_submit_practice_audio_not_found(client, db_session):
     """Test that submitting with invalid audio URL returns error."""
-    token = await register_and_login_pro(client, session_override, email="invalidaudio@example.com")
+    token = await register_and_login_pro(client, db_session, email="invalidaudio@example.com")
 
     # Create question and preparation
     question = Question(
@@ -663,12 +603,11 @@ async def test_submit_practice_audio_not_found(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "invalidaudio@example.com")
     )
     user = result.first()
@@ -679,9 +618,9 @@ async def test_submit_practice_audio_not_found(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Try to submit with non-existent audio URL
     response = await client.post(
@@ -693,11 +632,10 @@ async def test_submit_practice_audio_not_found(client, session_override):
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_get_attempts_success(client, session_override):
+async def test_get_attempts_success(client, db_session):
     """Test getting all delivery attempts for a preparation."""
-    token = await register_and_login_pro(client, session_override, email="attempts@example.com")
+    token = await register_and_login_pro(client, db_session, email="attempts@example.com")
 
     # Create question and preparation
     question = Question(
@@ -705,12 +643,11 @@ async def test_get_attempts_success(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(select(User).where(User.email == "attempts@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "attempts@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -719,9 +656,9 @@ async def test_get_attempts_success(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create multiple attempts
     attempt1 = DeliveryAttempt(
@@ -734,9 +671,9 @@ async def test_get_attempts_success(client, session_override):
         audio_url="/uploads/audio/attempt2.webm",
         transcript="Second practice attempt",
     )
-    session_override.add(attempt1)
-    session_override.add(attempt2)
-    await session_override.commit()
+    db_session.add(attempt1)
+    db_session.add(attempt2)
+    await db_session.commit()
 
     # Get attempts
     response = await client.get(
@@ -752,11 +689,10 @@ async def test_get_attempts_success(client, session_override):
     assert data["attempts"][0]["transcript"] == "Second practice attempt"
     assert data["attempts"][1]["transcript"] == "First practice attempt"
 
-
 @pytest.mark.asyncio
-async def test_get_attempts_empty(client, session_override):
+async def test_get_attempts_empty(client, db_session):
     """Test getting attempts when none exist."""
-    token = await register_and_login_pro(client, session_override, email="noattempts@example.com")
+    token = await register_and_login_pro(client, db_session, email="noattempts@example.com")
 
     # Create question and preparation
     question = Question(
@@ -764,12 +700,11 @@ async def test_get_attempts_empty(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "noattempts@example.com")
     )
     user = result.first()
@@ -780,9 +715,9 @@ async def test_get_attempts_empty(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Get attempts
     response = await client.get(
@@ -795,12 +730,11 @@ async def test_get_attempts_empty(client, session_override):
     assert "attempts" in data
     assert len(data["attempts"]) == 0
 
-
 @pytest.mark.asyncio
-async def test_get_attempts_unauthorized(client, session_override):
+async def test_get_attempts_unauthorized(client, db_session):
     """Test that users cannot access other users' attempts."""
-    await register_and_login_pro(client, session_override, email="user1@example.com")
-    token2 = await register_and_login_pro(client, session_override, email="user2@example.com")
+    await register_and_login_pro(client, db_session, email="user1@example.com")
+    token2 = await register_and_login_pro(client, db_session, email="user2@example.com")
 
     # User 1 creates preparation
     question = Question(
@@ -808,12 +742,11 @@ async def test_get_attempts_unauthorized(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(select(User).where(User.email == "user1@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "user1@example.com"))
     user1 = result.first()
 
     preparation = AnswerPreparation(
@@ -822,9 +755,9 @@ async def test_get_attempts_unauthorized(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # User 2 tries to access User 1's attempts
     response = await client.get(
@@ -834,16 +767,14 @@ async def test_get_attempts_unauthorized(client, session_override):
 
     assert response.status_code == 404
 
-
 # Rating Endpoints Tests
 
-
 @pytest.mark.asyncio
-async def test_rate_delivery_success(client, session_override):
+async def test_rate_delivery_success(client, db_session):
     """Test rating a delivery attempt."""
     from unittest.mock import AsyncMock, MagicMock, patch
 
-    token = await register_and_login_pro(client, session_override, email="rate@example.com")
+    token = await register_and_login_pro(client, db_session, email="rate@example.com")
 
     # Create question and preparation with draft
     question = Question(
@@ -851,12 +782,11 @@ async def test_rate_delivery_success(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(select(User).where(User.email == "rate@example.com"))
+    result = await db_session.exec(select(User).where(User.email == "rate@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -865,18 +795,18 @@ async def test_rate_delivery_success(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="**Situation**: Test situation\n**Task**: Test task\n**Action**: Test action\n**Result**: Test result",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create attempt with transcript
     attempt = DeliveryAttempt(
         preparation_id=preparation.id,
         transcript="I faced a test situation. My task was to handle it. I took specific actions. The result was positive.",
     )
-    session_override.add(attempt)
-    await session_override.commit()
-    await session_override.refresh(attempt)
+    db_session.add(attempt)
+    await db_session.commit()
+    await db_session.refresh(attempt)
 
     # Mock rating service
     with patch("app.api.preparation.DeliveryRatingService") as MockRatingService:
@@ -909,15 +839,14 @@ async def test_rate_delivery_success(client, session_override):
         assert data["stage"] == "complete"
 
         # Verify attempt was updated
-        await session_override.refresh(attempt)
+        await db_session.refresh(attempt)
         assert attempt.delivery_score == 85.0
         assert attempt.comparison_feedback is not None
 
-
 @pytest.mark.asyncio
-async def test_rate_delivery_no_transcript(client, session_override):
+async def test_rate_delivery_no_transcript(client, db_session):
     """Test that rating fails if attempt has no transcript."""
-    token = await register_and_login_pro(client, session_override, email="notranscript@example.com")
+    token = await register_and_login_pro(client, db_session, email="notranscript@example.com")
 
     # Create preparation with draft
     question = Question(
@@ -925,12 +854,11 @@ async def test_rate_delivery_no_transcript(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "notranscript@example.com")
     )
     user = result.first()
@@ -941,18 +869,18 @@ async def test_rate_delivery_no_transcript(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create attempt without transcript
     attempt = DeliveryAttempt(
         preparation_id=preparation.id,
         transcript=None,
     )
-    session_override.add(attempt)
-    await session_override.commit()
-    await session_override.refresh(attempt)
+    db_session.add(attempt)
+    await db_session.commit()
+    await db_session.refresh(attempt)
 
     # Try to rate
     response = await client.post(
@@ -964,11 +892,10 @@ async def test_rate_delivery_no_transcript(client, session_override):
     assert response.status_code == 400
     assert "transcript" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_get_comparison_success(client, session_override):
+async def test_get_comparison_success(client, db_session):
     """Test getting comparison view."""
-    token = await register_and_login_pro(client, session_override, email="comparison@example.com")
+    token = await register_and_login_pro(client, db_session, email="comparison@example.com")
 
     # Create preparation with draft
     question = Question(
@@ -976,12 +903,11 @@ async def test_get_comparison_success(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "comparison@example.com")
     )
     user = result.first()
@@ -992,9 +918,9 @@ async def test_get_comparison_success(client, session_override):
         stage=PreparationStage.COMPLETE,
         draft_answer="**Situation**: Planned situation\n**Task**: Planned task\n**Action**: Planned action\n**Result**: Planned result",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     # Create rated attempt
     attempt = DeliveryAttempt(
@@ -1003,9 +929,9 @@ async def test_get_comparison_success(client, session_override):
         delivery_score=85.0,
         comparison_feedback="Good delivery covering main points.",
     )
-    session_override.add(attempt)
-    await session_override.commit()
-    await session_override.refresh(attempt)
+    db_session.add(attempt)
+    await db_session.commit()
+    await db_session.refresh(attempt)
 
     # Get comparison
     response = await client.get(
@@ -1020,12 +946,11 @@ async def test_get_comparison_success(client, session_override):
     assert data["delivery_score"] == 85.0
     assert data["comparison_feedback"] == "Good delivery covering main points."
 
-
 @pytest.mark.asyncio
-async def test_get_comparison_unauthorized(client, session_override):
+async def test_get_comparison_unauthorized(client, db_session):
     """Test that users cannot access other users' comparisons."""
-    await register_and_login_pro(client, session_override, email="user1comp@example.com")
-    token2 = await register_and_login_pro(client, session_override, email="user2comp@example.com")
+    await register_and_login_pro(client, db_session, email="user1comp@example.com")
+    token2 = await register_and_login_pro(client, db_session, email="user2comp@example.com")
 
     # User 1 creates preparation
     question = Question(
@@ -1033,12 +958,11 @@ async def test_get_comparison_unauthorized(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
-
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "user1comp@example.com")
     )
     user1 = result.first()
@@ -1049,17 +973,17 @@ async def test_get_comparison_unauthorized(client, session_override):
         stage=PreparationStage.PRACTICE,
         draft_answer="Test draft",
     )
-    session_override.add(preparation)
-    await session_override.commit()
-    await session_override.refresh(preparation)
+    db_session.add(preparation)
+    await db_session.commit()
+    await db_session.refresh(preparation)
 
     attempt = DeliveryAttempt(
         preparation_id=preparation.id,
         transcript="Test delivery",
     )
-    session_override.add(attempt)
-    await session_override.commit()
-    await session_override.refresh(attempt)
+    db_session.add(attempt)
+    await db_session.commit()
+    await db_session.refresh(attempt)
 
     # User 2 tries to access User 1's comparison
     response = await client.get(

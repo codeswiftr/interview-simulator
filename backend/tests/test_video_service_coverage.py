@@ -11,11 +11,9 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import text
 from sqlmodel import SQLModel, select
 
 from app.ai.video_analyzer import VideoMetrics
-from app.db import SessionLocal, engine
 from app.models.feedback import VideoFeedback
 from app.models.interview import (
     InterviewResponse,
@@ -28,32 +26,14 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.video_service import VideoService
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.fixture
 async def db_session():
     """Provide a database session for tests."""
     async with SessionLocal() as session:
         yield session
-
 
 @pytest.fixture
 async def test_user(db_session):
@@ -66,7 +46,6 @@ async def test_user(db_session):
     await db_session.commit()
     await db_session.refresh(user)
     return user
-
 
 @pytest.fixture
 async def test_interview_response(db_session, test_user):
@@ -99,12 +78,10 @@ async def test_interview_response(db_session, test_user):
     await db_session.refresh(response)
     return response
 
-
 @pytest.fixture
 def video_service():
     """Provide an instance of VideoService."""
     return VideoService()
-
 
 @pytest.fixture
 def sample_video_metrics():
@@ -121,9 +98,7 @@ def sample_video_metrics():
         frame_count=30,
     )
 
-
 # Test: analyze_video() missing file error (line 46)
-
 
 @pytest.mark.asyncio
 async def test_analyze_video_raises_error_when_file_not_found(
@@ -144,7 +119,6 @@ async def test_analyze_video_raises_error_when_file_not_found(
     error_message = str(exc_info.value)
     assert "Video file not found" in error_message
     assert nonexistent_path in error_message
-
 
 @pytest.mark.asyncio
 async def test_analyze_video_succeeds_when_file_exists(
@@ -168,7 +142,6 @@ async def test_analyze_video_succeeds_when_file_exists(
         )
 
     assert result == sample_video_metrics
-
 
 @pytest.mark.asyncio
 async def test_analyze_video_calls_get_response_to_validate(
@@ -194,9 +167,7 @@ async def test_analyze_video_calls_get_response_to_validate(
     assert "not found" in error_message
     assert str(fake_response_id) in error_message
 
-
 # Test: save_video_feedback() duplicate check (line 61)
-
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_raises_error_when_feedback_already_exists(
@@ -230,7 +201,6 @@ async def test_save_video_feedback_raises_error_when_feedback_already_exists(
     error_message = str(exc_info.value)
     assert "already exists" in error_message
     assert str(test_interview_response.id) in error_message
-
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_succeeds_when_no_existing_feedback(
@@ -270,7 +240,6 @@ async def test_save_video_feedback_succeeds_when_no_existing_feedback(
     assert saved_feedback is not None
     assert saved_feedback.id == feedback.id
 
-
 @pytest.mark.asyncio
 async def test_save_video_feedback_commits_and_refreshes(
     db_session, test_interview_response, video_service, sample_video_metrics
@@ -294,9 +263,7 @@ async def test_save_video_feedback_commits_and_refreshes(
         assert queried_feedback is not None
         assert queried_feedback.response_id == test_interview_response.id
 
-
 # Test: _get_response() validation (line 89)
-
 
 @pytest.mark.asyncio
 async def test_get_response_raises_error_when_response_not_found(
@@ -314,7 +281,6 @@ async def test_get_response_raises_error_when_response_not_found(
     assert "not found" in error_message
     assert str(fake_id) in error_message
 
-
 @pytest.mark.asyncio
 async def test_get_response_returns_response_when_exists(
     db_session, test_interview_response, video_service
@@ -329,9 +295,7 @@ async def test_get_response_returns_response_when_exists(
     assert result.session_id == test_interview_response.session_id
     assert result.question_id == test_interview_response.question_id
 
-
 # Test: process_response_video() integration
-
 
 @pytest.mark.asyncio
 async def test_process_response_video_analyzes_and_saves_feedback(
@@ -365,7 +329,6 @@ async def test_process_response_video_analyzes_and_saves_feedback(
     saved_feedback = result.first()
     assert saved_feedback is not None
 
-
 @pytest.mark.asyncio
 async def test_process_response_video_fails_when_file_missing(
     db_session, test_interview_response, video_service
@@ -381,7 +344,6 @@ async def test_process_response_video_fails_when_file_missing(
         )
 
     assert "Video file not found" in str(exc_info.value)
-
 
 @pytest.mark.asyncio
 async def test_process_response_video_fails_when_response_not_found(
@@ -403,7 +365,6 @@ async def test_process_response_video_fails_when_response_not_found(
 
     error_message = str(exc_info.value)
     assert "not found" in error_message
-
 
 @pytest.mark.asyncio
 async def test_process_response_video_fails_when_feedback_already_exists(
@@ -445,9 +406,7 @@ async def test_process_response_video_fails_when_feedback_already_exists(
 
     assert "already exists" in str(exc_info.value)
 
-
 # Test: Edge cases and additional coverage
-
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_handles_all_metric_fields(
@@ -484,7 +443,6 @@ async def test_save_video_feedback_handles_all_metric_fields(
     assert feedback.processing_duration_ms == 2500
     assert feedback.frame_count == 120
 
-
 @pytest.mark.asyncio
 async def test_analyze_video_passes_correct_path_to_analyzer(
     db_session, test_interview_response, video_service, sample_video_metrics, tmp_path
@@ -506,7 +464,6 @@ async def test_analyze_video_passes_correct_path_to_analyzer(
     # Verify analyzer was called with the correct path
     mock_analyze.assert_called_once_with(str(video_file))
 
-
 @pytest.mark.asyncio
 async def test_video_service_initializes_analyzer(video_service):
     """Test that VideoService initializes with a VideoAnalyzer instance."""
@@ -514,7 +471,6 @@ async def test_video_service_initializes_analyzer(video_service):
 
     assert hasattr(video_service, 'analyzer')
     assert isinstance(video_service.analyzer, VideoAnalyzer)
-
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_for_multiple_different_responses(
@@ -570,7 +526,6 @@ async def test_save_video_feedback_for_multiple_different_responses(
     assert feedback2.response_id == response2.id
     assert feedback1.id != feedback2.id
 
-
 @pytest.mark.asyncio
 async def test_analyze_video_with_pathlib_path(
     db_session, test_interview_response, video_service, sample_video_metrics, tmp_path
@@ -592,7 +547,6 @@ async def test_analyze_video_with_pathlib_path(
         )
 
     assert result == sample_video_metrics
-
 
 @pytest.mark.asyncio
 async def test_get_response_with_different_response_states(

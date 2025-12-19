@@ -1,62 +1,19 @@
-"""Integration tests for login with password migration."""
+"""Integration tests for login with password migration.
+
+Uses shared fixtures from conftest.py for database setup and client.
+"""
 
 from typing import Any
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from passlib.hash import pbkdf2_sha256
-from sqlalchemy import text
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.user import User
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-async def session():
-    async with SessionLocal() as session:
-        yield session
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 
 class TestLoginMigration:
@@ -64,7 +21,7 @@ class TestLoginMigration:
 
     @pytest.mark.asyncio
     async def test_login_migrates_legacy_password(
-        self, client: AsyncClient, session: Any
+        self, client: AsyncClient, db_session: Any
     ):
         """Test that login migrates legacy pbkdf2 passwords to bcrypt."""
         # Create user with legacy pbkdf2 password hash
@@ -77,9 +34,9 @@ class TestLoginMigration:
             hashed_password=legacy_hash,  # Directly set legacy hash
             full_name="Test User",
         )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
 
         # Verify initial state
         assert user.hashed_password.startswith("$pbkdf2-sha256$")
@@ -97,7 +54,7 @@ class TestLoginMigration:
         # Check that password was migrated in database
         # Need a new session since the API uses its own session
         async with SessionLocal() as new_session:
-            result = await new_session.exec(select(User).where(User.email == email))
+            result = await new_db_session.exec(select(User).where(User.email == email))
             updated_user = result.first()
 
             # Password should now be bcrypt
@@ -125,9 +82,9 @@ class TestLoginMigration:
             hashed_password=bcrypt_hash,
             full_name="Modern User",
         )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
 
         # Verify initial state
         assert user.hashed_password.startswith("$2b$")
@@ -143,7 +100,7 @@ class TestLoginMigration:
         assert "access_token" in token_data
 
         # Check that password hash wasn't changed
-        result = await session.exec(select(User).where(User.email == email))
+        result = await db_session.exec(select(User).where(User.email == email))
         updated_user = result.first()
 
         # Password should still be the same bcrypt hash
@@ -164,8 +121,8 @@ class TestLoginMigration:
             hashed_password=legacy_hash,
             full_name="Wrong Password User",
         )
-        session.add(user)
-        await session.commit()
+        db_session.add(user)
+        await db_session.commit()
 
         # Try login with wrong password
         login_response = await client.post(
@@ -177,7 +134,7 @@ class TestLoginMigration:
         assert "Invalid credentials" in login_response.json()["detail"]
 
         # Password should not be migrated
-        result = await session.exec(select(User).where(User.email == email))
+        result = await db_session.exec(select(User).where(User.email == email))
         unchanged_user = result.first()
         assert unchanged_user.hashed_password == legacy_hash
 
@@ -199,9 +156,9 @@ class TestLoginMigration:
             hashed_password=legacy_hash,
             full_name="Change Password User",
         )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
 
         # Get auth token for password change
         login_response = await client.post(
@@ -224,7 +181,7 @@ class TestLoginMigration:
 
         # Check that new password is bcrypt
         async with SessionLocal() as new_session:
-            result = await new_session.exec(select(User).where(User.email == email))
+            result = await new_db_session.exec(select(User).where(User.email == email))
             updated_user = result.first()
 
             assert updated_user.hashed_password.startswith("$2b$")
@@ -265,7 +222,7 @@ class TestLoginMigration:
         assert register_response.status_code == 201
 
         # Check that password is bcrypt
-        result = await session.exec(select(User).where(User.email == email))
+        result = await db_session.exec(select(User).where(User.email == email))
         new_user = result.first()
 
         assert new_user.hashed_password.startswith("$2b$")
@@ -295,9 +252,9 @@ class TestLoginMigration:
             hashed_password=legacy_hash,
             full_name="Login Time User",
         )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
 
         # Initially no last_login
         assert user.last_login_at is None
@@ -314,7 +271,7 @@ class TestLoginMigration:
 
         # Check last_login was updated
         async with SessionLocal() as new_session:
-            result = await new_session.exec(select(User).where(User.email == email))
+            result = await new_db_session.exec(select(User).where(User.email == email))
             updated_user = result.first()
 
             assert updated_user.last_login_at is not None

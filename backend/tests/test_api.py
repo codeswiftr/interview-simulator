@@ -1,64 +1,18 @@
-"""API integration tests for auth, questions, and interviews."""
+"""API integration tests for auth, questions, and interviews.
+
+Uses shared fixtures from conftest.py for database setup and client.
+"""
 
 from datetime import UTC
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel
+from httpx import AsyncClient
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.interview import InterviewStatus, InterviewType
 from app.models.question import Difficulty, QuestionCategory
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
-    """Register user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
-    token = resp.json()["access_token"]
-    return f"Bearer {token}"
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 
 @pytest.mark.asyncio
@@ -67,14 +21,14 @@ async def test_auth_flow(client: AsyncClient):
     resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
     assert resp.status_code == 200
     data = resp.json()
-    assert data["email"] == "user@example.com"
+    assert data["email"] == "testuser@example.com"
 
 
 @pytest.mark.asyncio
 async def test_question_crud_and_random(client: AsyncClient):
     token = await register_and_login(client)
     create_resp = await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "What is polymorphism?",
             "category": QuestionCategory.TECHNICAL.value,
@@ -87,7 +41,7 @@ async def test_question_crud_and_random(client: AsyncClient):
     assert create_resp.status_code == 201
     question_id = create_resp.json()["id"]
 
-    list_resp = await client.get("/api/v1/questions/")
+    list_resp = await client.get("/api/v1/questions")
     assert list_resp.status_code == 200
     assert len(list_resp.json()) == 1
 
@@ -106,7 +60,7 @@ async def test_interview_lifecycle(client: AsyncClient):
     # Seed enough behavioral questions for assignment
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Behavioral question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -116,7 +70,7 @@ async def test_interview_lifecycle(client: AsyncClient):
         )
 
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -146,7 +100,7 @@ async def test_interview_lifecycle(client: AsyncClient):
     assert end_resp.json()["status"] == InterviewStatus.COMPLETED
     assert end_resp.json()["duration_seconds"] >= 0
 
-    list_resp = await client.get("/api/v1/interviews/", headers={"Authorization": token})
+    list_resp = await client.get("/api/v1/interviews", headers={"Authorization": token})
     assert list_resp.status_code == 200
     assert len(list_resp.json()) == 1
     assert list_resp.json()[0]["id"] == interview_id
@@ -166,7 +120,7 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
 
     # Create a TECHNICAL question that won't be assigned to behavioral interview
     question_resp = await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Explain polymorphism in OOP",
             "category": QuestionCategory.TECHNICAL.value,  # Different category
@@ -180,7 +134,7 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
     # Create enough behavioral questions for the interview
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Tell me about a time {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -191,7 +145,7 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
 
     # Create an interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -231,7 +185,7 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_response_with_linked_question(client: AsyncClient, session_override):
+async def test_response_with_linked_question(client: AsyncClient, db_session):
     """Test response submission with a properly linked question."""
     from app.models.interview import InterviewQuestion
     from app.models.question import Question
@@ -244,13 +198,13 @@ async def test_response_with_linked_question(client: AsyncClient, session_overri
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create an interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 1},
         headers={"Authorization": token},
     )
@@ -264,8 +218,8 @@ async def test_response_with_linked_question(client: AsyncClient, session_overri
         order=1,
         time_limit_seconds=180,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     # Start interview
     await client.post(
@@ -304,7 +258,7 @@ async def test_response_with_linked_question(client: AsyncClient, session_overri
 
 
 @pytest.mark.asyncio
-async def test_response_ownership_check(client: AsyncClient, session_override):
+async def test_response_ownership_check(client: AsyncClient, db_session):
     """Test that users can only access their own interview responses."""
     from app.models.interview import InterviewQuestion
     from app.models.question import Question
@@ -318,13 +272,13 @@ async def test_response_ownership_check(client: AsyncClient, session_override):
         category=QuestionCategory.SYSTEM_DESIGN,
         difficulty=Difficulty.HARD,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # User 1 creates interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.SYSTEM_DESIGN.value},
         headers={"Authorization": token1},
     )
@@ -336,8 +290,8 @@ async def test_response_ownership_check(client: AsyncClient, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -365,7 +319,7 @@ async def test_response_ownership_check(client: AsyncClient, session_override):
 
 
 @pytest.mark.asyncio
-async def test_audio_upload(client: AsyncClient, session_override):
+async def test_audio_upload(client: AsyncClient, db_session):
     """Test audio file upload for interview responses."""
     from io import BytesIO
 
@@ -374,7 +328,7 @@ async def test_audio_upload(client: AsyncClient, session_override):
     # Create behavioral questions for the interview
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Upload test question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -385,7 +339,7 @@ async def test_audio_upload(client: AsyncClient, session_override):
 
     # Create and start an interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -443,7 +397,7 @@ async def test_audio_upload_invalid_session(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_audio_upload_invalid_format(client: AsyncClient, session_override):
+async def test_audio_upload_invalid_format(client: AsyncClient, db_session):
     """Test upload rejects invalid file formats."""
     from io import BytesIO
 
@@ -452,7 +406,7 @@ async def test_audio_upload_invalid_format(client: AsyncClient, session_override
     # Create questions and interview
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Format test question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -462,7 +416,7 @@ async def test_audio_upload_invalid_format(client: AsyncClient, session_override
         )
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -498,7 +452,7 @@ async def test_register_with_experience_level(client: AsyncClient):
         "/api/v1/users/register",
         json={
             "email": "senior@example.com",
-            "password": "password123",
+            "password": "SecureTest123!",
             "experience_level": "senior"
         }
     )
@@ -514,7 +468,7 @@ async def test_register_without_experience_level_defaults_to_mid(client: AsyncCl
         "/api/v1/users/register",
         json={
             "email": "default@example.com",
-            "password": "password123"
+            "password": "SecureTest123!"
         }
     )
     assert resp.status_code == 201
@@ -557,7 +511,7 @@ async def test_experience_level_returned_in_me(client: AsyncClient):
         "/api/v1/users/register",
         json={
             "email": "me_test@example.com",
-            "password": "password123",
+            "password": "SecureTest123!",
             "experience_level": "junior"
         }
     )
@@ -565,7 +519,7 @@ async def test_experience_level_returned_in_me(client: AsyncClient):
 
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "me_test@example.com", "password": "password123"}
+        json={"email": "me_test@example.com", "password": "SecureTest123!"}
     )
     token = f"Bearer {login_resp.json()['access_token']}"
 
@@ -579,11 +533,11 @@ async def test_login_returns_refresh_token(client: AsyncClient):
     """Test that login returns both access and refresh tokens."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "refresh@example.com", "password": "password123"}
+        json={"email": "refresh@example.com", "password": "SecureTest123!"}
     )
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "refresh@example.com", "password": "password123"}
+        json={"email": "refresh@example.com", "password": "SecureTest123!"}
     )
     assert login_resp.status_code == 200
     data = login_resp.json()
@@ -598,11 +552,11 @@ async def test_refresh_token_returns_new_tokens(client: AsyncClient):
     """Test that refreshing tokens returns a new access and refresh token."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "refresh2@example.com", "password": "password123"}
+        json={"email": "refresh2@example.com", "password": "SecureTest123!"}
     )
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "refresh2@example.com", "password": "password123"}
+        json={"email": "refresh2@example.com", "password": "SecureTest123!"}
     )
     old_refresh = login_resp.json()["refresh_token"]
 
@@ -623,11 +577,11 @@ async def test_refresh_token_rotation_invalidates_old(client: AsyncClient):
     """Test that using a refresh token invalidates it (token rotation)."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "rotation@example.com", "password": "password123"}
+        json={"email": "rotation@example.com", "password": "SecureTest123!"}
     )
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "rotation@example.com", "password": "password123"}
+        json={"email": "rotation@example.com", "password": "SecureTest123!"}
     )
     old_refresh = login_resp.json()["refresh_token"]
 
@@ -657,35 +611,33 @@ async def test_refresh_with_invalid_token_fails(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_refresh_with_expired_token_fails(client: AsyncClient):
+async def test_refresh_with_expired_token_fails(client: AsyncClient, db_session):
     """Test that an expired refresh token is rejected."""
     from datetime import datetime, timedelta
 
     from sqlmodel import select
 
-    from app.db import SessionLocal
     from app.models.user import User
 
     # Create user and login
     await client.post(
         "/api/v1/users/register",
-        json={"email": "expired_refresh@example.com", "password": "password123"}
+        json={"email": "expired_refresh@example.com", "password": "SecureTest123!"}
     )
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "expired_refresh@example.com", "password": "password123"}
+        json={"email": "expired_refresh@example.com", "password": "SecureTest123!"}
     )
     refresh_token = login_resp.json()["refresh_token"]
 
     # Manually expire the token in database
-    async with SessionLocal() as session:
-        result = await session.exec(
-            select(User).where(User.email == "expired_refresh@example.com")
-        )
-        user = result.first()
-        assert user is not None
-        user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
-        await session.commit()
+    result = await db_session.exec(
+        select(User).where(User.email == "expired_refresh@example.com")
+    )
+    user = result.first()
+    assert user is not None
+    user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
+    await db_session.commit()
 
     # Try to refresh with expired token
     refresh_resp = await client.post(
@@ -702,11 +654,11 @@ async def test_new_access_token_works(client: AsyncClient):
     """Test that the new access token from refresh can access protected endpoints."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "access@example.com", "password": "password123"}
+        json={"email": "access@example.com", "password": "SecureTest123!"}
     )
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "access@example.com", "password": "password123"}
+        json={"email": "access@example.com", "password": "SecureTest123!"}
     )
     refresh_token = login_resp.json()["refresh_token"]
 
@@ -742,7 +694,7 @@ async def test_change_password_success(client: AsyncClient):
 
     resp = await client.post(
         "/api/v1/users/me/change-password",
-        json={"current_password": "password123", "new_password": "newpassword456"},
+        json={"current_password": "TestPassword123!", "new_password": "NewSecure456!"},
         headers={"Authorization": token}
     )
     assert resp.status_code == 200
@@ -751,7 +703,7 @@ async def test_change_password_success(client: AsyncClient):
     # Verify new password works
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "password_change@example.com", "password": "newpassword456"}
+        json={"email": "password_change@example.com", "password": "NewSecure456!"}
     )
     assert login_resp.status_code == 200
 
@@ -786,7 +738,7 @@ async def test_delete_account(client: AsyncClient):
     # Try to login - should fail because account is soft deleted
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "delete_me@example.com", "password": "password123"}
+        json={"email": "delete_me@example.com", "password": "SecureTest123!"}
     )
     # Either 401 (invalid) or login works but is_active=False blocks access
     # Based on implementation, just check old email no longer works
@@ -891,22 +843,21 @@ async def test_update_profile_partial_updates(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_change_password_weak_password(client: AsyncClient):
-    """Test change password with weak new password (should still work, but may want validation)."""
+    """Test change password with weak new password rejects due to validation."""
     token = await register_and_login(client, email="weak_password@example.com")
 
-    # Try with very short password (current implementation may not validate)
+    # Try with very short password (min 6 chars required)
     resp = await client.post(
         "/api/v1/users/me/change-password",
-        json={"current_password": "password123", "new_password": "123"},
+        json={"current_password": "TestPassword123!", "new_password": "123"},
         headers={"Authorization": token},
     )
-    # Current implementation doesn't validate password strength
-    # This test documents current behavior - may want to add validation later
-    assert resp.status_code in [200, 400]  # May succeed or fail based on validation
+    # Password validation rejects passwords under 6 chars with 422
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_delete_account_cascade_cleanup(client: AsyncClient):
+async def test_delete_account_cascade_cleanup(client: AsyncClient, db_session):
     """Test DELETE /users/me cleans up related data (interviews, responses, feedback)."""
     from sqlmodel import select
 
@@ -922,7 +873,7 @@ async def test_delete_account_cascade_cleanup(client: AsyncClient):
     # Create interview and response
     for i in range(2):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -932,7 +883,7 @@ async def test_delete_account_cascade_cleanup(client: AsyncClient):
         )
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 2},
         headers={"Authorization": token},
     )
@@ -964,19 +915,18 @@ async def test_delete_account_cascade_cleanup(client: AsyncClient):
     assert del_resp.status_code == 204
 
     # Verify user is soft deleted (is_active=False)
-    async with SessionLocal() as session:
-        result = await session.exec(select(User).where(User.id == user_id))
-        user = result.first()
-        assert user is not None
-        assert user.is_active is False
+    result = await db_session.exec(select(User).where(User.id == user_id))
+    user = result.first()
+    assert user is not None
+    assert user.is_active is False
 
-        # Verify interviews still exist (soft delete doesn't cascade)
-        interviews_result = await session.exec(
-            select(InterviewSession).where(InterviewSession.user_id == user_id)
-        )
-        interviews = list(interviews_result.all())
-        # Soft delete keeps data, just marks user inactive
-        assert len(interviews) >= 1
+    # Verify interviews still exist (soft delete doesn't cascade)
+    interviews_result = await db_session.exec(
+        select(InterviewSession).where(InterviewSession.user_id == user_id)
+    )
+    interviews = list(interviews_result.all())
+    # Soft delete keeps data, just marks user inactive
+    assert len(interviews) >= 1
 
 
 @pytest.mark.asyncio
@@ -984,11 +934,11 @@ async def test_duplicate_registration_fails(client: AsyncClient):
     """Test registering with existing email fails."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "duplicate@example.com", "password": "password123"}
+        json={"email": "duplicate@example.com", "password": "SecureTest123!"}
     )
     resp = await client.post(
         "/api/v1/users/register",
-        json={"email": "duplicate@example.com", "password": "password123"}
+        json={"email": "duplicate@example.com", "password": "SecureTest123!"}
     )
     assert resp.status_code == 400
     assert "already registered" in resp.json()["detail"].lower()
@@ -999,7 +949,7 @@ async def test_login_with_wrong_password(client: AsyncClient):
     """Test login with incorrect password."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "wrong_login@example.com", "password": "password123"}
+        json={"email": "wrong_login@example.com", "password": "SecureTest123!"}
     )
     resp = await client.post(
         "/api/v1/users/login",
@@ -1014,7 +964,7 @@ async def test_login_nonexistent_user(client: AsyncClient):
     """Test login for user that doesn't exist."""
     resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "nonexistent@example.com", "password": "password123"}
+        json={"email": "nonexistent@example.com", "password": "SecureTest123!"}
     )
     assert resp.status_code == 401
 
@@ -1026,7 +976,7 @@ async def test_get_questions_by_category(client: AsyncClient):
 
     # Create a technical question
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Technical question for filter test",
             "category": QuestionCategory.TECHNICAL.value,
@@ -1037,7 +987,7 @@ async def test_get_questions_by_category(client: AsyncClient):
 
     # Create a behavioral question
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Behavioral question for filter test",
             "category": QuestionCategory.BEHAVIORAL.value,
@@ -1047,7 +997,7 @@ async def test_get_questions_by_category(client: AsyncClient):
     )
 
     # Filter by technical
-    resp = await client.get("/api/v1/questions/", params={"category": "technical"})
+    resp = await client.get("/api/v1/questions", params={"category": "technical"})
     assert resp.status_code == 200
     questions = resp.json()
     assert len(questions) >= 1
@@ -1061,7 +1011,7 @@ async def test_get_questions_by_difficulty(client: AsyncClient):
 
     # Create an easy question
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Easy question for filter test",
             "category": QuestionCategory.TECHNICAL.value,
@@ -1072,7 +1022,7 @@ async def test_get_questions_by_difficulty(client: AsyncClient):
 
     # Create a hard question
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Hard question for filter test",
             "category": QuestionCategory.TECHNICAL.value,
@@ -1082,7 +1032,7 @@ async def test_get_questions_by_difficulty(client: AsyncClient):
     )
 
     # Filter by easy
-    resp = await client.get("/api/v1/questions/", params={"difficulty": "easy"})
+    resp = await client.get("/api/v1/questions", params={"difficulty": "easy"})
     assert resp.status_code == 200
     questions = resp.json()
     assert len(questions) >= 1
@@ -1096,7 +1046,7 @@ async def test_get_question_by_id(client: AsyncClient):
 
     # Create a question
     create_resp = await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Question to get by ID",
             "category": QuestionCategory.BEHAVIORAL.value,
@@ -1119,7 +1069,7 @@ async def test_get_random_question_filtered(client: AsyncClient):
 
     # Create a behavioral medium question
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Behavioral medium for random test",
             "category": QuestionCategory.BEHAVIORAL.value,
@@ -1147,7 +1097,7 @@ async def test_interview_get_by_id(client: AsyncClient):
     # Create behavioral questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Interview get test question {i}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1158,7 +1108,7 @@ async def test_interview_get_by_id(client: AsyncClient):
 
     # Create interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1181,7 +1131,7 @@ async def test_interview_cancel_before_start(client: AsyncClient):
     # Create behavioral questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Cancel test question {i}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1192,7 +1142,7 @@ async def test_interview_cancel_before_start(client: AsyncClient):
 
     # Create interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1214,7 +1164,7 @@ async def test_interview_already_started_returns_same_state(client: AsyncClient)
     # Create behavioral questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Start twice test question {i}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1225,7 +1175,7 @@ async def test_interview_already_started_returns_same_state(client: AsyncClient)
 
     # Create and start interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1255,7 +1205,7 @@ async def test_forgot_password_returns_success_always(client: AsyncClient):
     # Existing user
     await client.post(
         "/api/v1/users/register",
-        json={"email": "forgotpw@example.com", "password": "password123"}
+        json={"email": "forgotpw@example.com", "password": "SecureTest123!"}
     )
     resp1 = await client.post(
         "/api/v1/auth/forgot-password",
@@ -1293,7 +1243,7 @@ async def test_create_interview_with_all_optional_fields(client: AsyncClient):
     # Seed questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Question {i+1}",
                 "category": QuestionCategory.TECHNICAL.value,
@@ -1307,7 +1257,7 @@ async def test_create_interview_with_all_optional_fields(client: AsyncClient):
     scheduled_at = (datetime.now(UTC) + timedelta(days=1)).isoformat()
 
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={
             "interview_type": InterviewType.TECHNICAL.value,
             "question_count": 2,
@@ -1336,7 +1286,7 @@ async def test_start_interview_already_completed(client: AsyncClient):
     # Seed questions
     for i in range(2):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1347,7 +1297,7 @@ async def test_start_interview_already_completed(client: AsyncClient):
 
     # Create and complete interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 2},
         headers={"Authorization": token},
     )
@@ -1378,7 +1328,7 @@ async def test_start_interview_cancelled(client: AsyncClient):
 
     # Create and cancel interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1404,7 +1354,7 @@ async def test_get_questions_when_not_started(client: AsyncClient):
     token = await register_and_login(client, email="questions_not_started@example.com")
 
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 2},
         headers={"Authorization": token},
     )
@@ -1427,7 +1377,7 @@ async def test_get_questions_ordering(client: AsyncClient):
     # Seed questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1437,7 +1387,7 @@ async def test_get_questions_ordering(client: AsyncClient):
         )
 
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1467,7 +1417,7 @@ async def test_submit_response_invalid_question_id(client: AsyncClient):
 
     # Create question that won't be assigned
     question_resp = await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Unassigned question",
             "category": QuestionCategory.TECHNICAL.value,
@@ -1480,7 +1430,7 @@ async def test_submit_response_invalid_question_id(client: AsyncClient):
     # Create behavioral interview
     for i in range(2):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Behavioral {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1490,7 +1440,7 @@ async def test_submit_response_invalid_question_id(client: AsyncClient):
         )
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 2},
         headers={"Authorization": token},
     )
@@ -1523,7 +1473,7 @@ async def test_submit_response_to_completed_interview(client: AsyncClient):
     # Seed questions
     for i in range(2):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Question {i+1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1533,7 +1483,7 @@ async def test_submit_response_to_completed_interview(client: AsyncClient):
         )
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 2},
         headers={"Authorization": token},
     )
@@ -1578,7 +1528,7 @@ async def test_end_interview_not_in_progress(client: AsyncClient):
 
     # Seed questions
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Test question",
             "category": QuestionCategory.BEHAVIORAL.value,
@@ -1589,7 +1539,7 @@ async def test_end_interview_not_in_progress(client: AsyncClient):
 
     # Create, start, and end interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1620,7 +1570,7 @@ async def test_end_interview_no_responses(client: AsyncClient):
 
     # Seed questions
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Test question",
             "category": QuestionCategory.BEHAVIORAL.value,
@@ -1630,7 +1580,7 @@ async def test_end_interview_no_responses(client: AsyncClient):
     )
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1657,7 +1607,7 @@ async def test_delete_interview_other_user(client: AsyncClient):
 
     # Create interview as user 1
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 1},
         headers={"Authorization": token1},
     )
@@ -1680,7 +1630,7 @@ async def test_delete_interview_in_progress(client: AsyncClient):
 
     # Seed questions
     await client.post(
-        "/api/v1/questions/",
+        "/api/v1/questions",
         json={
             "content": "Test question",
             "category": QuestionCategory.BEHAVIORAL.value,
@@ -1690,7 +1640,7 @@ async def test_delete_interview_in_progress(client: AsyncClient):
     )
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1737,7 +1687,7 @@ async def test_interview_list_empty(client: AsyncClient):
     """Test listing interviews when user has none."""
     token = await register_and_login(client, email="empty_interviews@example.com")
 
-    resp = await client.get("/api/v1/interviews/", headers={"Authorization": token})
+    resp = await client.get("/api/v1/interviews", headers={"Authorization": token})
     assert resp.status_code == 200
     assert resp.json() == []
 
@@ -1750,7 +1700,7 @@ async def test_create_interview_with_company_style(client: AsyncClient):
     # Create behavioral questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Company style test question {i}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1760,7 +1710,7 @@ async def test_create_interview_with_company_style(client: AsyncClient):
         )
 
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={
             "interview_type": InterviewType.BEHAVIORAL.value,
             "company_style": "google",
@@ -1780,7 +1730,7 @@ async def test_create_interview_with_difficulty(client: AsyncClient):
     # Create hard behavioral questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"Difficulty test question {i}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1790,7 +1740,7 @@ async def test_create_interview_with_difficulty(client: AsyncClient):
         )
 
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={
             "interview_type": InterviewType.BEHAVIORAL.value,
             "difficulty": "hard",
@@ -1809,7 +1759,7 @@ async def test_end_interview_returns_completed_status(client: AsyncClient):
     # Create behavioral questions
     for i in range(3):
         await client.post(
-            "/api/v1/questions/",
+            "/api/v1/questions",
             json={
                 "content": f"End complete test {i}",
                 "category": QuestionCategory.BEHAVIORAL.value,
@@ -1820,7 +1770,7 @@ async def test_end_interview_returns_completed_status(client: AsyncClient):
 
     # Create and start interview
     create_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": InterviewType.BEHAVIORAL.value, "question_count": 3},
         headers={"Authorization": token},
     )

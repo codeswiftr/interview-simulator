@@ -99,11 +99,8 @@ class UserCreate(SQLModel):
             email=self.email
         )
         if errors:
-            from pydantic import ValidationError
-            raise ValidationError.from_exception_data(
-                "UserCreate",
-                [{"type": "value_error", "loc": ("password",), "msg": "\n".join(errors)}]
-            )
+            # Raise ValueError which FastAPI converts to 422 Unprocessable Entity
+            raise ValueError(f"Password validation failed: {'; '.join(errors)}")
 
 
 class UserLogin(SQLModel):
@@ -160,8 +157,4 @@ class PasswordChange(SQLModel):
 
         errors = validate_password(self.new_password)
         if errors:
-            from pydantic import ValidationError
-            raise ValidationError.from_exception_data(
-                "PasswordChange",
-                [{"type": "value_error", "loc": ("new_password",), "msg": "\n".join(errors)}]
-            )
+            raise ValueError(f"Password validation failed: {'; '.join(errors)}")

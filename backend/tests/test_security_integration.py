@@ -460,7 +460,7 @@ class TestContentSecurityIntegration:
         """Test XSS prevention in search functionality."""
         xss_queries = [
             "<script>alert('XSS')</script>",
-            "';alert('XSS');//",
+            "';alert('XSS');/",
             "<svg onload=alert('XSS')>",
         ]
 
@@ -655,7 +655,7 @@ class TestFileUploadSecurity:
         malicious_names = [
             "../../../etc/passwd",
             "..\\..\\..\\windows\\system32\\config\\sam",
-            "....//....//....//etc/passwd",
+            "..../..../..../etc/passwd",
             "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
         ]
 

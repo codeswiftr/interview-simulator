@@ -1,62 +1,10 @@
 """Tests for coaching hint generation endpoint."""
 
-
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel
+from httpx import AsyncClient
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
-
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
-    """Register user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
-    token = resp.json()["access_token"]
-    return f"Bearer {token}"
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.mark.asyncio
 async def test_coaching_hint_endpoint_requires_auth(client: AsyncClient):
@@ -70,7 +18,6 @@ async def test_coaching_hint_endpoint_requires_auth(client: AsyncClient):
         },
     )
     assert response.status_code == 401
-
 
 @pytest.mark.asyncio
 async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
@@ -93,7 +40,6 @@ async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
     assert isinstance(data["hint"], str)
     assert len(data["hint"]) > 0
 
-
 @pytest.mark.asyncio
 async def test_coaching_hint_validates_question_type(client: AsyncClient):
     """Test that coaching hint endpoint validates question_type."""
@@ -110,7 +56,6 @@ async def test_coaching_hint_validates_question_type(client: AsyncClient):
     )
     assert response.status_code == 422  # Validation error
 
-
 @pytest.mark.asyncio
 async def test_coaching_hint_requires_question(client: AsyncClient):
     """Test that coaching hint endpoint requires question field."""
@@ -125,7 +70,6 @@ async def test_coaching_hint_requires_question(client: AsyncClient):
         },
     )
     assert response.status_code == 422  # Validation error
-
 
 @pytest.mark.asyncio
 async def test_coaching_hint_handles_empty_transcript(client: AsyncClient):
@@ -146,7 +90,6 @@ async def test_coaching_hint_handles_empty_transcript(client: AsyncClient):
     data = response.json()
     assert "hint" in data
 
-
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_endpoint_requires_auth(client: AsyncClient):
     """Test that streaming coaching hint endpoint requires authentication."""
@@ -159,7 +102,6 @@ async def test_coaching_hint_stream_endpoint_requires_auth(client: AsyncClient):
         },
     )
     assert response.status_code == 401
-
 
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_endpoint_returns_stream(client: AsyncClient):
@@ -192,7 +134,6 @@ async def test_coaching_hint_stream_endpoint_returns_stream(client: AsyncClient)
     last_chunk = chunks[-1]
     assert "done" in last_chunk or "data:" in last_chunk
 
-
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_validates_question_type(client: AsyncClient):
     """Test that streaming endpoint validates question_type."""
@@ -208,7 +149,6 @@ async def test_coaching_hint_stream_validates_question_type(client: AsyncClient)
         },
     )
     assert response.status_code == 422  # Validation error
-
 
 @pytest.mark.asyncio
 async def test_coaching_hint_rate_limiting(client: AsyncClient):
@@ -240,7 +180,6 @@ async def test_coaching_hint_rate_limiting(client: AsyncClient):
     )
     assert response.status_code == 429  # Too Many Requests
     assert "rate limit" in response.json()["detail"].lower()
-
 
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_rate_limiting(client: AsyncClient):

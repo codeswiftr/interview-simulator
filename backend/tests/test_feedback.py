@@ -1,16 +1,15 @@
-"""Tests for feedback generation service and API endpoints."""
+"""Tests for feedback generation service and API endpoints.
+
+Uses shared fixtures from conftest.py for database setup and client.
+"""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel
+from httpx import AsyncClient
 
 from app.ai.content_analyzer import ContentMetrics
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.feedback import ContentFeedback, SessionFeedback
 from app.models.interview import (
     InterviewQuestion,
@@ -23,53 +22,8 @@ from app.models.interview import (
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.services.feedback_service import FeedbackService
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
-    """Register user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
-    token = resp.json()["access_token"]
-    return f"Bearer {token}"
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 
 @pytest.fixture
@@ -91,16 +45,16 @@ def mock_content_metrics():
 
 
 @pytest.mark.asyncio
-async def test_generate_feedback_success(session_override, mock_content_metrics):
+async def test_generate_feedback_success(db_session, mock_content_metrics):
     """Test successful feedback generation for a response."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user first to satisfy foreign key constraint
     user = User(email="test@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create test data
     question = Question(
@@ -108,18 +62,18 @@ async def test_generate_feedback_success(session_override, mock_content_metrics)
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     response = InterviewResponse(
         session_id=interview.id,
@@ -127,9 +81,9 @@ async def test_generate_feedback_success(session_override, mock_content_metrics)
         transcript="I faced a challenging bug in production. I analyzed logs, identified the root cause, and implemented a fix that resolved the issue.",
         duration_seconds=120,
     )
-    session_override.add(response)
-    await session_override.commit()
-    await session_override.refresh(response)
+    db_session.add(response)
+    await db_session.commit()
+    await db_session.refresh(response)
 
     # Mock the content analyzer
     with patch.object(
@@ -140,7 +94,7 @@ async def test_generate_feedback_success(session_override, mock_content_metrics)
         service.content_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
 
         # Generate feedback
-        feedback = await service.generate_feedback(session_override, response.id)
+        feedback = await service.generate_feedback(db_session, response.id)
 
         # Assertions
         assert feedback is not None
@@ -157,34 +111,34 @@ async def test_generate_feedback_success(session_override, mock_content_metrics)
 
 
 @pytest.mark.asyncio
-async def test_generate_feedback_no_transcript(session_override):
+async def test_generate_feedback_no_transcript(db_session):
     """Test feedback generation fails when response has no transcript."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user first
     user = User(email="test2@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     question = Question(
         content="What is polymorphism?",
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.TECHNICAL,
         status=InterviewStatus.IN_PROGRESS,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     response = InterviewResponse(
         session_id=interview.id,
@@ -192,45 +146,45 @@ async def test_generate_feedback_no_transcript(session_override):
         transcript=None,  # No transcript
         duration_seconds=60,
     )
-    session_override.add(response)
-    await session_override.commit()
-    await session_override.refresh(response)
+    db_session.add(response)
+    await db_session.commit()
+    await db_session.refresh(response)
 
     service = FeedbackService()
 
     with pytest.raises(ValueError, match="no transcript"):
-        await service.generate_feedback(session_override, response.id)
+        await service.generate_feedback(db_session, response.id)
 
 
 @pytest.mark.asyncio
-async def test_generate_feedback_already_exists(session_override, mock_content_metrics):
+async def test_generate_feedback_already_exists(db_session, mock_content_metrics):
     """Test feedback generation fails when feedback already exists."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user first
     user = User(email="test3@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     question = Question(
         content="Design a URL shortener",
         category=QuestionCategory.SYSTEM_DESIGN,
         difficulty=Difficulty.HARD,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.SYSTEM_DESIGN,
         status=InterviewStatus.IN_PROGRESS,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     response = InterviewResponse(
         session_id=interview.id,
@@ -238,9 +192,9 @@ async def test_generate_feedback_already_exists(session_override, mock_content_m
         transcript="I would use consistent hashing and a distributed key-value store...",
         duration_seconds=300,
     )
-    session_override.add(response)
-    await session_override.commit()
-    await session_override.refresh(response)
+    db_session.add(response)
+    await db_session.commit()
+    await db_session.refresh(response)
 
     # Create existing feedback
     existing_feedback = ContentFeedback(
@@ -255,44 +209,44 @@ async def test_generate_feedback_already_exists(session_override, mock_content_m
         improvements=["Add scalability discussion"],
         detailed_feedback="Solid design",
     )
-    session_override.add(existing_feedback)
-    await session_override.commit()
+    db_session.add(existing_feedback)
+    await db_session.commit()
 
     service = FeedbackService()
 
     with pytest.raises(ValueError, match="already exists"):
-        await service.generate_feedback(session_override, response.id)
+        await service.generate_feedback(db_session, response.id)
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_success(session_override, mock_content_metrics):
+async def test_generate_session_feedback_success(db_session, mock_content_metrics):
     """Test successful session feedback generation."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user first
     user = User(email="test4@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     question = Question(
         content="Tell me about your leadership experience",
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.COMPLETED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     # Create responses with transcripts
     response1 = InterviewResponse(
@@ -307,11 +261,11 @@ async def test_generate_session_feedback_success(session_override, mock_content_
         transcript="Another example of my leadership was when I mentored junior developers.",
         duration_seconds=90,
     )
-    session_override.add(response1)
-    session_override.add(response2)
-    await session_override.commit()
-    await session_override.refresh(response1)
-    await session_override.refresh(response2)
+    db_session.add(response1)
+    db_session.add(response2)
+    await db_session.commit()
+    await db_session.refresh(response1)
+    await db_session.refresh(response2)
 
     # Mock the content analyzer
     with patch.object(
@@ -322,7 +276,7 @@ async def test_generate_session_feedback_success(session_override, mock_content_
         service.content_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
 
         # Generate session feedback
-        session_feedback = await service.generate_session_feedback(session_override, interview.id)
+        session_feedback = await service.generate_session_feedback(db_session, interview.id)
 
         # Assertions
         assert session_feedback is not None
@@ -333,43 +287,43 @@ async def test_generate_session_feedback_success(session_override, mock_content_
         assert len(session_feedback.top_improvements) > 0
 
         # Check interview status updated
-        await session_override.refresh(interview)
+        await db_session.refresh(interview)
         assert interview.status == InterviewStatus.ANALYZED
         assert interview.overall_score is not None
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_no_responses(session_override):
+async def test_generate_session_feedback_no_responses(db_session):
     """Test session feedback generation fails when no responses exist."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user first
     user = User(email="test5@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     interview = InterviewSession(
         user_id=user.id,
         interview_type=InterviewType.TECHNICAL,
         status=InterviewStatus.COMPLETED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     service = FeedbackService()
 
     with pytest.raises(ValueError, match="No responses found"):
-        await service.generate_session_feedback(session_override, interview.id)
+        await service.generate_session_feedback(db_session, interview.id)
 
 
 # API Endpoint Tests
 
 
 @pytest.mark.asyncio
-async def test_get_response_feedback_endpoint(client, session_override, mock_content_metrics):
+async def test_get_response_feedback_endpoint(client, db_session, mock_content_metrics):
     """Test GET /api/v1/feedback/response/{response_id} endpoint."""
     token = await register_and_login(client, email="feedback@example.com")
 
@@ -379,9 +333,9 @@ async def test_get_response_feedback_endpoint(client, session_override, mock_con
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -396,8 +350,8 @@ async def test_get_response_feedback_endpoint(client, session_override, mock_con
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     # Start interview and submit response
     await client.post(
@@ -430,8 +384,8 @@ async def test_get_response_feedback_endpoint(client, session_override, mock_con
         improvements=["Add examples", "Discuss benefits"],
         detailed_feedback="Strong technical answer with clear explanation.",
     )
-    session_override.add(feedback)
-    await session_override.commit()
+    db_session.add(feedback)
+    await db_session.commit()
 
     # Test endpoint
     get_resp = await client.get(
@@ -447,7 +401,7 @@ async def test_get_response_feedback_endpoint(client, session_override, mock_con
 
 
 @pytest.mark.asyncio
-async def test_get_response_feedback_not_found(client, session_override):
+async def test_get_response_feedback_not_found(client, db_session):
     """Test GET /api/v1/feedback/response/{response_id} returns 404 when no feedback exists."""
     token = await register_and_login(client, email="nofeedback@example.com")
 
@@ -456,9 +410,9 @@ async def test_get_response_feedback_not_found(client, session_override):
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -472,8 +426,8 @@ async def test_get_response_feedback_not_found(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -501,7 +455,7 @@ async def test_get_response_feedback_not_found(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_session_feedback_endpoint(client, session_override):
+async def test_get_session_feedback_endpoint(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id} endpoint."""
     token = await register_and_login(client, email="sessionfeedback@example.com")
 
@@ -523,8 +477,8 @@ async def test_get_session_feedback_endpoint(client, session_override):
         recommended_practice_areas=["Technical depth"],
         next_question_ids=[],
     )
-    session_override.add(session_feedback)
-    await session_override.commit()
+    db_session.add(session_feedback)
+    await db_session.commit()
 
     # Test endpoint
     get_resp = await client.get(
@@ -540,7 +494,7 @@ async def test_get_session_feedback_endpoint(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_generate_response_feedback_endpoint(client, session_override, mock_content_metrics):
+async def test_generate_response_feedback_endpoint(client, db_session, mock_content_metrics):
     """Test POST /api/v1/feedback/generate/response/{response_id} endpoint."""
     token = await register_and_login(client, email="generate@example.com")
 
@@ -549,9 +503,9 @@ async def test_generate_response_feedback_endpoint(client, session_override, moc
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -565,8 +519,8 @@ async def test_generate_response_feedback_endpoint(client, session_override, moc
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -603,7 +557,7 @@ async def test_generate_response_feedback_endpoint(client, session_override, moc
 
 
 @pytest.mark.asyncio
-async def test_generate_response_feedback_ai_failure(client, session_override):
+async def test_generate_response_feedback_ai_failure(client, db_session):
     """Test POST /feedback/generate/response/{id} returns 400 when analysis fails."""
     token = await register_and_login(client, email="ai_failure@example.com")
 
@@ -612,9 +566,9 @@ async def test_generate_response_feedback_ai_failure(client, session_override):
         category=QuestionCategory.SYSTEM_DESIGN,
         difficulty=Difficulty.HARD,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -628,8 +582,8 @@ async def test_generate_response_feedback_ai_failure(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -666,7 +620,7 @@ async def test_generate_response_feedback_ai_failure(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_feedback_authorization(client, session_override):
+async def test_feedback_authorization(client, db_session):
     """Test that users can only access their own feedback."""
     # User 1
     token1 = await register_and_login(client, email="user1@example.com")
@@ -676,9 +630,9 @@ async def test_feedback_authorization(client, session_override):
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -692,8 +646,8 @@ async def test_feedback_authorization(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -728,7 +682,7 @@ async def test_feedback_authorization(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_session_processing_status_returns_counts_and_flags(client, session_override):
+async def test_get_session_processing_status_returns_counts_and_flags(client, db_session):
     """Test that processing status endpoint returns counts and flags."""
     token = await register_and_login(client, email="status@example.com")
 
@@ -737,9 +691,9 @@ async def test_get_session_processing_status_returns_counts_and_flags(client, se
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -753,8 +707,8 @@ async def test_get_session_processing_status_returns_counts_and_flags(client, se
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -776,9 +730,9 @@ async def test_get_session_processing_status_returns_counts_and_flags(client, se
         duration_seconds=30,
         processing_status=ProcessingStatus.TRANSCRIBING,
     )
-    session_override.add(response1)
-    session_override.add(response2)
-    await session_override.commit()
+    db_session.add(response1)
+    db_session.add(response2)
+    await db_session.commit()
 
     # Get processing status
     status_resp = await client.get(
@@ -800,7 +754,7 @@ async def test_get_session_processing_status_returns_counts_and_flags(client, se
 
 
 @pytest.mark.asyncio
-async def test_get_session_processing_status_authorization(client, session_override):
+async def test_get_session_processing_status_authorization(client, db_session):
     """Test that users cannot see another user's session status."""
     token1 = await register_and_login(client, email="user1_status@example.com")
 
@@ -809,9 +763,9 @@ async def test_get_session_processing_status_authorization(client, session_overr
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -830,7 +784,7 @@ async def test_get_session_processing_status_authorization(client, session_overr
 
 
 @pytest.mark.asyncio
-async def test_get_session_processing_status_handles_no_responses(client, session_override):
+async def test_get_session_processing_status_handles_no_responses(client, db_session):
     """Test that processing status returns sensible defaults when no responses exist."""
     token = await register_and_login(client, email="no_responses@example.com")
 
@@ -859,7 +813,7 @@ async def test_get_session_processing_status_handles_no_responses(client, sessio
 
 
 @pytest.mark.asyncio
-async def test_get_session_feedback_not_found(client, session_override):
+async def test_get_session_feedback_not_found(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id} returns 404 when no feedback exists."""
     token = await register_and_login(client, email="session_no_feedback@example.com")
 
@@ -880,7 +834,7 @@ async def test_get_session_feedback_not_found(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_all_session_feedbacks_endpoint(client, session_override):
+async def test_get_all_session_feedbacks_endpoint(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id}/all endpoint."""
     token = await register_and_login(client, email="all_feedbacks@example.com")
 
@@ -889,9 +843,9 @@ async def test_get_all_session_feedbacks_endpoint(client, session_override):
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -905,8 +859,8 @@ async def test_get_all_session_feedbacks_endpoint(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -938,8 +892,8 @@ async def test_get_all_session_feedbacks_endpoint(client, session_override):
         improvements=["Add more detail"],
         detailed_feedback="Solid answer.",
     )
-    session_override.add(feedback)
-    await session_override.commit()
+    db_session.add(feedback)
+    await db_session.commit()
 
     # Get all feedbacks
     get_resp = await client.get(
@@ -954,7 +908,7 @@ async def test_get_all_session_feedbacks_endpoint(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_all_session_feedbacks_empty(client, session_override):
+async def test_get_all_session_feedbacks_empty(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id}/all returns empty list when no feedbacks."""
     token = await register_and_login(client, email="empty_feedbacks@example.com")
 
@@ -977,7 +931,7 @@ async def test_get_all_session_feedbacks_empty(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_session_processing_status_with_feedback(client, session_override):
+async def test_get_session_processing_status_with_feedback(client, db_session):
     """Test GET /api/v1/feedback/session/{id}/status returns correct counts."""
     token = await register_and_login(client, email="status@example.com")
 
@@ -995,17 +949,17 @@ async def test_get_session_processing_status_with_feedback(client, session_overr
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_question = InterviewQuestion(
         session_id=interview_id,
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     # Start interview and submit two responses
     await client.post(
@@ -1059,9 +1013,9 @@ async def test_get_session_processing_status_with_feedback(client, session_overr
         top_improvements=["Add examples"],
         summary="Solid session.",
     )
-    session_override.add(content_fb)
-    session_override.add(session_fb)
-    await session_override.commit()
+    db_session.add(content_fb)
+    db_session.add(session_fb)
+    await db_session.commit()
 
     status_resp = await client.get(
         f"/api/v1/feedback/session/{interview_id}/status",
@@ -1076,7 +1030,7 @@ async def test_get_session_processing_status_with_feedback(client, session_overr
 
 
 @pytest.mark.asyncio
-async def test_get_session_processing_status_empty(client, session_override):
+async def test_get_session_processing_status_empty(client, db_session):
     """Test status endpoint when there are no responses yet."""
     token = await register_and_login(client, email="status_empty@example.com")
 
@@ -1098,7 +1052,7 @@ async def test_get_session_processing_status_empty(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_session_comparison_endpoint(client, session_override):
+async def test_get_session_comparison_endpoint(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id}/comparison endpoint."""
     token = await register_and_login(client, email="comparison@example.com")
 
@@ -1112,13 +1066,13 @@ async def test_get_session_comparison_endpoint(client, session_override):
 
     # Manually set the interview status and overall_score for baseline
     from sqlmodel import select
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(InterviewSession).where(InterviewSession.id == interview_id1)
     )
     interview1 = result.first()
     interview1.status = InterviewStatus.ANALYZED
     interview1.overall_score = 75.0
-    await session_override.commit()
+    await db_session.commit()
 
     # Create second interview (the one we'll compare)
     interview_resp2 = await client.post(
@@ -1139,8 +1093,8 @@ async def test_get_session_comparison_endpoint(client, session_override):
         recommended_practice_areas=["Technical depth"],
         next_question_ids=[],
     )
-    session_override.add(session_feedback)
-    await session_override.commit()
+    db_session.add(session_feedback)
+    await db_session.commit()
 
     # Get comparison
     comp_resp = await client.get(
@@ -1156,7 +1110,7 @@ async def test_get_session_comparison_endpoint(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_session_comparison_no_feedback(client, session_override):
+async def test_get_session_comparison_no_feedback(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id}/comparison returns 404 when no feedback."""
     token = await register_and_login(client, email="no_comparison@example.com")
 
@@ -1177,7 +1131,7 @@ async def test_get_session_comparison_no_feedback(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_session_comparison_no_previous_sessions(client, session_override):
+async def test_get_session_comparison_no_previous_sessions(client, db_session):
     """Test comparison when user has no previous sessions for baseline."""
     token = await register_and_login(client, email="first_session@example.com")
 
@@ -1199,8 +1153,8 @@ async def test_get_session_comparison_no_previous_sessions(client, session_overr
         recommended_practice_areas=["Technical"],
         next_question_ids=[],
     )
-    session_override.add(session_feedback)
-    await session_override.commit()
+    db_session.add(session_feedback)
+    await db_session.commit()
 
     # Get comparison (no previous sessions)
     comp_resp = await client.get(
@@ -1216,7 +1170,7 @@ async def test_get_session_comparison_no_previous_sessions(client, session_overr
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_endpoint(client, session_override, mock_content_metrics):
+async def test_generate_session_feedback_endpoint(client, db_session, mock_content_metrics):
     """Test POST /api/v1/feedback/generate/session/{session_id} endpoint."""
     token = await register_and_login(client, email="gen_session@example.com")
 
@@ -1225,9 +1179,9 @@ async def test_generate_session_feedback_endpoint(client, session_override, mock
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -1241,8 +1195,8 @@ async def test_generate_session_feedback_endpoint(client, session_override, mock
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -1280,7 +1234,7 @@ async def test_generate_session_feedback_endpoint(client, session_override, mock
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_no_responses_api(client, session_override):
+async def test_generate_session_feedback_no_responses_api(client, db_session):
     """Test generate session feedback returns 400 when no responses exist."""
     token = await register_and_login(client, email="gen_no_resp@example.com")
 
@@ -1301,7 +1255,7 @@ async def test_generate_session_feedback_no_responses_api(client, session_overri
 
 
 @pytest.mark.asyncio
-async def test_generate_response_feedback_no_transcript(client, session_override):
+async def test_generate_response_feedback_no_transcript(client, db_session):
     """Test generate response feedback returns 400 when no transcript exists."""
     token = await register_and_login(client, email="gen_no_trans@example.com")
 
@@ -1310,9 +1264,9 @@ async def test_generate_response_feedback_no_transcript(client, session_override
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -1326,8 +1280,8 @@ async def test_generate_response_feedback_no_transcript(client, session_override
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -1355,7 +1309,7 @@ async def test_generate_response_feedback_no_transcript(client, session_override
 
 
 @pytest.mark.asyncio
-async def test_session_feedback_unauthorized_access(client, session_override):
+async def test_session_feedback_unauthorized_access(client, db_session):
     """Test that users cannot access another user's session feedback."""
     token1 = await register_and_login(client, email="owner_session@example.com")
 
@@ -1377,7 +1331,7 @@ async def test_session_feedback_unauthorized_access(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_all_feedbacks_unauthorized_access(client, session_override):
+async def test_all_feedbacks_unauthorized_access(client, db_session):
     """Test that users cannot access another user's all feedbacks."""
     token1 = await register_and_login(client, email="owner_all@example.com")
 
@@ -1399,7 +1353,7 @@ async def test_all_feedbacks_unauthorized_access(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_comparison_unauthorized_access(client, session_override):
+async def test_comparison_unauthorized_access(client, db_session):
     """Test that users cannot access another user's comparison."""
     token1 = await register_and_login(client, email="owner_comp@example.com")
 
@@ -1421,7 +1375,7 @@ async def test_comparison_unauthorized_access(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_already_exists(client, session_override, mock_content_metrics):
+async def test_generate_session_feedback_already_exists(client, db_session, mock_content_metrics):
     """Test generate session feedback when feedback already exists."""
     token = await register_and_login(client, email="gen_already@example.com")
 
@@ -1430,9 +1384,9 @@ async def test_generate_session_feedback_already_exists(client, session_override
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews/",
@@ -1446,8 +1400,8 @@ async def test_generate_session_feedback_already_exists(client, session_override
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -1489,7 +1443,7 @@ async def test_generate_session_feedback_already_exists(client, session_override
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_invalid_session(client, session_override):
+async def test_generate_session_feedback_invalid_session(client, db_session):
     """Test generate session feedback with invalid session ID returns 404."""
 
     token = await register_and_login(client, email="gen_invalid@example.com")
@@ -1509,13 +1463,13 @@ async def test_generate_session_feedback_invalid_session(client, session_overrid
 
 
 @pytest.mark.asyncio
-async def test_generate_feedback_response_not_found(session_override):
+async def test_generate_feedback_response_not_found(db_session):
     """Test FeedbackService.generate_feedback raises ValueError for non-existent response."""
     service = FeedbackService()
     fake_response_id = uuid4()
 
     with pytest.raises(ValueError, match="not found"):
-        await service.generate_feedback(session_override, fake_response_id)
+        await service.generate_feedback(db_session, fake_response_id)
 
 
 # Note: test_generate_feedback_question_not_found skipped
@@ -1524,26 +1478,26 @@ async def test_generate_feedback_response_not_found(session_override):
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_session_not_found(session_override):
+async def test_generate_session_feedback_session_not_found(db_session):
     """Test FeedbackService.generate_session_feedback raises ValueError for non-existent session."""
     service = FeedbackService()
     fake_session_id = uuid4()
 
     with pytest.raises(ValueError, match="not found"):
-        await service.generate_session_feedback(session_override, fake_session_id)
+        await service.generate_session_feedback(db_session, fake_session_id)
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_already_exists(session_override, mock_content_metrics):
+async def test_generate_session_feedback_already_exists(db_session, mock_content_metrics):
     """Test FeedbackService.generate_session_feedback raises ValueError when feedback exists."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user
     user = User(email="session_exists@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create interview
     interview = InterviewSession(
@@ -1551,9 +1505,9 @@ async def test_generate_session_feedback_already_exists(session_override, mock_c
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.COMPLETED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     # Create existing session feedback
     existing_feedback = SessionFeedback(
@@ -1565,25 +1519,25 @@ async def test_generate_session_feedback_already_exists(session_override, mock_c
         top_improvements=["Better"],
         recommended_practice_areas=["Practice"],
     )
-    session_override.add(existing_feedback)
-    await session_override.commit()
+    db_session.add(existing_feedback)
+    await db_session.commit()
 
     service = FeedbackService()
     with pytest.raises(ValueError, match="already exists"):
-        await service.generate_session_feedback(session_override, interview.id)
+        await service.generate_session_feedback(db_session, interview.id)
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_no_feedback_generated(session_override):
+async def test_generate_session_feedback_no_feedback_generated(db_session):
     """Test FeedbackService.generate_session_feedback raises ValueError when no feedback can be generated."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user
     user = User(email="no_feedback@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create question
     question = Question(
@@ -1591,9 +1545,9 @@ async def test_generate_session_feedback_no_feedback_generated(session_override)
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create interview with response but no transcript (can't generate feedback)
     interview = InterviewSession(
@@ -1601,9 +1555,9 @@ async def test_generate_session_feedback_no_feedback_generated(session_override)
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.COMPLETED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     # Create response without transcript
     response = InterviewResponse(
@@ -1612,25 +1566,25 @@ async def test_generate_session_feedback_no_feedback_generated(session_override)
         transcript=None,  # No transcript
         duration_seconds=60,
     )
-    session_override.add(response)
-    await session_override.commit()
+    db_session.add(response)
+    await db_session.commit()
 
     service = FeedbackService()
     with pytest.raises(ValueError, match="No feedback could be generated"):
-        await service.generate_session_feedback(session_override, interview.id)
+        await service.generate_session_feedback(db_session, interview.id)
 
 
 @pytest.mark.asyncio
-async def test_get_processing_summary(session_override):
+async def test_get_processing_summary(db_session):
     """Test FeedbackService.get_processing_summary returns correct status counts."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user
     user = User(email="processing@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create question
     question = Question(
@@ -1638,9 +1592,9 @@ async def test_get_processing_summary(session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create interview
     interview = InterviewSession(
@@ -1648,9 +1602,9 @@ async def test_get_processing_summary(session_override):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     # Create responses with different processing statuses
     response1 = InterviewResponse(
@@ -1671,13 +1625,13 @@ async def test_get_processing_summary(session_override):
         transcript="Response 3",
         processing_status=ProcessingStatus.FAILED,
     )
-    session_override.add(response1)
-    session_override.add(response2)
-    session_override.add(response3)
-    await session_override.commit()
+    db_session.add(response1)
+    db_session.add(response2)
+    db_session.add(response3)
+    await db_session.commit()
 
     service = FeedbackService()
-    summary = await service.get_processing_summary(session_override, interview.id)
+    summary = await service.get_processing_summary(db_session, interview.id)
 
     assert summary["total_responses"] == 3
     assert summary["status_counts"]["completed"] == 1
@@ -1689,16 +1643,16 @@ async def test_get_processing_summary(session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_user_progress_summary(session_override, mock_content_metrics):
+async def test_get_user_progress_summary(db_session, mock_content_metrics):
     """Test FeedbackService.get_user_progress_summary returns progress metrics."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user
     user = User(email="progress@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create completed interviews with feedback
     interview1 = InterviewSession(
@@ -1711,11 +1665,11 @@ async def test_get_user_progress_summary(session_override, mock_content_metrics)
         interview_type=InterviewType.TECHNICAL,
         status=InterviewStatus.COMPLETED,
     )
-    session_override.add(interview1)
-    session_override.add(interview2)
-    await session_override.commit()
-    await session_override.refresh(interview1)
-    await session_override.refresh(interview2)
+    db_session.add(interview1)
+    db_session.add(interview2)
+    await db_session.commit()
+    await db_session.refresh(interview1)
+    await db_session.refresh(interview2)
 
     # Create session feedbacks
     feedback1 = SessionFeedback(
@@ -1736,12 +1690,12 @@ async def test_get_user_progress_summary(session_override, mock_content_metrics)
         top_improvements=["More detail"],
         recommended_practice_areas=["Answer structure"],
     )
-    session_override.add(feedback1)
-    session_override.add(feedback2)
-    await session_override.commit()
+    db_session.add(feedback1)
+    db_session.add(feedback2)
+    await db_session.commit()
 
     service = FeedbackService()
-    progress = await service.get_user_progress(session_override, user.id)
+    progress = await service.get_user_progress(db_session, user.id)
 
     assert "recommended_practice_areas" in progress
     assert "average_audio_score" in progress
@@ -1752,19 +1706,19 @@ async def test_get_user_progress_summary(session_override, mock_content_metrics)
 
 
 @pytest.mark.asyncio
-async def test_get_user_progress_summary_no_sessions(session_override):
+async def test_get_user_progress_summary_no_sessions(db_session):
     """Test FeedbackService.get_user_progress returns empty metrics for new user."""
     from app.models.user import User
     from app.security import hash_password
 
     # Create user with no sessions
     user = User(email="new_user@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     service = FeedbackService()
-    progress = await service.get_user_progress(session_override, user.id)
+    progress = await service.get_user_progress(db_session, user.id)
 
     assert progress["recommended_practice_areas"] == []
     assert progress["average_audio_score"] is None
@@ -1775,7 +1729,7 @@ async def test_get_user_progress_summary_no_sessions(session_override):
 
 
 @pytest.mark.asyncio
-async def test_interview_service_assign_specific_question_inactive_fails(session_override):
+async def test_interview_service_assign_specific_question_inactive_fails(db_session):
     """Test InterviewService.assign_specific_question raises ValueError for inactive question."""
     from app.models.user import User
     from app.security import hash_password
@@ -1783,9 +1737,9 @@ async def test_interview_service_assign_specific_question_inactive_fails(session
 
     # Create user
     user = User(email="service_test@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create inactive question
     question = Question(
@@ -1794,9 +1748,9 @@ async def test_interview_service_assign_specific_question_inactive_fails(session
         difficulty=Difficulty.MEDIUM,
         is_active=False,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create interview
     interview = InterviewSession(
@@ -1804,17 +1758,17 @@ async def test_interview_service_assign_specific_question_inactive_fails(session
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.SCHEDULED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     service = InterviewService()
     with pytest.raises(ValueError, match="not found or is inactive"):
-        await service.assign_specific_question(session_override, interview, question.id)
+        await service.assign_specific_question(db_session, interview, question.id)
 
 
 @pytest.mark.asyncio
-async def test_interview_service_assign_specific_question_nonexistent_fails(session_override):
+async def test_interview_service_assign_specific_question_nonexistent_fails(db_session):
     """Test InterviewService.assign_specific_question raises ValueError for non-existent question."""
     from app.models.user import User
     from app.security import hash_password
@@ -1823,9 +1777,9 @@ async def test_interview_service_assign_specific_question_nonexistent_fails(sess
 
     # Create user
     user = User(email="service_test2@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create interview
     interview = InterviewSession(
@@ -1833,18 +1787,18 @@ async def test_interview_service_assign_specific_question_nonexistent_fails(sess
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.SCHEDULED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     service = InterviewService()
     fake_question_id = uuid4()
     with pytest.raises(ValueError, match="not found or is inactive"):
-        await service.assign_specific_question(session_override, interview, fake_question_id)
+        await service.assign_specific_question(db_session, interview, fake_question_id)
 
 
 @pytest.mark.asyncio
-async def test_interview_service_assign_specific_question_success(session_override):
+async def test_interview_service_assign_specific_question_success(db_session):
     """Test InterviewService.assign_specific_question successfully assigns question."""
     from app.models.user import User
     from app.security import hash_password
@@ -1852,9 +1806,9 @@ async def test_interview_service_assign_specific_question_success(session_overri
 
     # Create user
     user = User(email="service_test3@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create active question
     question = Question(
@@ -1864,9 +1818,9 @@ async def test_interview_service_assign_specific_question_success(session_overri
         is_active=True,
         expected_duration_seconds=180,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create interview
     interview = InterviewSession(
@@ -1874,13 +1828,13 @@ async def test_interview_service_assign_specific_question_success(session_overri
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.SCHEDULED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     service = InterviewService()
     interview_question = await service.assign_specific_question(
-        session_override, interview, question.id
+        db_session, interview, question.id
     )
 
     assert interview_question is not None
@@ -1891,7 +1845,7 @@ async def test_interview_service_assign_specific_question_success(session_overri
 
 
 @pytest.mark.asyncio
-async def test_interview_service_has_assigned_questions(session_override):
+async def test_interview_service_has_assigned_questions(db_session):
     """Test InterviewService.has_assigned_questions returns correct boolean."""
     from app.models.user import User
     from app.security import hash_password
@@ -1899,9 +1853,9 @@ async def test_interview_service_has_assigned_questions(session_override):
 
     # Create user
     user = User(email="has_questions@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create question
     question = Question(
@@ -1909,9 +1863,9 @@ async def test_interview_service_has_assigned_questions(session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create interview
     interview = InterviewSession(
@@ -1919,26 +1873,26 @@ async def test_interview_service_has_assigned_questions(session_override):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.SCHEDULED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     service = InterviewService()
 
     # Initially no questions assigned
-    has_questions = await service.has_assigned_questions(session_override, interview.id)
+    has_questions = await service.has_assigned_questions(db_session, interview.id)
     assert has_questions is False
 
     # Assign question
-    await service.assign_specific_question(session_override, interview, question.id)
+    await service.assign_specific_question(db_session, interview, question.id)
 
     # Now should have questions
-    has_questions = await service.has_assigned_questions(session_override, interview.id)
+    has_questions = await service.has_assigned_questions(db_session, interview.id)
     assert has_questions is True
 
 
 @pytest.mark.asyncio
-async def test_interview_service_get_interview_questions(session_override):
+async def test_interview_service_get_interview_questions(db_session):
     """Test InterviewService.get_interview_questions returns questions in order."""
     from app.models.user import User
     from app.security import hash_password
@@ -1946,9 +1900,9 @@ async def test_interview_service_get_interview_questions(session_override):
 
     # Create user
     user = User(email="get_questions@example.com", hashed_password=hash_password("password"))
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Create questions
     question1 = Question(
@@ -1961,11 +1915,11 @@ async def test_interview_service_get_interview_questions(session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question1)
-    session_override.add(question2)
-    await session_override.commit()
-    await session_override.refresh(question1)
-    await session_override.refresh(question2)
+    db_session.add(question1)
+    db_session.add(question2)
+    await db_session.commit()
+    await db_session.refresh(question1)
+    await db_session.refresh(question2)
 
     # Create interview
     interview = InterviewSession(
@@ -1973,9 +1927,9 @@ async def test_interview_service_get_interview_questions(session_override):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.SCHEDULED,
     )
-    session_override.add(interview)
-    await session_override.commit()
-    await session_override.refresh(interview)
+    db_session.add(interview)
+    await db_session.commit()
+    await db_session.refresh(interview)
 
     service = InterviewService()
 
@@ -1990,12 +1944,12 @@ async def test_interview_service_get_interview_questions(session_override):
         question_id=question2.id,
         order=2,
     )
-    session_override.add(interview_question1)
-    session_override.add(interview_question2)
-    await session_override.commit()
+    db_session.add(interview_question1)
+    db_session.add(interview_question2)
+    await db_session.commit()
 
     # Get questions - should be in order
-    questions = await service.get_interview_questions(session_override, interview.id)
+    questions = await service.get_interview_questions(db_session, interview.id)
     assert len(questions) == 2
     assert questions[0].id == question1.id
     assert questions[1].id == question2.id

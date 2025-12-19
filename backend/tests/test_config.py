@@ -9,7 +9,7 @@ def test_settings_requires_critical_env_in_production(monkeypatch):
     """Test that settings validation raises error for missing critical env vars in production."""
     # Set debug to False (production mode)
     monkeypatch.setenv("DEBUG", "false")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/test")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg:/postgres:postgres@localhost:5432/test")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("SECRET_KEY", "change-me-in-production")
@@ -30,7 +30,7 @@ def test_settings_allows_missing_optional_env_in_debug(monkeypatch):
     """Test that settings validation allows missing optional vars in debug mode."""
     # Set debug to True
     monkeypatch.setenv("DEBUG", "true")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/test")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg:/postgres:postgres@localhost:5432/test")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     monkeypatch.setenv("OPENAI_API_KEY", "")
 

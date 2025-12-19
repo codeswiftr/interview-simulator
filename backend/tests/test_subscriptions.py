@@ -6,70 +6,21 @@ from uuid import uuid4
 
 import pytest
 import stripe
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
+from httpx import AsyncClient
 from sqlmodel import SQLModel, select
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.user import SubscriptionTier, User
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
-    """Register user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
-    token = resp.json()["access_token"]
-    return f"Bearer {token}"
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.mark.asyncio
-async def test_get_subscription_status_returns_correct_tier(client, session_override):
+async def test_get_subscription_status_returns_correct_tier(client, db_session):
     """Test that subscription status returns correct tier and limits."""
     token = await register_and_login(client)
 
     response = await client.get(
-        "/api/v1/subscriptions/status",
+        "/api/v1/subscriptionsstatus",
         headers={"Authorization": token},
     )
 
@@ -82,9 +33,8 @@ async def test_get_subscription_status_returns_correct_tier(client, session_over
     assert data["interviews_limit"] == 5
     assert "can_create_interview" in data
 
-
 @pytest.mark.asyncio
-async def test_create_checkout_session_returns_url(client, session_override):
+async def test_create_checkout_session_returns_url(client, db_session):
     """Test that checkout session creation returns valid Stripe URL."""
     token = await register_and_login(client)
 
@@ -103,7 +53,7 @@ async def test_create_checkout_session_returns_url(client, session_override):
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         response = await client.post(
-            "/api/v1/subscriptions/checkout",
+            "/api/v1/subscriptionscheckout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )
@@ -113,9 +63,8 @@ async def test_create_checkout_session_returns_url(client, session_override):
         assert "url" in data
         assert "stripe.com" in data["url"]
 
-
 @pytest.mark.asyncio
-async def test_create_checkout_session_creates_customer(client, session_override):
+async def test_create_checkout_session_creates_customer(client, db_session):
     """Test that Stripe customer is created if user doesn't have one."""
     token = await register_and_login(client)
 
@@ -134,7 +83,7 @@ async def test_create_checkout_session_creates_customer(client, session_override
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         await client.post(
-            "/api/v1/subscriptions/checkout",
+            "/api/v1/subscriptionscheckout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )
@@ -142,9 +91,8 @@ async def test_create_checkout_session_creates_customer(client, session_override
         # Verify customer was created
         mock_stripe.Customer.create.assert_called_once()
 
-
 @pytest.mark.asyncio
-async def test_webhook_checkout_completed_upgrades_user(client, session_override):
+async def test_webhook_checkout_completed_upgrades_user(client, db_session):
     """Test that user tier is updated on checkout completion."""
     token = await register_and_login(client)
 
@@ -187,7 +135,7 @@ async def test_webhook_checkout_completed_upgrades_user(client, session_override
         mock_stripe.Subscription.retrieve.return_value = mock_subscription
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -195,9 +143,8 @@ async def test_webhook_checkout_completed_upgrades_user(client, session_override
         # Webhook should process successfully
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
-async def test_webhook_subscription_deleted_downgrades_user(client, session_override):
+async def test_webhook_subscription_deleted_downgrades_user(client, db_session):
     """Test that user is downgraded to Free on subscription deletion."""
     token = await register_and_login(client)
 
@@ -229,7 +176,7 @@ async def test_webhook_subscription_deleted_downgrades_user(client, session_over
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -243,9 +190,8 @@ async def test_webhook_subscription_deleted_downgrades_user(client, session_over
             # In real scenario, would be downgraded to FREE
             # Here we just verify webhook was processed
 
-
 @pytest.mark.asyncio
-async def test_checkout_with_invalid_price_id(client, session_override):
+async def test_checkout_with_invalid_price_id(client, db_session):
     """Test checkout fails with invalid price_id."""
     token = await register_and_login(client)
 
@@ -271,7 +217,7 @@ async def test_checkout_with_invalid_price_id(client, session_override):
         mock_stripe.checkout.Session.create.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptions/checkout",
+            "/api/v1/subscriptionscheckout",
             json={"price_id": "price_invalid"},
             headers={"Authorization": token},
         )
@@ -279,9 +225,8 @@ async def test_checkout_with_invalid_price_id(client, session_override):
         assert response.status_code == 400
         assert "failed" in response.json()["detail"].lower() or "invalid" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_checkout_with_already_subscribed_user(client, session_override):
+async def test_checkout_with_already_subscribed_user(client, db_session):
     """Test checkout fails when user already has active subscription."""
     token = await register_and_login(client)
 
@@ -310,7 +255,7 @@ async def test_checkout_with_already_subscribed_user(client, session_override):
         mock_stripe.Subscription.list.return_value = mock_sub_list
 
         response = await client.post(
-            "/api/v1/subscriptions/checkout",
+            "/api/v1/subscriptionscheckout",
             json={"price_id": "price_pro_monthly"},
             headers={"Authorization": token},
         )
@@ -318,9 +263,8 @@ async def test_checkout_with_already_subscribed_user(client, session_override):
         assert response.status_code == 400
         assert "already have" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_webhook_invalid_signature(client, session_override):
+async def test_webhook_invalid_signature(client, db_session):
     """Test webhook rejects requests with invalid signature."""
     with patch("app.api.subscriptions.settings") as mock_settings, \
          patch("app.api.subscriptions.stripe") as mock_stripe:
@@ -337,7 +281,7 @@ async def test_webhook_invalid_signature(client, session_override):
         mock_stripe.Webhook.construct_event.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json={"type": "checkout.session.completed", "data": {}},
             headers={"stripe-signature": "invalid_signature"},
         )
@@ -346,9 +290,8 @@ async def test_webhook_invalid_signature(client, session_override):
         detail = response.json()["detail"].lower()
         assert "signature" in detail or "invalid" in detail
 
-
 @pytest.mark.asyncio
-async def test_webhook_unknown_event_type(client, session_override):
+async def test_webhook_unknown_event_type(client, db_session):
     """Test webhook handles unknown event types gracefully."""
     webhook_payload = {
         "type": "unknown.event.type",
@@ -362,7 +305,7 @@ async def test_webhook_unknown_event_type(client, session_override):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -371,9 +314,8 @@ async def test_webhook_unknown_event_type(client, session_override):
         assert response.status_code == 200
         assert response.json()["status"] == "success"
 
-
 @pytest.mark.asyncio
-async def test_get_subscription_status_expired(client, session_override):
+async def test_get_subscription_status_expired(client, db_session):
     """Test subscription status with expired subscription."""
     token = await register_and_login(client)
 
@@ -390,7 +332,7 @@ async def test_get_subscription_status_expired(client, session_override):
         await session.commit()
 
     response = await client.get(
-        "/api/v1/subscriptions/status",
+        "/api/v1/subscriptionsstatus",
         headers={"Authorization": token},
     )
 
@@ -399,9 +341,8 @@ async def test_get_subscription_status_expired(client, session_override):
     # Should show as expired or downgraded
     assert "tier" in data
 
-
 @pytest.mark.asyncio
-async def test_portal_session_creation(client, session_override):
+async def test_portal_session_creation(client, db_session):
     """Test portal session creation returns URL."""
     token = await register_and_login(client)
 
@@ -424,7 +365,7 @@ async def test_portal_session_creation(client, session_override):
         mock_stripe.billing_portal.Session.create.return_value = mock_session
 
         response = await client.post(
-            "/api/v1/subscriptions/portal",
+            "/api/v1/subscriptionsportal",
             headers={"Authorization": token},
         )
 
@@ -432,9 +373,8 @@ async def test_portal_session_creation(client, session_override):
         assert "url" in response.json()
         assert "stripe.com" in response.json()["url"]
 
-
 @pytest.mark.asyncio
-async def test_portal_error_handling(client, session_override):
+async def test_portal_error_handling(client, db_session):
     """Test portal session creation handles Stripe errors."""
     token = await register_and_login(client)
 
@@ -466,7 +406,7 @@ async def test_portal_error_handling(client, session_override):
         mock_stripe.billing_portal.Session.create.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptions/portal",
+            "/api/v1/subscriptionsportal",
             headers={"Authorization": token},
         )
 
@@ -474,9 +414,8 @@ async def test_portal_error_handling(client, session_override):
         detail = response.json()["detail"].lower()
         assert "failed" in detail or "error" in detail or "customer" in detail
 
-
 @pytest.mark.asyncio
-async def test_cancel_subscription(client, session_override):
+async def test_cancel_subscription(client, db_session):
     """Test subscription cancellation flow."""
     token = await register_and_login(client)
 
@@ -501,16 +440,15 @@ async def test_cancel_subscription(client, session_override):
         mock_stripe.Subscription.modify.return_value = mock_subscription
 
         response = await client.post(
-            "/api/v1/subscriptions/cancel",
+            "/api/v1/subscriptionscancel",
             headers={"Authorization": token},
         )
 
         assert response.status_code == 200
         assert "canceled" in response.json()["message"].lower() or "scheduled" in response.json()["message"].lower()
 
-
 @pytest.mark.asyncio
-async def test_cancel_already_cancelled_subscription(client, session_override):
+async def test_cancel_already_cancelled_subscription(client, db_session):
     """Test canceling already cancelled subscription."""
     token = await register_and_login(client)
 
@@ -541,14 +479,13 @@ async def test_cancel_already_cancelled_subscription(client, session_override):
         mock_stripe.Subscription.modify.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptions/cancel",
+            "/api/v1/subscriptionscancel",
             headers={"Authorization": token},
         )
 
         # Should handle gracefully - returns 400 with error message
         assert response.status_code == 400
         assert "failed" in response.json()["detail"].lower() or "cancel" in response.json()["detail"].lower()
-
 
 @pytest.mark.asyncio
 async def test_get_pricing_config(client):
@@ -557,7 +494,7 @@ async def test_get_pricing_config(client):
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
         mock_settings.stripe_price_id_pro_annual = "price_pro_annual"
 
-        response = await client.get("/api/v1/subscriptions/pricing")
+        response = await client.get("/api/v1/subscriptionspricing")
 
         assert response.status_code == 200
         data = response.json()
@@ -566,7 +503,6 @@ async def test_get_pricing_config(client):
         assert data["pro_monthly_price_id"] == "price_pro_monthly"
         assert data["pro_annual_price_id"] == "price_pro_annual"
 
-
 @pytest.mark.asyncio
 async def test_get_pricing_config_null_values(client):
     """Test pricing config returns None for unset price IDs."""
@@ -574,16 +510,15 @@ async def test_get_pricing_config_null_values(client):
         mock_settings.stripe_price_id_pro_monthly = None
         mock_settings.stripe_price_id_pro_annual = None
 
-        response = await client.get("/api/v1/subscriptions/pricing")
+        response = await client.get("/api/v1/subscriptionspricing")
 
         assert response.status_code == 200
         data = response.json()
         assert data["pro_monthly_price_id"] is None
         assert data["pro_annual_price_id"] is None
 
-
 @pytest.mark.asyncio
-async def test_checkout_stripe_not_configured(client, session_override):
+async def test_checkout_stripe_not_configured(client, db_session):
     """Test checkout fails when Stripe is not configured."""
     token = await register_and_login(client)
 
@@ -591,14 +526,13 @@ async def test_checkout_stripe_not_configured(client, session_override):
         mock_settings.stripe_secret_key = None
 
         response = await client.post(
-            "/api/v1/subscriptions/checkout",
+            "/api/v1/subscriptionscheckout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )
 
         assert response.status_code == 503
         assert "not configured" in response.json()["detail"].lower()
-
 
 @pytest.mark.asyncio
 async def test_webhook_stripe_not_configured(client):
@@ -607,7 +541,7 @@ async def test_webhook_stripe_not_configured(client):
         mock_settings.stripe_webhook_secret = None
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json={"type": "checkout.session.completed", "data": {}},
             headers={"stripe-signature": "test_signature"},
         )
@@ -615,9 +549,8 @@ async def test_webhook_stripe_not_configured(client):
         assert response.status_code == 503
         assert "not configured" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_webhook_invalid_payload(client, session_override):
+async def test_webhook_invalid_payload(client, db_session):
     """Test webhook rejects invalid JSON payload."""
     with patch("app.api.subscriptions.settings") as mock_settings, \
          patch("app.api.subscriptions.stripe") as mock_stripe:
@@ -630,7 +563,7 @@ async def test_webhook_invalid_payload(client, session_override):
         mock_stripe.Webhook.construct_event.side_effect = ValueError("Invalid payload")
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json={"invalid": "payload"},
             headers={"stripe-signature": "test_signature"},
         )
@@ -638,9 +571,8 @@ async def test_webhook_invalid_payload(client, session_override):
         assert response.status_code == 400
         assert "invalid" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_portal_no_customer_id(client, session_override):
+async def test_portal_no_customer_id(client, db_session):
     """Test portal session creation fails when user has no customer ID."""
     token = await register_and_login(client)
 
@@ -648,16 +580,15 @@ async def test_portal_no_customer_id(client, session_override):
         mock_settings.stripe_secret_key = "sk_test_xxx"
 
         response = await client.post(
-            "/api/v1/subscriptions/portal",
+            "/api/v1/subscriptionsportal",
             headers={"Authorization": token},
         )
 
         assert response.status_code == 400
         assert "no stripe customer" in response.json()["detail"].lower() or "subscribe first" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_portal_stripe_not_configured(client, session_override):
+async def test_portal_stripe_not_configured(client, db_session):
     """Test portal fails when Stripe is not configured."""
     token = await register_and_login(client)
 
@@ -665,30 +596,28 @@ async def test_portal_stripe_not_configured(client, session_override):
         mock_settings.stripe_secret_key = None
 
         response = await client.post(
-            "/api/v1/subscriptions/portal",
+            "/api/v1/subscriptionsportal",
             headers={"Authorization": token},
         )
 
         assert response.status_code == 503
         assert "not configured" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_cancel_no_subscription(client, session_override):
+async def test_cancel_no_subscription(client, db_session):
     """Test cancel fails when user has no active subscription."""
     token = await register_and_login(client)
 
     response = await client.post(
-        "/api/v1/subscriptions/cancel",
+        "/api/v1/subscriptionscancel",
         headers={"Authorization": token},
     )
 
     assert response.status_code == 400
     assert "no active subscription" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_webhook_subscription_updated(client, session_override):
+async def test_webhook_subscription_updated(client, db_session):
     """Test webhook handles customer.subscription.updated event."""
     token = await register_and_login(client)
 
@@ -727,7 +656,7 @@ async def test_webhook_subscription_updated(client, session_override):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -735,9 +664,8 @@ async def test_webhook_subscription_updated(client, session_override):
         assert response.status_code == 200
         assert response.json()["status"] == "success"
 
-
 @pytest.mark.asyncio
-async def test_webhook_checkout_missing_metadata(client, session_override):
+async def test_webhook_checkout_missing_metadata(client, db_session):
     """Test webhook handles checkout_completed with missing metadata gracefully."""
     webhook_payload = {
         "type": "checkout.session.completed",
@@ -756,7 +684,7 @@ async def test_webhook_checkout_missing_metadata(client, session_override):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -764,9 +692,8 @@ async def test_webhook_checkout_missing_metadata(client, session_override):
         # Should handle gracefully and return success (logs warning)
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
-async def test_webhook_checkout_user_not_found(client, session_override):
+async def test_webhook_checkout_user_not_found(client, db_session):
     """Test webhook handles checkout_completed when user doesn't exist."""
     webhook_payload = {
         "type": "checkout.session.completed",
@@ -785,7 +712,7 @@ async def test_webhook_checkout_user_not_found(client, session_override):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptions/webhook",
+            "/api/v1/subscriptionswebhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -793,9 +720,8 @@ async def test_webhook_checkout_user_not_found(client, session_override):
         # Should handle gracefully and return success (logs warning)
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
-async def test_get_subscription_status_syncs_from_stripe(client, session_override):
+async def test_get_subscription_status_syncs_from_stripe(client, db_session):
     """Test subscription status syncs from Stripe when customer exists."""
     token = await register_and_login(client)
 
@@ -831,16 +757,15 @@ async def test_get_subscription_status_syncs_from_stripe(client, session_overrid
         mock_stripe.Subscription.list.return_value = mock_sub_list
 
         response = await client.get(
-            "/api/v1/subscriptions/status",
+            "/api/v1/subscriptionsstatus",
             headers={"Authorization": token},
         )
 
         assert response.status_code == 200
         # Subscription should be synced from Stripe
 
-
 @pytest.mark.asyncio
-async def test_get_subscription_status_sync_error_handled(client, session_override):
+async def test_get_subscription_status_sync_error_handled(client, db_session):
     """Test subscription status handles Stripe sync errors gracefully."""
     token = await register_and_login(client)
 
@@ -863,16 +788,15 @@ async def test_get_subscription_status_sync_error_handled(client, session_overri
         mock_sync.side_effect = Exception("Stripe API error")
 
         response = await client.get(
-            "/api/v1/subscriptions/status",
+            "/api/v1/subscriptionsstatus",
             headers={"Authorization": token},
         )
 
         # Should still return status (error is logged but not fatal)
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
-async def test_cancel_subscription_stripe_error(client, session_override):
+async def test_cancel_subscription_stripe_error(client, db_session):
     """Test cancel handles Stripe API errors."""
     token = await register_and_login(client)
 
@@ -901,16 +825,15 @@ async def test_cancel_subscription_stripe_error(client, session_override):
         mock_stripe.Subscription.modify.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptions/cancel",
+            "/api/v1/subscriptionscancel",
             headers={"Authorization": token},
         )
 
         assert response.status_code == 400
         assert "failed" in response.json()["detail"].lower()
 
-
 @pytest.mark.asyncio
-async def test_checkout_reuses_existing_customer(client, session_override):
+async def test_checkout_reuses_existing_customer(client, db_session):
     """Test checkout reuses existing Stripe customer ID."""
     token = await register_and_login(client)
 
@@ -939,7 +862,7 @@ async def test_checkout_reuses_existing_customer(client, session_override):
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         response = await client.post(
-            "/api/v1/subscriptions/checkout",
+            "/api/v1/subscriptionscheckout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )

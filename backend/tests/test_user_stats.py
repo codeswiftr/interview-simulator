@@ -1,67 +1,17 @@
 """Tests for user stats and progress endpoints."""
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel
+from httpx import AsyncClient
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.feedback import SessionFeedback
 from app.models.interview import InterviewSession, InterviewStatus, InterviewType
 from app.models.user import User
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
-    """Register user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
-    token = resp.json()["access_token"]
-    return f"Bearer {token}"
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.mark.asyncio
-async def test_get_my_stats_returns_counts_and_average_score(client, session_override):
+async def test_get_my_stats_returns_counts_and_average_score(client, db_session):
     """Test that user stats endpoint returns counts and average score."""
     token = await register_and_login(client, email="stats@example.com")
 
@@ -71,7 +21,7 @@ async def test_get_my_stats_returns_counts_and_average_score(client, session_ove
 
     # Create some interview sessions
     from sqlmodel import select
-    result = await session_override.exec(select(User).where(User.id == user_id))
+    result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
     session1 = InterviewSession(
@@ -93,10 +43,10 @@ async def test_get_my_stats_returns_counts_and_average_score(client, session_ove
         interview_type=InterviewType.SYSTEM_DESIGN,
         status=InterviewStatus.IN_PROGRESS,
     )
-    session_override.add(session1)
-    session_override.add(session2)
-    session_override.add(session3)
-    await session_override.commit()
+    db_session.add(session1)
+    db_session.add(session2)
+    db_session.add(session3)
+    await db_session.commit()
 
     # Get stats
     stats_resp = await client.get("/api/v1/users/me/stats", headers={"Authorization": token})
@@ -108,9 +58,8 @@ async def test_get_my_stats_returns_counts_and_average_score(client, session_ove
     assert data["average_score"] == 85.0  # (80 + 90) / 2
     assert data["total_practice_time_seconds"] == 900  # 300 + 600
 
-
 @pytest.mark.asyncio
-async def test_get_my_progress_returns_trend_and_recommendations(client, session_override):
+async def test_get_my_progress_returns_trend_and_recommendations(client, db_session):
     """Test that user progress endpoint returns trend data and practice recommendations."""
     token = await register_and_login(client, email="progress@example.com")
 
@@ -120,7 +69,7 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, session
 
     # Create completed sessions with feedback
     from sqlmodel import select
-    result = await session_override.exec(select(User).where(User.id == user_id))
+    result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
     session1 = InterviewSession(
@@ -133,11 +82,11 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, session
         interview_type=InterviewType.TECHNICAL,
         status=InterviewStatus.ANALYZED,
     )
-    session_override.add(session1)
-    session_override.add(session2)
-    await session_override.commit()
-    await session_override.refresh(session1)
-    await session_override.refresh(session2)
+    db_session.add(session1)
+    db_session.add(session2)
+    await db_session.commit()
+    await db_session.refresh(session1)
+    await db_session.refresh(session2)
 
     # Create session feedbacks
     feedback1 = SessionFeedback(
@@ -158,9 +107,9 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, session
         top_improvements=[],
         recommended_practice_areas=["Technical accuracy", "Completeness"],
     )
-    session_override.add(feedback1)
-    session_override.add(feedback2)
-    await session_override.commit()
+    db_session.add(feedback1)
+    db_session.add(feedback2)
+    await db_session.commit()
 
     # Get progress
     progress_resp = await client.get("/api/v1/users/me/progress", headers={"Authorization": token})
@@ -174,7 +123,6 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, session
     assert data["average_audio_score"] == 75.0  # (70 + 80) / 2
     assert data["average_content_score"] == 85.0  # (80 + 90) / 2
 
-
 @pytest.mark.asyncio
 async def test_progress_endpoints_require_auth(client):
     """Test that progress endpoints require authentication."""
@@ -187,9 +135,8 @@ async def test_progress_endpoints_require_auth(client):
     readiness_resp = await client.get("/api/v1/users/me/readiness-score")
     assert readiness_resp.status_code == 401
 
-
 @pytest.mark.asyncio
-async def test_readiness_score_returns_null_when_no_sessions(client, session_override):
+async def test_readiness_score_returns_null_when_no_sessions(client, db_session):
     """Test that readiness score returns null when user has no completed sessions."""
     token = await register_and_login(client, email="readiness_empty@example.com")
 
@@ -202,9 +149,8 @@ async def test_readiness_score_returns_null_when_no_sessions(client, session_ove
     assert data["improvement_trend"] is None
     assert "message" in data
 
-
 @pytest.mark.asyncio
-async def test_readiness_score_calculates_from_last_5_sessions(client, session_override):
+async def test_readiness_score_calculates_from_last_5_sessions(client, db_session):
     """Test that readiness score calculates average from last 5 completed sessions."""
     token = await register_and_login(client, email="readiness_calc@example.com")
 
@@ -213,7 +159,7 @@ async def test_readiness_score_calculates_from_last_5_sessions(client, session_o
     user_id = user_resp.json()["id"]
 
     from sqlmodel import select
-    result = await session_override.exec(select(User).where(User.id == user_id))
+    result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
     # Create 7 sessions (only last 5 should be used)
@@ -225,8 +171,8 @@ async def test_readiness_score_calculates_from_last_5_sessions(client, session_o
             status=InterviewStatus.COMPLETED,
             overall_score=score,
         )
-        session_override.add(session)
-    await session_override.commit()
+        db_session.add(session)
+    await db_session.commit()
 
     resp = await client.get("/api/v1/users/me/readiness-score", headers={"Authorization": token})
 
@@ -236,9 +182,8 @@ async def test_readiness_score_calculates_from_last_5_sessions(client, session_o
     assert data["readiness_score"] == 80.0
     assert data["sessions_used"] == 5
 
-
 @pytest.mark.asyncio
-async def test_readiness_score_improvement_trend(client, session_override):
+async def test_readiness_score_improvement_trend(client, db_session):
     """Test that improvement trend shows difference between newer and older sessions."""
     token = await register_and_login(client, email="readiness_trend@example.com")
 
@@ -247,7 +192,7 @@ async def test_readiness_score_improvement_trend(client, session_override):
     user_id = user_resp.json()["id"]
 
     from sqlmodel import select
-    result = await session_override.exec(select(User).where(User.id == user_id))
+    result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
     # Create 4 sessions with improving trend (oldest to newest)
@@ -264,8 +209,8 @@ async def test_readiness_score_improvement_trend(client, session_override):
             status=InterviewStatus.COMPLETED,
             overall_score=score,
         )
-        session_override.add(session)
-        await session_override.commit()  # Commit each to ensure different created_at
+        db_session.add(session)
+        await db_session.commit()  # Commit each to ensure different created_at
 
     resp = await client.get("/api/v1/users/me/readiness-score", headers={"Authorization": token})
 

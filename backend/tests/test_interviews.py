@@ -1,12 +1,12 @@
-"""Comprehensive tests for interview endpoints to increase coverage."""
+"""Comprehensive tests for interview endpoints to increase coverage.
+
+Uses shared fixtures from conftest.py for database setup and client.
+"""
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel, select
+from httpx import AsyncClient
+from sqlmodel import select
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
 from app.models.interview import (
     InterviewQuestion,
     InterviewSession,
@@ -15,65 +15,20 @@ from app.models.interview import (
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import SubscriptionTier, User
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def session_override():
-    async with SessionLocal() as session:
-        yield session
-
-
-@pytest.fixture
-async def client(session_override):
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
-
-
-async def register_and_login(client: AsyncClient, email: str = "user@example.com") -> str:
-    """Register user and return bearer token."""
-    await client.post("/api/v1/users/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "password123"})
-    token = resp.json()["access_token"]
-    return f"Bearer {token}"
-
-
-async def create_test_question(session_override) -> Question:
+async def create_test_question(db_session, category=QuestionCategory.BEHAVIORAL) -> Question:
     """Create and return a test question."""
     question = Question(
         content="Test interview question",
-        category=QuestionCategory.BEHAVIORAL,
+        category=category,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
     return question
 
 
@@ -81,7 +36,7 @@ async def create_test_question(session_override) -> Question:
 
 
 @pytest.mark.asyncio
-async def test_list_interviews_with_status_filter(client, session_override):
+async def test_list_interviews_with_status_filter(client, db_session):
     """Test GET /interviews/ with status filter."""
     token = await register_and_login(client)
 
@@ -92,19 +47,19 @@ async def test_list_interviews_with_status_filter(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create interviews with different statuses
     resp1 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
     interview_id1 = resp1.json()["id"]
 
     resp2 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -118,7 +73,7 @@ async def test_list_interviews_with_status_filter(client, session_override):
 
     # List with status filter
     list_resp = await client.get(
-        "/api/v1/interviews/?status=in_progress",
+        "/api/v1/interviews?status=in_progress",
         headers={"Authorization": token},
     )
     assert list_resp.status_code == 200
@@ -129,21 +84,21 @@ async def test_list_interviews_with_status_filter(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_list_interviews_with_pagination(client, session_override):
+async def test_list_interviews_with_pagination(client, db_session):
     """Test GET /interviews/ with limit and offset."""
     token = await register_and_login(client)
 
     # Create multiple interviews
     for _i in range(5):
         await client.post(
-            "/api/v1/interviews/",
+            "/api/v1/interviews",
             json={"interview_type": "behavioral"},
             headers={"Authorization": token},
         )
 
     # Test pagination
     resp = await client.get(
-        "/api/v1/interviews/?limit=2&offset=1",
+        "/api/v1/interviews?limit=2&offset=1",
         headers={"Authorization": token},
     )
     assert resp.status_code == 200
@@ -155,25 +110,25 @@ async def test_list_interviews_with_pagination(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_start_interview_already_completed_fails(client, session_override):
+async def test_start_interview_already_completed_fails(client, db_session):
     """Test that starting a completed interview fails."""
     token = await register_and_login(client)
 
     # Create and complete interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
     interview_id = resp.json()["id"]
 
     # Manually set status to completed
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(InterviewSession).where(InterviewSession.id == interview_id)
     )
     interview = result.first()
     interview.status = InterviewStatus.COMPLETED
-    await session_override.commit()
+    await db_session.commit()
 
     # Try to start completed interview
     start_resp = await client.post(
@@ -185,7 +140,7 @@ async def test_start_interview_already_completed_fails(client, session_override)
 
 
 @pytest.mark.asyncio
-async def test_start_interview_assigns_questions(client, session_override):
+async def test_start_interview_assigns_questions(client, db_session):
     """Test that starting interview assigns questions."""
     token = await register_and_login(client)
 
@@ -196,12 +151,12 @@ async def test_start_interview_assigns_questions(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -225,7 +180,7 @@ async def test_start_interview_assigns_questions(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_start_interview_insufficient_questions_fails(client, session_override):
+async def test_start_interview_insufficient_questions_fails(client, db_session):
     """Test that starting interview fails if not enough questions available."""
     token = await register_and_login(client)
 
@@ -235,12 +190,12 @@ async def test_start_interview_insufficient_questions_fails(client, session_over
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # Try to create interview requiring 5 questions
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical", "question_count": 5},
         headers={"Authorization": token},
     )
@@ -258,12 +213,12 @@ async def test_start_interview_insufficient_questions_fails(client, session_over
 
 
 @pytest.mark.asyncio
-async def test_get_questions_before_start_fails(client, session_override):
+async def test_get_questions_before_start_fails(client, db_session):
     """Test that getting questions before start fails."""
     token = await register_and_login(client)
 
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -279,25 +234,25 @@ async def test_get_questions_before_start_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_questions_no_questions_assigned_fails(client, session_override):
+async def test_get_questions_no_questions_assigned_fails(client, db_session):
     """Test getting questions when none are assigned fails."""
     token = await register_and_login(client)
 
     # Create interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
     interview_id = resp.json()["id"]
 
     # Manually set status to IN_PROGRESS without assigning questions
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(InterviewSession).where(InterviewSession.id == interview_id)
     )
     interview = result.first()
     interview.status = InterviewStatus.IN_PROGRESS
-    await session_override.commit()
+    await db_session.commit()
 
     # Try to get questions
     questions_resp = await client.get(
@@ -312,7 +267,7 @@ async def test_get_questions_no_questions_assigned_fails(client, session_overrid
 
 
 @pytest.mark.asyncio
-async def test_end_interview_sets_duration(client, session_override):
+async def test_end_interview_sets_duration(client, db_session):
     """Test that ending interview calculates duration."""
     token = await register_and_login(client)
 
@@ -323,12 +278,12 @@ async def test_end_interview_sets_duration(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -352,7 +307,7 @@ async def test_end_interview_sets_duration(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_end_interview_already_ended_fails(client, session_override):
+async def test_end_interview_already_ended_fails(client, db_session):
     """Test that ending an already completed interview fails."""
     token = await register_and_login(client)
 
@@ -362,12 +317,12 @@ async def test_end_interview_already_ended_fails(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # Create, start, and end interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -396,12 +351,12 @@ async def test_end_interview_already_ended_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_cancel_scheduled_interview(client, session_override):
+async def test_cancel_scheduled_interview(client, db_session):
     """Test cancelling a scheduled interview."""
     token = await register_and_login(client)
 
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -416,7 +371,7 @@ async def test_cancel_scheduled_interview(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_cancel_non_scheduled_interview_fails(client, session_override):
+async def test_cancel_non_scheduled_interview_fails(client, db_session):
     """Test that cancelling a non-scheduled interview fails."""
     token = await register_and_login(client)
 
@@ -426,12 +381,12 @@ async def test_cancel_non_scheduled_interview_fails(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -455,15 +410,15 @@ async def test_cancel_non_scheduled_interview_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_not_in_progress_fails(client, session_override):
+async def test_submit_response_not_in_progress_fails(client, db_session):
     """Test submitting response to non-in-progress interview fails."""
     token = await register_and_login(client)
 
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create interview (but don't start it)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -484,7 +439,7 @@ async def test_submit_response_not_in_progress_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_wrong_question_fails(client, session_override):
+async def test_submit_response_wrong_question_fails(client, db_session):
     """Test submitting response for question not in interview fails."""
     token = await register_and_login(client)
 
@@ -499,15 +454,15 @@ async def test_submit_response_wrong_question_fails(client, session_override):
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
     )
-    session_override.add(question1)
-    session_override.add(question2)
-    await session_override.commit()
-    await session_override.refresh(question1)
-    await session_override.refresh(question2)
+    db_session.add(question1)
+    db_session.add(question2)
+    await db_session.commit()
+    await db_session.refresh(question1)
+    await db_session.refresh(question2)
 
     # Create and start behavioral interview (will use question1)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -533,15 +488,15 @@ async def test_submit_response_wrong_question_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_calculates_word_count(client, session_override):
+async def test_submit_response_calculates_word_count(client, db_session):
     """Test that submitting response calculates word count."""
     token = await register_and_login(client)
 
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -553,8 +508,8 @@ async def test_submit_response_calculates_word_count(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -578,15 +533,15 @@ async def test_submit_response_calculates_word_count(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_with_audio_url(client, session_override):
+async def test_submit_response_with_audio_url(client, db_session):
     """Test submitting response with audio URL (no transcript)."""
     token = await register_and_login(client)
 
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -597,8 +552,8 @@ async def test_submit_response_with_audio_url(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -625,15 +580,15 @@ async def test_submit_response_with_audio_url(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_responses_includes_question_data(client, session_override):
+async def test_get_responses_includes_question_data(client, db_session):
     """Test that getting responses includes question data."""
     token = await register_and_login(client)
 
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -644,8 +599,8 @@ async def test_get_responses_includes_question_data(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -676,13 +631,13 @@ async def test_get_responses_includes_question_data(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_responses_empty_list(client, session_override):
+async def test_get_responses_empty_list(client, db_session):
     """Test getting responses for interview with no responses."""
     token = await register_and_login(client)
 
     # Create interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -701,11 +656,11 @@ async def test_get_responses_empty_list(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_quick_practice_with_specific_question(client, session_override):
+async def test_quick_practice_with_specific_question(client, db_session):
     """Test creating quick practice session with specific question."""
     token = await register_and_login(client)
 
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create quick practice
     resp = await client.post(
@@ -719,7 +674,7 @@ async def test_quick_practice_with_specific_question(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_quick_practice_inactive_question_fails(client, session_override):
+async def test_quick_practice_inactive_question_fails(client, db_session):
     """Test quick practice with inactive question fails."""
     token = await register_and_login(client)
 
@@ -730,9 +685,9 @@ async def test_quick_practice_inactive_question_fails(client, session_override):
         difficulty=Difficulty.EASY,
         is_active=False,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Try to create quick practice with inactive question
     resp = await client.post(
@@ -744,7 +699,7 @@ async def test_quick_practice_inactive_question_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_quick_practice_nonexistent_question_fails(client, session_override):
+async def test_quick_practice_nonexistent_question_fails(client, db_session):
     """Test quick practice with non-existent question fails."""
     from uuid import uuid4
 
@@ -764,7 +719,7 @@ async def test_quick_practice_nonexistent_question_fails(client, session_overrid
 # Epic 2 Phase 2: Additional Tests for Coverage
 
 @pytest.mark.asyncio
-async def test_create_interview_with_all_options(client, session_override):
+async def test_create_interview_with_all_options(client, db_session):
     """Test POST /interviews with all optional fields."""
     token = await register_and_login(client, email="all_options@example.com")
 
@@ -776,15 +731,15 @@ async def test_create_interview_with_all_options(client, session_override):
             difficulty=Difficulty.MEDIUM,
             company_tags=["google", "amazon"],
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create interview with all options
     from datetime import UTC, datetime
 
     scheduled_at = datetime.now(UTC)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={
             "interview_type": "behavioral",
             "company_style": "faang",
@@ -807,7 +762,7 @@ async def test_create_interview_with_all_options(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_create_interview_with_difficulty_filter(client, session_override):
+async def test_create_interview_with_difficulty_filter(client, db_session):
     """Test creating interview with difficulty filter."""
     token = await register_and_login(client, email="difficulty@example.com")
 
@@ -819,12 +774,12 @@ async def test_create_interview_with_difficulty_filter(client, session_override)
                 category=QuestionCategory.TECHNICAL,
                 difficulty=diff,
             )
-            session_override.add(question)
-    await session_override.commit()
+            db_session.add(question)
+    await db_session.commit()
 
     # Create interview with hard difficulty
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={
             "interview_type": "technical",
             "question_count": 3,
@@ -855,7 +810,7 @@ async def test_create_interview_with_difficulty_filter(client, session_override)
 
 
 @pytest.mark.asyncio
-async def test_get_questions_ordering(client, session_override):
+async def test_get_questions_ordering(client, db_session):
     """Test GET /interviews/{id}/questions returns questions in correct order."""
     token = await register_and_login(client, email="ordering@example.com")
 
@@ -867,14 +822,14 @@ async def test_get_questions_ordering(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-        await session_override.flush()
+        db_session.add(question)
+        await db_session.flush()
         question_ids.append(question.id)
-    await session_override.commit()
+    await db_session.commit()
 
     # Create interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 5},
         headers={"Authorization": token},
     )
@@ -904,53 +859,9 @@ async def test_get_questions_ordering(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_quota_enforcement_free_tier_limit(client, session_override):
-    """Test that Free tier users are blocked after 3 interviews."""
+async def test_quota_enforcement_free_tier_limit(client, db_session):
+    """Test that Free tier users are blocked after 5 interviews."""
     token = await register_and_login(client, email="free_tier@example.com")
-
-    # Create questions
-    for i in range(5):
-        question = Question(
-            content=f"Question {i}",
-            category=QuestionCategory.BEHAVIORAL,
-            difficulty=Difficulty.MEDIUM,
-        )
-        session_override.add(question)
-    await session_override.commit()
-
-    # Create 3 interviews (the limit)
-    for _ in range(3):
-        resp = await client.post(
-            "/api/v1/interviews/",
-            json={"interview_type": "behavioral", "question_count": 1},
-            headers={"Authorization": token},
-        )
-        assert resp.status_code == 201
-
-    # 4th interview should be blocked
-    resp = await client.post(
-        "/api/v1/interviews/",
-        json={"interview_type": "behavioral", "question_count": 1},
-        headers={"Authorization": token},
-    )
-    assert resp.status_code == 402  # Payment Required
-    assert "limit reached" in resp.json()["detail"].lower()
-
-
-@pytest.mark.asyncio
-async def test_quota_enforcement_pro_tier_unlimited(client, session_override):
-    """Test that Pro tier users can create unlimited interviews."""
-    from app.models.user import SubscriptionTier
-
-    token = await register_and_login(client, email="pro_tier@example.com")
-
-    # Upgrade user to Pro tier
-    result = await session_override.exec(
-        select(User).where(User.email == "pro_tier@example.com")
-    )
-    user = result.first()
-    user.subscription_tier = SubscriptionTier.PRO
-    await session_override.commit()
 
     # Create questions
     for i in range(10):
@@ -959,13 +870,57 @@ async def test_quota_enforcement_pro_tier_unlimited(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
+
+    # Create 5 interviews (the limit)
+    for _ in range(5):
+        resp = await client.post(
+            "/api/v1/interviews",
+            json={"interview_type": "behavioral", "question_count": 1},
+            headers={"Authorization": token},
+        )
+        assert resp.status_code == 201
+
+    # 6th interview should be blocked
+    resp = await client.post(
+        "/api/v1/interviews",
+        json={"interview_type": "behavioral", "question_count": 1},
+        headers={"Authorization": token},
+    )
+    assert resp.status_code == 402  # Payment Required
+    assert "limit reached" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_quota_enforcement_pro_tier_unlimited(client, db_session):
+    """Test that Pro tier users can create unlimited interviews."""
+    from app.models.user import SubscriptionTier
+
+    token = await register_and_login(client, email="pro_tier@example.com")
+
+    # Upgrade user to Pro tier
+    result = await db_session.exec(
+        select(User).where(User.email == "pro_tier@example.com")
+    )
+    user = result.first()
+    user.subscription_tier = SubscriptionTier.PRO
+    await db_session.commit()
+
+    # Create questions
+    for i in range(10):
+        question = Question(
+            content=f"Question {i}",
+            category=QuestionCategory.BEHAVIORAL,
+            difficulty=Difficulty.MEDIUM,
+        )
+        db_session.add(question)
+    await db_session.commit()
 
     # Create 5 interviews (should all succeed)
     for _ in range(5):
         resp = await client.post(
-            "/api/v1/interviews/",
+            "/api/v1/interviews",
             json={"interview_type": "behavioral", "question_count": 1},
             headers={"Authorization": token},
         )
@@ -973,7 +928,7 @@ async def test_quota_enforcement_pro_tier_unlimited(client, session_override):
 
     # Verify user can still create more
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -981,7 +936,7 @@ async def test_quota_enforcement_pro_tier_unlimited(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_interview_state_transition_start_to_end(client, session_override):
+async def test_interview_state_transition_start_to_end(client, db_session):
     """Test complete state transition: scheduled -> in_progress -> completed."""
     token = await register_and_login(client, email="transitions@example.com")
 
@@ -992,12 +947,12 @@ async def test_interview_state_transition_start_to_end(client, session_override)
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create interview (count as 1 of free tier limit)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1026,7 +981,7 @@ async def test_interview_state_transition_start_to_end(client, session_override)
 
 
 @pytest.mark.asyncio
-async def test_interview_state_transition_edge_cases(client, session_override):
+async def test_interview_state_transition_edge_cases(client, db_session):
     """Test edge cases for state transitions."""
     token = await register_and_login(client, email="edge_cases@example.com")
 
@@ -1037,12 +992,12 @@ async def test_interview_state_transition_edge_cases(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create interview (count as 1 of free tier limit)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1060,7 +1015,7 @@ async def test_interview_state_transition_edge_cases(client, session_override):
 
     # Create new interview for remaining tests
     resp2 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1082,7 +1037,7 @@ async def test_interview_state_transition_edge_cases(client, session_override):
 
     # Create 3rd interview for testing end edge case
     resp3 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1109,14 +1064,14 @@ async def test_interview_state_transition_edge_cases(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_interview_unauthorized_fails(client, session_override):
+async def test_get_interview_unauthorized_fails(client, db_session):
     """Test that users cannot access other users' interviews."""
     token1 = await register_and_login(client, "user1@example.com")
     token2 = await register_and_login(client, "user2@example.com")
 
     # User 1 creates interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token1},
     )
@@ -1131,7 +1086,7 @@ async def test_get_interview_unauthorized_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_start_interview_already_started_idempotent(client, session_override):
+async def test_start_interview_already_started_idempotent(client, db_session):
     """Test that starting an already started interview is idempotent."""
     token = await register_and_login(client)
 
@@ -1142,12 +1097,12 @@ async def test_start_interview_already_started_idempotent(client, session_overri
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1180,12 +1135,12 @@ async def test_start_interview_already_started_idempotent(client, session_overri
 
 
 @pytest.mark.asyncio
-async def test_create_interview_with_target_company_standalone(client, session_override):
+async def test_create_interview_with_target_company_standalone(client, db_session):
     """Test creating interview with target_company field explicitly."""
     token = await register_and_login(client)
 
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={
             "interview_type": "behavioral",
             "target_company": "Microsoft",
@@ -1202,7 +1157,7 @@ async def test_create_interview_with_target_company_standalone(client, session_o
 
 
 @pytest.mark.asyncio
-async def test_submit_response_interview_not_started_fails(client, session_override):
+async def test_submit_response_interview_not_started_fails(client, db_session):
     """Test that submitting response fails if interview hasn't been started."""
     token = await register_and_login(client)
 
@@ -1212,13 +1167,13 @@ async def test_submit_response_interview_not_started_fails(client, session_overr
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create interview (but don't start it - status will be SCHEDULED)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1239,7 +1194,7 @@ async def test_submit_response_interview_not_started_fails(client, session_overr
 
 
 @pytest.mark.asyncio
-async def test_quota_reset_monthly(client, session_override):
+async def test_quota_reset_monthly(client, db_session):
     """Test that interview quota resets monthly based on user creation date."""
     from datetime import UTC, datetime, timedelta
 
@@ -1249,25 +1204,25 @@ async def test_quota_reset_monthly(client, session_override):
     old_date = datetime.now(UTC) - timedelta(days=35)  # More than a month ago
     user = User(
         email="quota-test@example.com",
-        hashed_password=hash_password("password"),
+        hashed_password=hash_password("secret25"),
         subscription_tier=SubscriptionTier.FREE,
         interviews_this_month=3,  # At limit
         created_at=old_date,
     )
-    session_override.add(user)
-    await session_override.commit()
-    await session_override.refresh(user)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
 
     # Login
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "quota-test@example.com", "password": "password"},
+        json={"email": "quota-test@example.com", "password": "secret25"},
     )
     token = f"Bearer {login_resp.json()['access_token']}"
 
     # Try to create interview - quota should be reset and allow creation
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1276,7 +1231,7 @@ async def test_quota_reset_monthly(client, session_override):
     assert resp.status_code == 201
 
     # Verify counter was reset and incremented
-    await session_override.refresh(user)
+    await db_session.refresh(user)
     # Counter should be 1 after creating one interview
     assert user.interviews_this_month == 1
 
@@ -1361,12 +1316,12 @@ async def test_get_questions_nonexistent_interview_fails(client):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_nonexistent_interview_fails(client, session_override):
+async def test_submit_response_nonexistent_interview_fails(client, db_session):
     """Test POST /interviews/{id}/responses with non-existent UUID returns 404."""
     from uuid import uuid4
 
     token = await register_and_login(client)
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
     fake_id = uuid4()
 
     resp = await client.post(
@@ -1397,13 +1352,13 @@ async def test_get_responses_nonexistent_interview_fails(client):
 
 
 @pytest.mark.asyncio
-async def test_end_interview_not_started_status_transition(client, session_override):
+async def test_end_interview_not_started_status_transition(client, db_session):
     """Test ending an interview that is SCHEDULED (not started) still works."""
     token = await register_and_login(client, email="end_scheduled@example.com")
 
     # Create interview (status = SCHEDULED)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1420,13 +1375,13 @@ async def test_end_interview_not_started_status_transition(client, session_overr
 
 
 @pytest.mark.asyncio
-async def test_cancel_interview_already_cancelled_fails(client, session_override):
+async def test_cancel_interview_already_cancelled_fails(client, db_session):
     """Test that cancelling an already cancelled interview fails."""
     token = await register_and_login(client)
 
     # Create interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1449,14 +1404,14 @@ async def test_cancel_interview_already_cancelled_fails(client, session_override
 
 
 @pytest.mark.asyncio
-async def test_submit_response_with_video_url(client, session_override):
+async def test_submit_response_with_video_url(client, db_session):
     """Test submitting response with video URL."""
     token = await register_and_login(client)
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1467,8 +1422,8 @@ async def test_submit_response_with_video_url(client, session_override):
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -1493,14 +1448,14 @@ async def test_submit_response_with_video_url(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_with_both_audio_and_video(client, session_override):
+async def test_submit_response_with_both_audio_and_video(client, db_session):
     """Test submitting response with both audio and video URLs."""
     token = await register_and_login(client)
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1511,8 +1466,8 @@ async def test_submit_response_with_both_audio_and_video(client, session_overrid
         question_id=question.id,
         order=1,
     )
-    session_override.add(interview_question)
-    await session_override.commit()
+    db_session.add(interview_question)
+    await db_session.commit()
 
     await client.post(
         f"/api/v1/interviews/{interview_id}/start",
@@ -1538,17 +1493,17 @@ async def test_submit_response_with_both_audio_and_video(client, session_overrid
 
 
 @pytest.mark.asyncio
-async def test_list_interviews_with_all_statuses(client, session_override):
+async def test_list_interviews_with_all_statuses(client, db_session):
     """Test listing interviews filters by all status types."""
     token = await register_and_login(client, email="all_statuses@example.com")
 
     # Upgrade user to PRO to create more than 3 interviews
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "all_statuses@example.com")
     )
     user = result.first()
     user.subscription_tier = SubscriptionTier.PRO
-    await session_override.commit()
+    await db_session.commit()
 
     # Create questions
     for i in range(5):
@@ -1557,13 +1512,13 @@ async def test_list_interviews_with_all_statuses(client, session_override):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create interviews with different statuses
     # 1. SCHEDULED
     resp1 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1571,7 +1526,7 @@ async def test_list_interviews_with_all_statuses(client, session_override):
 
     # 2. IN_PROGRESS
     resp2 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1583,7 +1538,7 @@ async def test_list_interviews_with_all_statuses(client, session_override):
 
     # 3. COMPLETED
     resp3 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1599,7 +1554,7 @@ async def test_list_interviews_with_all_statuses(client, session_override):
 
     # 4. CANCELLED
     resp4 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1611,7 +1566,7 @@ async def test_list_interviews_with_all_statuses(client, session_override):
 
     # Test filtering by each status
     scheduled_list = await client.get(
-        "/api/v1/interviews/?status=scheduled",
+        "/api/v1/interviews?status=scheduled",
         headers={"Authorization": token},
     )
     assert scheduled_list.status_code == 200
@@ -1619,21 +1574,21 @@ async def test_list_interviews_with_all_statuses(client, session_override):
     assert scheduled_list.json()[0]["id"] == scheduled_id
 
     in_progress_list = await client.get(
-        "/api/v1/interviews/?status=in_progress",
+        "/api/v1/interviews?status=in_progress",
         headers={"Authorization": token},
     )
     assert in_progress_list.status_code == 200
     assert len(in_progress_list.json()) == 1
 
     completed_list = await client.get(
-        "/api/v1/interviews/?status=completed",
+        "/api/v1/interviews?status=completed",
         headers={"Authorization": token},
     )
     assert completed_list.status_code == 200
     assert len(completed_list.json()) == 1
 
     cancelled_list = await client.get(
-        "/api/v1/interviews/?status=cancelled",
+        "/api/v1/interviews?status=cancelled",
         headers={"Authorization": token},
     )
     assert cancelled_list.status_code == 200
@@ -1641,14 +1596,14 @@ async def test_list_interviews_with_all_statuses(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_quick_practice_increments_quota(client, session_override):
+async def test_quick_practice_increments_quota(client, db_session):
     """Test that quick practice increments interview quota counter."""
     token = await register_and_login(client, email="quick_quota@example.com")
-    question = await create_test_question(session_override)
+    question = await create_test_question(db_session)
 
     # Get initial count
     from app.models.user import User
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(User).where(User.email == "quick_quota@example.com")
     )
     user = result.first()
@@ -1662,19 +1617,19 @@ async def test_quick_practice_increments_quota(client, session_override):
     assert resp.status_code == 201
 
     # Verify counter incremented
-    await session_override.refresh(user)
+    await db_session.refresh(user)
     assert user.total_interviews == initial_count + 1
     assert user.interviews_this_month == 1
 
 
 @pytest.mark.asyncio
-async def test_start_interview_cancelled_status_fails(client, session_override):
+async def test_start_interview_cancelled_status_fails(client, db_session):
     """Test that starting a cancelled interview fails."""
     token = await register_and_login(client)
 
     # Create and cancel interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1698,13 +1653,13 @@ async def test_start_interview_cancelled_status_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_end_interview_scheduled_status_allowed(client, session_override):
+async def test_end_interview_scheduled_status_allowed(client, db_session):
     """Test that ending a scheduled interview is allowed (edge case)."""
     token = await register_and_login(client)
 
     # Create interview (scheduled status)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1720,13 +1675,13 @@ async def test_end_interview_scheduled_status_allowed(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_get_interview_feedback_placeholder(client, session_override):
+async def test_get_interview_feedback_placeholder(client, db_session):
     """Test GET /interviews/{id}/feedback returns placeholder."""
     token = await register_and_login(client)
 
     # Create interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1742,13 +1697,13 @@ async def test_get_interview_feedback_placeholder(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_start_interview_value_error_from_assign_questions(client, session_override):
+async def test_start_interview_value_error_from_assign_questions(client, db_session):
     """Test that ValueError from assign_questions is properly converted to 400."""
     token = await register_and_login(client)
 
     # Create interview without enough questions
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical", "question_count": 5},
         headers={"Authorization": token},
     )
@@ -1765,25 +1720,25 @@ async def test_start_interview_value_error_from_assign_questions(client, session
 
 
 @pytest.mark.asyncio
-async def test_get_interview_questions_no_questions_assigned_404(client, session_override):
+async def test_get_interview_questions_no_questions_assigned_404(client, db_session):
     """Test GET /interviews/{id}/questions returns 404 when no questions assigned."""
     token = await register_and_login(client)
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
     interview_id = resp.json()["id"]
 
     # Manually set status to IN_PROGRESS without assigning questions
-    result = await session_override.exec(
+    result = await db_session.exec(
         select(InterviewSession).where(InterviewSession.id == interview_id)
     )
     interview = result.first()
     interview.status = InterviewStatus.IN_PROGRESS
-    await session_override.commit()
+    await db_session.commit()
 
     # Try to get questions - should return 404
     questions_resp = await client.get(
@@ -1795,7 +1750,7 @@ async def test_get_interview_questions_no_questions_assigned_404(client, session
 
 
 @pytest.mark.asyncio
-async def test_cancel_interview_non_scheduled_status_fails(client, session_override):
+async def test_cancel_interview_non_scheduled_status_fails(client, db_session):
     """Test that canceling a non-scheduled interview fails with 400."""
     token = await register_and_login(client)
 
@@ -1806,12 +1761,12 @@ async def test_cancel_interview_non_scheduled_status_fails(client, session_overr
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -1832,7 +1787,7 @@ async def test_cancel_interview_non_scheduled_status_fails(client, session_overr
 
 
 @pytest.mark.asyncio
-async def test_submit_response_wrong_question_id_fails(client, session_override):
+async def test_submit_response_wrong_question_id_fails(client, db_session):
     """Test submitting response with question_id not in interview fails."""
     token = await register_and_login(client)
 
@@ -1843,12 +1798,12 @@ async def test_submit_response_wrong_question_id_fails(client, session_override)
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
         )
-        session_override.add(question)
-    await session_override.commit()
+        db_session.add(question)
+    await db_session.commit()
 
     # Create and start interview (will assign 1 question randomly)
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1872,8 +1827,8 @@ async def test_submit_response_wrong_question_id_fails(client, session_override)
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(unassigned_question)
-    await session_override.commit()
+    db_session.add(unassigned_question)
+    await db_session.commit()
 
     # Try to submit response with unassigned question - should fail
     submit_resp = await client.post(
@@ -1889,7 +1844,7 @@ async def test_submit_response_wrong_question_id_fails(client, session_override)
 
 
 @pytest.mark.asyncio
-async def test_submit_response_scheduled_interview_fails(client, session_override):
+async def test_submit_response_scheduled_interview_fails(client, db_session):
     """Test submitting response to scheduled (not started) interview fails."""
     token = await register_and_login(client)
 
@@ -1899,12 +1854,12 @@ async def test_submit_response_scheduled_interview_fails(client, session_overrid
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # Create interview but don't start it
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1924,7 +1879,7 @@ async def test_submit_response_scheduled_interview_fails(client, session_overrid
 
 
 @pytest.mark.asyncio
-async def test_get_responses_builds_question_data(client, session_override):
+async def test_get_responses_builds_question_data(client, db_session):
     """Test GET /interviews/{id}/responses includes question data in response."""
     token = await register_and_login(client)
 
@@ -1934,12 +1889,12 @@ async def test_get_responses_builds_question_data(client, session_override):
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # Create and start interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1975,7 +1930,7 @@ async def test_get_responses_builds_question_data(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_quick_practice_value_error_from_assign_specific_question(client, session_override):
+async def test_quick_practice_value_error_from_assign_specific_question(client, db_session):
     """Test that ValueError from assign_specific_question is converted to 400."""
     token = await register_and_login(client)
 
@@ -1986,8 +1941,8 @@ async def test_quick_practice_value_error_from_assign_specific_question(client, 
         difficulty=Difficulty.MEDIUM,
         is_active=False,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # Try to create quick practice with inactive question
     # This should fail at question lookup (404), but if it gets past that,
@@ -2002,14 +1957,14 @@ async def test_quick_practice_value_error_from_assign_specific_question(client, 
 
 
 @pytest.mark.asyncio
-async def test_get_interview_unauthorized_access_404(client, session_override):
+async def test_get_interview_unauthorized_access_404(client, db_session):
     """Test GET /interviews/{id} returns 404 for interview owned by different user."""
     token1 = await register_and_login(client, email="user1@example.com")
     token2 = await register_and_login(client, email="user2@example.com")
 
     # User1 creates interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token1},
     )
@@ -2025,14 +1980,14 @@ async def test_get_interview_unauthorized_access_404(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_start_interview_unauthorized_access_404(client, session_override):
+async def test_start_interview_unauthorized_access_404(client, db_session):
     """Test POST /interviews/{id}/start returns 404 for interview owned by different user."""
     token1 = await register_and_login(client, email="start_user1@example.com")
     token2 = await register_and_login(client, email="start_user2@example.com")
 
     # User1 creates interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token1},
     )
@@ -2044,8 +1999,8 @@ async def test_start_interview_unauthorized_access_404(client, session_override)
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # User2 tries to start user1's interview - should get 404
     start_resp = await client.post(
@@ -2056,7 +2011,7 @@ async def test_start_interview_unauthorized_access_404(client, session_override)
 
 
 @pytest.mark.asyncio
-async def test_submit_response_unauthorized_access_404(client, session_override):
+async def test_submit_response_unauthorized_access_404(client, db_session):
     """Test POST /interviews/{id}/responses returns 404 for interview owned by different user."""
     token1 = await register_and_login(client, email="resp_user1@example.com")
     token2 = await register_and_login(client, email="resp_user2@example.com")
@@ -2067,12 +2022,12 @@ async def test_submit_response_unauthorized_access_404(client, session_override)
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
+    db_session.add(question)
+    await db_session.commit()
 
     # User1 creates and starts interview
     resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token1},
     )
@@ -2099,13 +2054,13 @@ async def test_submit_response_unauthorized_access_404(client, session_override)
 
 
 @pytest.mark.asyncio
-async def test_get_interview_questions_scheduled_status_fails(client, session_override):
+async def test_get_interview_questions_scheduled_status_fails(client, db_session):
     """Test GET /interviews/{id}/questions fails for scheduled (not started) interview."""
     token = await register_and_login(client, email="questions_scheduled@example.com")
 
     # Create scheduled interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -2121,13 +2076,13 @@ async def test_get_interview_questions_scheduled_status_fails(client, session_ov
 
 
 @pytest.mark.asyncio
-async def test_end_interview_cancelled_status_fails(client, session_override):
+async def test_end_interview_cancelled_status_fails(client, db_session):
     """Test ending a cancelled interview fails."""
     token = await register_and_login(client, email="end_cancelled@example.com")
 
     # Create and cancel interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -2149,13 +2104,13 @@ async def test_end_interview_cancelled_status_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_end_interview_completed_status_fails(client, session_override):
+async def test_end_interview_completed_status_fails(client, db_session):
     """Test ending an already completed interview fails."""
     token = await register_and_login(client, email="end_completed@example.com")
 
     # Create, start, and end interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 3},
         headers={"Authorization": token},
     )
@@ -2181,7 +2136,7 @@ async def test_end_interview_completed_status_fails(client, session_override):
 
 
 @pytest.mark.asyncio
-async def test_submit_response_completed_interview_fails(client, session_override):
+async def test_submit_response_completed_interview_fails(client, db_session):
     """Test submitting response to completed interview fails."""
     token = await register_and_login(client, email="submit_completed@example.com")
 
@@ -2191,13 +2146,13 @@ async def test_submit_response_completed_interview_fails(client, session_overrid
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Create, start, and end interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -2227,13 +2182,13 @@ async def test_submit_response_completed_interview_fails(client, session_overrid
 
 
 @pytest.mark.asyncio
-async def test_submit_response_cancelled_interview_fails(client, session_override):
+async def test_submit_response_cancelled_interview_fails(client, db_session):
     """Test submitting response to cancelled interview fails."""
     token = await register_and_login(client, email="submit_cancelled@example.com")
 
     # Create and cancel interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -2250,9 +2205,9 @@ async def test_submit_response_cancelled_interview_fails(client, session_overrid
         category=QuestionCategory.BEHAVIORAL,
         difficulty=Difficulty.MEDIUM,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Try to submit response to cancelled interview
     submit_resp = await client.post(
@@ -2268,13 +2223,13 @@ async def test_submit_response_cancelled_interview_fails(client, session_overrid
 
 
 @pytest.mark.asyncio
-async def test_get_responses_empty_question_ids_handles_gracefully(client, session_override):
+async def test_get_responses_empty_question_ids_handles_gracefully(client, db_session):
     """Test GET /interviews/{id}/responses handles empty responses gracefully."""
     token = await register_and_login(client, email="empty_responses@example.com")
 
     # Create and start interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -2295,7 +2250,7 @@ async def test_get_responses_empty_question_ids_handles_gracefully(client, sessi
 
 
 @pytest.mark.asyncio
-async def test_quick_practice_assign_specific_question_error_handled(client, session_override):
+async def test_quick_practice_assign_specific_question_error_handled(client, db_session):
     """Test quick practice handles ValueError from assign_specific_question."""
     token = await register_and_login(client, email="quick_error@example.com")
 
@@ -2306,9 +2261,9 @@ async def test_quick_practice_assign_specific_question_error_handled(client, ses
         difficulty=Difficulty.MEDIUM,
         is_active=False,
     )
-    session_override.add(question)
-    await session_override.commit()
-    await session_override.refresh(question)
+    db_session.add(question)
+    await db_session.commit()
+    await db_session.refresh(question)
 
     # Try quick practice with inactive question
     resp = await client.post(

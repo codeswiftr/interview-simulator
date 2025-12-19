@@ -3,12 +3,9 @@
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import text
-from sqlmodel import SQLModel
 
 from app.ai.audio_analyzer import AudioMetrics
 from app.ai.transcriber import TranscriptionResult
-from app.db import SessionLocal, engine
 from app.models.feedback import AudioFeedback
 from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType
 from app.models.question import Question, QuestionCategory
@@ -16,32 +13,14 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.audio_service import AudioService
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.fixture
 async def db_session():
     """Create a test database session."""
     async with SessionLocal() as session:
         yield session
-
 
 @pytest.fixture
 async def sample_user(db_session):
@@ -55,7 +34,6 @@ async def sample_user(db_session):
     await db_session.commit()
     await db_session.refresh(user)
     return user
-
 
 @pytest.fixture
 async def sample_interview_session(db_session, sample_user):
@@ -71,7 +49,6 @@ async def sample_interview_session(db_session, sample_user):
     await db_session.refresh(session)
     return session
 
-
 @pytest.fixture
 async def sample_question(db_session):
     """Create a test question."""
@@ -84,7 +61,6 @@ async def sample_question(db_session):
     await db_session.commit()
     await db_session.refresh(question)
     return question
-
 
 @pytest.fixture
 async def sample_response(db_session, sample_interview_session, sample_question):
@@ -100,7 +76,6 @@ async def sample_response(db_session, sample_interview_session, sample_question)
     await db_session.refresh(response)
     return response
 
-
 @pytest.fixture
 def mock_audio_file(tmp_path):
     """Create a mock audio file for testing."""
@@ -108,12 +83,10 @@ def mock_audio_file(tmp_path):
     audio_file.write_bytes(b"fake audio data")
     return str(audio_file)
 
-
 @pytest.fixture
 def audio_service():
     """Create an AudioService instance."""
     return AudioService()
-
 
 class TestAudioService:
     """Test suite for AudioService."""

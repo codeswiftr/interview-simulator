@@ -12,32 +12,10 @@ Test Coverage:
 """
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlmodel import SQLModel
+from httpx import AsyncClient
 
-from app.db import SessionLocal, engine, get_session
-from app.main import app
-
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
+# Import register_and_login from conftest.py
+from tests.conftest import register_and_login
 
 @pytest.fixture
 async def client():
@@ -54,14 +32,12 @@ async def client():
         yield ac
     app.dependency_overrides.clear()
 
-
 @pytest.fixture
 async def openapi_schema(client: AsyncClient) -> dict:
     """Fetch the OpenAPI schema from the application."""
     response = await client.get("/openapi.json")
     assert response.status_code == 200
     return response.json()
-
 
 class TestOpenAPISchemaStructure:
     """Tests for OpenAPI schema structure and completeness."""
@@ -100,7 +76,6 @@ class TestOpenAPISchemaStructure:
         assert "components" in openapi_schema
         assert "schemas" in openapi_schema["components"]
         assert len(openapi_schema["components"]["schemas"]) > 0
-
 
 class TestCriticalEndpointsInSchema:
     """Test that critical API endpoints are documented in OpenAPI schema."""
@@ -142,7 +117,6 @@ class TestCriticalEndpointsInSchema:
         feedback_paths = [p for p in paths if "/feedback" in p]
         assert len(feedback_paths) > 0, "No feedback endpoints found in schema"
 
-
 class TestSchemaModelsExist:
     """Test that critical schema models are defined."""
 
@@ -174,7 +148,6 @@ class TestSchemaModelsExist:
         schemas = openapi_schema["components"]["schemas"]
         feedback_schemas = [s for s in schemas if "feedback" in s.lower()]
         assert len(feedback_schemas) > 0, "No feedback schemas found"
-
 
 class TestEndpointResponseCodes:
     """Test that endpoints return status codes matching the schema."""
@@ -222,7 +195,6 @@ class TestEndpointResponseCodes:
         )
         assert response.status_code == 422
 
-
 class TestResponseContentTypes:
     """Test that response content types match schema."""
 
@@ -243,7 +215,6 @@ class TestResponseContentTypes:
         # Verify it's parseable JSON
         error_data = response.json()
         assert "detail" in error_data
-
 
 class TestRequestValidation:
     """Test request validation against schema."""
@@ -275,22 +246,21 @@ class TestRequestValidation:
         # Register and login
         await client.post(
             "/api/v1/users/register",
-            json={"email": "enum_test@example.com", "password": "password123"}
+            json={"email": "enum_test@example.com", "password": "SecureTest123!"}
         )
         login_resp = await client.post(
             "/api/v1/users/login",
-            json={"email": "enum_test@example.com", "password": "password123"}
+            json={"email": "enum_test@example.com", "password": "SecureTest123!"}
         )
         token = f"Bearer {login_resp.json()['access_token']}"
 
         # Try invalid interview type
         response = await client.post(
-            "/api/v1/interviews/",
+            "/api/v1/interviews",
             json={"interview_type": "invalid_type"},
             headers={"Authorization": token}
         )
         assert response.status_code == 422
-
 
 class TestSchemaEnumValues:
     """Test that schema enums are properly defined and match implementation."""
@@ -326,7 +296,6 @@ class TestSchemaEnumValues:
         ]
         assert len(schemas) > 0
 
-
 class TestEndpointMethodsMatch:
     """Test that HTTP methods in schema match implementation."""
 
@@ -350,7 +319,7 @@ class TestEndpointMethodsMatch:
         """Test POST endpoints accept JSON content type."""
         response = await client.post(
             "/api/v1/users/register",
-            json={"email": "post_test@example.com", "password": "password123"},
+            json={"email": "post_test@example.com", "password": "SecureTest123!"},
             headers={"Content-Type": "application/json"}
         )
         assert response.status_code in [201, 400]  # 201 success or 400 if already exists
@@ -361,7 +330,6 @@ class TestEndpointMethodsMatch:
         # Health endpoint at /health doesn't support DELETE
         response = await client.delete("/health")
         assert response.status_code == 405
-
 
 class TestSecuritySchemes:
     """Test security schemes in OpenAPI spec."""
@@ -379,12 +347,11 @@ class TestSecuritySchemes:
         """Test that protected endpoints require authentication."""
         protected_endpoints = [
             "/api/v1/users/me",
-            "/api/v1/interviews/",
+            "/api/v1/interviews",
         ]
         for endpoint in protected_endpoints:
             response = await client.get(endpoint)
             assert response.status_code == 401, f"{endpoint} should require auth"
-
 
 class TestTagsOrganization:
     """Test that OpenAPI tags are properly organized."""
@@ -406,7 +373,6 @@ class TestTagsOrganization:
         # At least some expected tags should be present
         common_tags = expected_tags & actual_tags
         assert len(common_tags) > 0, f"Expected some of {expected_tags}, found {actual_tags}"
-
 
 class TestSchemaConsistency:
     """Test schema consistency across the API."""
