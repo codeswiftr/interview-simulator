@@ -146,7 +146,7 @@ export function Modal({
           'relative w-full bg-surface-primary rounded-2xl shadow-2xl',
           'border border-border-light',
           'transition-all duration-200',
-          'animate-scale-in',
+          'animate-bounce-in',
           sizeStyles[size],
           'dark:bg-dark-surface-secondary dark:border-dark-border-light',
           className
@@ -177,7 +177,7 @@ export function Modal({
                 )}
                 aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             )}
           </div>

@@ -89,6 +89,12 @@
     --fg-secondary: hsl(var(--muted-foreground));
     --fg-tertiary: hsl(var(--muted-foreground) / 0.7);
     --border-color: hsl(var(--border));
+
+    /* Safe Area Insets for iPhone notch/home indicator */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
   }
 
   /* Dark mode overrides applied via design-tokens.css .dark class */
@@ -161,6 +167,45 @@
     background-color: var(--color-dark-surface-secondary);
     color: var(--color-dark-text-primary);
   }
+
+  /* Safe Area Utilities for iOS notch/home indicator */
+  .safe-area-top {
+    padding-top: max(0.5rem, var(--safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+
+  .safe-area-left {
+    padding-left: max(1rem, var(--safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(1rem, var(--safe-area-inset-right));
+  }
+
+  .safe-area-x {
+    padding-left: max(1rem, var(--safe-area-inset-left));
+    padding-right: max(1rem, var(--safe-area-inset-right));
+  }
+
+  .safe-area-y {
+    padding-top: max(0.5rem, var(--safe-area-inset-top));
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+
+  /* Touch optimizations for mobile */
+  button, a, [role="button"], .clickable {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
 }
 
 /* Keyframe Animations */
@@ -206,6 +251,72 @@
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; filter: brightness(1); }
   50% { opacity: 0.8; filter: brightness(1.1); }
+}
+
+/* Micro-Animation Keyframes for Premium Feel */
+@keyframes press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
 
 /* Utility Classes */
@@ -288,10 +399,9 @@
 
   .label {
     font-family: var(--font-family-body);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
   }
 
   .score-display {
@@ -424,13 +534,17 @@
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
-    background-color: hsl(var(--input));
+    background-color: hsl(var(--card));
     border: 1px solid hsl(var(--border));
     color: hsl(var(--foreground));
     transition: all 0.2s;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     font-family: inherit;
     font-size: 1rem;
+  }
+
+  .dark .input {
+    background-color: hsl(var(--muted) / 0.5);
   }
 
   .input::placeholder {
@@ -559,3 +673,53 @@
 
 /* Dark mode styles are now handled via HSL variables in design-tokens.css
    The .dark class automatically switches the CSS variable values */
+
+/* Micro-Animation Utility Classes */
+@layer utilities {
+  .animate-press {
+    animation: press 0.15s ease-out;
+  }
+
+  .animate-ripple {
+    animation: ripple 0.6s ease-out forwards;
+  }
+
+  .animate-reveal {
+    animation: reveal 0.5s ease-out forwards;
+  }
+
+  .animate-stagger-in {
+    animation: stagger-in 0.3s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-bounce-in {
+    animation: bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Stagger delay utilities for list animations */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
+
+  /* Active/pressed state for buttons */
+  .active\:scale-press:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Hover scale for interactive elements */
+  .hover\:scale-hover:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease-out;
+  }
+}

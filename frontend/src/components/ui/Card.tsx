@@ -7,27 +7,38 @@ import { cn } from '../../lib/utils';
 export type CardVariant = 'default' | 'glass' | 'interactive' | 'elevated' | 'outline';
 
 const variantClasses: Record<CardVariant, string> = {
-  default: 'bg-white dark:bg-dark-surface-secondary border border-border-light dark:border-dark-border-light shadow-sm hover:shadow-md',
+  default: 'bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-sm hover:shadow-md',
   glass: 'card-glass',
   interactive: 'card-interactive',
-  elevated: 'bg-white dark:bg-dark-surface-secondary border border-border-light dark:border-dark-border-light shadow-md hover:shadow-lg',
-  outline: 'bg-transparent border border-border-light dark:border-dark-border-light',
+  elevated: 'bg-[hsl(var(--card))] border border-[hsl(var(--border))] shadow-md hover:shadow-lg',
+  outline: 'bg-transparent border border-[hsl(var(--border))]',
 };
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: CardVariant;
+  /** Enable entrance animation with optional stagger index (1-8) */
+  animate?: boolean | number;
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', ...props }, ref) => {
+  ({ className, variant = 'default', animate, ...props }, ref) => {
+    // Determine animation classes
+    const animationClasses = animate
+      ? typeof animate === 'number'
+        ? `animate-stagger-in stagger-${Math.min(Math.max(animate, 1), 8)}`
+        : 'animate-stagger-in'
+      : '';
+
     return (
       <div
         ref={ref}
         className={cn(
           'rounded-xl transition-all duration-300',
           variantClasses[variant],
+          animationClasses,
           className
         )}
+        style={animate ? { animationFillMode: 'forwards' } : undefined}
         {...props}
       />
     );

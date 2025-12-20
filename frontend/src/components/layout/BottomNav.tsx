@@ -27,10 +27,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border-light bg-white/95 backdrop-blur-sm md:hidden dark:border-dark-border-light dark:bg-dark-surface-primary/95"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border-light bg-white/95 backdrop-blur-sm md:hidden dark:border-dark-border-light dark:bg-dark-surface-primary/95 safe-area-bottom"
       aria-label="Mobile navigation"
     >
-      <div className="mx-auto flex max-w-md items-center justify-between px-4 py-2">
+      <div className="mx-auto flex max-w-md items-center justify-between px-4 pt-2 pb-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (

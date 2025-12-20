@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './hooks/useToast';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { usePageTracking } from './hooks/usePageTracking';
+import { OfflineIndicator, InstallPrompt } from './components/pwa';
 import { Loader2 } from 'lucide-react';
 
 // Eager load lightweight pages (core auth, home)
@@ -43,6 +44,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
+          <OfflineIndicator />
           <div className="min-h-screen bg-surface-primary">
             <Header />
             <main id="main-content" className="pb-16 md:pb-0">
@@ -122,6 +124,7 @@ function App() {
               </Suspense>
             </main>
             <BottomNav />
+            <InstallPrompt />
           </div>
         </ToastProvider>
       </ThemeProvider>
