@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle, Loader2, Upload, Send } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle, Loader2, Upload, Send, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface AudioPreviewProps {
   isPlaying: boolean;
@@ -9,9 +9,11 @@ interface AudioPreviewProps {
   onPause: () => void;
   onReRecord: () => void;
   onConfirm: () => void;
+  onRetry?: () => void;
   disabled?: boolean;
   isSubmitting?: boolean;
   submitProgress?: 'uploading' | 'processing' | null;
+  submitError?: string | null;
 }
 
 function formatTime(seconds: number): string {
@@ -28,9 +30,11 @@ export default function AudioPreview({
   onPause,
   onReRecord,
   onConfirm,
+  onRetry,
   disabled = false,
   isSubmitting = false,
-  submitProgress = null
+  submitProgress = null,
+  submitError = null
 }: AudioPreviewProps) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -209,6 +213,28 @@ export default function AudioPreview({
           {submitProgress === 'uploading' && 'Uploading your audio recording...'}
           {submitProgress === 'processing' && 'Your answer is being processed...'}
           {!submitProgress && 'Submitting...'}
+        </div>
+      )}
+
+      {/* Error state with retry */}
+      {submitError && !isSubmitting && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">Submission Failed</p>
+              <p className="text-xs text-text-secondary mt-1">{submitError}</p>
+            </div>
+          </div>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-red-500 text-white font-medium text-sm hover:bg-red-600 active:scale-[0.98] transition-all"
+            >
+              <RefreshCw size={16} />
+              Retry Upload
+            </button>
+          )}
         </div>
       )}
     </div>

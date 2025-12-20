@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   const error = useCallback(
-    (title: string, message?: string) => addToast('error', title, message, 8000),
+    (title: string, message?: string) => addToast('error', title, message, 12000),
     [addToast]
   );
 

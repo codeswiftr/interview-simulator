@@ -116,31 +116,41 @@ export default function CoachOverlay({
   const isTimeRunningOut = expectedDuration > 0 && timeLeft < 60 && timeLeft > 0;
 
   return (
-    <div className={`fixed right-4 top-24 z-40 transition-all duration-300 ease-in-out ${isExpanded ? 'w-80' : 'w-12'}`}>
+    <div
+      className={`fixed right-4 top-24 z-40 transition-all duration-300 ease-in-out max-w-[calc(100vw-2rem)] ${isExpanded ? 'w-72 sm:w-80' : 'w-12'}`}
+      role="complementary"
+      aria-label="AI Coach"
+    >
       <div className="bg-white/95 dark:bg-surface-dark/95 backdrop-blur-md border border-electric-blue/30 shadow-xl rounded-2xl overflow-hidden">
         {/* Header / Toggle */}
         <button
           onClick={handleToggle}
           className="w-full p-3 flex items-center justify-between bg-electric-blue/10 hover:bg-electric-blue/20 transition-colors"
+          aria-expanded={isExpanded}
+          aria-controls="coach-content"
         >
           {isExpanded ? (
             <div className="flex items-center gap-2 text-electric-blue font-semibold">
-              <Lightbulb size={18} />
+              <Lightbulb size={18} aria-hidden="true" />
               <span>AI Coach</span>
             </div>
           ) : (
-            <Lightbulb size={20} className="text-electric-blue mx-auto" />
+            <Lightbulb size={20} className="text-electric-blue mx-auto" aria-hidden="true" />
           )}
-          {isExpanded && <ChevronRight size={18} className="text-electric-blue" />}
+          {isExpanded && <ChevronRight size={18} className="text-electric-blue" aria-hidden="true" />}
         </button>
 
         {/* Content */}
         {isExpanded && (
-          <div className="p-4 space-y-4">
-            {/* Timer Warning */}
+          <div id="coach-content" className="p-4 space-y-4">
+            {/* Timer Warning - announced urgently */}
             {isTimeRunningOut && (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 animate-pulse">
-                <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div
+                className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 animate-pulse"
+                role="alert"
+                aria-live="assertive"
+              >
+                <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-bold text-amber-600 dark:text-amber-400">Time is running out!</p>
                   <p className="text-xs text-text-secondary">Wrap up your answer in the next minute.</p>
@@ -148,8 +158,13 @@ export default function CoachOverlay({
               </div>
             )}
 
-            {/* Hint Carousel */}
-            <div className="relative bg-surface-secondary rounded-xl p-4 min-h-[140px] flex flex-col justify-between border border-border-light">
+            {/* Hint Carousel - hints announced to screen readers */}
+            <div
+              className="relative bg-surface-secondary rounded-xl p-4 min-h-[140px] flex flex-col justify-between border border-border-light"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-busy={resolvedLoading}
+            >
               {resolvedHint ? (
                 // Dynamic AI-generated hint
                 <div>

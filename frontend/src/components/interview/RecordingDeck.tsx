@@ -180,7 +180,7 @@ export default function RecordingDeck({
       </div>
 
       {/* Controls Area */}
-      <div className="p-6 bg-surface-secondary/50 backdrop-blur-md">
+      <div className="p-4 sm:p-6 bg-surface-secondary/50 backdrop-blur-md">
         {/* Timer & Status */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
@@ -200,15 +200,16 @@ export default function RecordingDeck({
         </div>
 
         {/* Main Controls */}
-        <div className="flex items-center justify-center gap-6">
+        <div className="flex items-center justify-center gap-4 sm:gap-6">
           {recordingState === 'idle' ? (
             <button
               onClick={onStart}
               disabled={disabled}
-              className="group relative flex items-center justify-center h-16 w-16 rounded-full bg-electric-blue text-white shadow-lg hover:bg-sky-500 hover:scale-110 active:scale-95 transition-all duration-200"
-              title="Start recording"
+              className="group relative flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-electric-blue text-white shadow-lg hover:bg-sky-500 hover:scale-110 active:scale-95 transition-all duration-200"
+              aria-label="Start recording"
             >
-              <Mic size={28} />
+              <Mic size={24} className="sm:hidden" aria-hidden="true" />
+              <Mic size={28} className="hidden sm:block" aria-hidden="true" />
               <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:border-white/40 transition-colors"></div>
             </button>
           ) : (
@@ -216,35 +217,36 @@ export default function RecordingDeck({
               <button
                 onClick={onCancel}
                 className="p-3 rounded-full text-text-tertiary hover:bg-status-error/10 hover:text-status-error transition-colors"
-                title="Cancel"
+                aria-label="Cancel recording"
               >
-                <X size={24} />
+                <X size={24} aria-hidden="true" />
               </button>
 
               {recordingState === 'recording' ? (
                 <button
                   onClick={onPause}
                   className="p-4 rounded-full bg-surface-tertiary text-text-primary hover:bg-surface-tertiary/80 transition-colors"
-                  title="Pause"
+                  aria-label="Pause recording"
                 >
-                  <Pause size={28} />
+                  <Pause size={28} aria-hidden="true" />
                 </button>
               ) : (
                 <button
                   onClick={onResume}
                   className="p-4 rounded-full bg-surface-tertiary text-text-primary hover:bg-surface-tertiary/80 transition-colors"
-                  title="Resume"
+                  aria-label="Resume recording"
                 >
-                  <Play size={28} />
+                  <Play size={28} aria-hidden="true" />
                 </button>
               )}
 
               <button
                 onClick={onStop}
-                className="group relative flex items-center justify-center h-16 w-16 rounded-full bg-status-error text-white shadow-lg hover:bg-red-600 hover:scale-110 active:scale-95 transition-all duration-200"
-                title="Stop & Save"
+                className="group relative flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-status-error text-white shadow-lg hover:bg-red-600 hover:scale-110 active:scale-95 transition-all duration-200"
+                aria-label="Stop and save recording"
               >
-                <Square size={24} fill="currentColor" />
+                <Square size={20} className="sm:hidden" fill="currentColor" aria-hidden="true" />
+                <Square size={24} className="hidden sm:block" fill="currentColor" aria-hidden="true" />
               </button>
             </>
           )}

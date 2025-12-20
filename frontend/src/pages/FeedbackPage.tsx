@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  Share2,
   RefreshCw,
   BookOpen,
   MessageSquare,
@@ -129,7 +128,13 @@ export default function FeedbackPage() {
       const allTranscribed = responses.length > 0 && responses.every((r: InterviewResponse) => r.transcript);
       setProcessingComplete(allTranscribed);
     } catch (err) {
-      setError('Failed to load interview data');
+      // Extract error message from Axios error or use generic message
+      const axiosError = err as { response?: { status?: number; data?: { message?: string; detail?: string } } };
+      const status = axiosError.response?.status;
+      const errorMessage = axiosError.response?.data?.message
+        || axiosError.response?.data?.detail
+        || (status === 404 ? 'Interview session not found' : 'Failed to load interview data');
+      setError(errorMessage);
       console.error('Error loading feedback:', err);
     } finally {
       setLoading(false);
@@ -173,7 +178,11 @@ export default function FeedbackPage() {
       // Reload feedback data
       await loadFeedback();
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to generate feedback';
+      // Extract error message from Axios error or generic error
+      const axiosError = err as { response?: { data?: { message?: string; detail?: string } } };
+      const errorMessage = axiosError.response?.data?.message
+        || axiosError.response?.data?.detail
+        || (err instanceof Error ? err.message : 'Failed to generate feedback');
       setError(errorMessage);
       console.error('Error generating feedback:', err);
     } finally {
@@ -214,10 +223,10 @@ export default function FeedbackPage() {
         </div>
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card p-6">
+            <Card key={i} className="p-6">
               <Skeleton variant="text" width="70%" height={20} className="mb-4" />
               <SkeletonText lines={3} />
-            </div>
+            </Card>
           ))}
         </div>
       </div>
@@ -227,12 +236,12 @@ export default function FeedbackPage() {
   if (error && !feedbackState.session) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-        <div className="text-center card p-8 border-status-error/20 bg-status-error/5">
-          <p className="body-large text-status-error mb-4">{error}</p>
+        <Card className="text-center p-8 border-status-error/20 bg-status-error/5">
+          <p className="text-lg text-status-error mb-4">{error}</p>
           <button onClick={() => navigate('/dashboard')} className="btn-primary">
             Return to Dashboard
           </button>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -291,10 +300,10 @@ export default function FeedbackPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="badge bg-white dark:bg-white/10 backdrop-blur-sm border border-border-light dark:border-white/10 text-text-secondary dark:text-text-primary shadow-sm font-medium">
+                <span className="badge bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-text-secondary shadow-sm font-medium">
                   {getTypeLabel(session.interview_type)}
                 </span>
-                <span className="badge bg-white dark:bg-white/10 backdrop-blur-sm border border-border-light dark:border-white/10 text-text-secondary dark:text-text-primary shadow-sm font-medium">
+                <span className="badge bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-text-secondary shadow-sm font-medium">
                   {session.question_count} questions
                 </span>
               </div>
@@ -324,18 +333,18 @@ export default function FeedbackPage() {
 
           {/* No Responses State */}
           {!hasFeedback && responses.length === 0 && (
-            <Card variant="glass" className="p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
-              <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-amber-500/5">
+            <Card className="p-12 mb-8 text-center animate-scale-in">
+              <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6">
                 <MessageSquare className="w-10 h-10 text-amber-500" />
               </div>
-              <h2 className="heading-section mb-4 text-[var(--fg-primary)]">No Responses Recorded</h2>
-              <p className="body-large text-text-secondary dark:text-text-tertiary mb-8 max-w-2xl mx-auto">
+              <h2 className="text-xl font-semibold mb-4 text-text-primary">No Responses Recorded</h2>
+              <p className="text-text-secondary mb-8 max-w-2xl mx-auto">
                 This interview session doesn't have any recorded answers yet.
                 Complete the interview to get AI-powered feedback on your performance.
               </p>
               <Link
                 to="/dashboard"
-                className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-lg shadow-lg hover:shadow-electric-blue/30 transition-all duration-300 transform hover:scale-105"
+                className="btn-primary inline-flex items-center gap-2 px-8 py-3 shadow-lg hover:shadow-electric-blue/30 transition-all"
               >
                 <ArrowLeft className="w-5 h-5" />
                 Back to Dashboard
@@ -345,19 +354,19 @@ export default function FeedbackPage() {
 
           {/* Generate Feedback Call-to-Action - only show when transcription is complete */}
           {!hasFeedback && responses.length > 0 && processingComplete && (
-            <Card variant="glass" className="p-12 mb-8 text-center animate-scale-in dark:bg-surface-secondary/30 dark:border-white/10">
-              <div className="w-20 h-20 rounded-full bg-electric-blue/10 flex items-center justify-center mx-auto mb-6 ring-4 ring-electric-blue/5">
+            <Card className="p-12 mb-8 text-center animate-scale-in">
+              <div className="w-20 h-20 rounded-full bg-electric-blue/10 flex items-center justify-center mx-auto mb-6">
                 <Sparkles className="w-10 h-10 text-electric-blue" />
               </div>
-              <h2 className="heading-section mb-4 text-[var(--fg-primary)]">Ready for Analysis</h2>
-              <p className="body-large text-text-secondary dark:text-text-tertiary mb-8 max-w-2xl mx-auto">
+              <h2 className="text-xl font-semibold mb-4 text-text-primary">Ready for Analysis</h2>
+              <p className="text-text-secondary mb-8 max-w-2xl mx-auto">
                 Your interview responses have been recorded. Generate AI-powered feedback
                 to get detailed insights on your performance, strengths, and areas for improvement.
               </p>
               <button
                 onClick={handleGenerateFeedback}
                 disabled={generating}
-                className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-lg shadow-lg hover:shadow-electric-blue/30 transition-all duration-300 transform hover:scale-105"
+                className="btn-primary inline-flex items-center gap-2 px-8 py-3 shadow-lg hover:shadow-electric-blue/30 transition-all"
               >
                 {generating ? (
                   <>
@@ -378,29 +387,29 @@ export default function FeedbackPage() {
           {hasFeedback && (
             <div className="animate-slide-up space-y-8">
               {/* Overall Score Hero */}
-              <Card variant="glass" className="p-8 sm:p-12 text-center relative overflow-hidden dark:bg-surface-secondary/40 dark:border-white/10">
+              <Card className="p-8 sm:p-12 text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-electric-blue to-indigo-500"></div>
 
-                <h2 className="heading-section mb-2 text-[var(--fg-primary)]">Overall Performance</h2>
+                <h2 className="text-xl font-semibold mb-2 text-text-primary">Overall Performance</h2>
                 {user?.experience_level && (
-                  <p className="body-small text-electric-blue font-medium mb-8 bg-electric-blue/5 dark:bg-electric-blue/10 inline-block px-4 py-1 rounded-full border border-electric-blue/10">
+                  <p className="text-sm text-electric-blue font-medium mb-8 bg-electric-blue/10 inline-block px-4 py-1 rounded-full border border-electric-blue/20">
                     Feedback tailored for {experienceLevelLabels[user.experience_level] || 'Mid-Level Engineers'}
                   </p>
                 )}
 
                 <div className="flex justify-center mb-8 relative z-10">
-                  <div className="bg-white/50 dark:bg-white/5 rounded-full p-6 backdrop-blur-sm border border-white/20 dark:border-white/5 shadow-2xl">
+                  <div className="bg-[hsl(var(--muted)/0.3)] rounded-full p-6 border border-[hsl(var(--border))]">
                     <ScoreRing score={sessionFeedback.overall_score} size="large" />
                   </div>
                 </div>
 
-                <p className="body-large text-text-secondary dark:text-text-tertiary max-w-2xl mx-auto">
-                  You completed <span className="font-semibold text-[var(--fg-primary)]">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
+                <p className="text-text-secondary max-w-2xl mx-auto">
+                  You completed <span className="font-semibold text-text-primary">{responses.length}</span> question{responses.length !== 1 ? 's' : ''}.
                 </p>
 
                 {/* Improvement Banner */}
                 {comparison && comparison.sessions_compared > 0 && comparison.improvement_percent !== null && (
-                  <div className={`inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border backdrop-blur-md ${comparison.improvement_percent > 0
+                  <div className={`inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border ${comparison.improvement_percent > 0
                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                       : comparison.improvement_percent < 0
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
@@ -413,7 +422,7 @@ export default function FeedbackPage() {
                     ) : (
                       <Minus className="w-4 h-4" />
                     )}
-                    <span className="body-small font-semibold">
+                    <span className="text-sm font-semibold">
                       {comparison.improvement_percent > 0 ? '+' : ''}
                       {comparison.improvement_percent}% vs your average ({comparison.average_score})
                     </span>
@@ -423,7 +432,7 @@ export default function FeedbackPage() {
 
               {/* Score Breakdown */}
               <div>
-                <h2 className="heading-section mb-6 flex items-center gap-2 text-[var(--fg-primary)]">
+                <h2 className="text-lg font-semibold mb-6 flex items-center gap-2 text-text-primary">
                   <BarChart className="w-5 h-5 text-electric-blue" />
                   Score Breakdown
                 </h2>
@@ -452,50 +461,50 @@ export default function FeedbackPage() {
               {/* Top Strengths & Improvements */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {sessionFeedback.top_strengths.length > 0 && (
-                  <div className="card p-6 border-t-4 border-t-emerald-500 bg-white dark:bg-surface-secondary/40 dark:border-white/5">
-                    <h3 className="heading-card text-emerald-600 dark:text-emerald-400 mb-6 flex items-center gap-2">
+                  <Card className="p-6 border-t-4 border-t-emerald-500">
+                    <h3 className="font-semibold text-emerald-600 dark:text-emerald-400 mb-6 flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5" />
                       Top Strengths
                     </h3>
-                    <ul className="space-y-4">
+                    <ul className="space-y-3">
                       {sessionFeedback.top_strengths.map((strength, idx) => (
-                        <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">•</span>
-                          <span className="body-default text-text-secondary dark:text-text-tertiary">{strength}</span>
+                        <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 dark:border-emerald-500/20">
+                          <span className="text-emerald-500 mt-0.5">•</span>
+                          <span className="text-sm text-text-secondary">{strength}</span>
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </Card>
                 )}
 
                 {sessionFeedback.top_improvements.length > 0 && (
-                  <div className="card p-6 border-t-4 border-t-amber-500 bg-white dark:bg-surface-secondary/40 dark:border-white/5">
-                    <h3 className="heading-card text-amber-600 dark:text-amber-400 mb-6 flex items-center gap-2">
+                  <Card className="p-6 border-t-4 border-t-amber-500">
+                    <h3 className="font-semibold text-amber-600 dark:text-amber-400 mb-6 flex items-center gap-2">
                       <TrendingUp className="w-5 h-5" />
                       Areas for Improvement
                     </h3>
-                    <ul className="space-y-4">
+                    <ul className="space-y-3">
                       {sessionFeedback.top_improvements.map((improvement, idx) => (
-                        <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                          <span className="text-amber-600 dark:text-amber-400 font-bold mt-0.5">•</span>
-                          <span className="body-default text-text-secondary dark:text-text-tertiary">{improvement}</span>
+                        <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 dark:border-amber-500/20">
+                          <span className="text-amber-500 mt-0.5">•</span>
+                          <span className="text-sm text-text-secondary">{improvement}</span>
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </Card>
                 )}
               </div>
 
               {/* Recommended Practice Areas */}
               {sessionFeedback.recommended_practice_areas.length > 0 && (
-                <Card variant="glass" className="p-6 dark:bg-surface-secondary/40 dark:border-white/10">
-                  <h3 className="heading-card mb-4 flex items-center gap-2 text-[var(--fg-primary)]">
+                <Card className="p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2 text-text-primary">
                     <Sparkles className="w-5 h-5 text-electric-blue" />
                     Recommended Practice Areas
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {sessionFeedback.recommended_practice_areas.map((area, idx) => (
-                      <span key={idx} className="badge bg-white dark:bg-white/5 border border-electric-blue/20 dark:border-electric-blue/30 px-4 py-2 text-sm text-text-secondary dark:text-text-tertiary hover:border-electric-blue/50 transition-colors cursor-default">
+                      <span key={idx} className="badge bg-[hsl(var(--muted)/0.5)] border border-electric-blue/20 px-4 py-2 text-sm text-text-secondary hover:border-electric-blue/50 transition-colors cursor-default">
                         {area}
                       </span>
                     ))}
@@ -506,7 +515,7 @@ export default function FeedbackPage() {
               {/* Questions & Responses */}
               {responses.length > 0 && (
                 <div>
-                  <h2 className="heading-section mb-6 text-[var(--fg-primary)]">Question-by-Question Analysis</h2>
+                  <h2 className="text-lg font-semibold mb-6 text-text-primary">Question-by-Question Analysis</h2>
                   <div className="space-y-4">
                     {responses.map((response, idx) => {
                       const contentFeedback = contentFeedbacks[idx];
@@ -529,9 +538,9 @@ export default function FeedbackPage() {
               )}
 
               {/* Action Section */}
-              <Card variant="glass" className="p-8 text-center bg-gradient-to-br from-white to-surface-secondary dark:from-surface-secondary dark:to-surface-tertiary dark:border-white/10">
-                <h2 className="heading-section mb-4 text-[var(--fg-primary)]">What's Next?</h2>
-                <p className="body-default text-text-secondary dark:text-text-tertiary mb-8">
+              <Card className="p-8 text-center">
+                <h2 className="text-xl font-semibold mb-4 text-text-primary">What's Next?</h2>
+                <p className="text-text-secondary mb-8">
                   Continue improving your skills with more practice sessions
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -544,19 +553,10 @@ export default function FeedbackPage() {
                   </button>
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="btn-secondary inline-flex items-center justify-center gap-2 dark:border-white/10 dark:hover:bg-white/5"
+                    className="btn-secondary inline-flex items-center justify-center gap-2"
                   >
                     Try Different Type
                   </button>
-                  <div className="relative group">
-                    <button className="btn-ghost inline-flex items-center justify-center gap-2 opacity-50 cursor-not-allowed w-full" disabled>
-                      <Share2 className="w-5 h-5" />
-                      Share Results
-                    </button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-surface-dark dark:bg-white text-white dark:text-surface-dark text-xs font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-surface-dark dark:after:border-t-white">
-                      Coming Soon
-                    </span>
-                  </div>
                 </div>
               </Card>
             </div>

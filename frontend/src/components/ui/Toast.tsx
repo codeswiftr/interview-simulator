@@ -25,10 +25,10 @@ const toastIcons = {
 };
 
 const toastStyles = {
-  success: 'bg-[#FF6B9D]/10 border-[#FF6B9D]/30 text-[#FF6B9D]', // Brand pink for success
-  error: 'bg-status-error/10 border-status-error/30 text-status-error',
-  warning: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
-  info: 'bg-electric-blue/10 border-electric-blue/30 text-electric-blue',
+  success: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-400',
+  error: 'bg-red-500/10 border-red-500/30 text-red-700 dark:bg-red-500/15 dark:border-red-500/40 dark:text-red-400',
+  warning: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:bg-amber-500/15 dark:border-amber-500/40 dark:text-amber-400',
+  info: 'bg-sky-500/10 border-sky-500/30 text-sky-700 dark:bg-sky-500/15 dark:border-sky-500/40 dark:text-sky-400',
 };
 
 export function Toast({ toast, onDismiss }: ToastProps) {
@@ -79,7 +79,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
         className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
         aria-label="Dismiss"
       >
-        <X className="w-4 h-4" />
+        <X className="w-4 h-4" aria-hidden="true" />
       </button>
     </div>
   );
@@ -94,7 +94,7 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
+    <div className="fixed bottom-20 sm:bottom-4 right-4 left-4 sm:left-auto z-50 flex flex-col gap-2 max-w-sm w-auto sm:w-full">
       {toasts.map((toast) => (
         <Toast key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
