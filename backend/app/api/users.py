@@ -11,6 +11,7 @@ from app.config import settings
 from app.db import get_session
 from app.dependencies import get_current_user
 from app.models.email_verification import EmailVerificationToken
+from app.models.feedback import SkillsGapResponse
 from app.models.user import (
     ExperienceLevel,
     PasswordChange,
@@ -404,6 +405,66 @@ async def get_my_progress(
         "average_audio_score": progress_data.get("average_audio_score"),
         "average_content_score": progress_data.get("average_content_score"),
     }
+
+
+@router.get("/me/improvements")
+async def get_my_improvements(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Get improvement metrics by criteria category.
+
+    Analyzes performance trends across Delivery, Behavioral, and Technical
+    dimensions based on the user's last 10 completed sessions.
+
+    Categories:
+    - Delivery: Audio metrics (speech rate, filler words, confidence, volume)
+    - Behavioral: STAR adherence, structure (behavioral questions only)
+    - Technical: Accuracy, completeness (technical/system_design questions)
+
+    Returns:
+        Dictionary with improvements/areas for each category:
+        {
+            "delivery": { "current_score", "previous_score", "trend", "improvements", "areas_to_work_on" },
+            "behavioral": { ... },
+            "technical": { ... },
+            "sessions_analyzed": int,
+            "data_available": bool
+        }
+    """
+    feedback_service = FeedbackService()
+    return await feedback_service.get_user_improvements(session, current_user.id)
+
+
+@router.get("/me/skills-gap", response_model=SkillsGapResponse)
+async def get_skills_gap(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> SkillsGapResponse:
+    """Get skills gap analysis with 6 skill dimensions.
+
+    Analyzes performance across 6 dimensions based on the user's
+    last 20 completed sessions:
+
+    - Content: Overall content quality (avg overall_content_score)
+    - Delivery: Audio/speaking quality (avg overall_audio_score)
+    - Behavioral: STAR method and structure (behavioral questions only)
+    - Technical: Technical accuracy (technical questions only)
+    - System Design: System design skills (system_design questions only)
+    - Communication: Clarity proxy (relevance + structure average)
+
+    Each dimension includes:
+    - current_score: 0-100, computed from recent sessions
+    - target_score: 0-100, goal (typically 85-95)
+    - sessions_with_data: How many sessions contributed
+    - trend: "improving" | "declining" | "stable"
+
+    Returns:
+        SkillsGapResponse with dimensions list and metadata.
+        If user has <2 sessions, returns data_available=false.
+    """
+    feedback_service = FeedbackService()
+    return await feedback_service.get_user_skills_gap(session, current_user.id)
 
 
 @router.get("/me/readiness-score")

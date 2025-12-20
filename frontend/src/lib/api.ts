@@ -16,12 +16,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Add correlation ID for tracing
     if (!config.headers['X-Correlation-ID']) {
       config.headers['X-Correlation-ID'] = crypto.randomUUID();
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -58,9 +58,11 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // Minimal debug logging in development builds
+    // Skip logging expected 404s (feedback not yet generated, etc.)
     if (import.meta.env.DEV) {
       const requestId = error.response?.headers['x-correlation-id'] || error.response?.headers['X-Correlation-ID'];
-      if (requestId) {
+      const isExpected404 = error.response?.status === 404 && originalRequest?.url?.includes('/feedback/');
+      if (requestId && !isExpected404) {
         console.warn(`[API Error] ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} - Request ID: ${requestId} - Status: ${error.response?.status}`);
       }
     }
@@ -147,20 +149,20 @@ api.interceptors.response.use(
 );
 
 // Authentication API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const authAPI = {
   login: (email: string, password: string) =>
-    api.post('/users/login/', { email, password }),
+    api.post('/users/login', { email, password }),
 
   register: (email: string, password: string, full_name: string, experience_level?: string) =>
-    api.post('/users/register/', { email, password, full_name, experience_level }),
+    api.post('/users/register', { email, password, full_name, experience_level }),
 
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
   },
 
-  getCurrentUser: () => api.get('/users/me/'),
+  getCurrentUser: () => api.get('/users/me'),
 
   forgotPassword: (email: string) =>
     api.post('/auth/forgot-password', { email }),
@@ -170,49 +172,49 @@ export const authAPI = {
 };
 
 // Interview Sessions API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const interviewsAPI = {
-  getAll: () => api.get('/interviews/'),
+  getAll: () => api.get('/interviews'),
 
-  getById: (id: string) => api.get(`/interviews/${id}/`),
+  getById: (id: string) => api.get(`/interviews/${id}`),
 
   create: (data: {
     interview_type: string;
     company_style?: string;
     question_count?: number;
     difficulty?: string;
-  }) => api.post('/interviews/', data),
+  }) => api.post('/interviews', data),
 
   quickPractice: (questionId: string) =>
-    api.post('/interviews/quick-practice/', null, {
+    api.post('/interviews/quick-practice', null, {
       params: { question_id: questionId },
     }),
 
-  start: (id: string) => api.post(`/interviews/${id}/start/`),
+  start: (id: string) => api.post(`/interviews/${id}/start`),
 
-  end: (id: string) => api.post(`/interviews/${id}/end/`),
+  end: (id: string) => api.post(`/interviews/${id}/end`),
 
-  getQuestions: (id: string) => api.get(`/interviews/${id}/questions/`),
+  getQuestions: (id: string) => api.get(`/interviews/${id}/questions`),
 
-  getResponses: (id: string) => api.get(`/interviews/${id}/responses/`),
+  getResponses: (id: string) => api.get(`/interviews/${id}/responses`),
 
-  delete: (id: string) => api.delete(`/interviews/${id}/`),
+  delete: (id: string) => api.delete(`/interviews/${id}`),
 };
 
 // Questions API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const questionsAPI = {
   getAll: (params?: { category?: string; difficulty?: string }) =>
-    api.get('/questions/', { params }),
+    api.get('/questions', { params }),
 
-  getById: (id: string) => api.get(`/questions/${id}/`),
+  getById: (id: string) => api.get(`/questions/${id}`),
 
   getRandomQuestion: (category?: string, difficulty?: string) =>
-    api.get('/questions/random/', { params: { category, difficulty } }),
+    api.get('/questions/random', { params: { category, difficulty } }),
 };
 
 // Responses API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const responsesAPI = {
   submit: (sessionId: string, data: {
     question_id: string;
@@ -220,28 +222,28 @@ export const responsesAPI = {
     video_url?: string;
     transcript?: string;
     duration_seconds?: number;
-  }) => api.post(`/interviews/${sessionId}/responses/`, data),
+  }) => api.post(`/interviews/${sessionId}/responses`, data),
 
   getBySessionId: (sessionId: string) =>
-    api.get(`/interviews/${sessionId}/responses/`),
+    api.get(`/interviews/${sessionId}/responses`),
 
-  getById: (id: string) => api.get(`/responses/${id}/`),
+  getById: (id: string) => api.get(`/responses/${id}`),
 };
 
 // Feedback API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const feedbackAPI = {
   getByResponseId: (responseId: string) =>
-    api.get(`/feedback/response/${responseId}/`),
+    api.get(`/feedback/response/${responseId}`),
 
   getBySessionId: (sessionId: string) =>
-    api.get(`/feedback/session/${sessionId}/`),
+    api.get(`/feedback/session/${sessionId}`),
 
   getAllBySessionId: (sessionId: string) =>
-    api.get(`/feedback/session/${sessionId}/all/`),
+    api.get(`/feedback/session/${sessionId}/all`),
 
   getSessionStatus: (sessionId: string) =>
-    api.get(`/feedback/session/${sessionId}/status/`),
+    api.get(`/feedback/session/${sessionId}/status`),
 
   getComparison: (sessionId: string) =>
     api.get<{
@@ -249,17 +251,17 @@ export const feedbackAPI = {
       average_score: number | null;
       improvement_percent: number | null;
       sessions_compared: number;
-    }>(`/feedback/session/${sessionId}/comparison/`),
+    }>(`/feedback/session/${sessionId}/comparison`),
 
   generateForSession: (sessionId: string) =>
-    api.post(`/feedback/generate/session/${sessionId}/`),
+    api.post(`/feedback/generate/session/${sessionId}`),
 
   generateForResponse: (responseId: string) =>
-    api.post(`/feedback/generate/response/${responseId}/`),
+    api.post(`/feedback/generate/response/${responseId}`),
 };
 
 // Upload API for audio files
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const uploadAPI = {
   uploadAudio: (
     file: File,
@@ -279,7 +281,7 @@ export const uploadAPI = {
       formData.append('preparation_id', preparationId);
     }
 
-    return api.post('/upload/audio/', formData, {
+    return api.post('/upload/audio', formData, {
       timeout: 60000, // 60 seconds for large audio files
       headers: {
         'Content-Type': undefined, // Remove default JSON content type, let browser set multipart/form-data with boundary
@@ -289,23 +291,23 @@ export const uploadAPI = {
 };
 
 // Subscriptions API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const subscriptionsAPI = {
-  getStatus: () => api.get('/subscriptions/status/'),
+  getStatus: () => api.get('/subscriptions/status'),
 
-  getPricing: () => api.get<{ pro_monthly_price_id: string | null; pro_annual_price_id: string | null }>('/subscriptions/pricing/'),
+  getPricing: () => api.get<{ pro_monthly_price_id: string | null; pro_annual_price_id: string | null }>('/subscriptions/pricing'),
 
   createCheckout: (priceId: string) =>
-    api.post('/subscriptions/checkout/', { price_id: priceId }),
+    api.post('/subscriptions/checkout', { price_id: priceId }),
 
   createPortalSession: () =>
-    api.post<{ url: string }>('/subscriptions/portal/'),
+    api.post<{ url: string }>('/subscriptions/portal'),
 
-  cancel: () => api.post('/subscriptions/cancel/'),
+  cancel: () => api.post('/subscriptions/cancel'),
 };
 
 // Preparation API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const preparationAPI = {
   getAll: () =>
     api.get<{
@@ -318,9 +320,9 @@ export const preparationAPI = {
         created_at: string;
         updated_at: string;
       }>;
-    }>('/preparation/'),
+    }>('/preparation'),
   start: (questionId: string) =>
-    api.post<{ preparation_id: string; stage: string; message: string }>('/preparation/start/', {
+    api.post<{ preparation_id: string; stage: string; message: string }>('/preparation/start', {
       question_id: questionId,
     }),
   getState: (preparationId: string) =>
@@ -348,32 +350,32 @@ export const preparationAPI = {
         improvements: string[];
         created_at: string;
       }>;
-    }>(`/preparation/${preparationId}/state/`),
+    }>(`/preparation/${preparationId}/state`),
   getDetectiveQuestion: (preparationId: string) =>
     api.post<{ question: string; order: number; is_complete: boolean }>(
-      `/preparation/${preparationId}/detective/question/`
+      `/preparation/${preparationId}/detective/question`
     ),
   submitDetectiveAnswer: (preparationId: string, answer: string) =>
     api.post<{ next_question: string | null; stage: string; is_complete: boolean }>(
-      `/preparation/${preparationId}/detective/answer/`,
+      `/preparation/${preparationId}/detective/answer`,
       { answer }
     ),
   generateDraft: (preparationId: string) =>
-    api.post<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/generate-draft/`),
+    api.post<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/generate-draft`),
   getDraft: (preparationId: string) =>
-    api.get<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/draft/`),
+    api.get<{ draft_answer: string; stage: string }>(`/preparation/${preparationId}/draft`),
   updateDraft: (preparationId: string, draftAnswer: string) =>
     api.patch<{ draft_answer: string; stage: string }>(
-      `/preparation/${preparationId}/draft/`,
+      `/preparation/${preparationId}/draft`,
       { draft_answer: draftAnswer }
     ),
   startPractice: (preparationId: string) =>
     api.post<{ attempt_id: string; stage: string }>(
-      `/preparation/${preparationId}/practice/start/`
+      `/preparation/${preparationId}/practice/start`
     ),
   submitPractice: (preparationId: string, audioUrl: string) =>
     api.post<{ attempt_id: string; transcript: string; stage: string }>(
-      `/preparation/${preparationId}/practice/submit/`,
+      `/preparation/${preparationId}/practice/submit`,
       { audio_url: audioUrl }
     ),
   getAttempts: (preparationId: string) =>
@@ -387,7 +389,7 @@ export const preparationAPI = {
         comparison_feedback: string | null;
         created_at: string;
       }>;
-    }>(`/preparation/${preparationId}/attempts/`),
+    }>(`/preparation/${preparationId}/attempts`),
   rateDelivery: (preparationId: string, attemptId: string) =>
     api.post<{
       delivery_score: number;
@@ -398,7 +400,7 @@ export const preparationAPI = {
       strengths: string[];
       improvements: string[];
       stage: string;
-    }>(`/preparation/${preparationId}/rate-delivery/`, {
+    }>(`/preparation/${preparationId}/rate-delivery`, {
       attempt_id: attemptId,
     }),
   getComparison: (preparationId: string, attemptId: string) =>
@@ -409,28 +411,43 @@ export const preparationAPI = {
       comparison_feedback: string | null;
       strengths: string[];
       improvements: string[];
-    }>(`/preparation/${preparationId}/comparison/?attempt_id=${attemptId}`),
+    }>(`/preparation/${preparationId}/comparison?attempt_id=${attemptId}`),
 };
 
 // User API
-// Note: Trailing slashes required to avoid 307 redirects from FastAPI
+// Note: Backend has redirect_slashes=False, so no trailing slashes
 export const userAPI = {
-  getStats: () => api.get('/users/me/stats/'),
+  getStats: () => api.get('/users/me/stats'),
 
-  getProgress: () => api.get('/users/me/progress/'),
+  getProgress: () => api.get('/users/me/progress'),
 
-  getReadinessScore: () => api.get('/users/me/readiness-score/'),
+  getReadinessScore: () => api.get('/users/me/readiness-score'),
+
+  getImprovements: () => api.get('/users/me/improvements'),
+
+  getSkillsGap: () => api.get<{
+    dimensions: Array<{
+      name: string;
+      current_score: number;
+      target_score: number;
+      sessions_with_data: number;
+      trend: 'improving' | 'declining' | 'stable';
+    }>;
+    sessions_analyzed: number;
+    data_available: boolean;
+    last_updated: string | null;
+  }>('/users/me/skills-gap'),
 
   updateProfile: (data: { full_name?: string; email?: string; experience_level?: string }) =>
-    api.patch('/users/me/', data),
+    api.patch('/users/me', data),
 
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.post('/users/me/change-password/', {
+    api.post('/users/me/change-password', {
       current_password: currentPassword,
       new_password: newPassword,
     }),
 
-  deleteAccount: () => api.delete('/users/me/'),
+  deleteAccount: () => api.delete('/users/me'),
 };
 
 export default api;

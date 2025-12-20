@@ -170,6 +170,39 @@ export interface CheckoutSessionResponse {
   url: string;
 }
 
+// Improvements by Criteria types
+export interface CriteriaImprovement {
+  current_score: number;
+  previous_score: number;
+  trend: 'improving' | 'declining' | 'stable';
+  improvements: string[];
+  areas_to_work_on: string[];
+}
+
+export interface ImprovementsByCriteriaResponse {
+  delivery: CriteriaImprovement | null;
+  behavioral: CriteriaImprovement | null;
+  technical: CriteriaImprovement | null;
+  sessions_analyzed: number;
+  data_available: boolean;
+}
+
+// Skills Gap Analysis types
+export interface SkillDimension {
+  name: string;
+  current_score: number;
+  target_score: number;
+  sessions_with_data: number;
+  trend: 'improving' | 'declining' | 'stable';
+}
+
+export interface SkillsGapResponse {
+  dimensions: SkillDimension[];
+  sessions_analyzed: number;
+  data_available: boolean;
+  last_updated: string | null;
+}
+
 // API Error types
 export interface APIError {
   message: string;

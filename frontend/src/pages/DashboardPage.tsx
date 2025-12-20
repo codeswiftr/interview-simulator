@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, TrendingUp, CheckCircle, XCircle, Mic, BarChart2 } from 'lucide-react';
+import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, Mic, BarChart2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboardModals } from '../hooks/useDashboardModals';
 import { interviewsAPI, userAPI, preparationAPI } from '../lib/api';
@@ -9,16 +9,16 @@ import ProgressChart from '../components/dashboard/ProgressChart';
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown';
 import ActivityHeatmap from '../components/dashboard/ActivityHeatmap';
 import SkillsRadar from '../components/dashboard/SkillsRadar';
+import ImprovementsByCriteria from '../components/dashboard/ImprovementsByCriteria';
 import InterviewCard from '../components/interview/InterviewCard';
 import NewInterviewModal from '../components/interview/NewInterviewModal';
 import UpgradeModal from '../components/subscription/UpgradeModal';
 import WelcomeModal from '../components/onboarding/WelcomeModal';
 import FirstSessionPrompt from '../components/onboarding/FirstSessionPrompt';
 import ContextualTooltip from '../components/common/ContextualTooltip';
-import ComingSoonBadge from '../components/ui/ComingSoonBadge';
 import { Skeleton, SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
 import { Card } from '../components/ui/Card';
-import type { InterviewSession, CreateInterviewFormData } from '../types';
+import type { InterviewSession, CreateInterviewFormData, ImprovementsByCriteriaResponse, SkillsGapResponse } from '../types';
 import type { AxiosError } from 'axios';
 import { useEffect } from 'react';
 
@@ -59,6 +59,10 @@ export default function DashboardPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   const [readinessScore, setReadinessScore] = useState<ReadinessScore | null>(null);
+  const [improvements, setImprovements] = useState<ImprovementsByCriteriaResponse | null>(null);
+  const [improvementsLoading, setImprovementsLoading] = useState(true);
+  const [skillsGap, setSkillsGap] = useState<SkillsGapResponse | null>(null);
+  const [skillsGapLoading, setSkillsGapLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +113,7 @@ export default function DashboardPage() {
   }, [user?.subscription_tier]);
 
   const loadData = useCallback(async () => {
-    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore(), loadPreparations()]);
+    await Promise.all([loadInterviews(), loadStats(), loadProgress(), loadReadinessScore(), loadPreparations(), loadImprovements(), loadSkillsGap()]);
   }, [loadInterviews, loadPreparations]);
 
   useEffect(() => {
@@ -140,6 +144,30 @@ export default function DashboardPage() {
       setReadinessScore(response.data);
     } catch (err) {
       console.warn('Failed to load readiness score:', err);
+    }
+  };
+
+  const loadImprovements = async () => {
+    try {
+      setImprovementsLoading(true);
+      const response = await userAPI.getImprovements();
+      setImprovements(response.data);
+    } catch (err) {
+      console.warn('Failed to load improvements:', err);
+    } finally {
+      setImprovementsLoading(false);
+    }
+  };
+
+  const loadSkillsGap = async () => {
+    try {
+      setSkillsGapLoading(true);
+      const response = await userAPI.getSkillsGap();
+      setSkillsGap(response.data);
+    } catch (err) {
+      console.warn('Failed to load skills gap:', err);
+    } finally {
+      setSkillsGapLoading(false);
     }
   };
 
@@ -236,19 +264,19 @@ export default function DashboardPage() {
     });
   }, [sessions]);
 
-  // Generate radar data from progress
+  // Generate radar data from skills gap API
   const radarData = useMemo(() => {
-    if (!userProgress) return undefined;
+    if (!skillsGap?.data_available || !skillsGap.dimensions?.length) {
+      return undefined;
+    }
 
-    return [
-      { subject: 'Content', current: Math.round(userProgress.average_content_score || 0), target: 90 },
-      { subject: 'Delivery', current: Math.round(userProgress.average_audio_score || 0), target: 85 },
-      // Mock other dimensions for now as they aren't in the API yet
-      { subject: 'Behavioral', current: 75, target: 90 },
-      { subject: 'Technical', current: 60, target: 85 },
-      { subject: 'System Design', current: 40, target: 80 },
-    ];
-  }, [userProgress]);
+    // Transform API response to SkillsRadar format
+    return skillsGap.dimensions.map((dim) => ({
+      subject: dim.name,
+      current: Math.round(dim.current_score),
+      target: dim.target_score,
+    }));
+  }, [skillsGap]);
 
   return (
     <div className="min-h-screen bg-surface-primary pb-12">
@@ -300,14 +328,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Skills Radar */}
             <Card className="p-6 lg:col-span-1 relative">
-              <ComingSoonBadge text="Preview" />
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-indigo-500/10">
                   <Target className="w-5 h-5 text-indigo-500" />
                 </div>
                 <h3 className="heading-card">Skills Gap Analysis</h3>
               </div>
-              <SkillsRadar data={radarData} />
+              <SkillsRadar data={radarData} isLoading={skillsGapLoading} />
             </Card>
 
             {/* Progress Chart */}
@@ -321,85 +348,20 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Improvements by Criteria (New Section) */}
+        {/* Improvements by Criteria */}
         {sessions.length > 0 && (
-          <Card className="p-6 mb-8 relative">
-            <ComingSoonBadge text="Preview" />
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <TrendingUp className="w-5 h-5 text-amber-500" />
-              </div>
-              <h3 className="heading-card">Improvements by Criteria</h3>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Delivery Improvements */}
-              <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
-                <h4 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-electric-blue"></span>
-                  Delivery
-                </h4>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2 text-sm text-text-secondary">
-                    <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span>Pacing improved by 15%</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm text-text-secondary">
-                    <XCircle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                    <span>Reduce filler words ("um", "like")</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Behavioral Improvements */}
-              <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
-                <h4 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                  Behavioral
-                </h4>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2 text-sm text-text-secondary">
-                    <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span>STAR method usage detected</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm text-text-secondary">
-                    <XCircle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                    <span>Elaborate more on "Results"</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Technical Improvements */}
-              <div className="p-4 rounded-xl bg-surface-secondary/50 border border-border-light">
-                <h4 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  Technical
-                </h4>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2 text-sm text-text-secondary">
-                    <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span>Key terminology used correctly</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm text-text-secondary">
-                    <XCircle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                    <span>Deepen system design explanations</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Card>
+          <ImprovementsByCriteria data={improvements} isLoading={improvementsLoading} />
         )}
 
         {/* Category Breakdown */}
         {sessions.length > 0 && (
-          <Card className="p-6 mb-8">
-            <h3 className="heading-card mb-6">Category Breakdown</h3>
+          <div className="mb-8">
             <CategoryBreakdown data={categoryBreakdown} />
-          </Card>
+          </div>
         )}
 
         {/* Progress Section - Practice Recommendations */}
-        {userProgress && userProgress.recommended_practice_areas.length > 0 && (
+        {userProgress && userProgress.recommended_practice_areas && userProgress.recommended_practice_areas.length > 0 && (
           <Card className="p-6 mb-8 border-l-4 border-l-electric-blue">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg bg-electric-blue/10">
@@ -412,7 +374,7 @@ export default function DashboardPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {userProgress.recommended_practice_areas.map((area, idx) => (
-                <span key={idx} className="badge badge-in-progress bg-white border border-electric-blue/20">
+                <span key={idx} className="badge badge-in-progress bg-[hsl(var(--card))] border border-electric-blue/20">
                   {area}
                 </span>
               ))}

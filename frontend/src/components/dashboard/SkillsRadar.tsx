@@ -7,6 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts';
+import { Skeleton } from '../ui/Skeleton';
 
 interface SkillData {
   subject: string;
@@ -16,27 +17,46 @@ interface SkillData {
 
 interface SkillsRadarProps {
   data?: SkillData[];
+  isLoading?: boolean;
 }
 
-// Dummy data fallback for Gap Analysis
-const defaultData: SkillData[] = [
-  { subject: 'Technical', current: 65, target: 90 },
-  { subject: 'Behavioral', current: 80, target: 90 },
-  { subject: 'System Design', current: 45, target: 85 },
-  { subject: 'Communication', current: 90, target: 95 },
-  { subject: 'Confidence', current: 70, target: 90 },
-  { subject: 'Delivery', current: 60, target: 85 },
-];
+export default function SkillsRadar({ data, isLoading }: SkillsRadarProps) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full h-[240px] flex items-center justify-center">
+        <div className="text-center">
+          <Skeleton variant="circular" width={160} height={160} />
+        </div>
+      </div>
+    );
+  }
 
-export default function SkillsRadar({ data = defaultData }: SkillsRadarProps) {
+  // Empty state - not enough data
+  if (!data || data.length === 0) {
+    return (
+      <div className="w-full h-[240px] flex items-center justify-center">
+        <div className="text-center px-4">
+          <p className="text-text-secondary text-sm mb-2">
+            Complete 2+ interview sessions to see your skills analysis.
+          </p>
+          <p className="text-text-tertiary text-xs">
+            Each session contributes to your skill dimensions.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-[240px]">
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
-          <PolarGrid stroke="var(--color-border-light)" strokeOpacity={0.5} />
+          <PolarGrid stroke="currentColor" strokeOpacity={0.15} className="text-text-secondary" />
           <PolarAngleAxis
             dataKey="subject"
-            tick={{ fill: 'var(--color-text-secondary)', fontSize: 10 }}
+            tick={{ fill: '#64748b', fontSize: 10 }}
+            className="dark:[&_text]:fill-slate-400"
           />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
 
@@ -44,20 +64,20 @@ export default function SkillsRadar({ data = defaultData }: SkillsRadarProps) {
           <Radar
             name="Score"
             dataKey="current"
-            stroke="var(--color-electric-blue)"
+            stroke="#0ea5e9"
             strokeWidth={2}
-            fill="var(--color-electric-blue)"
+            fill="#0ea5e9"
             fillOpacity={0.3}
           />
 
           <Tooltip
             contentStyle={{
-              backgroundColor: 'var(--bg-primary)',
-              borderColor: 'var(--border-color)',
+              backgroundColor: 'hsl(var(--surface-primary))',
+              borderColor: 'hsl(var(--border-light))',
               borderRadius: '0.375rem',
               fontSize: '12px'
             }}
-            itemStyle={{ color: 'var(--color-text-primary)' }}
+            itemStyle={{ color: 'hsl(var(--text-primary))' }}
           />
         </RadarChart>
       </ResponsiveContainer>

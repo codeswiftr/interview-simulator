@@ -7,6 +7,14 @@
 
 ## Recent Milestones
 
+### Skills Gap Analysis COMPLETE (2025-12-20)
+- Backend: Added GET /users/me/skills-gap endpoint with 6 dimensions
+- Computed real data: Content, Delivery, Behavioral, Technical, System Design, Communication
+- Trend calculation (improving/declining/stable) comparing recent vs previous sessions
+- Frontend: Updated SkillsRadar with loading skeleton and empty state
+- Removed mock data and "Preview" badge from dashboard
+- Full production-ready feature
+
 ### UI Polish & Error Handling COMPLETE (2025-12-20)
 - Fixed toast colors (pink → emerald green for success)
 - Fixed filter difficulty colors (semantic: emerald/amber/red)
@@ -70,6 +78,12 @@
 | WebRTC browser issues | Low | High | Fallback audio upload |
 
 ## Recent Changes (Last 30 Days)
+
+### 2025-12-20: Skills Gap Analysis
+- Added GET /users/me/skills-gap API endpoint
+- Implemented 6-dimension skill computation in FeedbackService
+- Updated SkillsRadar component with real API data
+- Removed "Preview" badge - feature is production-ready
 
 ### 2025-12-20: UI Polish & Error Handling
 - Fixed toast notification colors (success: pink→green)

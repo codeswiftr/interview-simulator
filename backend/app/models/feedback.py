@@ -180,3 +180,37 @@ class VideoFeedbackRead(SQLModel):
     hand_gesture_frequency: float | None = None
     processing_duration_ms: int
     frame_count: int
+
+
+# Skills Gap Analysis Response Schemas
+
+
+class SkillDimension(SQLModel):
+    """A single skill dimension with current score and target.
+
+    Used in Skills Gap Analysis to show radar chart dimensions.
+    """
+
+    name: str  # e.g., "Technical", "Behavioral", "Content"
+    current_score: float  # 0-100, computed from sessions
+    target_score: float  # 0-100, goal (typically 85-95)
+    sessions_with_data: int  # How many sessions contributed to this dimension
+    trend: str  # "improving" | "declining" | "stable"
+
+
+class SkillsGapResponse(SQLModel):
+    """Complete skills gap analysis response.
+
+    Returns 6 skill dimensions computed from the user's interview sessions:
+    - Content: Overall content quality (from ContentFeedback.overall_content_score)
+    - Delivery: Audio/speaking quality (from AudioFeedback.overall_audio_score)
+    - Behavioral: STAR method and structure (behavioral questions only)
+    - Technical: Technical accuracy (technical questions only)
+    - System Design: System design skills (system_design questions only)
+    - Communication: Clarity and relevance (relevance + structure average)
+    """
+
+    dimensions: list[SkillDimension]  # 6 dimensions
+    sessions_analyzed: int  # Total sessions used for analysis
+    data_available: bool  # False if <2 sessions
+    last_updated: datetime | None  # When this was last computed

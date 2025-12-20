@@ -8,7 +8,14 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.content_analyzer import ContentAnalyzer
-from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, VideoFeedback
+from app.models.feedback import (
+    AudioFeedback,
+    ContentFeedback,
+    SessionFeedback,
+    SkillDimension,
+    SkillsGapResponse,
+    VideoFeedback,
+)
 from app.models.interview import (
     InterviewResponse,
     InterviewSession,
@@ -499,3 +506,776 @@ class FeedbackService:
             "average_audio_score": round(avg_audio, 1) if avg_audio else None,
             "average_content_score": round(avg_content, 1) if avg_content else None,
         }
+
+    async def get_user_improvements(self, session: AsyncSession, user_id: UUID) -> dict:
+        """Aggregate improvement metrics by criteria category.
+
+        Analyzes last 10 completed sessions, comparing recent (5) vs previous (5)
+        to determine trends and extract actionable insights.
+
+        Categories:
+        - Delivery: Audio metrics (speech rate, filler words, confidence, volume)
+        - Behavioral: STAR adherence, structure (behavioral questions only)
+        - Technical: Accuracy, completeness (technical/system_design questions)
+
+        Args:
+            session: Database session
+            user_id: UUID of the user
+
+        Returns:
+            Dictionary with delivery, behavioral, technical improvement data
+        """
+        # Get last 10 completed sessions
+        sessions_result = await session.exec(
+            select(InterviewSession)
+            .where(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED]),
+            )
+            .order_by(InterviewSession.created_at.desc())
+            .limit(10)
+        )
+        sessions = list(sessions_result.all())
+
+        if len(sessions) < 2:
+            return {
+                "delivery": None,
+                "behavioral": None,
+                "technical": None,
+                "sessions_analyzed": len(sessions),
+                "data_available": False,
+            }
+
+        # Split into recent (first 5) vs previous (remaining)
+        recent_sessions = sessions[:5]
+        previous_sessions = sessions[5:] if len(sessions) > 5 else sessions[len(sessions) // 2 :]
+
+        # Get all session IDs
+        session_ids = [s.id for s in sessions]
+
+        # Get responses with their questions (for category filtering)
+        responses_result = await session.exec(
+            select(InterviewResponse, Question)
+            .join(Question, InterviewResponse.question_id == Question.id)
+            .where(InterviewResponse.session_id.in_(session_ids))
+        )
+        responses_with_questions = list(responses_result.all())
+
+        # Get response IDs for feedback lookup
+        response_ids = [r.id for r, _ in responses_with_questions]
+
+        # Get content feedbacks
+        content_feedbacks_result = await session.exec(
+            select(ContentFeedback).where(ContentFeedback.response_id.in_(response_ids))
+        )
+        content_feedbacks = {cf.response_id: cf for cf in content_feedbacks_result.all()}
+
+        # Get audio feedbacks
+        audio_feedbacks_result = await session.exec(
+            select(AudioFeedback).where(AudioFeedback.response_id.in_(response_ids))
+        )
+        audio_feedbacks = {af.response_id: af for af in audio_feedbacks_result.all()}
+
+        # Aggregate by category
+        delivery = self._aggregate_delivery(
+            responses_with_questions, audio_feedbacks, recent_sessions, previous_sessions
+        )
+        behavioral = self._aggregate_behavioral(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+        technical = self._aggregate_technical(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+
+        return {
+            "delivery": delivery,
+            "behavioral": behavioral,
+            "technical": technical,
+            "sessions_analyzed": len(sessions),
+            "data_available": True,
+        }
+
+    def _aggregate_delivery(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        audio_feedbacks: dict[UUID, AudioFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> dict | None:
+        """Aggregate delivery metrics from AudioFeedback."""
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        all_improvements: list[str] = []
+        all_areas: list[str] = []
+
+        for response, _question in responses:
+            af = audio_feedbacks.get(response.id)
+            if not af:
+                continue
+
+            # Calculate weighted delivery score
+            score = (
+                (af.speech_rate_score or 0) * 0.25
+                + (af.filler_word_score or 0) * 0.25
+                + (af.confidence_score or 0) * 0.25
+                + (af.volume_consistency or 0) * 0.25
+            )
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+            # Extract insights from audio metrics
+            if af.filler_word_score and af.filler_word_score >= 80:
+                all_improvements.append("Low filler word usage")
+            elif af.filler_word_score and af.filler_word_score < 60:
+                total_fillers = sum(af.filler_words.values()) if af.filler_words else 0
+                all_areas.append(f"Reduce filler words - {total_fillers} detected")
+
+            if af.speech_rate_score and af.speech_rate_score >= 80:
+                wpm = af.speech_rate_wpm or 130
+                all_improvements.append(f"Optimal pacing at {wpm:.0f} WPM")
+            elif af.speech_rate_wpm and af.speech_rate_wpm > 160:
+                all_areas.append("Slow down speech pace")
+            elif af.speech_rate_wpm and af.speech_rate_wpm < 110:
+                all_areas.append("Speed up delivery slightly")
+
+            if af.confidence_score and af.confidence_score >= 80:
+                all_improvements.append("Strong vocal confidence")
+            elif af.confidence_score and af.confidence_score < 60:
+                all_areas.append("Improve vocal confidence")
+
+            if af.volume_consistency and af.volume_consistency >= 80:
+                all_improvements.append("Consistent volume levels")
+            elif af.volume_consistency and af.volume_consistency < 60:
+                all_areas.append("Maintain more consistent volume")
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+
+        # Determine trend
+        if current > prev + 2:
+            trend = "improving"
+        elif current < prev - 2:
+            trend = "declining"
+        else:
+            trend = "stable"
+
+        return {
+            "current_score": round(current, 1),
+            "previous_score": round(prev, 1),
+            "trend": trend,
+            "improvements": list(dict.fromkeys(all_improvements))[:3],  # Unique, max 3
+            "areas_to_work_on": list(dict.fromkeys(all_areas))[:3],
+        }
+
+    def _aggregate_behavioral(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> dict | None:
+        """Aggregate behavioral metrics from ContentFeedback where category='behavioral'."""
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        all_improvements: list[str] = []
+        all_areas: list[str] = []
+
+        for response, question in responses:
+            # Only behavioral questions
+            if str(question.category) != "behavioral":
+                continue
+
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            # Calculate weighted behavioral score
+            score = (
+                (cf.star_adherence or 0) * 0.4
+                + (cf.answer_structure or 0) * 0.35
+                + (cf.completeness or 0) * 0.25
+            )
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+            # Extract insights
+            if cf.star_adherence and cf.star_adherence >= 80:
+                all_improvements.append("STAR method structure detected in most answers")
+            elif cf.star_adherence and cf.star_adherence < 60:
+                all_areas.append("Improve STAR method usage")
+
+            if cf.answer_structure and cf.answer_structure >= 80:
+                all_improvements.append("Clear and logical answer structure")
+            elif cf.answer_structure and cf.answer_structure < 60:
+                all_areas.append("Improve answer organization")
+
+            if cf.completeness and cf.completeness >= 80:
+                all_improvements.append("Comprehensive answers with good detail")
+            elif cf.completeness and cf.completeness < 60:
+                all_areas.append("Include more specific examples and metrics")
+
+            # Extract from strengths/improvements lists
+            if cf.strengths:
+                for s in cf.strengths[:2]:
+                    if "star" in s.lower() or "structure" in s.lower():
+                        all_improvements.append(s)
+            if cf.improvements:
+                for i in cf.improvements[:2]:
+                    if "star" in i.lower() or "structure" in i.lower():
+                        all_areas.append(i)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+
+        if current > prev + 2:
+            trend = "improving"
+        elif current < prev - 2:
+            trend = "declining"
+        else:
+            trend = "stable"
+
+        return {
+            "current_score": round(current, 1),
+            "previous_score": round(prev, 1),
+            "trend": trend,
+            "improvements": list(dict.fromkeys(all_improvements))[:3],
+            "areas_to_work_on": list(dict.fromkeys(all_areas))[:3],
+        }
+
+    def _aggregate_technical(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> dict | None:
+        """Aggregate technical metrics from ContentFeedback for technical/system_design questions."""
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        all_improvements: list[str] = []
+        all_areas: list[str] = []
+
+        for response, question in responses:
+            # Only technical and system_design questions
+            category = str(question.category)
+            if category not in ("technical", "system_design"):
+                continue
+
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            # Calculate weighted technical score
+            score = (
+                (cf.technical_accuracy or 0) * 0.4
+                + (cf.completeness or 0) * 0.35
+                + (cf.relevance or 0) * 0.25
+            )
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+            # Extract insights
+            if cf.technical_accuracy and cf.technical_accuracy >= 80:
+                all_improvements.append("Key terminology used correctly")
+            elif cf.technical_accuracy and cf.technical_accuracy < 60:
+                all_areas.append("Deepen technical explanations")
+
+            if cf.completeness and cf.completeness >= 80:
+                all_improvements.append("Good problem breakdown approach")
+            elif cf.completeness and cf.completeness < 60:
+                all_areas.append("Provide more trade-off analysis")
+
+            if cf.relevance and cf.relevance >= 80:
+                all_improvements.append("Answers directly address the question")
+            elif cf.relevance and cf.relevance < 60:
+                all_areas.append("Focus more on core requirements")
+
+            # Extract from strengths/improvements lists
+            if cf.strengths:
+                for s in cf.strengths[:2]:
+                    if "technical" in s.lower() or "system" in s.lower() or "design" in s.lower():
+                        all_improvements.append(s)
+            if cf.improvements:
+                for i in cf.improvements[:2]:
+                    if "technical" in i.lower() or "system" in i.lower() or "design" in i.lower():
+                        all_areas.append(i)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+
+        if current > prev + 2:
+            trend = "improving"
+        elif current < prev - 2:
+            trend = "declining"
+        else:
+            trend = "stable"
+
+        return {
+            "current_score": round(current, 1),
+            "previous_score": round(prev, 1),
+            "trend": trend,
+            "improvements": list(dict.fromkeys(all_improvements))[:3],
+            "areas_to_work_on": list(dict.fromkeys(all_areas))[:3],
+        }
+
+    async def get_user_skills_gap(self, session: AsyncSession, user_id: UUID) -> SkillsGapResponse:
+        """Compute skills gap analysis for a user.
+
+        Returns 6 skill dimensions computed from the user's interview sessions:
+        - Content: Overall content quality (avg ContentFeedback.overall_content_score)
+        - Delivery: Audio quality (avg AudioFeedback.overall_audio_score)
+        - Behavioral: STAR + structure (behavioral questions only)
+        - Technical: Technical accuracy (technical questions only)
+        - System Design: System design skills (system_design questions only)
+        - Communication: Clarity proxy (relevance + structure average)
+
+        Args:
+            session: Database session
+            user_id: UUID of the user
+
+        Returns:
+            SkillsGapResponse with 6 dimensions and metadata
+        """
+        from datetime import UTC, datetime
+
+        # Get last 20 completed sessions (limit for performance)
+        sessions_result = await session.exec(
+            select(InterviewSession)
+            .where(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status.in_([InterviewStatus.COMPLETED, InterviewStatus.ANALYZED]),
+            )
+            .order_by(InterviewSession.created_at.desc())
+            .limit(20)
+        )
+        all_sessions = list(sessions_result.all())
+
+        if len(all_sessions) < 2:
+            return SkillsGapResponse(
+                dimensions=[],
+                sessions_analyzed=len(all_sessions),
+                data_available=False,
+                last_updated=None,
+            )
+
+        # Split into recent (first 5) vs previous (remaining) for trend
+        recent_sessions = all_sessions[:5]
+        previous_sessions = all_sessions[5:] if len(all_sessions) > 5 else all_sessions[len(all_sessions) // 2 :]
+
+        # Get all session IDs
+        session_ids = [s.id for s in all_sessions]
+
+        # Get responses with their questions (for category filtering)
+        responses_result = await session.exec(
+            select(InterviewResponse, Question)
+            .join(Question, InterviewResponse.question_id == Question.id)
+            .where(InterviewResponse.session_id.in_(session_ids))
+        )
+        responses_with_questions = list(responses_result.all())
+
+        # Get response IDs for feedback lookup
+        response_ids = [r.id for r, _ in responses_with_questions]
+
+        # Get content feedbacks
+        content_feedbacks_result = await session.exec(
+            select(ContentFeedback).where(ContentFeedback.response_id.in_(response_ids))
+        )
+        content_feedbacks = {cf.response_id: cf for cf in content_feedbacks_result.all()}
+
+        # Get audio feedbacks
+        audio_feedbacks_result = await session.exec(
+            select(AudioFeedback).where(AudioFeedback.response_id.in_(response_ids))
+        )
+        audio_feedbacks = {af.response_id: af for af in audio_feedbacks_result.all()}
+
+        # Compute each dimension
+        dimensions = []
+
+        # 1. Content dimension
+        content_dim = self._compute_content_dimension(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+        if content_dim:
+            dimensions.append(content_dim)
+
+        # 2. Delivery dimension
+        delivery_dim = self._compute_delivery_dimension(
+            responses_with_questions, audio_feedbacks, recent_sessions, previous_sessions
+        )
+        if delivery_dim:
+            dimensions.append(delivery_dim)
+
+        # 3. Behavioral dimension
+        behavioral_dim = self._compute_behavioral_dimension(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+        if behavioral_dim:
+            dimensions.append(behavioral_dim)
+
+        # 4. Technical dimension
+        technical_dim = self._compute_technical_dimension(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+        if technical_dim:
+            dimensions.append(technical_dim)
+
+        # 5. System Design dimension
+        system_design_dim = self._compute_system_design_dimension(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+        if system_design_dim:
+            dimensions.append(system_design_dim)
+
+        # 6. Communication dimension
+        communication_dim = self._compute_communication_dimension(
+            responses_with_questions, content_feedbacks, recent_sessions, previous_sessions
+        )
+        if communication_dim:
+            dimensions.append(communication_dim)
+
+        # Get latest session timestamp for last_updated
+        last_updated = all_sessions[0].created_at if all_sessions else None
+        # Ensure timezone awareness
+        if last_updated and last_updated.tzinfo is None:
+            last_updated = last_updated.replace(tzinfo=UTC)
+
+        return SkillsGapResponse(
+            dimensions=dimensions,
+            sessions_analyzed=len(all_sessions),
+            data_available=len(dimensions) > 0,
+            last_updated=last_updated,
+        )
+
+    def _compute_content_dimension(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> SkillDimension | None:
+        """Compute Content dimension from overall_content_score."""
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        sessions_with_data: set[UUID] = set()
+
+        for response, _question in responses:
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            sessions_with_data.add(response.session_id)
+            score = cf.overall_content_score
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+        trend = self._get_trend(current, prev)
+
+        return SkillDimension(
+            name="Content",
+            current_score=round(current, 1),
+            target_score=90,
+            sessions_with_data=len(sessions_with_data),
+            trend=trend,
+        )
+
+    def _compute_delivery_dimension(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        audio_feedbacks: dict[UUID, AudioFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> SkillDimension | None:
+        """Compute Delivery dimension from overall_audio_score."""
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        sessions_with_data: set[UUID] = set()
+
+        for response, _question in responses:
+            af = audio_feedbacks.get(response.id)
+            if not af:
+                continue
+
+            sessions_with_data.add(response.session_id)
+            score = af.overall_audio_score
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+        trend = self._get_trend(current, prev)
+
+        return SkillDimension(
+            name="Delivery",
+            current_score=round(current, 1),
+            target_score=85,
+            sessions_with_data=len(sessions_with_data),
+            trend=trend,
+        )
+
+    def _compute_behavioral_dimension(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> SkillDimension | None:
+        """Compute Behavioral dimension (behavioral questions only).
+
+        Score = 40% STAR adherence + 35% answer_structure + 25% completeness
+        """
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        sessions_with_data: set[UUID] = set()
+
+        for response, question in responses:
+            # Only behavioral questions
+            if str(question.category) != "behavioral":
+                continue
+
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            sessions_with_data.add(response.session_id)
+            # Weighted score for behavioral
+            score = (
+                (cf.star_adherence or 0) * 0.4
+                + (cf.answer_structure or 0) * 0.35
+                + (cf.completeness or 0) * 0.25
+            )
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+        trend = self._get_trend(current, prev)
+
+        return SkillDimension(
+            name="Behavioral",
+            current_score=round(current, 1),
+            target_score=90,
+            sessions_with_data=len(sessions_with_data),
+            trend=trend,
+        )
+
+    def _compute_technical_dimension(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> SkillDimension | None:
+        """Compute Technical dimension (technical + system_design questions).
+
+        Score = 40% technical_accuracy + 35% completeness + 25% relevance
+        """
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        sessions_with_data: set[UUID] = set()
+
+        for response, question in responses:
+            # Only technical and system_design questions
+            category = str(question.category)
+            if category not in ("technical", "system_design"):
+                continue
+
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            sessions_with_data.add(response.session_id)
+            # Weighted score for technical
+            score = (
+                (cf.technical_accuracy or 0) * 0.4
+                + (cf.completeness or 0) * 0.35
+                + (cf.relevance or 0) * 0.25
+            )
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+        trend = self._get_trend(current, prev)
+
+        return SkillDimension(
+            name="Technical",
+            current_score=round(current, 1),
+            target_score=85,
+            sessions_with_data=len(sessions_with_data),
+            trend=trend,
+        )
+
+    def _compute_system_design_dimension(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> SkillDimension | None:
+        """Compute System Design dimension (system_design questions only).
+
+        Score = 40% technical_accuracy + 35% completeness + 25% relevance
+        """
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        sessions_with_data: set[UUID] = set()
+
+        for response, question in responses:
+            # Only system_design questions
+            if str(question.category) != "system_design":
+                continue
+
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            sessions_with_data.add(response.session_id)
+            # Weighted score for system design
+            score = (
+                (cf.technical_accuracy or 0) * 0.4
+                + (cf.completeness or 0) * 0.35
+                + (cf.relevance or 0) * 0.25
+            )
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+        trend = self._get_trend(current, prev)
+
+        return SkillDimension(
+            name="System Design",
+            current_score=round(current, 1),
+            target_score=80,
+            sessions_with_data=len(sessions_with_data),
+            trend=trend,
+        )
+
+    def _compute_communication_dimension(
+        self,
+        responses: list[tuple[InterviewResponse, Question]],
+        content_feedbacks: dict[UUID, ContentFeedback],
+        recent: list[InterviewSession],
+        previous: list[InterviewSession],
+    ) -> SkillDimension | None:
+        """Compute Communication dimension (clarity proxy).
+
+        Score = 50% relevance + 50% answer_structure
+        """
+        recent_ids = {s.id for s in recent}
+        previous_ids = {s.id for s in previous}
+
+        recent_scores: list[float] = []
+        previous_scores: list[float] = []
+        sessions_with_data: set[UUID] = set()
+
+        for response, _question in responses:
+            cf = content_feedbacks.get(response.id)
+            if not cf:
+                continue
+
+            sessions_with_data.add(response.session_id)
+            # Clarity proxy: relevance + structure average
+            score = ((cf.relevance or 0) * 0.5 + (cf.answer_structure or 0) * 0.5)
+
+            if response.session_id in recent_ids:
+                recent_scores.append(score)
+            elif response.session_id in previous_ids:
+                previous_scores.append(score)
+
+        if not recent_scores:
+            return None
+
+        current = sum(recent_scores) / len(recent_scores)
+        prev = sum(previous_scores) / len(previous_scores) if previous_scores else current
+        trend = self._get_trend(current, prev)
+
+        return SkillDimension(
+            name="Communication",
+            current_score=round(current, 1),
+            target_score=90,
+            sessions_with_data=len(sessions_with_data),
+            trend=trend,
+        )
+
+    def _get_trend(self, current: float, previous: float) -> str:
+        """Determine trend based on score difference."""
+        if current > previous + 2:
+            return "improving"
+        elif current < previous - 2:
+            return "declining"
+        return "stable"
