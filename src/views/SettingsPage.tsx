@@ -1,154 +1,578 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Switch } from "../components/ui/switch";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "../components/ui/drawer";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-import { Label } from "../components/ui/label";
-import { Button } from "../components/ui/button";
-import { Settings, Volume2 } from "lucide-react";
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2 } from 'lucide-react';
+import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
+import { useToast } from '../hooks/useToast';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../contexts/ThemeContext';
+import SubscriptionCard from '../components/subscription/SubscriptionCard';
+import BillingInfo from '../components/subscription/BillingInfo';
+import UpgradeModal from '../components/subscription/UpgradeModal';
+import { useVoicePreferences } from '../hooks/useVoicePreferences';
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
+import VoiceSettingsPanel from '../components/settings/VoiceSettingsPanel';
+import type { SubscriptionStatus, ExperienceLevel } from '../types';
 
-export function SettingsPage() {
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [ttsRate, setTtsRate] = useState("normal");
+export default function SettingsPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const toast = useToast();
+  const { user, refreshUser } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { settings: voiceSettings, updateSettings: updateVoiceSettings, resetSettings: resetVoiceSettings } = useVoicePreferences();
+  const {
+    speak,
+    stop,
+    voices,
+    setVoice,
+    setRate,
+    setPitch,
+    setVolume,
+    isSupported: isSpeechSupported,
+  } = useSpeechSynthesis({
+    defaultRate: voiceSettings.rate,
+    defaultPitch: voiceSettings.pitch,
+    defaultVolume: voiceSettings.volume,
+    defaultVoiceName: voiceSettings.voiceName || undefined,
+  });
+
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Profile edit state
+  const [profileData, setProfileData] = useState<{
+    full_name: string;
+    email: string;
+    experience_level: ExperienceLevel;
+  }>({
+    full_name: '',
+    email: '',
+    experience_level: 'mid',
+  });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sync speech hook with persisted voice preferences when they change
+  useEffect(() => {
+    setRate(voiceSettings.rate);
+    setPitch(voiceSettings.pitch);
+    setVolume(voiceSettings.volume);
+
+    if (voiceSettings.voiceName && voices.length > 0) {
+      const match = voices.find((v) => v.name === voiceSettings.voiceName);
+      if (match) {
+        setVoice(match);
+      }
+    }
+  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume, setPitch, setRate, setVoice, setVolume, voices]);
+
+  const handleTestVoice = () => {
+    if (!isSpeechSupported || !voiceSettings.enabled) return;
+    stop();
+    const sample = 'Hi! I am your interview mentor. Let us prepare together.';
+    speak(sample);
+  };
+
+  const voiceSummary = useMemo(() => {
+    const name = voiceSettings.voiceName || 'System default';
+    return `${name} • ${voiceSettings.rate.toFixed(2)}x • pitch ${voiceSettings.pitch.toFixed(2)} • volume ${voiceSettings.volume.toFixed(2)}`;
+  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume]);
+
+  useEffect(() => {
+    loadSubscription();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        full_name: user.full_name || '',
+        email: user.email || '',
+        experience_level: user.experience_level || 'mid',
+      });
+    }
+  }, [user]);
+
+  // Handle Stripe redirect query params (run only once on mount)
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true') {
+      toast.success('Subscription successful!', 'Welcome to Pro! Your account has been upgraded.');
+      // Clear the query params immediately to prevent re-runs
+      searchParams.delete('success');
+      navigate('/settings', { replace: true });
+    } else if (canceled === 'true') {
+      toast.info('Checkout canceled', 'Your subscription upgrade was canceled. No charges were made.');
+      // Clear the query params immediately to prevent re-runs
+      searchParams.delete('canceled');
+      navigate('/settings', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadSubscription = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await subscriptionsAPI.getStatus();
+      setSubscription(response.data);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } } };
+      setError(apiError.response?.data?.message || 'Failed to load subscription status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgrade = () => {
+    setShowUpgradeModal(true);
+  };
+
+  const handleUpgradeSuccess = () => {
+    setShowUpgradeModal(false);
+    setTimeout(() => {
+      loadSubscription();
+    }, 2000);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSavingProfile(true);
+      await userAPI.updateProfile(profileData);
+      await refreshUser();
+      toast.success('Profile updated', 'Your profile has been saved');
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { detail?: string } } };
+      toast.error('Error', apiError.response?.data?.detail || 'Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast.error('Error', 'Password must be at least 8 characters');
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      await userAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      toast.success('Password changed', 'Your password has been updated');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { detail?: string } } };
+      toast.error('Error', apiError.response?.data?.detail || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Error', 'Please type DELETE to confirm');
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await userAPI.deleteAccount();
+      toast.success('Account deleted', 'Your account has been deleted');
+      authAPI.logout();
+      navigate('/');
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { detail?: string } } };
+      toast.error('Error', apiError.response?.data?.detail || 'Failed to delete account');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-electric-blue mx-auto mb-4" />
+          <p className="body-large text-text-secondary">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !subscription) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="body-large text-status-error mb-4">{error}</p>
+          <Link to="/dashboard" className="btn-primary">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      {/* Account Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <p className="text-sm text-muted-foreground">
-              user@example.com
-            </p>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="email-notifications">
-                Email notifications
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Receive updates about your practice sessions
-              </p>
-            </div>
-            <Switch
-              id="email-notifications"
-              checked={emailNotifications}
-              onCheckedChange={setEmailNotifications}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen bg-surface-primary py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-electric-blue hover:text-electric-blue/80 transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="body-default font-medium">Back to Dashboard</span>
+          </Link>
 
-      {/* Voice Preferences Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Voice preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="voice-enabled">
-                Voice mentor
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Enable AI voice responses
-              </p>
+          <div className="flex items-center gap-3">
+            <SettingsIcon className="w-6 h-6 text-electric-blue" />
+            <h1 className="heading-page">Settings</h1>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="card p-4 mb-8 border-status-error bg-status-error/10">
+            <p className="text-status-error">{error}</p>
+          </div>
+        )}
+
+        <div className="space-y-8">
+          {/* Profile Section */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <User className="w-5 h-5 text-electric-blue" />
+              <h2 className="heading-section">Profile</h2>
             </div>
-            <Switch
-              id="voice-enabled"
-              checked={voiceEnabled}
-              onCheckedChange={setVoiceEnabled}
-            />
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="label mb-2 block">Full Name</label>
+                <input
+                  type="text"
+                  value={profileData.full_name}
+                  onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
+                  className="input w-full"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div>
+                <label className="label mb-2 block">Email</label>
+                <input
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                  className="input w-full"
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div>
+                <label className="label mb-2 block">Experience Level</label>
+                <select
+                  value={profileData.experience_level}
+                  onChange={(e) => setProfileData({ ...profileData, experience_level: e.target.value as ExperienceLevel })}
+                  className="input w-full"
+                >
+                  <option value="junior">Junior (0-2 years)</option>
+                  <option value="mid">Mid-Level (2-5 years)</option>
+                  <option value="senior">Senior (5+ years)</option>
+                </select>
+                <p className="mt-1 text-xs text-text-tertiary">
+                  This helps tailor feedback to your experience level
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="btn-primary flex items-center gap-2"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </form>
           </div>
 
-          {/* Voice Settings Drawer */}
-          <Drawer>
-            <DrawerTrigger asChild>
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <Volume2 className="h-4 w-4" />
-                <span>Voice settings</span>
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle>Voice Settings</DrawerTitle>
-                <DrawerDescription>
-                  Configure mentor voice, TTS rate, and audio options
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="space-y-4 px-4 pb-4">
-                <div className="space-y-2">
-                  <Label>Voice</Label>
-                  <Select defaultValue="female">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="neutral">Neutral</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Speech rate</Label>
-                  <Select value={ttsRate} onValueChange={setTtsRate}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="slow">Slow</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="fast">Fast</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Audio preview</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Test voice settings
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Play sample
-                  </Button>
+          {/* Theme Section */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Palette className="w-5 h-5 text-electric-blue" />
+              <h2 className="heading-section">Appearance</h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="label mb-3 block">Theme</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'light'
+                      ? 'border-electric-blue bg-electric-blue/10'
+                      : 'border-border-light hover:border-electric-blue/50'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-lg bg-white border border-border-light flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400"></div>
+                      </div>
+                      <span className="font-medium">Light</span>
+                      <span className="text-xs text-text-tertiary">Bright and clear</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'dark'
+                      ? 'border-electric-blue bg-electric-blue/10'
+                      : 'border-border-light hover:border-electric-blue/50'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500"></div>
+                      </div>
+                      <span className="font-medium">Dark</span>
+                      <span className="text-xs text-text-tertiary">Easy on the eyes</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setTheme('system')}
+                    className={`p-4 rounded-lg border-2 transition-all ${theme === 'system'
+                      ? 'border-electric-blue bg-electric-blue/10'
+                      : 'border-border-light hover:border-electric-blue/50'
+                      }`}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-gray-800 border border-border-light flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-electric-blue to-sky-500"></div>
+                      </div>
+                      <span className="font-medium">System</span>
+                      <span className="text-xs text-text-tertiary">Auto-adjust</span>
+                    </div>
+                  </button>
                 </div>
               </div>
-            </DrawerContent>
-          </Drawer>
-        </CardContent>
-      </Card>
+            </div>
+          </div>
 
-      {/* Appearance Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Dark mode will be available in a future update.
-          </p>
-        </CardContent>
-      </Card>
+          {/* Voice & Conversation */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Volume2 className="w-5 h-5 text-electric-blue" />
+              <h2 className="heading-section">Voice & Conversation</h2>
+            </div>
+
+            <div className="mb-3 text-sm text-text-secondary">
+              Configure the mentor voice used in conversational mode. Settings are stored on this device.
+            </div>
+
+            <VoiceSettingsPanel
+              settings={voiceSettings}
+              voices={voices}
+              isSupported={isSpeechSupported}
+              onChange={updateVoiceSettings}
+              onReset={resetVoiceSettings}
+              onTestVoice={handleTestVoice}
+            />
+
+            <div className="mt-4 text-xs text-text-tertiary">
+              Current: {voiceSummary}
+            </div>
+          </div>
+
+          {/* Password Section */}
+          <div className="card p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Lock className="w-5 h-5 text-electric-blue" />
+              <h2 className="heading-section">Change Password</h2>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="label mb-2 block">Current Password</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  className="input w-full"
+                  placeholder="Enter current password"
+                />
+              </div>
+
+              <div>
+                <label className="label mb-2 block">New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  className="input w-full"
+                  placeholder="Enter new password (min 8 characters)"
+                />
+              </div>
+
+              <div>
+                <label className="label mb-2 block">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  className="input w-full"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isChangingPassword || !passwordData.currentPassword || !passwordData.newPassword}
+                className="btn-primary flex items-center gap-2"
+              >
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Changing...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    Change Password
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Subscription Section */}
+          {subscription && (
+            <div className="space-y-6">
+              <SubscriptionCard subscription={subscription} onUpgrade={handleUpgrade} />
+              <BillingInfo subscription={subscription} onSubscriptionChange={loadSubscription} />
+            </div>
+          )}
+
+          {/* Danger Zone */}
+          <div className="card p-6 border-status-error/20">
+            <div className="flex items-center gap-3 mb-6">
+              <AlertTriangle className="w-5 h-5 text-status-error" />
+              <h2 className="heading-section text-status-error">Danger Zone</h2>
+            </div>
+
+            {!showDeleteConfirm ? (
+              <div>
+                <p className="text-text-secondary mb-4">
+                  Once you delete your account, there is no going back. Please be certain.
+                </p>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="btn-ghost text-status-error border-status-error/50 hover:bg-status-error/10 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Account
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-status-error/10 rounded-lg border border-status-error/20">
+                  <p className="text-text-primary font-medium mb-2">
+                    Are you absolutely sure?
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    This action cannot be undone. This will permanently delete your account
+                    and remove all your data from our servers.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label mb-2 block">
+                    Type <span className="font-mono font-bold">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="input w-full"
+                    placeholder="Type DELETE to confirm"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteConfirmText('');
+                    }}
+                    className="btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting || deleteConfirmText !== 'DELETE'}
+                    className="btn-primary bg-status-error hover:bg-status-error/90 flex items-center gap-2"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Delete Account
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Upgrade Modal */}
+        {showUpgradeModal && subscription && (
+          <UpgradeModal
+            isOpen={showUpgradeModal}
+            onClose={() => setShowUpgradeModal(false)}
+            currentTier={subscription.tier}
+            onSuccess={handleUpgradeSuccess}
+          />
+        )}
+      </div>
     </div>
   );
 }

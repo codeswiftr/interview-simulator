@@ -15,11 +15,12 @@ const SIZE_CONFIG = {
 };
 
 const getScoreColor = (value: number): string => {
-  if (value >= 90) return "hsl(142, 71%, 45%)"; // excellent - emerald
-  if (value >= 75) return "hsl(142, 71%, 45%)"; // good - green
-  if (value >= 60) return "hsl(45, 93%, 47%)"; // average - yellow
-  if (value >= 40) return "hsl(25, 95%, 53%)"; // needs-work - orange
-  return "hsl(0, 84%, 60%)"; // poor - red
+  // Use CSS custom properties for theme-aware score colors
+  if (value >= 90) return "hsl(var(--score-excellent))"; // 90-100
+  if (value >= 75) return "hsl(var(--score-good))";      // 75-89
+  if (value >= 60) return "hsl(var(--score-average))";   // 60-74
+  if (value >= 40) return "hsl(var(--score-poor))";      // 40-59
+  return "hsl(var(--score-bad))";                        // 0-39
 };
 
 export const ScoreRing = React.forwardRef<HTMLDivElement, ScoreRingProps>(

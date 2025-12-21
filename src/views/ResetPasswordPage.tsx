@@ -1,0 +1,231 @@
+import { useState, useEffect } from 'react';
+import type { FormEvent } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { authAPI } from '../lib/api';
+import { useToast } from '../hooks/useToast';
+import { AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+
+export default function ResetPasswordPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const token = searchParams.get('token');
+
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setError('Invalid or missing reset token. Please request a new password reset link.');
+    }
+  }, [token]);
+
+  const getPasswordStrength = (pass: string): { strength: string; color: string } => {
+    if (pass.length === 0) return { strength: '', color: '' };
+    if (pass.length < 8) return { strength: 'Too short', color: 'text-status-error' };
+    if (pass.length < 12) return { strength: 'Good', color: 'text-status-warning' };
+    return { strength: 'Strong', color: 'text-status-success' };
+  };
+
+  const passwordStrength = getPasswordStrength(password);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validation
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (!token) {
+      setError('Invalid or missing reset token');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await authAPI.resetPassword(token, password);
+      toast.success('Password Reset Successful', 'You can now sign in with your new password');
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
+    } catch (err) {
+      const errorMessage = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to reset password';
+      if (errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+        setError('This reset link has expired or is invalid. Please request a new one.');
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Show error state if no token
+  if (!token) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center w-full py-8">
+        <div className="w-full max-w-sm sm:max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-status-error/10 mb-4">
+              <AlertCircle className="w-8 h-8 text-status-error" />
+            </div>
+            <h1 className="heading-page mb-2">Invalid Reset Link</h1>
+            <p className="text-text-secondary">
+              This password reset link is invalid or has expired.
+            </p>
+          </div>
+
+          <div className="card p-6 sm:p-8">
+            <div className="text-center space-y-4">
+              <p className="text-sm text-text-secondary">
+                Password reset links are only valid for 1 hour after being requested.
+              </p>
+              <Link
+                to="/forgot-password"
+                className="inline-block btn-primary"
+              >
+                Request New Reset Link
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center w-full py-8">
+      <div className="w-full max-w-sm sm:max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="heading-page mb-2">Create New Password</h1>
+          <p className="text-text-secondary">
+            Choose a strong password for your account
+          </p>
+        </div>
+
+        <div className="card p-6 sm:p-8">
+          {error && (
+            <div className="mb-6 p-4 rounded-lg bg-status-error/10 border border-status-error/20 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-status-error flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-status-error">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pr-10"
+                  placeholder="••••••••"
+                  required
+                  autoFocus
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-text-tertiary">
+                  Must be at least 8 characters long
+                </p>
+                {passwordStrength.strength && (
+                  <p className={`text-xs font-medium ${passwordStrength.color}`}>
+                    {passwordStrength.strength}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-primary mb-2">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="input pr-10"
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {confirmPassword && password !== confirmPassword && (
+                <p className="mt-1 text-xs text-status-error">
+                  Passwords do not match
+                </p>
+              )}
+              {confirmPassword && password === confirmPassword && (
+                <div className="mt-1 flex items-center gap-1 text-xs text-status-success">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>Passwords match</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || password !== confirmPassword || password.length < 8}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Resetting Password...' : 'Reset Password'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-text-secondary">
+              Remember your password?{' '}
+              <Link to="/login" className="text-electric-blue hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
