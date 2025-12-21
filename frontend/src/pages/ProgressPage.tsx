@@ -231,7 +231,7 @@ export default function ProgressPage() {
               Complete your first interview to see your progress over time.
             </p>
             <button
-              onClick={() => navigate('/practice')}
+              onClick={() => navigate('/questions')}
               className="btn-primary"
             >
               Start Practicing

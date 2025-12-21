@@ -64,8 +64,13 @@ export default function RegisterPage() {
 
         <div className="card p-8">
           {error && (
-            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div
+              id="register-error"
+              role="alert"
+              aria-live="assertive"
+              className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -84,6 +89,8 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 required
                 autoFocus
+                aria-invalid={!!error}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
@@ -99,6 +106,8 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="you@example.com"
                 required
+                aria-invalid={!!error}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
@@ -114,8 +123,12 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="••••••••"
                 required
+                aria-invalid={!!error && error.toLowerCase().includes('password')}
+                aria-describedby="password-strength register-error"
               />
-              <PasswordStrengthIndicator password={password} />
+              <div id="password-strength">
+                <PasswordStrengthIndicator password={password} />
+              </div>
             </div>
 
             <div>
@@ -130,6 +143,8 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="••••••••"
                 required
+                aria-invalid={!!error && error.toLowerCase().includes('match')}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
@@ -142,12 +157,13 @@ export default function RegisterPage() {
                 value={experienceLevel}
                 onChange={(e) => setExperienceLevel(e.target.value as ExperienceLevel)}
                 className="input"
+                aria-describedby="experience-hint"
               >
                 <option value="junior">Junior (0-2 years)</option>
                 <option value="mid">Mid-Level (2-5 years)</option>
                 <option value="senior">Senior (5+ years)</option>
               </select>
-              <p className="mt-1 text-xs text-text-tertiary">
+              <p id="experience-hint" className="mt-1 text-xs text-text-tertiary">
                 This helps us tailor feedback to your experience level
               </p>
             </div>

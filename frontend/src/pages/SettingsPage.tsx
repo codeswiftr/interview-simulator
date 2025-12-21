@@ -265,54 +265,54 @@ export default function SettingsPage() {
         <div className="space-y-8">
           {/* Account Summary */}
           {user && (
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
+            <Card className="p-8">
+              <div className="flex items-center gap-3 mb-8">
                 <User className="w-5 h-5 text-electric-blue" />
                 <h2 className="heading-section">Account Overview</h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <User className="w-5 h-5 text-electric-blue" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <User className="w-6 h-6 text-electric-blue" />
                   </div>
                   <div>
-                    <p className="text-xs text-text-tertiary">Name</p>
-                    <p className="font-medium text-text-primary">{user.full_name || 'Not set'}</p>
+                    <p className="text-sm text-text-tertiary mb-0.5">Name</p>
+                    <p className="text-base font-medium text-text-primary">{user.full_name || 'Not set'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-electric-blue" />
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <Calendar className="w-6 h-6 text-electric-blue" />
                   </div>
                   <div>
-                    <p className="text-xs text-text-tertiary">Member since</p>
-                    <p className="font-medium text-text-primary">
+                    <p className="text-sm text-text-tertiary mb-0.5">Member since</p>
+                    <p className="text-base font-medium text-text-primary">
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <Target className="w-5 h-5 text-electric-blue" />
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <Target className="w-6 h-6 text-electric-blue" />
                   </div>
                   <div>
-                    <p className="text-xs text-text-tertiary">Total interviews</p>
-                    <p className="font-medium text-text-primary">{user.total_interviews || 0}</p>
+                    <p className="text-sm text-text-tertiary mb-0.5">Total interviews</p>
+                    <p className="text-base font-medium text-text-primary">{user.total_interviews || 0}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-electric-blue">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <span className="text-base font-bold text-electric-blue">
                       {user.subscription_tier === 'pro' ? '★' : user.subscription_tier === 'team' ? '★★' : '○'}
                     </span>
                   </div>
                   <div>
-                    <p className="text-xs text-text-tertiary">Plan</p>
-                    <p className="font-medium text-text-primary capitalize">{user.subscription_tier || 'Free'}</p>
+                    <p className="text-sm text-text-tertiary mb-0.5">Plan</p>
+                    <p className="text-base font-medium text-text-primary capitalize">{user.subscription_tier || 'Free'}</p>
                   </div>
                 </div>
               </div>
@@ -320,13 +320,13 @@ export default function SettingsPage() {
           )}
 
           {/* Profile Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-8">
               <User className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Profile</h2>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4">
+            <form onSubmit={handleSaveProfile} className="space-y-6">
               <div>
                 <label className="label mb-2 block">Full Name</label>
                 <input
@@ -386,77 +386,81 @@ export default function SettingsPage() {
           </Card>
 
           {/* Theme Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-8">
               <Palette className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Appearance</h2>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="label mb-3 block">Theme</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Theme selection">
-                  <button
-                    type="button"
-                    onClick={() => setTheme('light')}
-                    aria-pressed={theme === 'light'}
-                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'light'
-                      ? 'border-electric-blue bg-electric-blue/10'
-                      : 'border-border-light hover:border-electric-blue/50'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg bg-white border border-border-light flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400"></div>
-                      </div>
-                      <span className="font-medium">Light</span>
+            <div>
+              <label className="label mb-4 block">Theme</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" role="group" aria-label="Theme selection">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
+                  className={`p-5 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 bg-[hsl(var(--card))] ${theme === 'light'
+                    ? 'border-electric-blue'
+                    : 'border-[hsl(var(--border))] hover:border-electric-blue/50'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-white to-gray-100 border border-gray-200 flex items-center justify-center shadow-sm">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 shadow-md"></div>
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold text-text-primary block">Light</span>
                       <span className="text-xs text-text-tertiary">Bright and clear</span>
                     </div>
-                  </button>
+                  </div>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setTheme('dark')}
-                    aria-pressed={theme === 'dark'}
-                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'dark'
-                      ? 'border-electric-blue bg-electric-blue/10'
-                      : 'border-border-light hover:border-electric-blue/50'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500"></div>
-                      </div>
-                      <span className="font-medium">Dark</span>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
+                  className={`p-5 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 bg-[hsl(var(--card))] ${theme === 'dark'
+                    ? 'border-electric-blue'
+                    : 'border-[hsl(var(--border))] hover:border-electric-blue/50'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 border border-slate-600 flex items-center justify-center shadow-sm">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 shadow-md"></div>
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold text-text-primary block">Dark</span>
                       <span className="text-xs text-text-tertiary">Easy on the eyes</span>
                     </div>
-                  </button>
+                  </div>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setTheme('system')}
-                    aria-pressed={theme === 'system'}
-                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'system'
-                      ? 'border-electric-blue bg-electric-blue/10'
-                      : 'border-border-light hover:border-electric-blue/50'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-gray-800 border border-border-light flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-electric-blue to-sky-500"></div>
-                      </div>
-                      <span className="font-medium">System</span>
+                <button
+                  type="button"
+                  onClick={() => setTheme('system')}
+                  aria-pressed={theme === 'system'}
+                  className={`p-5 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 bg-[hsl(var(--card))] ${theme === 'system'
+                    ? 'border-electric-blue'
+                    : 'border-[hsl(var(--border))] hover:border-electric-blue/50'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-white via-gray-400 to-slate-800 border border-gray-300 flex items-center justify-center shadow-sm">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-electric-blue to-indigo-500 shadow-md"></div>
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold text-text-primary block">System</span>
                       <span className="text-xs text-text-tertiary">Auto-adjust</span>
                     </div>
-                  </button>
-                </div>
+                  </div>
+                </button>
               </div>
             </div>
           </Card>
 
           {/* Voice & Conversation */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-8">
               <Volume2 className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Voice & Conversation</h2>
             </div>
@@ -480,13 +484,13 @@ export default function SettingsPage() {
           </Card>
 
           {/* Password Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-8">
               <Lock className="w-5 h-5 text-electric-blue" />
               <h2 className="heading-section">Change Password</h2>
             </div>
 
-            <form onSubmit={handleChangePassword} className="space-y-4">
+            <form onSubmit={handleChangePassword} className="space-y-6">
               <div>
                 <label className="label mb-2 block">Current Password</label>
                 <input
@@ -549,8 +553,8 @@ export default function SettingsPage() {
           )}
 
           {/* Danger Zone */}
-          <Card className="p-6 border-status-error/20">
-            <div className="flex items-center gap-3 mb-6">
+          <Card className="p-8 border-status-error/20">
+            <div className="flex items-center gap-3 mb-8">
               <AlertTriangle className="w-5 h-5 text-status-error" />
               <h2 className="heading-section text-status-error">Danger Zone</h2>
             </div>

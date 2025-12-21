@@ -131,7 +131,7 @@ export default function Header() {
                             to="/settings"
                             className="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary dark:hover:bg-surface-tertiary transition-colors"
                           >
-                            <Settings size={18} />
+                            <Settings size={18} aria-hidden="true" />
                             <span className="text-sm">Settings</span>
                           </Link>
                         </div>
@@ -146,7 +146,7 @@ export default function Header() {
                             onClick={handleLogout}
                             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           >
-                            <LogOut size={18} />
+                            <LogOut size={18} aria-hidden="true" />
                             <span className="text-sm font-medium">Logout</span>
                           </button>
                         </div>
@@ -182,9 +182,9 @@ export default function Header() {
                   aria-expanded={isMobileMenuOpen}
                 >
                   {isMobileMenuOpen ? (
-                    <X className="w-6 h-6" />
+                    <X className="w-6 h-6" aria-hidden="true" />
                   ) : (
-                    <Menu className="w-6 h-6" />
+                    <Menu className="w-6 h-6" aria-hidden="true" />
                   )}
                 </button>
               </div>

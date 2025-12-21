@@ -104,12 +104,12 @@ export default function ActivityHeatmap({ data = [] }: ActivityHeatmapProps) {
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="flex flex-col gap-0.5">
               {week.map((day, dayIndex) => {
-                if (!day) return <div key={`empty-${dayIndex}`} className="w-2.5 h-2.5" />;
+                if (!day) return <div key={`empty-${dayIndex}`} className="w-3 h-3" />;
 
                 return (
                   <div
                     key={day.date}
-                    className={`w-2.5 h-2.5 rounded-sm ${getColor(day.count, day.trend)} transition-colors hover:ring-1 hover:ring-electric-blue cursor-pointer`}
+                    className={`w-3 h-3 rounded-sm ${getColor(day.count, day.trend)} transition-colors hover:ring-1 hover:ring-electric-blue cursor-pointer`}
                     data-tooltip-id="activity-tooltip"
                     data-tooltip-content={`${day.date}: ${day.count} sessions${day.trend ? ` (${day.trend})` : ''}`}
                   />
@@ -118,15 +118,15 @@ export default function ActivityHeatmap({ data = [] }: ActivityHeatmapProps) {
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-end gap-3 mt-2 text-xs text-text-tertiary">
-          <div className="flex items-center gap-1.5">
-             <span>Improving</span>
-             <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+        <div className="flex items-center justify-end gap-2 mt-3 text-xs text-text-tertiary">
+          <span>Less</span>
+          <div className="flex items-center gap-0.5">
+            <div className="w-3 h-3 rounded-sm bg-surface-tertiary dark:bg-surface-tertiary/30" />
+            <div className="w-3 h-3 rounded-sm bg-blue-300" />
+            <div className="w-3 h-3 rounded-sm bg-blue-400" />
+            <div className="w-3 h-3 rounded-sm bg-electric-blue" />
           </div>
-          <div className="flex items-center gap-1.5">
-             <span>Regressing</span>
-             <div className="w-2.5 h-2.5 rounded-sm bg-orange-500" />
-          </div>
+          <span>More</span>
         </div>
       </div>
       <Tooltip id="activity-tooltip" className="z-50 !bg-surface-dark !text-white !px-2 !py-1.5 !rounded-lg !text-xs !opacity-100" />

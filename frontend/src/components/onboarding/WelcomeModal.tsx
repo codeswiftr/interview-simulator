@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Mic, BarChart2, MessageSquare, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -38,6 +39,10 @@ const steps = [
 
 export default function WelcomeModal({ isOpen, onClose, onStartInterview, userName }: WelcomeModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const containerRef = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   if (!isOpen) return null;
 
@@ -67,7 +72,13 @@ export default function WelcomeModal({ isOpen, onClose, onStartInterview, userNa
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white dark:bg-surface-secondary rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="welcome-modal-title"
+        className="bg-white dark:bg-surface-secondary rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in"
+      >
         {/* Header */}
         <div className="bg-gradient-to-br from-electric-blue to-sky-500 p-6 text-white relative">
           <button
@@ -82,7 +93,7 @@ export default function WelcomeModal({ isOpen, onClose, onStartInterview, userNa
             <Icon size={32} />
           </div>
 
-          <h2 className="text-2xl font-bold mb-2">
+          <h2 id="welcome-modal-title" className="text-2xl font-bold mb-2">
             {currentStep === 0 && userName ? `Welcome, ${userName}!` : step.title}
           </h2>
 

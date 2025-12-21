@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Zap, BarChart2, Target, Building2, MessageSquare, Terminal, Server, Layers, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { CreateInterviewFormData } from '../../types';
 
 interface NewInterviewModalProps {
@@ -48,6 +49,10 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
   const { resolvedTheme } = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const containerRef = useFocusTrap({
+    isActive: isOpen,
+    onEscape: isSubmitting ? undefined : onClose,
+  });
 
   if (!isOpen) return null;
 
@@ -78,6 +83,10 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
   return (
     <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-interview-modal-title"
         className="backdrop-blur-xl max-w-4xl w-full rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] animate-scale-in"
         style={{ backgroundColor: resolvedTheme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)' }}
       >
@@ -85,7 +94,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-white/10">
           <div>
-            <h2 className="heading-section text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-electric-blue to-indigo-600">
+            <h2 id="new-interview-modal-title" className="heading-section text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-electric-blue to-indigo-600">
               New Interview Session
             </h2>
             <p className="body-small text-text-secondary dark:text-gray-400 mt-1">

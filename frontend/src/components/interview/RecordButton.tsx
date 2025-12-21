@@ -43,12 +43,12 @@ export default function RecordButton({
     >
       {isRecording ? (
         <>
-          <Square size={24} fill="white" />
+          <Square size={24} fill="white" aria-hidden="true" />
           <span>Stop Recording</span>
         </>
       ) : (
         <>
-          <Mic size={24} />
+          <Mic size={24} aria-hidden="true" />
           <span>Start Recording</span>
         </>
       )}

@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+              <CheckCircle className="w-8 h-8 text-green-600" aria-hidden="true" />
             </div>
             <h1 className="heading-page mb-2">Check Your Email</h1>
             <p className="text-text-secondary">
@@ -40,8 +40,8 @@ export default function ForgotPasswordPage() {
 
           <div className="card p-8">
             <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200" role="status">
+                <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="text-sm text-blue-800">
                   <p className="font-medium mb-1">What's next?</p>
                   <ul className="list-disc list-inside space-y-1 text-blue-700">

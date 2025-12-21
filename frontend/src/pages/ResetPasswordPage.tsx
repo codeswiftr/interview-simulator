@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-              <AlertCircle className="w-8 h-8 text-red-600" />
+              <AlertCircle className="w-8 h-8 text-red-600" aria-hidden="true" />
             </div>
             <h1 className="heading-page mb-2">Invalid Reset Link</h1>
             <p className="text-text-secondary">
@@ -118,8 +118,13 @@ export default function ResetPasswordPage() {
 
         <div className="card p-8">
           {error && (
-            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div
+              id="reset-error"
+              role="alert"
+              aria-live="assertive"
+              className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -140,26 +145,29 @@ export default function ResetPasswordPage() {
                   required
                   autoFocus
                   disabled={isLoading}
+                  aria-invalid={!!error && error.toLowerCase().includes('password')}
+                  aria-describedby="password-requirements password-strength reset-error"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
                   tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-5 h-5" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-5 h-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <p className="text-xs text-text-tertiary">
+                <p id="password-requirements" className="text-xs text-text-tertiary">
                   Must be at least 8 characters long
                 </p>
                 {passwordStrength.strength && (
-                  <p className={`text-xs font-medium ${passwordStrength.color}`}>
+                  <p id="password-strength" className={`text-xs font-medium ${passwordStrength.color}`} aria-live="polite">
                     {passwordStrength.strength}
                   </p>
                 )}
@@ -180,31 +188,36 @@ export default function ResetPasswordPage() {
                   placeholder="••••••••"
                   required
                   disabled={isLoading}
+                  aria-invalid={confirmPassword.length > 0 && password !== confirmPassword}
+                  aria-describedby="confirm-password-status"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
                   tabIndex={-1}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-5 h-5" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-5 h-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
-              {confirmPassword && password !== confirmPassword && (
-                <p className="mt-1 text-xs text-red-600">
-                  Passwords do not match
-                </p>
-              )}
-              {confirmPassword && password === confirmPassword && (
-                <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>Passwords match</span>
-                </div>
-              )}
+              <div id="confirm-password-status" aria-live="polite">
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="mt-1 text-xs text-red-600">
+                    Passwords do not match
+                  </p>
+                )}
+                {confirmPassword && password === confirmPassword && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                    <CheckCircle className="w-3 h-3" aria-hidden="true" />
+                    <span>Passwords match</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button

@@ -1,4 +1,5 @@
 import { X, Lightbulb, BookOpen } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface SampleAnswerModalProps {
   isOpen: boolean;
@@ -15,19 +16,30 @@ export default function SampleAnswerModal({
   sampleAnswer,
   questionNumber,
 }: SampleAnswerModalProps) {
+  const containerRef = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-charcoal/50 dark:bg-dark-charcoal/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="card max-w-2xl w-full max-h-[85vh] flex flex-col p-0 animate-[scale-in_0.2s_ease-out]">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sample-answer-modal-title"
+        className="card max-w-2xl w-full max-h-[85vh] flex flex-col p-0 animate-[scale-in_0.2s_ease-out]"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-dark-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-electric-blue/10 text-electric-blue flex items-center justify-center">
-              <Lightbulb size={20} />
+              <Lightbulb size={20} aria-hidden="true" />
             </div>
             <div>
-              <h2 className="heading-section">Sample Answer</h2>
+              <h2 id="sample-answer-modal-title" className="heading-section">Sample Answer</h2>
               <p className="body-small text-text-secondary dark:text-dark-text-secondary">
                 Question {questionNumber}
               </p>
@@ -36,8 +48,9 @@ export default function SampleAnswerModal({
           <button
             onClick={onClose}
             className="p-2 hover:bg-surface-secondary dark:hover:bg-dark-surface-tertiary rounded-lg transition-colors"
+            aria-label="Close sample answer"
           >
-            <X size={24} className="text-text-secondary dark:text-dark-text-secondary" />
+            <X size={24} className="text-text-secondary dark:text-dark-text-secondary" aria-hidden="true" />
           </button>
         </div>
 

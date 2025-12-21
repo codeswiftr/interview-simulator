@@ -46,24 +46,24 @@ export default function MetricCard({
   const scoreBgColor = getScoreBgColor(score);
 
   return (
-    <Card className="p-6 hover:shadow-lg transition-all dark:bg-surface-secondary/40 dark:border-white/5 hover:scale-[1.02] duration-300">
+    <Card className="p-6 hover:shadow-lg transition-all hover:scale-[1.02] duration-300">
       <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-lg ${scoreBgColor}`}>
-          <Icon className={`w-6 h-6 ${scoreColor}`} />
+        <div className={`p-3 rounded-xl ${scoreBgColor}`}>
+          <Icon className={`w-5 h-5 ${scoreColor}`} />
         </div>
         <div className="flex items-center gap-1">
           {getTrendIcon(trend)}
         </div>
       </div>
 
-      <h3 className="heading-card mb-2 text-text-primary dark:text-white">{title}</h3>
+      <h3 className="font-semibold text-text-primary mb-2">{title}</h3>
 
       <div className="flex items-baseline gap-2 mb-3">
-        <span className={`score-display ${scoreColor}`}>{Math.round(score * 10) / 10}</span>
-        <span className="body-small text-text-tertiary">/ 100</span>
+        <span className={`text-3xl font-bold tabular-nums ${scoreColor}`}>{Math.round(score * 10) / 10}</span>
+        <span className="text-sm text-text-tertiary">/ 100</span>
       </div>
 
-      <p className="body-small text-text-secondary">{description}</p>
+      <p className="text-sm text-text-secondary">{description}</p>
     </Card>
   );
 }
