@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
 import { BottomNav } from './components/layout/BottomNav';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -16,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AffiliatePage from './pages/AffiliatePage';
 
 // Lazy load heavier pages for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -55,6 +57,7 @@ function App() {
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/affiliates" element={<AffiliatePage />} />
                   <Route
                     path="/dashboard"
                     element={
@@ -123,6 +126,7 @@ function App() {
                 </Routes>
               </Suspense>
             </main>
+            <Footer />
             <BottomNav />
             <InstallPrompt />
           </div>

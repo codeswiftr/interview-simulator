@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
 import { PasswordStrengthIndicator } from '../components/ui/PasswordStrengthIndicator';
+import { trackConversion } from '../hooks/useAffiliateTracking';
 import type { ExperienceLevel } from '../types';
 import type { AxiosError } from 'axios';
 
@@ -46,6 +47,8 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, fullName, experienceLevel);
+      // Track affiliate conversion on successful signup
+      trackConversion(email);
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>;
       setError(axiosError.response?.data?.detail || 'Registration failed. Please try again.');

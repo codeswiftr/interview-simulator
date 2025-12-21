@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { getReferralCode } from '../hooks/useAffiliateTracking';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -297,8 +298,13 @@ export const subscriptionsAPI = {
 
   getPricing: () => api.get<{ pro_monthly_price_id: string | null; pro_annual_price_id: string | null }>('/subscriptions/pricing'),
 
-  createCheckout: (priceId: string) =>
-    api.post('/subscriptions/checkout', { price_id: priceId }),
+  createCheckout: (priceId: string) => {
+    const referralCode = getReferralCode();
+    return api.post('/subscriptions/checkout', {
+      price_id: priceId,
+      ...(referralCode && { referral_code: referralCode }),
+    });
+  },
 
   createPortalSession: () =>
     api.post<{ url: string }>('/subscriptions/portal'),
