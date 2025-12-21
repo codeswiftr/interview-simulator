@@ -20,6 +20,8 @@ describe('useOnboarding', () => {
       expect(result.current.state).toEqual({
         hasSeenWelcome: false,
         completedSteps: [],
+        firstSessionCreated: false,
+        preparationTourCompleted: false,
       });
       expect(result.current.shouldShowWelcome).toBe(true);
     });
@@ -46,6 +48,8 @@ describe('useOnboarding', () => {
       expect(result.current.state).toEqual({
         hasSeenWelcome: false,
         completedSteps: [],
+        firstSessionCreated: false,
+        preparationTourCompleted: false,
       });
     });
   });
@@ -181,6 +185,8 @@ describe('useOnboarding', () => {
       expect(result.current.state).toEqual({
         hasSeenWelcome: false,
         completedSteps: [],
+        firstSessionCreated: false,
+        preparationTourCompleted: false,
       });
       expect(result.current.shouldShowWelcome).toBe(true);
     });
@@ -225,6 +231,8 @@ describe('useOnboarding', () => {
       expect(result.current.state).toEqual({
         hasSeenWelcome: false,
         completedSteps: [],
+        firstSessionCreated: false,
+        preparationTourCompleted: false,
       });
       expect(result.current.shouldShowWelcome).toBe(true);
     });

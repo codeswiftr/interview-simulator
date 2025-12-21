@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/test/polyfills.ts', './src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
@@ -16,7 +16,21 @@ export default defineConfig({
     },
     environmentOptions: {
       jsdom: {
+        url: 'http://localhost:3000/',
         resources: 'usable',
+      },
+    },
+    // Force MSW and is-node-process to be processed after jsdom environment is ready
+    server: {
+      deps: {
+        inline: ['msw', 'is-node-process'],
+      },
+    },
+    deps: {
+      optimizer: {
+        web: {
+          include: ['msw', 'is-node-process'],
+        },
       },
     },
   },

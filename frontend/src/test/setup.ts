@@ -1,34 +1,21 @@
-// Mock localStorage BEFORE importing anything else
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString();
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    },
-  };
-})();
-
-Object.defineProperty(globalThis, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-});
-
-// Now import everything else
+// Polyfills are loaded first via vitest.config.ts setupFiles
 import '@testing-library/jest-dom';
 import * as matchers from 'vitest-axe/matchers';
-import { expect } from 'vitest';
+import { expect, afterEach, beforeEach, afterAll, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 expect.extend(matchers);
-import { afterEach, beforeEach } from 'vitest';
+
+// MSW server - dynamically imported to ensure polyfills run first
+let server: Awaited<typeof import('./mocks/server')>['server'];
+
+// Start MSW server before all tests
+beforeAll(async () => {
+  // Dynamic import ensures localStorage polyfill is ready
+  const msw = await import('./mocks/server');
+  server = msw.server;
+  server.listen({ onUnhandledRequest: 'warn' });
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -36,6 +23,13 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  // Reset handlers to default after each test
+  server?.resetHandlers();
+});
+
+// Stop MSW server after all tests
+afterAll(() => {
+  server?.close();
 });
 
 // Mock window.matchMedia for ThemeContext
