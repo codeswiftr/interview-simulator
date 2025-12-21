@@ -51,16 +51,23 @@ class Settings(BaseSettings):
     # In development, allow localhost ports
     # In production, set to specific domains via CORS_ORIGINS env var
     cors_origins: list[str] = [
-        "http://localhost:3000",
+        # Development ports - Vite dev server (default: 5173)
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        # Vite preview server (default: 4173)
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+        # Additional Vite fallback ports (5174-5176)
         "http://localhost:5174",
         "http://localhost:5175",
         "http://localhost:5176",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
         "http://127.0.0.1:5175",
         "http://127.0.0.1:5176",
+        # Legacy/alternative dev ports
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # Production domains
         "https://app.codeswiftr.com",
         "https://interview-simulator-4bo.pages.dev",
     ]
@@ -77,7 +84,7 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
-    smtp_from_email: str = "noreply@careerswiftr.com"
+    smtp_from_email: str = "noreply@codeswiftr.com"
 
     # Resend (preferred email provider)
     # Note: Domain must be verified in Resend dashboard

@@ -1,7 +1,8 @@
 """Custom Pydantic validators."""
 
-from typing import Any, Dict, List, Optional
-from pydantic import GetCoreSchema, GetJsonSchemaHandler, ValidatorFunction
+from typing import Any
+
+from pydantic import GetCoreSchema, GetJsonSchemaHandler
 from pydantic_core import core_schema
 from pydantic_core._pydantic_core import PydanticCustomError
 
@@ -30,7 +31,7 @@ class PasswordValidatorType:
     @classmethod
     def __get_pydantic_json_schema__(
         cls, core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Define the JSON schema for password validation."""
         return {
             "type": "string",

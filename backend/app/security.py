@@ -35,8 +35,8 @@ def hash_password(password: str) -> str:
     Note: bcrypt has a 72-byte limit, so longer passwords are truncated.
     This is a bcrypt limitation, not a security issue.
     """
-    # Convert password to bytes
-    password_bytes = password.encode('utf-8')
+    # Convert password to bytes and truncate to 72 bytes (bcrypt limit)
+    password_bytes = password.encode('utf-8')[:72]
 
     # Generate salt and hash with 12 rounds
     salt = bcrypt.gensalt(rounds=12)
@@ -55,8 +55,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         # Check if it's a bcrypt hash
         if hashed_password.startswith(BCRYPT_PREFIX):
-            # Bcrypt verification
-            password_bytes = plain_password.encode('utf-8')
+            # Bcrypt verification (truncate to 72 bytes to match hashing)
+            password_bytes = plain_password.encode('utf-8')[:72]
             hash_bytes = hashed_password.encode('utf-8')
             return bcrypt.checkpw(password_bytes, hash_bytes)
         else:
@@ -112,19 +112,24 @@ def migrate_password_hash(plain_password: str) -> str:
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
     """Create a signed JWT access token."""
     to_encode = data.copy()
-    expire = datetime.now(UTC) + timedelta(
+    now = datetime.now(UTC)
+    expire = now + timedelta(
         minutes=expires_minutes or settings.access_token_expire_minutes
     )
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "iat": now})
     return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
 
 
-def decode_token(token: str) -> dict[str, Any]:
-    """Decode and validate a JWT token."""
+def decode_token(token: str) -> dict[str, Any] | None:
+    """Decode and validate a JWT token.
+
+    Returns:
+        The decoded payload if valid, None if invalid/expired.
+    """
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-    except JWTError as exc:
-        raise ValueError("Invalid token") from exc
+    except JWTError:
+        return None
 
 
 def create_refresh_token() -> tuple[str, datetime]:
