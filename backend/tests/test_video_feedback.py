@@ -5,12 +5,11 @@ from __future__ import annotations
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
+from app.ai.video_analyzer import VideoMetrics
 from app.config import settings
 from app.models.feedback import VideoFeedback
 from app.models.interview import (
@@ -23,10 +22,10 @@ from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import User
 from app.security import hash_password
 from app.services.video_service import VideoService
-from app.ai.video_analyzer import VideoMetrics
 
 # Import register_and_login from conftest.py
 from tests.conftest import register_and_login
+
 
 @pytest.fixture(autouse=True)
 def enable_video_feature_flag():
@@ -40,7 +39,7 @@ def enable_video_feature_flag():
 @pytest.mark.asyncio
 async def test_upload_video_updates_response_and_saves_file(client, db_session, tmp_path):
     """Uploading a video should persist file and update the response video_url."""
-    token = await register_and_login(client)
+    token = await register_and_login(client, email="video@example.com")
 
     # Build interview context
     user_query = select(User).where(User.email == "video@example.com")

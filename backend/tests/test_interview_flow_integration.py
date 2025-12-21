@@ -1,10 +1,10 @@
 """Integration tests for full interview flow."""
 
 import pytest
-from httpx import AsyncClient
 
 # Import register_and_login from conftest.py
 from tests.conftest import register_and_login
+
 
 @pytest.mark.asyncio
 async def test_full_interview_flow(client, db_session):
@@ -75,11 +75,14 @@ async def test_full_interview_flow(client, db_session):
 
 @pytest.mark.asyncio
 async def test_quota_enforcement_integration(client, db_session):
-    """Test that free user is blocked on 4th interview."""
+    """Test that free user is blocked after exceeding quota.
+
+    Free tier allows 5 interviews per month. The 6th should fail with 402.
+    """
     token = await register_and_login(client)
 
     # Seed questions for interviews
-    for i in range(5):
+    for i in range(6):
         await client.post(
             "/api/v1/questions",
             json={
@@ -90,8 +93,8 @@ async def test_quota_enforcement_integration(client, db_session):
             headers={"Authorization": token},
         )
 
-    # Create 3 interviews (should succeed)
-    for _ in range(3):
+    # Create 5 interviews (should succeed - free tier limit)
+    for _ in range(5):
         resp = await client.post(
             "/api/v1/interviews",
             headers={"Authorization": token},
@@ -102,7 +105,7 @@ async def test_quota_enforcement_integration(client, db_session):
         )
         assert resp.status_code == 201
 
-    # 4th interview should fail with 402
+    # 6th interview should fail with 402 (quota exceeded)
     resp = await client.post(
         "/api/v1/interviews",
         headers={"Authorization": token},

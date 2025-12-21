@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.models.preparation import (
     AnswerPreparation,
@@ -15,13 +15,10 @@ from app.models.preparation import (
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import SubscriptionTier, User
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
 
-@pytest.fixture
+# Helper functions (not fixtures) for creating test users with dynamic emails
 async def register_and_login_pro(client: AsyncClient, db_session, email: str = "user@example.com") -> str:
     """Register Pro tier user and return bearer token."""
-
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
     resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
     token = resp.json()["access_token"]
@@ -34,6 +31,7 @@ async def register_and_login_pro(client: AsyncClient, db_session, email: str = "
         await db_session.commit()
 
     return f"Bearer {token}"
+
 
 async def register_and_login_free(client: AsyncClient, email: str = "user@example.com") -> str:
     """Register Free tier user and return bearer token."""
@@ -99,7 +97,7 @@ async def test_list_preparations(client, db_session):
 
     # List preparations
     response = await client.get(
-        "/api/v1/preparation/",
+        "/api/v1/preparation",
         headers={"Authorization": token},
     )
 
