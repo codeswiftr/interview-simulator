@@ -863,7 +863,7 @@ class FeedbackService:
         Returns:
             SkillsGapResponse with 6 dimensions and metadata
         """
-        from datetime import UTC, datetime
+        from datetime import UTC
 
         # Get last 20 completed sessions (limit for performance)
         sessions_result = await session.exec(

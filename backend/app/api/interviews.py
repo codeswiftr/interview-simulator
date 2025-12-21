@@ -53,7 +53,7 @@ async def _get_interview_for_user(
 
 
 @router.post(
-    "/",
+    "",
     response_model=InterviewSessionRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(check_interview_quota)],
@@ -102,7 +102,7 @@ async def create_interview(
     return interview
 
 
-@router.get("/", response_model=list[InterviewSessionRead])
+@router.get("", response_model=list[InterviewSessionRead])
 async def list_interviews(
     status_filter: InterviewStatus | None = Query(None, alias="status"),
     limit: int = Query(20, ge=1, le=100),

@@ -200,7 +200,7 @@ class PreparationsListResponse(BaseModel):
     preparations: list[PreparationListItem]
 
 
-@router.get("/", response_model=PreparationsListResponse)
+@router.get("", response_model=PreparationsListResponse)
 async def list_preparations(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
