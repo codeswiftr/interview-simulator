@@ -1,6 +1,5 @@
 """Tests for password migration from pbkdf2_sha256 to bcrypt."""
 
-import pytest
 from passlib.hash import pbkdf2_sha256
 
 from app.security import (

@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
 
 from app.ai.content_analyzer import ContentMetrics
 from app.models.feedback import ContentFeedback, SessionFeedback
@@ -338,7 +337,7 @@ async def test_get_response_feedback_endpoint(client, db_session, mock_content_m
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -415,7 +414,7 @@ async def test_get_response_feedback_not_found(client, db_session):
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -460,7 +459,7 @@ async def test_get_session_feedback_endpoint(client, db_session):
     token = await register_and_login(client, email="sessionfeedback@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -508,7 +507,7 @@ async def test_generate_response_feedback_endpoint(client, db_session, mock_cont
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -571,7 +570,7 @@ async def test_generate_response_feedback_ai_failure(client, db_session):
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "system_design"},
         headers={"Authorization": token},
     )
@@ -635,7 +634,7 @@ async def test_feedback_authorization(client, db_session):
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token1},
     )
@@ -696,7 +695,7 @@ async def test_get_session_processing_status_returns_counts_and_flags(client, db
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -768,7 +767,7 @@ async def test_get_session_processing_status_authorization(client, db_session):
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token1},
     )
@@ -789,7 +788,7 @@ async def test_get_session_processing_status_handles_no_responses(client, db_ses
     token = await register_and_login(client, email="no_responses@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -818,7 +817,7 @@ async def test_get_session_feedback_not_found(client, db_session):
     token = await register_and_login(client, email="session_no_feedback@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -848,7 +847,7 @@ async def test_get_all_session_feedbacks_endpoint(client, db_session):
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -913,7 +912,7 @@ async def test_get_all_session_feedbacks_empty(client, db_session):
     token = await register_and_login(client, email="empty_feedbacks@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -937,7 +936,7 @@ async def test_get_session_processing_status_with_feedback(client, db_session):
 
     # Create interview
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical", "question_count": 1},
         headers={"Authorization": token},
     )
@@ -1035,7 +1034,7 @@ async def test_get_session_processing_status_empty(client, db_session):
     token = await register_and_login(client, email="status_empty@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -1058,7 +1057,7 @@ async def test_get_session_comparison_endpoint(client, db_session):
 
     # Create first interview with feedback (for baseline)
     interview_resp1 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1076,7 +1075,7 @@ async def test_get_session_comparison_endpoint(client, db_session):
 
     # Create second interview (the one we'll compare)
     interview_resp2 = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1115,7 +1114,7 @@ async def test_get_session_comparison_no_feedback(client, db_session):
     token = await register_and_login(client, email="no_comparison@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1136,7 +1135,7 @@ async def test_get_session_comparison_no_previous_sessions(client, db_session):
     token = await register_and_login(client, email="first_session@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1184,7 +1183,7 @@ async def test_generate_session_feedback_endpoint(client, db_session, mock_conte
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1239,7 +1238,7 @@ async def test_generate_session_feedback_no_responses_api(client, db_session):
     token = await register_and_login(client, email="gen_no_resp@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1269,7 +1268,7 @@ async def test_generate_response_feedback_no_transcript(client, db_session):
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "technical"},
         headers={"Authorization": token},
     )
@@ -1314,7 +1313,7 @@ async def test_session_feedback_unauthorized_access(client, db_session):
     token1 = await register_and_login(client, email="owner_session@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token1},
     )
@@ -1336,7 +1335,7 @@ async def test_all_feedbacks_unauthorized_access(client, db_session):
     token1 = await register_and_login(client, email="owner_all@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token1},
     )
@@ -1358,7 +1357,7 @@ async def test_comparison_unauthorized_access(client, db_session):
     token1 = await register_and_login(client, email="owner_comp@example.com")
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token1},
     )
@@ -1389,7 +1388,7 @@ async def test_generate_session_feedback_already_exists(client, db_session, mock
     await db_session.refresh(question)
 
     interview_resp = await client.post(
-        "/api/v1/interviews/",
+        "/api/v1/interviews",
         json={"interview_type": "behavioral"},
         headers={"Authorization": token},
     )
@@ -1488,7 +1487,7 @@ async def test_generate_session_feedback_session_not_found(db_session):
 
 
 @pytest.mark.asyncio
-async def test_generate_session_feedback_already_exists(db_session, mock_content_metrics):
+async def test_feedback_service_generate_session_feedback_already_exists(db_session, mock_content_metrics):
     """Test FeedbackService.generate_session_feedback raises ValueError when feedback exists."""
     from app.models.user import User
     from app.security import hash_password
@@ -1770,10 +1769,11 @@ async def test_interview_service_assign_specific_question_inactive_fails(db_sess
 @pytest.mark.asyncio
 async def test_interview_service_assign_specific_question_nonexistent_fails(db_session):
     """Test InterviewService.assign_specific_question raises ValueError for non-existent question."""
+    from uuid import uuid4
+
     from app.models.user import User
     from app.security import hash_password
     from app.services.interview_service import InterviewService
-    from uuid import uuid4
 
     # Create user
     user = User(email="service_test2@example.com", hashed_password=hash_password("password"))

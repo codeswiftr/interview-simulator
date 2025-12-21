@@ -6,10 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import AsyncClient
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
 
-@pytest.fixture
 async def create_test_user_and_login(client: AsyncClient, email: str = "test@example.com") -> str:
     """Create a test user, login, and return bearer token."""
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})

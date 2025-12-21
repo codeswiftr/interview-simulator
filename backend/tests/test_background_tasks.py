@@ -3,10 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import text
-from sqlmodel import SQLModel
 
-from app.db import SessionLocal, engine
 from app.models.interview import (
     InterviewResponse,
     InterviewSession,
@@ -19,31 +16,7 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.background_tasks import BackgroundTaskService
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def db_session():
-    """Create a test database session."""
-    async with SessionLocal() as session:
-        yield session
+# Use shared fixtures from conftest.py (db_session, clean_database, etc.)
 
 
 @pytest.fixture
@@ -237,11 +210,10 @@ class TestBackgroundTasks:
             background_tasks.audio_service,
             "process_response_audio",
             side_effect=ConnectionError("Transient error"),
-        ):
-            with pytest.raises(Exception):
-                await background_tasks._process_audio_with_retry(
-                    db_session, sample_response.id, str(audio_file)
-                )
+        ), pytest.raises(ConnectionError):
+            await background_tasks._process_audio_with_retry(
+                db_session, sample_response.id, str(audio_file)
+            )
 
     @pytest.mark.asyncio
     async def test_process_audio_with_retry_permanent_error_no_retry(
@@ -256,11 +228,10 @@ class TestBackgroundTasks:
             background_tasks.audio_service,
             "process_response_audio",
             side_effect=ValueError("Permanent error - invalid format"),
-        ):
-            with pytest.raises(ValueError, match="Permanent error"):
-                await background_tasks._process_audio_with_retry(
-                    db_session, sample_response.id, str(audio_file)
-                )
+        ), pytest.raises(ValueError, match="Permanent error"):
+            await background_tasks._process_audio_with_retry(
+                db_session, sample_response.id, str(audio_file)
+            )
 
     @pytest.mark.asyncio
     async def test_update_processing_status_failed(

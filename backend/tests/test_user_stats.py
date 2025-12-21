@@ -1,7 +1,6 @@
 """Tests for user stats and progress endpoints."""
 
 import pytest
-from httpx import AsyncClient
 
 from app.models.feedback import SessionFeedback
 from app.models.interview import InterviewSession, InterviewStatus, InterviewType
@@ -9,6 +8,7 @@ from app.models.user import User
 
 # Import register_and_login from conftest.py
 from tests.conftest import register_and_login
+
 
 @pytest.mark.asyncio
 async def test_get_my_stats_returns_counts_and_average_score(client, db_session):

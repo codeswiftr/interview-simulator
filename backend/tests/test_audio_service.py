@@ -13,14 +13,8 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.audio_service import AudioService
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
+# Use shared fixtures from conftest.py (db_session, clean_database, etc.)
 
-@pytest.fixture
-async def db_session():
-    """Create a test database session."""
-    async with SessionLocal() as session:
-        yield session
 
 @pytest.fixture
 async def sample_user(db_session):

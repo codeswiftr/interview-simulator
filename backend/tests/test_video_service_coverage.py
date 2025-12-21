@@ -6,12 +6,11 @@ This test module specifically targets coverage gaps in video_service.py:
 - _get_response() validation (line 89)
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.ai.video_analyzer import VideoMetrics
 from app.models.feedback import VideoFeedback
@@ -26,14 +25,8 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.video_service import VideoService
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
+# Use shared fixtures from conftest.py (db_session, clean_database, etc.)
 
-@pytest.fixture
-async def db_session():
-    """Provide a database session for tests."""
-    async with SessionLocal() as session:
-        yield session
 
 @pytest.fixture
 async def test_user(db_session):
@@ -254,8 +247,10 @@ async def test_save_video_feedback_commits_and_refreshes(
     # Verify the feedback has an ID (committed)
     assert feedback.id is not None
 
-    # Verify we can query it in a new session
-    async with SessionLocal() as new_session:
+    # Verify we can query it in a new session (use conftest's get_test_engine)
+    from tests.conftest import get_test_engine
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as new_session:
         result = await new_session.exec(
             select(VideoFeedback).where(VideoFeedback.id == feedback.id)
         )
@@ -396,13 +391,12 @@ async def test_process_response_video_fails_when_feedback_already_exists(
         video_service.analyzer,
         'analyze',
         new=AsyncMock(return_value=sample_video_metrics)
-    ):
-        with pytest.raises(ValueError) as exc_info:
-            await video_service.process_response_video(
-                db_session,
-                test_interview_response.id,
-                str(video_file)
-            )
+    ), pytest.raises(ValueError) as exc_info:
+        await video_service.process_response_video(
+            db_session,
+            test_interview_response.id,
+            str(video_file)
+        )
 
     assert "already exists" in str(exc_info.value)
 

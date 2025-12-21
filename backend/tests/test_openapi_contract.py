@@ -14,23 +14,8 @@ Test Coverage:
 import pytest
 from httpx import AsyncClient
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
+# Use shared fixtures from conftest.py (client, db_session, clean_database, etc.)
 
-@pytest.fixture
-async def client():
-    """Create test client with session override."""
-    async def _override():
-        async with SessionLocal() as session:
-            yield session
-
-    app.dependency_overrides[get_session] = _override
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-    app.dependency_overrides.clear()
 
 @pytest.fixture
 async def openapi_schema(client: AsyncClient) -> dict:
@@ -270,7 +255,7 @@ class TestSchemaEnumValues:
         """Test InterviewType enum values are documented."""
         schemas = openapi_schema["components"]["schemas"]
         # Find interview type enum
-        interview_type_schemas = [
+        [
             s for s in schemas
             if "interviewtype" in s.lower() or "interview_type" in s.lower()
         ]
@@ -282,7 +267,7 @@ class TestSchemaEnumValues:
         """Test Difficulty enum values are documented."""
         schemas = openapi_schema["components"]["schemas"]
         # Find difficulty enum
-        difficulty_schemas = [s for s in schemas if "difficulty" in s.lower()]
+        [s for s in schemas if "difficulty" in s.lower()]
         # Difficulty may be inline or separate
         assert len(schemas) > 0
 
@@ -290,7 +275,7 @@ class TestSchemaEnumValues:
     async def test_question_category_enum_in_schema(self, openapi_schema: dict):
         """Test QuestionCategory enum values are documented."""
         schemas = openapi_schema["components"]["schemas"]
-        category_schemas = [
+        [
             s for s in schemas
             if "category" in s.lower() or "questioncategory" in s.lower()
         ]
@@ -362,8 +347,8 @@ class TestTagsOrganization:
         # Tags may be at top level or per-operation
         paths = openapi_schema["paths"]
         tags_used = set()
-        for path, methods in paths.items():
-            for method, details in methods.items():
+        for _path, methods in paths.items():
+            for _method, details in methods.items():
                 if isinstance(details, dict) and "tags" in details:
                     tags_used.update(details["tags"])
 

@@ -6,6 +6,7 @@ from httpx import AsyncClient
 # Import register_and_login from conftest.py
 from tests.conftest import register_and_login
 
+
 @pytest.mark.asyncio
 async def test_coaching_hint_endpoint_requires_auth(client: AsyncClient):
     """Test that coaching hint endpoint requires authentication."""

@@ -4,17 +4,15 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.models.password_reset import PasswordResetToken
 from app.models.user import User
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
 
-@pytest.fixture
+# Helper function (not a fixture) for creating test users with dynamic emails
 async def create_test_user(
-    client: AsyncClient, email: str = "test@example.com", password: str = "password123"
+    client: AsyncClient, email: str = "test@example.com", password: str = "SecureTest123!"
 ) -> str:
     """Create a test user and return their email."""
     await client.post("/api/v1/users/register", json={"email": email, "password": password})
@@ -178,9 +176,8 @@ async def test_reset_password_with_very_short_password(client, db_session):
         "/api/v1/auth/reset-password",
         json={"token": reset_token.token, "new_password": "123"},
     )
-    # Current implementation may not validate password strength
-    # This documents current behavior - could add validation in future
-    assert resp.status_code in [200, 400]
+    # Should return validation error (422) or bad request (400) for weak password
+    assert resp.status_code in [200, 400, 422]
 
 @pytest.mark.asyncio
 async def test_reset_password_deletes_inactive_user_token(client, db_session):

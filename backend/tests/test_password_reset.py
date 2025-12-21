@@ -5,16 +5,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.models.password_reset import PasswordResetToken
 from app.models.user import User
 from app.security import verify_password
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
 
-@pytest.fixture
 async def create_test_user(client: AsyncClient, email: str = "test@example.com") -> str:
     """Create a test user and return their email."""
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
@@ -145,14 +142,14 @@ async def test_reset_password_rejects_used_token(client: AsyncClient, db_session
     # Use token once
     resp1 = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "password1"}
+        json={"token": reset_token.token, "new_password": "ValidNewPass1"}
     )
     assert resp1.status_code == 200
 
     # Try to use token again
     resp2 = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "password2"}
+        json={"token": reset_token.token, "new_password": "ValidNewPass2"}
     )
     assert resp2.status_code == 400
     assert "already been used" in resp2.json()["detail"].lower()
