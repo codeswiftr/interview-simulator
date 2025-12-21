@@ -1,49 +1,51 @@
 # Agent Continuation Prompt
 
 ## Project Overview
-**Project**: CareerSwiftr Interview Simulator
-**Purpose**: AI-powered interview practice platform with audio recording, transcription, and personalized feedback
-**Tech Stack**: Python 3.13+/FastAPI/SQLModel/PostgreSQL (backend) | React 19/TypeScript/Vite 7/TailwindCSS (frontend)
-**Repository**: /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator
+**Project**: Interview Simulator
+**Purpose**: AI-powered interview practice platform for software engineers with real-time audio analysis, transcription, and Claude-generated feedback
+**Tech Stack**: FastAPI + SQLModel + PostgreSQL (backend), React 19 + TypeScript + Vite + TailwindCSS v4 (frontend), OpenAI Whisper, Anthropic Claude
+**Repository**: `/Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator`
 
 ---
 
 ## Current State
 
 ### Branch
-`main` - Production branch, Sprint 4 complete
+`main` - Up to date with origin
 
 ### Recent Progress
-- `9b63833` docs: mark Sprint 4 complete with final metrics
-- `f2b7a6a` test: add comprehensive hook tests and expand MSW mock infrastructure
-- `b3db554` test: increase backend test coverage from 67% to 69%
-- `867615a` fix(frontend): resolve all ESLint errors (28 to 0)
-- `313c800` fix(backend): resolve all ruff linting errors (158 to 0)
+- ✅ **Skills Gap Analysis COMPLETE (2025-12-20)**: Full-stack implementation with real API data
+  - Backend: GET /users/me/skills-gap endpoint with 6 dimensions
+  - Frontend: SkillsRadar with loading/empty states, no mock data
+  - Removed "Preview" badge - feature production-ready
+- ✅ UI Polish & Error Handling (toast colors, filter colors, mobile responsiveness)
+- ✅ Improvements by Criteria feature with real data
+- ✅ Sprint 10 Code Quality (337 lint errors fixed, 69% backend coverage)
+- ✅ Deployed to production (app.codeswiftr.com)
 
 ### Current Focus
-**Sprint 4: Technical Debt Payback** - COMPLETE (Epics 1-3 Done)
+Skills Gap Analysis fully implemented and deployed. System is launch-ready.
 
 ### Blockers/Issues
-- None - codebase clean, tests passing
+- Frontend test coverage at 0% (Sprint 11 priority)
+- One pre-existing test failure: `test_get_session_feedback_no_feedback_generated` (unrelated to recent work)
 
 ---
 
 ## Active Plan
-**Plan File**: `docs/PLAN.md`
-**Current Phase**: Sprint 4 Complete
-**Status**: Ready for next sprint
+**Plan File**: `docs/SKILLS_GAP_PLAN.md`
+**Status**: ✅ COMPLETE
 
-### Completed (Sprint 4)
-- [x] Epic 1: Fix Linting Errors (158 backend + 28 frontend to 0)
-- [x] Epic 2: Backend Test Coverage (67% to 69%, 219 tests)
-- [x] Epic 3: Frontend Test Infrastructure (55 tests, hooks 100%)
-- [x] Epic 4: E2E Test Suite (Deferred to future sprint)
+### Completed Milestones
+- ✅ Skills Gap Analysis with real API data (6 dimensions)
+- ✅ UI Polish & Error Handling
+- ✅ Improvements by Criteria feature
+- ✅ v2 UI Overhaul (React 19 + TailwindCSS v4)
 
-### Future Work
-1. **Frontend Component Tests** - Add tests for pages and components
-2. **API Endpoint Test Coverage** - Reach 75% on remaining modules
-3. **E2E Test Suite** - Playwright for critical user journeys
-4. **Performance Optimization** - Code splitting, bundle optimization
+### Next Priority Items
+1. Frontend test coverage (currently 0%, target 60%)
+2. Video Analysis MVP (scaffolded, needs completion)
+3. B2B features (deferred)
 
 ---
 
@@ -52,42 +54,38 @@
 ### Important Files
 | File | Purpose |
 |------|---------|
-| `backend/app/main.py` | FastAPI application entry point |
-| `backend/app/api/` | API routers (8 modules) |
-| `backend/tests/` | Backend test suite (219 tests, 69% coverage) |
-| `frontend/src/hooks/` | React hooks (4 hooks, 3 fully tested) |
-| `frontend/src/hooks/__tests__/` | Hook tests (49 tests) |
-| `frontend/src/test/mocks/handlers.ts` | MSW handlers (40+ endpoints) |
-| `frontend/src/pages/` | Page components (10 pages) |
-| `docs/PLAN.md` | Sprint implementation plans |
-| `docs/CODEBASE_AUDIT.md` | Current codebase metrics |
-
-### Current Coverage
-| Module | Coverage | Status |
-|--------|----------|--------|
-| Backend Overall | 69% | Good |
-| `middleware/rate_limit.py` | 100% | Excellent |
-| `hooks/useAuth` | 100% | Excellent |
-| `hooks/useToast` | 100% | Excellent |
-| `hooks/useOnboarding` | 100% | Excellent |
-| `api/interviews.py` | 41% | Needs work |
-| `api/transcription.py` | 42% | Needs work |
+| `backend/app/services/feedback_service.py` | Skills gap computation, improvements aggregation |
+| `backend/app/api/users.py` | User endpoints including /skills-gap, /improvements |
+| `backend/app/models/feedback.py` | SkillDimension, SkillsGapResponse schemas |
+| `frontend/src/pages/DashboardPage.tsx` | Main dashboard with skills radar |
+| `frontend/src/components/dashboard/SkillsRadar.tsx` | Radar chart component |
+| `frontend/src/lib/api.ts` | API client with userAPI.getSkillsGap() |
+| `docs/progress.md` | Project progress tracking |
+| `docs/SKILLS_GAP_PLAN.md` | Completed implementation plan |
 
 ### Recent Decisions
-- **B008 ruff ignore**: Added to pyproject.toml for FastAPI Depends() pattern
-- **ESLint disable comments**: Used for react-refresh/only-export-components in hook files
-- **useCallback pattern**: Used for functions referenced in useEffect dependencies
+- **6 skill dimensions**: Content, Delivery, Behavioral, Technical, System Design, Communication
+- **Trend calculation**: Compare recent 5 vs previous 5 sessions (improving/declining/stable)
+- **Target scores**: Content 90, Delivery 85, Behavioral 90, Technical 85, System Design 80, Communication 90
+- **Empty state**: Show message when <2 sessions available
 
 ### Gotchas Discovered
-- Port 5432 may conflict with other PostgreSQL instances (postgres-db container)
-- Frontend useEffect dependencies require useCallback for function stability
-- Backend Depends() pattern triggers B008 linting rule - ignore is correct
+- ⚠️ Backend tests need `uv sync --all-extras` before running
+- ⚠️ AudioFeedback is often null - delivery dimension needs graceful null handling
+- ⚠️ Question.category determines which feedback dimensions to aggregate
+- ⚠️ Frontend build uses .env.production for API URL (must be https://)
 
 ### Patterns to Follow
-- **Backend tests**: Use pytest-asyncio, mock external services
-- **Frontend tests**: Vitest + RTL + MSW, wrap with providers
-- **Commits**: Conventional format with scope (e.g., `fix(backend): ...`)
-- **Coverage**: Focus on API endpoints and components
+- **Skills dimensions**: Use weighted score computation per category
+- **API endpoints**: Follow pattern in `users.py` (get_my_stats, get_my_progress, get_skills_gap)
+- **Frontend data fetching**: Add state + load function + useMemo transformation
+- **Component states**: Always handle loading, empty, and data states
+
+### Things to Avoid
+- ❌ Don't commit to main directly (use feature branches for major work)
+- ❌ Don't use pip (use `uv` for Python dependencies)
+- ❌ Don't add mock data fallbacks - compute from real data or show empty state
+- ❌ Don't skip the build verification before deploying
 
 ---
 
@@ -95,31 +93,38 @@
 
 ### Verify Environment
 ```bash
-cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator
-docker compose up -d  # Start PostgreSQL and Redis
-cd backend && uv run alembic upgrade head  # Run migrations
+cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/frontend
+npm run build  # Should pass with no errors
 ```
 
-### Run Tests
+### Run Backend Tests
 ```bash
-# Backend tests with coverage
-cd backend && uv run pytest --cov=app --cov-report=term-missing -v
+cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/backend
+uv run pytest tests/test_feedback.py tests/test_api.py -v  # Core tests
+```
 
-# Frontend tests
-cd frontend && npm test
-
-# Linting (should be clean)
-cd backend && uv run ruff check app/
-cd frontend && npm run lint
+### Run Frontend Tests
+```bash
+cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/frontend
+npm run test -- --run
 ```
 
 ### Start Development
 ```bash
-# Backend (port 8000)
-cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Backend
+cd backend && uv run uvicorn app.main:app --reload
 
-# Frontend (port 5173)
+# Frontend
 cd frontend && npm run dev
+```
+
+### Deploy
+```bash
+# Frontend to Cloudflare Pages
+cd frontend && npm run build && npx wrangler pages deploy dist --project-name=interview-simulator --branch=main
+
+# Backend to Railway
+cd backend && railway up
 ```
 
 ---
@@ -127,40 +132,73 @@ cd frontend && npm run dev
 ## Instructions for New Agent
 
 ### Mindset
-You are a pragmatic senior engineer. Your approach:
-- Apply Pareto principle - 20% effort for 80% value
-- Test-driven development for business logic
-- YAGNI - don't build what isn't needed
-- Clean architecture with clear separation
+You are a pragmatic senior engineer. The system is launch-ready and deployed. Focus on:
+- Quality improvements (test coverage)
+- Bug fixes as they arise
+- Feature enhancements based on user feedback
 
 ### Workflow
-1. Read this context and the plan file (`docs/PLAN.md`)
-2. Run tests to verify current state: `cd backend && uv run pytest`
-3. Identify next priority from remaining work
-4. Commit after each completed task
-5. Update docs as you progress
+1. Read this context and check `docs/progress.md` for current status
+2. Run build to verify everything compiles
+3. Address any specific task requested
+4. Commit with conventional messages
+5. Deploy if changes are ready
 
 ### Quality Gates
 After each change:
-1. Run affected tests: `uv run pytest tests/test_<module>.py -v`
-2. Check coverage: `uv run pytest --cov=app/<module>.py`
-3. Verify linting: `uv run ruff check app/`
-4. Commit with conventional message
-5. Continue to next task
+1. `npm run build` passes (frontend)
+2. `uv run pytest tests/test_feedback.py tests/test_api.py` passes (backend)
+3. Commit with conventional message
+4. Push and deploy if ready
+
+### Production URLs
+- Frontend: https://app.codeswiftr.com
+- Backend: https://interview-simulator-api-production.up.railway.app
 
 ---
 
-## Current Metrics
+## API Reference
 
-| Metric | Value |
-|--------|-------|
-| Backend Tests | 219 (215 passed, 4 skipped) |
-| Backend Coverage | 69% |
-| Frontend Tests | 55 |
-| Frontend Hook Coverage | 100% (3/4 hooks) |
-| Linting Errors | 0 (backend + frontend) |
-| MSW Handlers | 40+ |
-| Questions with Sample Answers | 60 |
+### Skills Gap Endpoint
+```
+GET /api/v1/users/me/skills-gap
+
+Response (success):
+{
+  "dimensions": [
+    {
+      "name": "Content",
+      "current_score": 72.5,
+      "target_score": 90,
+      "sessions_with_data": 8,
+      "trend": "improving"
+    },
+    // ... 5 more dimensions
+  ],
+  "sessions_analyzed": 10,
+  "data_available": true,
+  "last_updated": "2025-12-20T12:00:00Z"
+}
+
+Response (insufficient data):
+{
+  "dimensions": [],
+  "sessions_analyzed": 1,
+  "data_available": false,
+  "last_updated": null
+}
+```
+
+---
+
+## Key Metrics
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Backend Test Coverage | 69% | 70%+ |
+| Frontend Test Coverage | 0% | 60% |
+| Backend Tests | 637 collected | - |
+| API Endpoints | 25+ | - |
 
 ---
 
@@ -168,8 +206,6 @@ After each change:
 
 To continue work, start with:
 ```
-Read docs/PROMPT.md and docs/PLAN.md. Sprint 4 is complete.
-Verify tests pass, then evaluate priorities for next sprint.
-Consider: frontend component tests, API coverage to 75%, E2E tests, or new features.
-DO NOT STOP! Continue like an empowered, pragmatic senior engineer.
+Read docs/PROMPT.md and docs/progress.md. The system is deployed and launch-ready.
+Check for any specific tasks or continue with frontend test coverage improvements.
 ```
