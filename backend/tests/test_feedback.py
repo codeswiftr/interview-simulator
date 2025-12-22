@@ -856,45 +856,48 @@ async def test_get_all_session_feedbacks_endpoint(client, db_session):
     """Test GET /api/v1/feedback/session/{session_id}/all endpoint."""
     token = await register_and_login(client, email="all_feedbacks@example.com")
 
+    # Create a question that can be assigned
     question = Question(
         content="Test question for all feedbacks",
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
+        is_active=True,
     )
     db_session.add(question)
     await db_session.commit()
-    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews",
-        json={"interview_type": "technical"},
+        json={"interview_type": "technical", "question_count": 1},
         headers={"Authorization": token},
     )
     interview_id = interview_resp.json()["id"]
 
-    interview_question = InterviewQuestion(
-        session_id=interview_id,
-        question_id=question.id,
-        order=1,
-    )
-    db_session.add(interview_question)
-    await db_session.commit()
-
-    await client.post(
+    # Start interview (assigns questions automatically)
+    start_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/start",
         headers={"Authorization": token},
     )
+    assert start_resp.status_code == 200, f"Start failed: {start_resp.json()}"
+
+    # Get the assigned question
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    question_id = questions_resp.json()[0]["id"]
 
     # Submit response
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json={
-            "question_id": str(question.id),
+            "question_id": question_id,
             "transcript": "Test answer",
             "duration_seconds": 30,
         },
         headers={"Authorization": token},
     )
+    assert submit_resp.status_code == 201, f"Submit failed: {submit_resp.json()}"
     response_id = submit_resp.json()["id"]
 
     # Create feedback for the response
