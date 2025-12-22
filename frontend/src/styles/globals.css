@@ -319,6 +319,55 @@
   20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
 
+/* Waveform bar bounce animation for visualizer placeholder */
+@keyframes bar-bounce {
+  0%, 100% {
+    transform: scaleY(0.3);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Sound wave animation for onboarding illustrations */
+@keyframes soundwave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+
+/* Line drawing dash animation */
+@keyframes dash {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Onboarding step slide animation */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.onboarding-step-enter {
+  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-bar-bounce,
+  .onboarding-step-enter {
+    animation: none;
+    transform: scaleY(0.5);
+    opacity: 0.4;
+  }
+}
+
 /* Utility Classes */
 /* Dark Mode Surface Overrides - uses dynamic CSS variables */
 @layer base {
@@ -623,14 +672,29 @@
   .question-card {
     background: linear-gradient(145deg, #1F2937 0%, #111827 100%);
     border-radius: 1.5rem;
-    padding: 3rem;
+    padding: 1.5rem;
     color: white;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(255,255,255,0.1);
     position: relative;
     overflow: hidden;
   }
-  
+
+  /* Desktop: larger padding */
+  @media (min-width: 640px) {
+    .question-card {
+      padding: 3rem;
+    }
+  }
+
+  /* Light mode: Add subtle electric-blue glow to make dark card feel intentional */
+  :root:not(.dark) .question-card {
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.15),
+      0 0 0 1px rgba(56, 189, 248, 0.1),
+      0 0 60px -15px rgba(56, 189, 248, 0.15);
+  }
+
   .question-card::before {
     content: '';
     position: absolute;
@@ -639,6 +703,20 @@
     right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  }
+
+  /* Recording Deck - Dark studio aesthetic */
+  .recording-deck {
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Light mode: Add subtle glow to recording deck */
+  :root:not(.dark) .recording-deck {
+    box-shadow:
+      0 20px 40px -12px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(56, 189, 248, 0.15),
+      0 0 50px -15px rgba(56, 189, 248, 0.12);
   }
 
   /* Progress Bars */
@@ -699,6 +777,11 @@
 
   .animate-shake {
     animation: shake 0.5s ease-in-out;
+  }
+
+  /* Waveform bar animation for visualizer placeholder */
+  .animate-bar-bounce {
+    animation: bar-bounce 1s ease-in-out infinite;
   }
 
   /* Stagger delay utilities for list animations */

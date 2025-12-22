@@ -28,6 +28,9 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PreparationPage = lazy(() => import('./pages/PreparationPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 
+// Dev-only preview page (lazy loaded, only in development)
+const DevPreviewPage = lazy(() => import('./pages/DevPreviewPage'));
+
 // Loading fallback component
 const PageLoadingFallback = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -123,6 +126,10 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  {/* Dev-only preview route */}
+                  {import.meta.env.DEV && (
+                    <Route path="/dev-preview" element={<DevPreviewPage />} />
+                  )}
                 </Routes>
               </Suspense>
             </main>

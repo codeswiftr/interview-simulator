@@ -158,7 +158,7 @@ export function useCoachingHint({
       setIsStreaming(false);
       abortControllerRef.current = null;
     }
-  }, [question, questionType, transcript, enabled]);
+  }, [question, questionType, transcript, enabled, countWords]);
 
   // Debounced hint generation
   useEffect(() => {

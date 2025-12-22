@@ -10,6 +10,20 @@ const api = axios.create({
   },
 });
 
+// Generate UUID with fallback for non-secure contexts (HTTP)
+function generateUUID(): string {
+  // crypto.randomUUID() only works in secure contexts (HTTPS or localhost)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for HTTP contexts
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -20,7 +34,7 @@ api.interceptors.request.use(
 
     // Add correlation ID for tracing
     if (!config.headers['X-Correlation-ID']) {
-      config.headers['X-Correlation-ID'] = crypto.randomUUID();
+      config.headers['X-Correlation-ID'] = generateUUID();
     }
 
     return config;
