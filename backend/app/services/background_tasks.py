@@ -263,6 +263,9 @@ class BackgroundTaskService:
                         task_name="generate_content_feedback",
                     )
 
+                    # Check if all responses now have feedback and auto-generate session feedback
+                    await self._maybe_generate_session_feedback(session, response_id)
+
                 except ValueError as e:
                     # Expected errors (e.g., no transcript, already exists)
                     self._log_with_context(
@@ -286,6 +289,105 @@ class BackgroundTaskService:
                 f"Failed to start content feedback generation for response {response_id}: {e}",
                 response_id=response_id,
                 task_name="generate_content_feedback",
+                exc_info=True,
+            )
+
+    async def _maybe_generate_session_feedback(
+        self,
+        session: AsyncSession,
+        response_id: UUID,
+    ) -> None:
+        """Check if all responses have ContentFeedback and auto-generate SessionFeedback.
+
+        This is called after each ContentFeedback is successfully generated to check
+        if the session is now ready for aggregated feedback.
+
+        Args:
+            session: Database session
+            response_id: UUID of the response that just got feedback
+        """
+        try:
+            from app.models.feedback import ContentFeedback, SessionFeedback
+
+            # Get the response to find its session
+            response_result = await session.exec(
+                select(InterviewResponse).where(InterviewResponse.id == response_id)
+            )
+            response = response_result.first()
+            if not response:
+                return
+
+            session_id = response.session_id
+
+            # Check if session feedback already exists
+            existing_session_feedback = await session.exec(
+                select(SessionFeedback).where(SessionFeedback.session_id == session_id)
+            )
+            if existing_session_feedback.first():
+                self._log_with_context(
+                    logging.DEBUG,
+                    f"SessionFeedback already exists for session {session_id}",
+                    session_id=session_id,
+                    task_name="auto_session_feedback",
+                )
+                return
+
+            # Get all responses for this session
+            all_responses_result = await session.exec(
+                select(InterviewResponse).where(InterviewResponse.session_id == session_id)
+            )
+            all_responses = list(all_responses_result.all())
+
+            # Check if all responses have ContentFeedback
+            all_have_feedback = True
+            for resp in all_responses:
+                feedback_result = await session.exec(
+                    select(ContentFeedback).where(ContentFeedback.response_id == resp.id)
+                )
+                if not feedback_result.first():
+                    all_have_feedback = False
+                    break
+
+            if not all_have_feedback:
+                self._log_with_context(
+                    logging.DEBUG,
+                    f"Not all responses have feedback yet for session {session_id}",
+                    session_id=session_id,
+                    task_name="auto_session_feedback",
+                )
+                return
+
+            # All responses have feedback - generate session feedback
+            self._log_with_context(
+                logging.INFO,
+                f"All responses have feedback, generating session feedback for {session_id}",
+                session_id=session_id,
+                task_name="auto_session_feedback",
+            )
+
+            try:
+                feedback = await self.feedback_service.generate_session_feedback(session, session_id)
+                self._log_with_context(
+                    logging.INFO,
+                    f"Successfully auto-generated session feedback for {session_id}",
+                    session_id=session_id,
+                    task_name="auto_session_feedback",
+                    overall_score=feedback.overall_score if feedback else None,
+                )
+            except ValueError as e:
+                self._log_with_context(
+                    logging.WARNING,
+                    f"Could not auto-generate session feedback for {session_id}: {e}",
+                    session_id=session_id,
+                    task_name="auto_session_feedback",
+                )
+
+        except Exception as e:
+            self._log_with_context(
+                logging.ERROR,
+                f"Error checking for auto session feedback generation: {e}",
+                response_id=response_id,
+                task_name="auto_session_feedback",
                 exc_info=True,
             )
 

@@ -404,44 +404,52 @@ async def test_get_response_feedback_not_found(client, db_session):
     """Test GET /api/v1/feedback/response/{response_id} returns 404 when no feedback exists."""
     token = await register_and_login(client, email="nofeedback@example.com")
 
+    # Create a technical question that can be assigned
     question = Question(
-        content="Test question",
+        content="Test technical question for feedback test",
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
+        is_active=True,
     )
     db_session.add(question)
     await db_session.commit()
-    await db_session.refresh(question)
 
+    # Create interview with question_count=1
     interview_resp = await client.post(
         "/api/v1/interviews",
-        json={"interview_type": "technical"},
+        json={"interview_type": "technical", "question_count": 1},
         headers={"Authorization": token},
     )
     interview_id = interview_resp.json()["id"]
 
-    interview_question = InterviewQuestion(
-        session_id=interview_id,
-        question_id=question.id,
-        order=1,
-    )
-    db_session.add(interview_question)
-    await db_session.commit()
-
-    await client.post(
+    # Start interview (this assigns questions automatically)
+    start_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/start",
         headers={"Authorization": token},
     )
+    assert start_resp.status_code == 200, f"Start failed: {start_resp.json()}"
 
+    # Get the assigned questions
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200, f"Get questions failed: {questions_resp.json()}"
+    questions = questions_resp.json()
+    assert len(questions) > 0, "Interview should have assigned questions"
+    question_id = questions[0]["id"]
+
+    # Submit a response using the assigned question
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json={
-            "question_id": str(question.id),
+            "question_id": question_id,
             "transcript": "Test answer",
             "duration_seconds": 30,
         },
         headers={"Authorization": token},
     )
+    assert submit_resp.status_code == 201, f"Submit failed: {submit_resp.json()}"
     response_id = submit_resp.json()["id"]
 
     # No feedback created yet
@@ -497,44 +505,49 @@ async def test_generate_response_feedback_endpoint(client, db_session, mock_cont
     """Test POST /api/v1/feedback/generate/response/{response_id} endpoint."""
     token = await register_and_login(client, email="generate@example.com")
 
+    # Create a technical question that can be assigned
     question = Question(
         content="Explain REST API principles",
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.MEDIUM,
+        is_active=True,
     )
     db_session.add(question)
     await db_session.commit()
-    await db_session.refresh(question)
 
+    # Create interview with question_count=1
     interview_resp = await client.post(
         "/api/v1/interviews",
-        json={"interview_type": "technical"},
+        json={"interview_type": "technical", "question_count": 1},
         headers={"Authorization": token},
     )
     interview_id = interview_resp.json()["id"]
 
-    interview_question = InterviewQuestion(
-        session_id=interview_id,
-        question_id=question.id,
-        order=1,
-    )
-    db_session.add(interview_question)
-    await db_session.commit()
-
-    await client.post(
+    # Start interview (assigns questions automatically)
+    start_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/start",
         headers={"Authorization": token},
     )
+    assert start_resp.status_code == 200, f"Start failed: {start_resp.json()}"
+
+    # Get the assigned question
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    assert questions_resp.status_code == 200
+    question_id = questions_resp.json()[0]["id"]
 
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json={
-            "question_id": str(question.id),
+            "question_id": question_id,
             "transcript": "REST stands for Representational State Transfer. It uses HTTP methods and is stateless.",
             "duration_seconds": 45,
         },
         headers={"Authorization": token},
     )
+    assert submit_resp.status_code == 201, f"Submit failed: {submit_resp.json()}"
     response_id = submit_resp.json()["id"]
 
     # Mock the content analyzer
@@ -560,44 +573,47 @@ async def test_generate_response_feedback_ai_failure(client, db_session):
     """Test POST /feedback/generate/response/{id} returns 400 when analysis fails."""
     token = await register_and_login(client, email="ai_failure@example.com")
 
+    # Create a system design question that can be assigned
     question = Question(
         content="Explain CAP theorem",
         category=QuestionCategory.SYSTEM_DESIGN,
         difficulty=Difficulty.HARD,
+        is_active=True,
     )
     db_session.add(question)
     await db_session.commit()
-    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews",
-        json={"interview_type": "system_design"},
+        json={"interview_type": "system_design", "question_count": 1},
         headers={"Authorization": token},
     )
     interview_id = interview_resp.json()["id"]
 
-    interview_question = InterviewQuestion(
-        session_id=interview_id,
-        question_id=question.id,
-        order=1,
-    )
-    db_session.add(interview_question)
-    await db_session.commit()
-
-    await client.post(
+    # Start interview (assigns questions automatically)
+    start_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/start",
         headers={"Authorization": token},
     )
+    assert start_resp.status_code == 200, f"Start failed: {start_resp.json()}"
+
+    # Get the assigned question
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token},
+    )
+    question_id = questions_resp.json()[0]["id"]
 
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json={
-            "question_id": str(question.id),
+            "question_id": question_id,
             "transcript": "Some answer that will cause AI failure",
             "duration_seconds": 30,
         },
         headers={"Authorization": token},
     )
+    assert submit_resp.status_code == 201, f"Submit failed: {submit_resp.json()}"
     response_id = submit_resp.json()["id"]
 
     # Patch FeedbackService.generate_feedback to simulate analysis failure
@@ -624,44 +640,47 @@ async def test_feedback_authorization(client, db_session):
     # User 1
     token1 = await register_and_login(client, email="user1@example.com")
 
+    # Create a question that can be assigned
     question = Question(
         content="Authorization test question",
         category=QuestionCategory.TECHNICAL,
         difficulty=Difficulty.EASY,
+        is_active=True,
     )
     db_session.add(question)
     await db_session.commit()
-    await db_session.refresh(question)
 
     interview_resp = await client.post(
         "/api/v1/interviews",
-        json={"interview_type": "technical"},
+        json={"interview_type": "technical", "question_count": 1},
         headers={"Authorization": token1},
     )
     interview_id = interview_resp.json()["id"]
 
-    interview_question = InterviewQuestion(
-        session_id=interview_id,
-        question_id=question.id,
-        order=1,
-    )
-    db_session.add(interview_question)
-    await db_session.commit()
-
-    await client.post(
+    # Start interview (assigns questions automatically)
+    start_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/start",
         headers={"Authorization": token1},
     )
+    assert start_resp.status_code == 200, f"Start failed: {start_resp.json()}"
+
+    # Get the assigned question
+    questions_resp = await client.get(
+        f"/api/v1/interviews/{interview_id}/questions",
+        headers={"Authorization": token1},
+    )
+    question_id = questions_resp.json()[0]["id"]
 
     submit_resp = await client.post(
         f"/api/v1/interviews/{interview_id}/responses",
         json={
-            "question_id": str(question.id),
+            "question_id": question_id,
             "transcript": "Test answer",
             "duration_seconds": 30,
         },
         headers={"Authorization": token1},
     )
+    assert submit_resp.status_code == 201, f"Submit failed: {submit_resp.json()}"
     response_id = submit_resp.json()["id"]
 
     # User 2 tries to access User 1's feedback

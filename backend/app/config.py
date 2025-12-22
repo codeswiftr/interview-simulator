@@ -67,6 +67,9 @@ class Settings(BaseSettings):
         # Legacy/alternative dev ports
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # Local development domain (via Caddy/reverse proxy)
+        "http://app.codeswiftr.local:8080",
+        "http://app.codeswiftr.local",
         # Production domains
         "https://app.codeswiftr.com",
         "https://interview-simulator-4bo.pages.dev",
