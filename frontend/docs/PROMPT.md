@@ -1,53 +1,58 @@
 # Agent Continuation Prompt
 
 ## Project Overview
-**Project**: Interview Simulator Frontend
-**Purpose**: AI-powered interview practice platform for software engineers with real-time audio analysis and Claude-generated feedback
-**Tech Stack**: React 19 + TypeScript + Vite + TailwindCSS v4 + Axios
-**Repository**: `/Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/frontend`
+**Project**: FORGE Portfolio - Interview Simulator (Primary Focus)
+**Purpose**: AI-powered interview practice platform for software engineers with transcription and Claude-generated feedback
+**Tech Stack**: FastAPI + SQLModel + PostgreSQL (backend), React 19 + Vite + TailwindCSS v4 (frontend), OpenAI Whisper + Claude (AI)
+**Repository**: `/Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator`
 
 ---
 
 ## Current State
 
 ### Branch
-`main` - Primary development branch (feature branches not required for this project)
+`feat/content-strategy-cto-review` - CTO strategic review of content strategies across 7 domains, plus Sprint 1-2 execution
 
 ### Recent Progress
-- ✅ Completed Epic 3: Component Refactoring (InterviewContext, InterviewHeader, RecordingSection, etc.)
-- ✅ Completed Epic 4: Fixed broken tests after refactoring (useOnboarding, page tests)
-- ✅ Created comprehensive Frontend Design Assessment (`docs/FRONTEND_DESIGN_ASSESSMENT.md`)
-- ✅ Created detailed implementation plan for Epics 5-9 (`docs/PLAN.md`)
-- ✅ **Completed Epic 6: Navigation Modernization** (BottomNav, ProgressPage, /practice & /progress routes)
-- ✅ **Completed Epic 5: Design Token Unification** (HSL color system, design-tokens.css)
-- ✅ **Completed Epic 7: Component API Migration** (Shadcn-style Card components)
-- ✅ **Completed Epic 8: Dashboard Simplification** (cleaner cards, compact heatmap, improved empty state)
-- 🔄 Ready to start Epic 9: Settings & Polish
+- ✅ CTO Strategic Review completed for 7 domain content strategies
+- ✅ Sprint 1 completed (5 high-priority tasks):
+  - T1.1: CodeSwiftr content library (50 pieces)
+  - T1.2: LeanVibe content library (50 pieces)
+  - T1.3: NeoForge content library (50 pieces)
+  - T2.1: COPPA compliance playbook (TheBrightHarbor)
+  - T3.1: Security audit (Interview Simulator)
+- ✅ Sprint 2 tasks completed (5 tasks):
+  - T1.4: CodeSwiftr LinkedIn posts
+  - T1.5: LeanVibe LinkedIn posts
+  - T3.2: Codebase review with repomix
+  - T4.1: GraphRAG market research
+  - T5.1: Docker staging configs
 
 ### Current Focus
-**Frontend Design System Unification** - Merging best practices from two parallel frontend implementations:
-- Legacy frontend (`/frontend/`) - Full-featured but older design patterns
-- V2 UI (`/src/` at parent level) - Cleaner Linear-inspired design with bottom nav
+All Sprint 1 and Sprint 2 delegatable tasks are complete. The next phase requires:
+1. Human review of strategic decisions in HUMAN.md files
+2. Stripe pricing configuration
+3. Content publishing approval
+4. COPPA attorney review for TheBrightHarbor
 
 ### Blockers/Issues
-- 7 pre-existing test failures in `useAudioRecording.test.tsx` (timing issues, not blocking)
-- 263 tests passing, build succeeds
+- **Human Decision Required**: Stripe pricing configuration blocks revenue tracking
+- **Human Decision Required**: Content publishing approval blocks distribution
+- **Legal Review Required**: COPPA attorney review blocks TheBrightHarbor child-focused products
 
 ---
 
 ## Active Plan
-**Plan File**: `docs/PLAN.md`
-**Current Phase**: Phase 4: Dashboard Simplification (Epic 8)
-**Current Task**: Task 8.1: Simplify DashboardPage layout
-**Status**: Ready to start
+**Plan File**: `/Users/bogdan/work/FORGE/docs/PLAN.md`
+**Current Phase**: Sprint 2 Complete
+**Current Task**: Awaiting human decisions
+**Status**: Ready for Next Sprint / Human Review
 
 ### Immediate Next Steps
-1. Review docs/PLAN.md for Epic 8 tasks
-2. Simplify DashboardPage layout structure
-3. Reduce visual complexity while maintaining functionality
-4. Optimize mobile responsiveness
-5. Add appropriate loading states and error handling
-6. Commit: `refactor(frontend): simplify dashboard layout`
+1. Commit all Sprint 1-2 deliverables (uncommitted changes pending)
+2. Review HUMAN.md strategic decision requests
+3. Configure Stripe pricing for Interview Simulator
+4. Approve content for publishing (LinkedIn, blogs)
 
 ---
 
@@ -56,43 +61,48 @@
 ### Important Files
 | File | Purpose |
 |------|---------|
-| `src/App.tsx` | Route definitions - needs /progress, /practice routes |
-| `src/components/layout/Header.tsx` | Desktop navigation - needs mobile menu hiding |
-| `src/styles/globals.css` | Design tokens - will migrate to HSL in Epic 5 |
-| `docs/PLAN.md` | Implementation plan with 38 tasks across 5 epics |
-| `docs/FRONTEND_DESIGN_ASSESSMENT.md` | Design gap analysis between frontends |
+| `docs/PLAN.md` | Portfolio execution plan with sprint tracking |
+| `docs/CTO_STRATEGY_REVIEW.md` | CTO analysis of content strategies |
+| `docs/IMMEDIATE_ACTION_PLAN.md` | Prioritized action items |
+| `HUMAN.md` | Strategic decisions requiring human input |
+| `codeswiftr-com/interview-simulator/backend/app/main.py` | Backend entry point |
+| `codeswiftr-com/interview-simulator/frontend/src/main.tsx` | Frontend entry point |
 
-### Reference Files (V2 UI to port from)
-| File | Purpose |
-|------|---------|
-| `../src/components/navigation/BottomNav.tsx` | Mobile navigation to port |
-| `../src/views/ProgressPage.tsx` | Progress page template |
-| `../src/shell/AppShell.tsx` | Route structure reference |
-| `../src/styles.css` | HSL design tokens reference |
+### Sprint 1-2 Deliverables Created
+| Location | Content |
+|----------|---------|
+| `codeswiftr-com/interview-simulator/docs/marketing/content/` | 5 files (50 pieces): strategy, blogs, social, email, resources |
+| `codeswiftr-com/interview-simulator/docs/marketing/linkedin/` | LINKEDIN_POSTS.md |
+| `codeswiftr-com/interview-simulator/docker/` | Complete staging Docker setup (Dockerfile, compose, nginx) |
+| `codeswiftr-com/interview-simulator/docs/CODEBASE_REVIEW.md` | Repomix codebase analysis |
+| `leanvibe-dev/docs/marketing/content/` | 5 files (50 pieces): B2B technical debt content |
+| `leanvibe-dev/docs/marketing/linkedin/` | LINKEDIN_POSTS.md |
+| `neoforge-dev/docs/marketing/content/` | 5 files (50 pieces): GraphRAG content |
+| `neoforge-dev/docs/research/GRAPHRAG_MARKET.md` | Market research |
+| `thebrightharbor-com/docs/compliance/` | 5 files: COPPA playbook, privacy policy, consent workflow |
 
 ### Recent Decisions
-- **Strategy: Evolve Legacy** - Keep `/frontend/` as primary, incrementally adopt v2 patterns
-- **HSL Colors** - Will migrate from HEX to HSL for better theming flexibility
-- **Shadcn-style Cards** - Will adopt Card/CardHeader/CardContent API pattern
-- **Keep /questions route** - Maintain as alias for /practice for backwards compat
+- **Tiered Focus Strategy**: CodeSwiftr 60%, LeanVibe/NeoForge 25%, Others 15%
+- **Content-First Revenue**: Generate 150+ content pieces before heavy development
+- **Security Validated**: Interview Simulator passed audit with LOW risk rating
 
 ### Gotchas Discovered
-- ⚠️ Two parallel frontends exist: `/frontend/` (port 5173) and `/src/` (port 5176)
-- ⚠️ V2 UI uses React Query; legacy uses direct Axios - don't mix for now
-- ⚠️ useAudioRecording tests have pre-existing timing issues - ignore for now
-- ⚠️ Bottom nav needs `pb-16` on main content to avoid overlap
+- Content is created but requires human approval before publishing
+- COPPA compliance playbook is informational; requires attorney review before TheBrightHarbor launch
+- Stripe not configured - blocks any monetization tracking
+- Many uncommitted files across the repository
 
 ### Patterns to Follow
-- **Component API**: Use Shadcn-style slots (CardHeader, CardContent, CardFooter)
-- **Design Tokens**: HSL format `--color-name: H S% L%` without `hsl()` wrapper
-- **Responsive**: Use `md:hidden` for mobile-only, `hidden md:flex` for desktop-only
-- **Commit Messages**: Conventional format `feat(frontend): description`
+- **Conventional Commits**: Use `feat:`, `docs:`, `fix:` prefixes
+- **Never commit to main**: Feature branches only
+- **80/20 Content Philosophy**: 80% problem exploration, 20% actionable advice
+- **CAR+ Framework**: For behavioral interview content (Conflict > Context > Action > Result + Insight)
 
 ### Things to Avoid
-- ❌ Don't add React Query to legacy frontend (defer for later)
-- ❌ Don't remove card-glass until Epic 7 (Card component migration)
-- ❌ Don't modify useAudioRecording tests (pre-existing issues)
-- ❌ Don't commit to a feature branch - work directly on main
+- Don't auto-commit - only commit when explicitly requested
+- Don't use pip - always use `uv` for Python dependencies
+- Don't start child-focused products without COPPA legal review
+- Don't make breaking API changes without human gate approval
 
 ---
 
@@ -100,27 +110,40 @@
 
 ### Verify Environment
 ```bash
+# Backend
+cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/backend
+uv sync
+
+# Frontend
 cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/frontend
-npm run build
+npm install
 ```
 
 ### Run Tests
 ```bash
-npm run test -- --run
-# Expect 255 passed, 7 failed (pre-existing)
+# Backend (385 tests)
+cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/backend
+uv run pytest
+
+# Frontend build check
+cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator/frontend
+npm run build
 ```
 
 ### Start Development
 ```bash
+# Backend
+uv run uvicorn app.main:app --reload
+
+# Frontend
 npm run dev
-# Opens on http://localhost:5173
 ```
 
-### View V2 UI for Reference
+### Check Git Status
 ```bash
-cd /Users/bogdan/work/FORGE/codeswiftr-com/interview-simulator
-npm run dev
-# Opens on http://localhost:5176
+cd /Users/bogdan/work/FORGE
+git status
+git branch --show-current  # Should be feat/content-strategy-cto-review
 ```
 
 ---
@@ -128,70 +151,92 @@ npm run dev
 ## Instructions for New Agent
 
 ### Mindset
-You are a pragmatic senior engineer continuing frontend design system unification. Your approach:
+You are a pragmatic senior engineer continuing CTO-level strategic work. Your approach:
 - Apply Pareto principle - 20% effort for 80% value
-- Port components from v2 UI, adapting to legacy patterns
-- Preserve all existing functionality while modernizing design
-- Clean commits after each phase completion
+- Content and revenue focus (Interview Simulator is LIVE)
+- Delegate to subagents when skills are available
+- Track all work in docs/PLAN.md
 
 ### Workflow
-1. Read this context and `docs/PLAN.md`
-2. Run `npm run build` to verify current state
-3. Start with Task 6.1: Create BottomNav component
-4. Use `frontend-design` skill for UI/UX decisions
-5. Use `frontend-builder` agent for implementation
-6. Commit after completing Phase 1 (Epic 6)
+1. Read this context and the plan file
+2. Check git status for uncommitted work
+3. Review HUMAN.md for pending decisions
+4. Continue with next priority task
+5. Update plan status as you progress
+
+### Available Skills for Delegation
+- `content-library-producer`: 50-piece content libraries
+- `content-publisher`: Transform content for specific platforms
+- `compliance-playbook-writer`: Policy and compliance docs
+- `dependency-auditor`: Security/dependency audits
+- `repo-reviewer`: Codebase analysis
+- `docker-composer`: Container configurations
+- `gemini-researcher` / `perplexity-researcher`: Deep research
 
 ### Quality Gates
 After each change:
-1. Run `npm run build` - must succeed
-2. Run `npm run test -- --run` - 255+ tests must pass
-3. Visual check on localhost:5173
-4. Commit with conventional message
-
-### Parallel Execution
-For Epic 6, launch two parallel subagents:
-- **Group A**: BottomNav (tasks 6.1-6.3)
-- **Group B**: ProgressPage (tasks 6.4-6.6)
+1. Run affected tests
+2. Ensure no regressions
+3. Commit with conventional message (when requested)
+4. Continue to next task
 
 ### If Stuck
-- Check v2 UI reference at `../src/components/navigation/BottomNav.tsx`
 - Use `/debug` for complex issues
-- Check `docs/FRONTEND_DESIGN_ASSESSMENT.md` for design decisions
-- The 7 failing tests are pre-existing - don't try to fix them
+- Use `/feedback` to review approach
+- Check `docs/PLAN.md` for context
+- Ask for clarification if requirements unclear
 
 ---
 
-## Epic Summary
+## Resume Command
 
-| Epic | Status | Tasks | Est |
-|------|--------|-------|-----|
-| Epic 6: Navigation | ✅ Complete | 8 | 10.5h |
-| Epic 5: Design Tokens | ✅ Complete | 7 | 7.5h |
-| Epic 7: Component API | ✅ Complete | 9 | 10.5h |
-| Epic 8: Dashboard | ✅ Complete | 7 | 5.5h |
-| Epic 9: Settings | ✅ Complete | 7 | 7.5h |
+To continue work, start with:
+```
+Read docs/PROMPT.md and /Users/bogdan/work/FORGE/docs/PLAN.md, verify tests pass, then help me decide next priorities.
+
+Key decisions needed:
+1. Commit all Sprint 1-2 deliverables?
+2. Start Sprint 3 tasks?
+3. Focus on human decisions (Stripe, publishing approval)?
+
+DO NOT STOP! Continue with the plan like an empowered, pragmatic senior engineer.
+```
 
 ---
 
-## Milestone Complete
+## Quick Reference: Uncommitted Deliverables
 
-All 5 epics of the Frontend Design System Unification have been completed:
+```
+Sprint 1-2 content created (150+ pieces total):
+├── codeswiftr-com/interview-simulator/
+│   ├── docs/marketing/content/ (5 files)
+│   ├── docs/marketing/linkedin/ (1 file)
+│   ├── docs/CODEBASE_REVIEW.md
+│   └── docker/ (14 files)
+├── leanvibe-dev/docs/marketing/
+│   ├── content/ (5 files)
+│   └── linkedin/ (1 file)
+├── neoforge-dev/docs/
+│   ├── marketing/content/ (5 files)
+│   └── research/ (1 file)
+└── thebrightharbor-com/docs/compliance/ (5 files)
+```
 
-### Summary of Changes
-- **Epic 6**: Added BottomNav mobile navigation, ProgressPage, /practice route
-- **Epic 5**: Migrated to HSL design tokens in design-tokens.css
-- **Epic 7**: Created Shadcn-style Card component API, migrated all pages
-- **Epic 8**: Simplified dashboard visual design, compact charts, improved empty states
-- **Epic 9**: Settings page polish, Account Overview section, accessibility improvements
+---
 
-### Quality Metrics
-- Build: ✅ Passes
+## Frontend-Specific Context (Previous Work)
+
+### Frontend Design System Status
+All 5 epics of the Frontend Design System Unification were completed previously:
+- Epic 5: Design Token Unification (HSL color system)
+- Epic 6: Navigation Modernization (BottomNav, /practice route)
+- Epic 7: Component API Migration (Shadcn-style Cards)
+- Epic 8: Dashboard Simplification
+- Epic 9: Settings & Polish
+
+### Frontend Quality
+- Build: Passes
 - Tests: 263 passing, 7 pre-existing failures (useAudioRecording timing)
-- Bundle sizes optimized (Dashboard: 476KB)
+- Bundle sizes optimized
 
-### Ready for Next Steps
-The frontend design system is now unified and ready for:
-1. E2E testing and visual regression
-2. Performance optimization (code splitting for DashboardPage)
-3. Feature development on the new foundation
+The frontend is production-ready and deployed to Cloudflare Pages at `app.codeswiftr.com`.
