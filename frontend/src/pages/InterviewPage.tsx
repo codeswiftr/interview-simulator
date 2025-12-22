@@ -70,12 +70,18 @@ function InterviewContent() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-primary flex flex-col">
+    <div className="min-h-screen bg-surface-primary flex flex-col relative">
+      {/* Ambient gradient for light mode - creates depth behind dark cards */}
+      <div className="absolute inset-0 bg-gradient-to-b from-surface-primary via-surface-secondary/30 to-surface-primary dark:from-transparent dark:via-transparent dark:to-transparent pointer-events-none" />
+
+      {/* Subtle radial glow behind content in light mode */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-electric-blue/[0.03] via-transparent to-transparent dark:from-transparent pointer-events-none" />
+
       {/* Header with timer, progress, controls */}
       <InterviewHeader />
 
       {/* Main Content */}
-      <div className="flex-1 container mx-auto px-6 py-8 max-w-4xl flex flex-col justify-center min-h-[calc(100vh-80px)] relative">
+      <div className="flex-1 container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-4xl flex flex-col justify-center min-h-[calc(100vh-80px)] relative z-10">
         {/* Error Alert */}
         {error && (
           <div
@@ -92,7 +98,7 @@ function InterviewContent() {
 
         {/* Question Display */}
         {currentQuestion && (
-          <div className="mb-12">
+          <div className="mb-6 sm:mb-12">
             <QuestionDisplay
               question={currentQuestion}
               questionNumber={currentQuestionIndex + 1}

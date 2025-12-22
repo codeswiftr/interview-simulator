@@ -98,6 +98,7 @@ export default function LoginPage() {
                   className="input pr-10"
                   placeholder="••••••••"
                   required
+                  autoComplete="current-password"
                   aria-invalid={!!error}
                   aria-describedby={error ? 'login-error' : undefined}
                 />

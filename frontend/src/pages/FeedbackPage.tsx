@@ -328,6 +328,10 @@ export default function FeedbackPage() {
                 setProcessingComplete(true);
                 loadFeedback();
               }}
+              onStuck={() => {
+                // When stuck in generating_feedback state, show the generate button
+                setProcessingComplete(true);
+              }}
             />
           )}
 

@@ -50,8 +50,32 @@ export default function RegisterPage() {
       // Track affiliate conversion on successful signup
       trackConversion(email);
     } catch (err) {
-      const axiosError = err as AxiosError<{ detail?: string }>;
-      setError(axiosError.response?.data?.detail || 'Registration failed. Please try again.');
+      console.error('[Register] Error:', err);
+      const axiosError = err as AxiosError<{ detail?: string | Array<{ msg: string }> }>;
+      console.error('[Register] Response status:', axiosError.response?.status);
+      console.error('[Register] Response data:', axiosError.response?.data);
+      const detail = axiosError.response?.data?.detail;
+
+      // Handle FastAPI validation errors (array format) vs simple string errors
+      let errorMessage: string;
+      if (Array.isArray(detail)) {
+        // Extract first validation error message
+        errorMessage = detail[0]?.msg || 'Validation failed. Please check your input.';
+      } else if (typeof detail === 'string') {
+        errorMessage = detail;
+      } else {
+        // Log the full error for debugging
+        console.error('[Register] Unknown error format, detail:', detail, 'full response:', axiosError.response);
+        errorMessage = 'Registration failed. Please try again.';
+      }
+
+      // Add helpful guidance for password-related errors
+      const isPasswordError = errorMessage.toLowerCase().includes('password');
+      if (isPasswordError) {
+        errorMessage += ' Please use a strong password with uppercase, lowercase, numbers, and special characters.';
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +150,8 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="••••••••"
                 required
-                aria-invalid={!!error && error.toLowerCase().includes('password')}
+                autoComplete="new-password"
+                aria-invalid={!!error && typeof error === 'string' && error.toLowerCase().includes('password')}
                 aria-describedby="password-strength register-error"
               />
               <div id="password-strength">
@@ -146,7 +171,8 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="••••••••"
                 required
-                aria-invalid={!!error && error.toLowerCase().includes('match')}
+                autoComplete="new-password"
+                aria-invalid={!!error && typeof error === 'string' && error.toLowerCase().includes('match')}
                 aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
