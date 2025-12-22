@@ -1,5 +1,5 @@
 import { Home, Mic, BarChart2, Settings } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -15,22 +15,27 @@ const navItems = [
  *
  * Displays a fixed bottom navigation for mobile devices (< md breakpoint).
  * Only shown when user is authenticated.
+ * Hidden during active interview sessions to reduce cognitive distraction.
  * Uses NavLink for active state detection.
  */
 export function BottomNav() {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
 
-  // Only show for authenticated users
-  if (!isAuthenticated) {
+  // Hide during active interview (path like /interview/uuid but not /interview/uuid/feedback)
+  const isActiveInterview = /^\/interview\/[^/]+$/.test(location.pathname);
+
+  // Only show for authenticated users, and not during active interviews
+  if (!isAuthenticated || isActiveInterview) {
     return null;
   }
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border-light bg-white/95 backdrop-blur-sm md:hidden dark:border-dark-border-light dark:bg-dark-surface-primary/95 safe-area-bottom"
+      className="fixed inset-x-0 bottom-0 z-40 glass border-t border-border-light md:hidden safe-area-bottom"
       aria-label="Mobile navigation"
     >
-      <div className="mx-auto flex max-w-md items-center justify-between px-4 pt-2 pb-1">
+      <div className="mx-auto flex max-w-md items-center justify-between px-3 pt-1.5 pb-1.5 h-14">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -39,14 +44,14 @@ export function BottomNav() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-1 flex-col items-center gap-1 py-1 text-xs font-medium transition-colors',
+                  'flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] sm:text-xs font-medium transition-colors',
                   'text-text-tertiary hover:text-text-secondary',
                   isActive && 'text-electric-blue'
                 )
               }
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
-              <span>{item.label}</span>
+              <Icon className="h-[18px] w-[18px] sm:h-5 sm:w-5" aria-hidden="true" />
+              <span className="leading-tight">{item.label}</span>
             </NavLink>
           );
         })}
