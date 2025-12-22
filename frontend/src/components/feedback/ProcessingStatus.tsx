@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { feedbackAPI } from '../../lib/api';
 import type { AxiosError } from 'axios';
@@ -20,6 +20,7 @@ interface ProcessingStatusData {
 interface ProcessingStatusProps {
   sessionId: string;
   onComplete?: () => void;
+  onStuck?: () => void; // Called when all responses processed but session feedback not generated
 }
 
 const stepLabels: Record<string, string> = {
@@ -31,10 +32,12 @@ const stepLabels: Record<string, string> = {
   failed: 'Processing failed',
 };
 
-export default function ProcessingStatus({ sessionId, onComplete }: ProcessingStatusProps) {
+export default function ProcessingStatus({ sessionId, onComplete, onStuck }: ProcessingStatusProps) {
   const [status, setStatus] = useState<ProcessingStatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stuckCount, setStuckCount] = useState(0);
+  const stuckNotified = React.useRef(false);
 
   useEffect(() => {
     let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -59,6 +62,13 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
             if (onComplete && data.current_step === 'complete') {
               onComplete();
             }
+          }
+
+          // Detect stuck state: all responses processed but feedback not generated
+          if (data.all_processed && data.current_step === 'generating_feedback' && !data.has_session_feedback) {
+            setStuckCount(prev => prev + 1);
+          } else {
+            setStuckCount(0);
           }
         }
       } catch (err) {
@@ -87,6 +97,14 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
       }
     };
   }, [sessionId, onComplete]);
+
+  // Call onStuck after 3 consecutive stuck polls (6 seconds)
+  useEffect(() => {
+    if (stuckCount >= 3 && onStuck && !stuckNotified.current) {
+      stuckNotified.current = true;
+      onStuck();
+    }
+  }, [stuckCount, onStuck]);
 
   if (loading && !status) {
     return (

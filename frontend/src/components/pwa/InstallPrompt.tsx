@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X, Download } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -10,13 +11,24 @@ interface BeforeInstallPromptEvent extends Event {
  * PWA Install Prompt component.
  * Shows a banner prompting users to install the app on supported browsers.
  * Automatically hides on iOS (uses Add to Home Screen instead).
+ * Context-aware: Only shows on non-interview pages to avoid interrupting user flow.
  */
 export function InstallPrompt() {
+  const location = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  // Don't show during active interview sessions
+  const isInterviewPage = location.pathname.includes('/interview/') && !location.pathname.includes('/feedback');
+
   useEffect(() => {
+    // Don't show during interviews
+    if (isInterviewPage) {
+      setShowPrompt(false);
+      return;
+    }
+
     // Check if already dismissed this session
     const wasDismissed = sessionStorage.getItem('pwa-install-dismissed');
     if (wasDismissed) {
@@ -32,8 +44,13 @@ export function InstallPrompt() {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      // Delay showing prompt to not interrupt initial experience
-      setTimeout(() => setShowPrompt(true), 3000);
+      // Delay showing prompt - longer delay to avoid interrupting user flow
+      // Only show after user has been on a non-interview page for 10 seconds
+      setTimeout(() => {
+        if (!isInterviewPage) {
+          setShowPrompt(true);
+        }
+      }, 10000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -41,7 +58,7 @@ export function InstallPrompt() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
     };
-  }, []);
+  }, [isInterviewPage]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -63,7 +80,8 @@ export function InstallPrompt() {
     sessionStorage.setItem('pwa-install-dismissed', 'true');
   };
 
-  if (!showPrompt || dismissed || !deferredPrompt) {
+  // Don't show during interviews or if dismissed
+  if (isInterviewPage || !showPrompt || dismissed || !deferredPrompt) {
     return null;
   }
 

@@ -26,16 +26,16 @@ export function ThemeSlider() {
     <div
       role="radiogroup"
       aria-label="Theme selection"
-      className="flex items-center justify-between p-2 bg-surface-tertiary rounded-lg"
+      className="flex items-center justify-between p-1.5 bg-[hsl(var(--muted))] rounded-lg gap-1"
     >
       <button
         role="radio"
         aria-checked={theme === 'light'}
         onClick={() => setTheme('light')}
         onKeyDown={(e) => handleKeyDown(e, 'light')}
-        className={`flex-1 flex items-center justify-center p-1.5 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${
+        className={`flex-1 flex items-center justify-center p-2 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 ${
           theme === 'light'
-            ? 'bg-white text-electric-blue shadow-sm'
+            ? 'bg-[hsl(var(--card))] text-electric-blue shadow-sm'
             : 'text-text-secondary hover:text-text-primary'
         }`}
         aria-label="Light mode"
@@ -48,9 +48,9 @@ export function ThemeSlider() {
         aria-checked={theme === 'system'}
         onClick={() => setTheme('system')}
         onKeyDown={(e) => handleKeyDown(e, 'system')}
-        className={`flex-1 flex items-center justify-center p-1.5 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${
+        className={`flex-1 flex items-center justify-center p-2 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 ${
           theme === 'system'
-            ? 'bg-white text-electric-blue shadow-sm'
+            ? 'bg-[hsl(var(--card))] text-electric-blue shadow-sm'
             : 'text-text-secondary hover:text-text-primary'
         }`}
         aria-label="System preference"
@@ -63,9 +63,9 @@ export function ThemeSlider() {
         aria-checked={theme === 'dark'}
         onClick={() => setTheme('dark')}
         onKeyDown={(e) => handleKeyDown(e, 'dark')}
-        className={`flex-1 flex items-center justify-center p-1.5 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${
+        className={`flex-1 flex items-center justify-center p-2 rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 ${
           theme === 'dark'
-            ? 'bg-white text-electric-blue shadow-sm'
+            ? 'bg-[hsl(var(--card))] text-electric-blue shadow-sm'
             : 'text-text-secondary hover:text-text-primary'
         }`}
         aria-label="Dark mode"

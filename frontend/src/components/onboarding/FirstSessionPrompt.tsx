@@ -1,4 +1,6 @@
-import { Play, X } from 'lucide-react';
+import { Play, X, Lightbulb } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { GrowthIllustration } from './OnboardingIllustrations';
 
 interface FirstSessionPromptProps {
   isOpen: boolean;
@@ -14,55 +16,71 @@ export default function FirstSessionPrompt({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white dark:bg-surface-secondary rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-electric-blue to-sky-500 p-6 text-white relative">
-          <button
-            onClick={onSkip}
-            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in border border-white/5">
+        {/* Close button */}
+        <button
+          onClick={onSkip}
+          className="absolute top-4 right-4 z-10 p-2 text-white/50 hover:text-white/80 transition-colors rounded-lg hover:bg-white/5"
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
 
-          <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
-            <Play size={32} />
+        {/* Main content area */}
+        <div className="relative">
+          {/* Ambient glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-electric-blue/15 via-transparent to-transparent pointer-events-none" />
+
+          {/* Illustration */}
+          <div className="relative h-40 flex items-center justify-center pt-6">
+            <GrowthIllustration className="w-32 h-32" animate={true} />
           </div>
 
-          <h2 className="text-2xl font-bold mb-2">
-            Ready to Start Practicing?
-          </h2>
+          {/* Content */}
+          <div className="px-8 pb-6 pt-2 text-center">
+            <h2 className="text-2xl font-bold text-white mb-1">
+              Ready to Begin?
+            </h2>
+            <p className="text-electric-blue font-medium text-sm mb-3">
+              Your first practice session awaits
+            </p>
+            <p className="text-white/70 text-sm leading-relaxed mb-6 max-w-sm mx-auto">
+              Create your first interview session and experience AI-powered feedback that helps you improve.
+            </p>
 
-          <p className="text-white/90 text-sm">
-            Create your first interview session to begin practicing with AI-powered feedback.
-          </p>
+            {/* Tip box */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+              <p className="text-white/80 text-sm flex items-start gap-2 text-left">
+                <Lightbulb size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-white">Tip:</strong> Start with a behavioral question to practice the STAR method, or try a technical question to work on problem-solving skills.
+                </span>
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <div className="bg-electric-blue/5 border border-electric-blue/20 rounded-lg p-4 mb-6">
-            <p className="text-sky-600 dark:text-electric-blue font-medium text-sm">
-              💡 Tip: Start with a behavioral question to practice the STAR method, or try a technical question to work on problem-solving skills.
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={onSkip}
-              className="btn-ghost flex-1"
-            >
-              Maybe Later
-            </button>
-            <button
-              onClick={onCreateSession}
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
-            >
-              <Play size={18} />
-              Create Session
-            </button>
-          </div>
+        {/* Actions */}
+        <div className="px-8 pb-8 flex gap-3">
+          <button
+            onClick={onSkip}
+            className="flex-1 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all font-medium"
+          >
+            Maybe Later
+          </button>
+          <button
+            onClick={onCreateSession}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all',
+              'bg-electric-blue hover:bg-sky-500 text-white',
+              'hover:translate-y-[-1px] hover:shadow-lg hover:shadow-electric-blue/25',
+              'active:translate-y-0 active:shadow-none'
+            )}
+          >
+            <Play size={18} />
+            Create Session
+          </button>
         </div>
       </div>
     </div>
