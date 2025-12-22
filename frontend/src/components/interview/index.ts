@@ -14,3 +14,4 @@ export { default as RecordingSection } from './RecordingSection';
 export { default as Timer } from './Timer';
 export { default as TranscriptionDisplay } from './TranscriptionDisplay';
 export { default as TranscriptionPanel } from './TranscriptionPanel';
+export { WaveformPlaceholder } from './WaveformPlaceholder';
