@@ -1,7 +1,8 @@
 import posthog from 'posthog-js';
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://app.posthog.com';
+// Use reverse proxy to bypass ad blockers - proxy at api.codeswiftr.com/ph forwards to PostHog EU
+const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://api.codeswiftr.com/ph';
 
 // Event names following {noun}_{action} convention
 export const Events = {
@@ -73,6 +74,8 @@ export const analytics = {
     try {
       posthog.init(POSTHOG_KEY!, {
         api_host: POSTHOG_HOST,
+        // UI host for EU region (used for opt-out, surveys, etc.)
+        ui_host: 'https://eu.posthog.com',
         capture_pageview: false, // We manually track page views
         capture_pageleave: true,
         persistence: 'localStorage',
@@ -80,7 +83,7 @@ export const analytics = {
         // Disable session recording by default (can enable in PostHog dashboard)
         disable_session_recording: true,
       });
-      console.debug('[Analytics] PostHog initialized');
+      console.debug('[Analytics] PostHog initialized with reverse proxy');
     } catch (error) {
       console.error('[Analytics] Failed to initialize PostHog:', error);
     }
