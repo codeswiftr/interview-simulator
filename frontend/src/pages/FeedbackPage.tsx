@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useScrollDirection } from '../hooks/useScrollDirection';
 import {
   ArrowLeft,
   RefreshCw,
@@ -71,6 +72,32 @@ export default function FeedbackPage() {
   });
   const [comparison, setComparison] = useState<ComparisonData | null>(null);
   const [processingComplete, setProcessingComplete] = useState(false);
+
+  // Sticky CTA tracking
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const scrollDirection = useScrollDirection({ threshold: 10 });
+
+  // Track when scrolled past hero section (throttled with rAF)
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (heroRef.current) {
+            const heroBottom = heroRef.current.getBoundingClientRect().bottom;
+            setShowStickyBar(heroBottom < 0);
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const loadFeedback = useCallback(async () => {
     if (!id) return;
@@ -332,6 +359,15 @@ export default function FeedbackPage() {
                 // When stuck in generating_feedback state, show the generate button
                 setProcessingComplete(true);
               }}
+              checkFeedbackExists={async () => {
+                // Directly check if feedback exists (bypassing status endpoint)
+                try {
+                  const feedbackRes = await feedbackAPI.getBySessionId(id);
+                  return feedbackRes.data !== null;
+                } catch {
+                  return false;
+                }
+              }}
             />
           )}
 
@@ -391,7 +427,7 @@ export default function FeedbackPage() {
           {hasFeedback && (
             <div className="animate-slide-up space-y-8">
               {/* Overall Score Hero */}
-              <Card className="p-8 sm:p-12 text-center relative overflow-hidden">
+              <Card ref={heroRef} className="p-8 sm:p-12 text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-electric-blue to-indigo-500"></div>
 
                 <h2 className="text-xl font-semibold mb-2 text-text-primary">Overall Performance</h2>
@@ -567,6 +603,25 @@ export default function FeedbackPage() {
           )}
         </div>
       </div>
+
+      {/* Sticky Practice Again Bar - Mobile only */}
+      {hasFeedback && (
+        <div
+          className={`fixed bottom-16 inset-x-0 z-30 md:hidden transition-transform duration-300 ease-out ${
+            showStickyBar && scrollDirection !== 'down' ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <div className="bg-surface-primary/95 backdrop-blur-sm border-t border-border-light px-4 py-3 safe-area-bottom">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full btn-primary flex items-center justify-center gap-2 py-3"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Practice Again
+            </button>
+          </div>
+        </div>
+      )}
     </ErrorBoundary>
   );
 }
