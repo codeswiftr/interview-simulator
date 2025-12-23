@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart2, Clock, Target, TrendingUp, Calendar, ChevronRight, AlertCircle } from 'lucide-react';
+import { BarChart2, Clock, Target, TrendingUp, Calendar, ChevronRight, AlertCircle, Plus } from 'lucide-react';
 import { userAPI, interviewsAPI } from '../lib/api';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Card } from '../components/ui/Card';
@@ -190,6 +190,33 @@ export default function ProgressPage() {
           </>
         )}
       </section>
+
+      {/* Quick Action - Start Practice */}
+      {!isLoading && sessions.length > 0 && (
+        <section className="mb-8">
+          <Card
+            variant="interactive"
+            className="p-4 cursor-pointer bg-gradient-to-r from-electric-blue/5 to-indigo-500/5 border-electric-blue/20 hover:border-electric-blue/40 focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2"
+            onClick={() => navigate('/practice')}
+            onKeyDown={(e) => e.key === 'Enter' && navigate('/practice')}
+            tabIndex={0}
+            role="button"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-electric-blue/10">
+                  <Plus className="w-5 h-5 text-electric-blue" />
+                </div>
+                <div>
+                  <p className="font-semibold text-text-primary">Continue Practicing</p>
+                  <p className="text-sm text-text-secondary">Keep improving your skills</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-electric-blue" />
+            </div>
+          </Card>
+        </section>
+      )}
 
       {/* Practice Areas */}
       {!isLoading && progress?.recommended_practice_areas && progress.recommended_practice_areas.length > 0 && (

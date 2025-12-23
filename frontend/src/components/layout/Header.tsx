@@ -1,9 +1,17 @@
 import { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X, Settings, ChevronDown } from 'lucide-react';
+import { LogOut, Menu, X, Settings, ChevronDown, Plus, Shuffle, RefreshCw, Play } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ThemeSlider } from '../ThemeSlider';
 import { useScrollDirection } from '../../hooks/useScrollDirection';
+
+// Contextual action configuration per route
+interface ContextualAction {
+  icon: React.ElementType;
+  label: string;
+  onClick?: () => void;
+  to?: string;
+}
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -16,6 +24,49 @@ export default function Header() {
 
   // Determine if header should be hidden on mobile (only when scrolling down and authenticated)
   const shouldHideOnMobile = isAuthenticated && scrollDirection === 'down';
+
+  // Get contextual action based on current route
+  const getContextualAction = (): ContextualAction | null => {
+    const path = location.pathname;
+
+    if (path === '/dashboard') {
+      return {
+        icon: Plus,
+        label: 'New',
+        // Dashboard handles this via its own modal - we emit a custom event
+        onClick: () => window.dispatchEvent(new CustomEvent('open-new-interview')),
+      };
+    }
+
+    if (path === '/practice' || path === '/questions') {
+      return {
+        icon: Shuffle,
+        label: 'Random',
+        onClick: () => window.dispatchEvent(new CustomEvent('random-practice')),
+      };
+    }
+
+    if (path === '/progress') {
+      return {
+        icon: Play,
+        label: 'Practice',
+        to: '/practice',
+      };
+    }
+
+    // Feedback page - /interview/:id/feedback
+    if (path.match(/^\/interview\/[^/]+\/feedback$/)) {
+      return {
+        icon: RefreshCw,
+        label: 'Again',
+        to: '/dashboard',
+      };
+    }
+
+    return null;
+  };
+
+  const contextualAction = isAuthenticated ? getContextualAction() : null;
 
   // Close mobile menu on route change
   useLayoutEffect(() => {
@@ -111,6 +162,12 @@ export default function Header() {
                   >
                     Questions
                   </Link>
+                  <Link
+                    to="/progress"
+                    className="text-text-secondary hover:text-text-primary transition-colors font-medium"
+                  >
+                    Progress
+                  </Link>
 
                   {/* User Menu Dropdown */}
                   <div className="relative" ref={userMenuRef}>
@@ -185,6 +242,29 @@ export default function Header() {
                 </>
               )}
             </nav>
+
+            {/* Mobile Contextual Action - Only show when authenticated */}
+            {isAuthenticated && contextualAction && (
+              <div className="flex items-center md:hidden">
+                {contextualAction.to ? (
+                  <Link
+                    to={contextualAction.to}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-electric-blue text-white text-sm font-medium shadow-sm active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-electric-blue focus-visible:ring-offset-2"
+                  >
+                    <contextualAction.icon className="w-4 h-4" aria-hidden="true" />
+                    <span>{contextualAction.label}</span>
+                  </Link>
+                ) : (
+                  <button
+                    onClick={contextualAction.onClick}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-electric-blue text-white text-sm font-medium shadow-sm active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-electric-blue focus-visible:ring-offset-2"
+                  >
+                    <contextualAction.icon className="w-4 h-4" aria-hidden="true" />
+                    <span>{contextualAction.label}</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Mobile Menu Button - Only show when not authenticated (no BottomNav) */}
             {!isAuthenticated && (

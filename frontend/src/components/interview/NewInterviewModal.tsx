@@ -130,9 +130,10 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       onClick={() => setFormData({ ...formData, interview_type: type.value as CreateInterviewFormData['interview_type'] })}
                       className={`
                         relative group p-4 rounded-xl text-left border-2 transition-all duration-200
+                        focus:outline-none focus-visible:ring-2 focus-visible:ring-electric-blue focus-visible:ring-offset-2
                         ${isSelected
-                          ? `border-electric-blue bg-electric-blue/5 dark:bg-electric-blue/10 shadow-md shadow-electric-blue/10`
-                          : 'border-transparent bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 hover:border-[hsl(var(--border))]'
+                          ? `border-electric-blue bg-electric-blue/10 dark:bg-electric-blue/15 shadow-lg shadow-electric-blue/20 scale-[1.02]`
+                          : 'border-transparent bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 hover:border-[hsl(var(--border))] hover:scale-[1.01]'
                         }
                       `}
                     >
@@ -267,7 +268,6 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
           <button
             type="submit"
             form="new-interview-form"
-            onClick={handleSubmit}
             className="btn-primary"
             disabled={isSubmitting}
           >
