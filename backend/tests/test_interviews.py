@@ -4,7 +4,6 @@ Uses shared fixtures from conftest.py for database setup and client.
 """
 
 import pytest
-from httpx import AsyncClient
 from sqlmodel import select
 
 from app.models.interview import (
@@ -1819,7 +1818,7 @@ async def test_submit_response_wrong_question_id_fails(client, db_session):
         f"/api/v1/interviews/{interview_id}/questions",
         headers={"Authorization": token},
     )
-    assigned_question_id = questions_resp.json()[0]["id"]
+    questions_resp.json()[0]["id"]
 
     # Create a new question AFTER interview started (definitely not assigned)
     unassigned_question = Question(

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_session
@@ -53,7 +53,7 @@ async def _get_interview_for_user(
 
 
 @router.post(
-    "/",
+    "",
     response_model=InterviewSessionRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(check_interview_quota)],
@@ -102,7 +102,7 @@ async def create_interview(
     return interview
 
 
-@router.get("/", response_model=list[InterviewSessionRead])
+@router.get("", response_model=list[InterviewSessionRead])
 async def list_interviews(
     status_filter: InterviewStatus | None = Query(None, alias="status"),
     limit: int = Query(20, ge=1, le=100),
@@ -148,8 +148,18 @@ async def start_interview(
         )
 
     # Assign questions if not already assigned (idempotent for re-starting)
-    has_questions = await interview_service.has_assigned_questions(session, interview_id)
-    if not has_questions:
+    # Check both if questions exist AND if the count matches (prevents partial/duplicate assignments)
+    existing_questions = await interview_service.get_interview_questions(session, interview_id)
+    expected_count = interview.question_count
+    
+    if len(existing_questions) != expected_count:
+        # Clear any existing questions if count doesn't match (handles partial assignments or duplicates)
+        if existing_questions:
+            await session.exec(
+                delete(InterviewQuestion).where(InterviewQuestion.session_id == interview_id)
+            )
+            await session.flush()
+        # Assign the correct number of questions
         try:
             await interview_service.assign_questions(session, interview)
         except ValueError as e:

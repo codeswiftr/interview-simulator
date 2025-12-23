@@ -10,7 +10,7 @@ This test module specifically targets coverage gaps in assign_questions():
 from uuid import uuid4
 
 import pytest
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.models.interview import (
     InterviewQuestion,
@@ -23,14 +23,8 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.interview_service import InterviewService
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
+# Use shared fixtures from conftest.py (db_session, clean_database, etc.)
 
-@pytest.fixture
-async def db_session():
-    """Provide a database session for tests."""
-    async with SessionLocal() as session:
-        yield session
 
 @pytest.fixture
 async def test_user(db_session):

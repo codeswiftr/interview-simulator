@@ -1,0 +1,159 @@
+# =============================================================================
+# Interview Simulator - Docker Local Development Makefile
+# Convenience commands for managing the local development environment
+# =============================================================================
+
+.PHONY: help dev-up dev-down dev-restart dev-logs dev-build dev-clean
+
+# Default target
+.DEFAULT_GOAL := help
+
+# Environment file
+ENV_FILE := .env
+COMPOSE := docker compose -f docker-compose.yml --env-file $(ENV_FILE)
+
+# Colors for output
+CYAN := \033[0;36m
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m # No Color
+
+help: ## Show this help message
+	@echo "$(CYAN)Interview Simulator - Docker Local Development$(NC)"
+	@echo ""
+	@echo "$(GREEN)Available commands:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(CYAN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(YELLOW)Quick start:$(NC)"
+	@echo "  1. cp .env.example .env"
+	@echo "  2. Edit .env with your API keys (optional for basic dev)"
+	@echo "  3. make dev-up"
+	@echo ""
+
+dev-init: ## Initialize development environment
+	@echo "$(CYAN)Initializing development environment...$(NC)"
+	@if [ ! -f $(ENV_FILE) ]; then \
+		cp .env.example $(ENV_FILE); \
+		echo "$(GREEN)Created $(ENV_FILE) from .env.example$(NC)"; \
+		echo "$(YELLOW)Edit $(ENV_FILE) to add your API keys if needed$(NC)"; \
+	else \
+		echo "$(YELLOW)$(ENV_FILE) already exists, skipping...$(NC)"; \
+	fi
+
+dev-build: ## Build development images
+	@echo "$(CYAN)Building development images...$(NC)"
+	$(COMPOSE) build --parallel
+
+dev-up: dev-init ## Start development environment
+	@echo "$(CYAN)Starting development environment...$(NC)"
+	$(COMPOSE) up -d
+	@echo "$(GREEN)Development environment started!$(NC)"
+	@echo ""
+	@echo "$(CYAN)Access:$(NC)"
+	@echo "  Frontend: http://localhost:5173"
+	@echo "  Backend API: http://localhost:8000"
+	@echo "  API Docs: http://localhost:8000/docs"
+	@echo ""
+	@echo "$(YELLOW)Run 'make dev-logs' to view logs$(NC)"
+
+dev-down: ## Stop development environment
+	@echo "$(CYAN)Stopping development environment...$(NC)"
+	$(COMPOSE) down
+	@echo "$(GREEN)Development environment stopped!$(NC)"
+
+dev-restart: ## Restart development environment
+	@echo "$(CYAN)Restarting development environment...$(NC)"
+	$(COMPOSE) restart
+	@echo "$(GREEN)Development environment restarted!$(NC)"
+
+dev-restart-backend: ## Restart backend service only
+	@echo "$(CYAN)Restarting backend...$(NC)"
+	$(COMPOSE) restart backend
+	@echo "$(GREEN)Backend restarted!$(NC)"
+
+dev-restart-frontend: ## Restart frontend service only
+	@echo "$(CYAN)Restarting frontend...$(NC)"
+	$(COMPOSE) restart frontend
+	@echo "$(GREEN)Frontend restarted!$(NC)"
+
+dev-logs: ## View logs from all services
+	$(COMPOSE) logs -f
+
+dev-logs-backend: ## View backend logs
+	$(COMPOSE) logs -f backend
+
+dev-logs-frontend: ## View frontend logs
+	$(COMPOSE) logs -f frontend
+
+dev-logs-db: ## View database logs
+	$(COMPOSE) logs -f postgres
+
+dev-ps: ## Show running containers
+	$(COMPOSE) ps
+
+dev-shell-backend: ## Open shell in backend container
+	$(COMPOSE) exec backend /bin/sh
+
+dev-shell-frontend: ## Open shell in frontend container
+	$(COMPOSE) exec frontend /bin/sh
+
+dev-shell-db: ## Open PostgreSQL shell
+	$(COMPOSE) exec postgres psql -U postgres -d interview_simulator
+
+dev-migrate: ## Run database migrations
+	@echo "$(CYAN)Running database migrations...$(NC)"
+	$(COMPOSE) exec backend alembic upgrade head
+	@echo "$(GREEN)Migrations complete!$(NC)"
+
+dev-migrate-rollback: ## Rollback last migration
+	@echo "$(CYAN)Rolling back last migration...$(NC)"
+	$(COMPOSE) exec backend alembic downgrade -1
+	@echo "$(GREEN)Rollback complete!$(NC)"
+
+dev-seed: ## Seed database with sample data
+	@echo "$(CYAN)Seeding database...$(NC)"
+	$(COMPOSE) exec backend python -c "from app.data.seed_questions import seed_questions; import asyncio; asyncio.run(seed_questions())"
+	@echo "$(GREEN)Database seeded!$(NC)"
+
+dev-test-backend: ## Run backend tests
+	@echo "$(CYAN)Running backend tests...$(NC)"
+	$(COMPOSE) exec backend pytest
+
+dev-test-backend-coverage: ## Run backend tests with coverage
+	@echo "$(CYAN)Running backend tests with coverage...$(NC)"
+	$(COMPOSE) exec backend pytest --cov=app --cov-report=html --cov-report=term
+
+dev-clean: ## Remove stopped containers and volumes (WARNING: deletes data!)
+	@echo "$(RED)WARNING: This will delete all data!$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		$(COMPOSE) down -v; \
+		echo "$(GREEN)Containers and volumes removed!$(NC)"; \
+	fi
+
+dev-clean-all: ## Remove all containers, images, and volumes
+	@echo "$(RED)WARNING: This will remove all Docker resources!$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		$(COMPOSE) down -v; \
+		docker system prune -af; \
+		echo "$(GREEN)All resources removed!$(NC)"; \
+	fi
+
+dev-health: ## Check health of all services
+	@echo "$(CYAN)Checking service health...$(NC)"
+	@echo ""
+	@$(COMPOSE) ps
+	@echo ""
+	@echo "$(CYAN)Backend health:$(NC)"
+	@curl -s http://localhost:8000/api/v1/health | python3 -m json.tool || echo "$(RED)Backend not responding$(NC)"
+	@echo ""
+	@echo "$(CYAN)Frontend health:$(NC)"
+	@curl -s http://localhost:5173/ > /dev/null && echo "$(GREEN)Frontend is running$(NC)" || echo "$(RED)Frontend not responding$(NC)"
+	@echo ""
+
+dev-stats: ## Show container resource usage
+	docker stats --no-stream

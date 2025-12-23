@@ -5,7 +5,6 @@ Use get_password_strength() for frontend warnings about weak passwords.
 """
 
 import re
-from typing import List
 from enum import Enum
 
 
@@ -39,7 +38,7 @@ class PasswordValidator:
         """
         self.min_length = min_length
 
-    def validate(self, password: str, username: str = None, email: str = None) -> List[str]:
+    def validate(self, password: str, username: str = None, email: str = None) -> list[str]:
         """Validate password - only blocks trivially weak passwords.
 
         Args:
@@ -167,7 +166,7 @@ class PasswordValidator:
 password_validator = PasswordValidator()
 
 
-def validate_password(password: str, username: str = None, email: str = None) -> List[str]:
+def validate_password(password: str, username: str = None, email: str = None) -> list[str]:
     """Validate password using the global validator.
 
     Args:
@@ -205,3 +204,17 @@ def get_password_strength(password: str) -> dict:
         Dictionary with strength metrics
     """
     return password_validator.get_password_strength(password)
+
+
+def validate_password_complexity(password: str) -> None:
+    """Validate password complexity, raising ValueError if invalid.
+
+    Args:
+        password: Password to validate
+
+    Raises:
+        ValueError: If password doesn't meet complexity requirements
+    """
+    errors = password_validator.validate(password)
+    if errors:
+        raise ValueError("; ".join(errors))

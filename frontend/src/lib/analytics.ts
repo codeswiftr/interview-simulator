@@ -1,7 +1,8 @@
 import posthog from 'posthog-js';
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://app.posthog.com';
+// Use reverse proxy to bypass ad blockers - proxy at api.codeswiftr.com/ph forwards to PostHog EU
+const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://api.codeswiftr.com/ph';
 
 // Event names following {noun}_{action} convention
 export const Events = {
@@ -15,9 +16,11 @@ export const Events = {
 
   // Upgrade / billing funnel events
   UPGRADE_MODAL_OPENED: 'upgrade_modal_opened',
+  UPGRADE_MODAL_CLOSED: 'upgrade_modal_closed',
   UPGRADE_CTA_CLICKED: 'upgrade_cta_clicked',
   CHECKOUT_STARTED: 'checkout_started',
   UPGRADE_REASON_SUBMITTED: 'upgrade_reason_submitted',
+  LIMIT_REACHED: 'limit_reached',
 
   // Interview lifecycle events
   INTERVIEW_CREATED: 'interview_created',
@@ -27,6 +30,7 @@ export const Events = {
 
   // Question/recording events
   QUESTION_VIEWED: 'question_viewed',
+  QUESTION_SKIPPED: 'question_skipped',
   RECORDING_STARTED: 'recording_started',
   RECORDING_COMPLETED: 'recording_completed',
 
@@ -40,6 +44,18 @@ export const Events = {
 
   // Payment events
   SUBSCRIPTION_CREATED: 'subscription_created',
+
+  // Settings events
+  THEME_CHANGED: 'theme_changed',
+  VOICE_SETTINGS_CHANGED: 'voice_settings_changed',
+
+  // Question bank events
+  QUESTION_FILTER_APPLIED: 'question_filter_applied',
+  QUESTION_PRACTICE_STARTED: 'question_practice_started',
+
+  // Error events
+  UPLOAD_FAILED: 'upload_failed',
+  API_ERROR: 'api_error',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];
@@ -73,6 +89,8 @@ export const analytics = {
     try {
       posthog.init(POSTHOG_KEY!, {
         api_host: POSTHOG_HOST,
+        // UI host for EU region (used for opt-out, surveys, etc.)
+        ui_host: 'https://eu.posthog.com',
         capture_pageview: false, // We manually track page views
         capture_pageleave: true,
         persistence: 'localStorage',
@@ -80,7 +98,7 @@ export const analytics = {
         // Disable session recording by default (can enable in PostHog dashboard)
         disable_session_recording: true,
       });
-      console.debug('[Analytics] PostHog initialized');
+      console.debug('[Analytics] PostHog initialized with reverse proxy');
     } catch (error) {
       console.error('[Analytics] Failed to initialize PostHog:', error);
     }

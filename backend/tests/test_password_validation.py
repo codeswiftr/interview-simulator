@@ -5,12 +5,13 @@ while blocking only trivially weak ones.
 """
 
 import pytest
+
 from app.utils.password_validation import (
-    PasswordValidator,
     PasswordValidationError,
-    validate_password,
-    is_password_valid,
+    PasswordValidator,
     get_password_strength,
+    is_password_valid,
+    validate_password,
 )
 
 

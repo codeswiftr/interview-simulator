@@ -3,8 +3,7 @@
 from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.models.interview import (
     InterviewResponse,
@@ -17,6 +16,7 @@ from app.models.user import User
 
 # Import register_and_login from conftest.py
 from tests.conftest import register_and_login
+
 
 async def create_test_interview_with_response(db_session, user: User) -> tuple:
     """Create interview session with response for testing."""
@@ -59,7 +59,7 @@ async def test_get_session_feedback_nonexistent_session_fails(client):
     fake_id = uuid4()
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{fake_id}",
+        f"/api/v1/feedback/session/{fake_id}",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -80,7 +80,7 @@ async def test_get_session_feedback_unauthorized_access_fails(client, db_session
     token2 = await register_and_login(client, "user2@example.com")
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}",
+        f"/api/v1/feedback/session/{interview.id}",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -98,7 +98,7 @@ async def test_get_session_feedback_no_feedback_generated(client, db_session):
     interview, _ = await create_test_interview_with_response(db_session, user)
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}",
+        f"/api/v1/feedback/session/{interview.id}",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -124,7 +124,7 @@ async def test_get_all_session_feedbacks_empty_list(client, db_session):
     await db_session.refresh(interview)
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}/all",
+        f"/api/v1/feedback/session/{interview.id}/all",
         headers={"Authorization": token},
     )
     assert resp.status_code == 200
@@ -145,7 +145,7 @@ async def test_get_all_session_feedbacks_unauthorized_fails(client, db_session):
     token2 = await register_and_login(client, "other@example.com")
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}/all",
+        f"/api/v1/feedback/session/{interview.id}/all",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -159,7 +159,7 @@ async def test_get_response_feedback_nonexistent_response_fails(client):
     fake_id = uuid4()
 
     resp = await client.get(
-        f"/api/v1/feedbackresponse/{fake_id}",
+        f"/api/v1/feedback/response/{fake_id}",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -181,7 +181,7 @@ async def test_get_response_feedback_unauthorized_access_fails(client, db_sessio
     token2 = await register_and_login(client, "resp_other@example.com")
 
     resp = await client.get(
-        f"/api/v1/feedbackresponse/{response.id}",
+        f"/api/v1/feedback/response/{response.id}",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -199,7 +199,7 @@ async def test_get_response_feedback_not_generated_fails(client, db_session):
     _, response = await create_test_interview_with_response(db_session, user)
 
     resp = await client.get(
-        f"/api/v1/feedbackresponse/{response.id}",
+        f"/api/v1/feedback/response/{response.id}",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -224,7 +224,7 @@ async def test_generate_response_feedback_unauthorized_fails(client, db_session)
     token2 = await register_and_login(client, "gen_other@example.com")
 
     resp = await client.post(
-        f"/api/v1/feedbackgenerate/response/{response.id}",
+        f"/api/v1/feedback/generate/response/{response.id}",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -236,7 +236,7 @@ async def test_generate_response_feedback_nonexistent_fails(client):
     fake_id = uuid4()
 
     resp = await client.post(
-        f"/api/v1/feedbackgenerate/response/{fake_id}",
+        f"/api/v1/feedback/generate/response/{fake_id}",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -258,7 +258,7 @@ async def test_generate_session_feedback_unauthorized_fails(client, db_session):
     token2 = await register_and_login(client, "session_gen_other@example.com")
 
     resp = await client.post(
-        f"/api/v1/feedbackgenerate/session/{interview.id}",
+        f"/api/v1/feedback/generate/session/{interview.id}",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -270,7 +270,7 @@ async def test_generate_session_feedback_nonexistent_fails(client):
     fake_id = uuid4()
 
     resp = await client.post(
-        f"/api/v1/feedbackgenerate/session/{fake_id}",
+        f"/api/v1/feedback/generate/session/{fake_id}",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -294,7 +294,7 @@ async def test_get_session_processing_status_unauthorized_fails(client, db_sessi
     token2 = await register_and_login(client, "status_other@example.com")
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}/status",
+        f"/api/v1/feedback/session/{interview.id}/status",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -306,7 +306,7 @@ async def test_get_session_processing_status_nonexistent_fails(client):
     fake_id = uuid4()
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{fake_id}/status",
+        f"/api/v1/feedback/session/{fake_id}/status",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -330,7 +330,7 @@ async def test_get_session_comparison_unauthorized_fails(client, db_session):
     token2 = await register_and_login(client, "comp_other@example.com")
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}/comparison",
+        f"/api/v1/feedback/session/{interview.id}/comparison",
         headers={"Authorization": token2},
     )
     assert resp.status_code == 404
@@ -348,7 +348,7 @@ async def test_get_session_comparison_no_feedback_fails(client, db_session):
     interview, _ = await create_test_interview_with_response(db_session, user)
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{interview.id}/comparison",
+        f"/api/v1/feedback/session/{interview.id}/comparison",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404
@@ -361,7 +361,7 @@ async def test_get_session_comparison_nonexistent_session_fails(client):
     fake_id = uuid4()
 
     resp = await client.get(
-        f"/api/v1/feedbacksession/{fake_id}/comparison",
+        f"/api/v1/feedback/session/{fake_id}/comparison",
         headers={"Authorization": token},
     )
     assert resp.status_code == 404

@@ -4,7 +4,6 @@ Uses shared fixtures from conftest.py for database setup and client.
 """
 
 import pytest
-from httpx import AsyncClient
 
 from app.middleware.rate_limit import RateLimitConfig, SecureRateLimitMiddleware
 

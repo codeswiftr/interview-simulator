@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2, Calendar, Target } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2, Calendar, Target, Sun, Moon, Monitor, LogOut, Download, Smartphone } from 'lucide-react';
 import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -12,13 +12,16 @@ import UpgradeModal from '../components/subscription/UpgradeModal';
 import { useVoicePreferences } from '../hooks/useVoicePreferences';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 import VoiceSettingsPanel from '../components/settings/VoiceSettingsPanel';
+import { getRecommendedVoice } from '../lib/voice-quality';
 import type { SubscriptionStatus, ExperienceLevel } from '../types';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const toast = useToast();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const { canInstall, isInstalled, isIOS, promptInstall } = usePWAInstall();
   const { theme, setTheme } = useTheme();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, resetSettings: resetVoiceSettings } = useVoicePreferences();
   const {
@@ -73,25 +76,58 @@ export default function SettingsPage() {
     setPitch(voiceSettings.pitch);
     setVolume(voiceSettings.volume);
 
-    if (voiceSettings.voiceName && voices.length > 0) {
-      const match = voices.find((v) => v.name === voiceSettings.voiceName);
-      if (match) {
-        setVoice(match);
+    if (voices.length > 0) {
+      // Use explicit voice if set, otherwise use recommended
+      const voiceToUse = voiceSettings.voiceName
+        ? voices.find((v) => v.name === voiceSettings.voiceName)
+        : getRecommendedVoice(voices);
+
+      if (voiceToUse) {
+        setVoice(voiceToUse);
+        // Auto-save recommended voice if none is set
+        if (!voiceSettings.voiceName && voiceToUse) {
+          updateVoiceSettings({ voiceName: voiceToUse.name });
+        }
       }
     }
-  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume, setPitch, setRate, setVoice, setVolume, voices]);
+  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume, setPitch, setRate, setVoice, setVolume, voices, updateVoiceSettings]);
 
-  const handleTestVoice = () => {
-    if (!isSpeechSupported || !voiceSettings.enabled) return;
+  const handleTestVoice = async () => {
+    if (!isSpeechSupported || !voiceSettings.enabled) {
+      toast.error('Voice not available', 'Please enable mentor voice first');
+      return;
+    }
+
+    // Ensure voices are loaded
+    if (voices.length === 0) {
+      toast.error('Voices loading', 'Please wait for voices to load');
+      return;
+    }
+
+    // Ensure we have a voice selected (use recommended if none)
+    const voiceToUse = voiceSettings.voiceName 
+      ? voices.find(v => v.name === voiceSettings.voiceName)
+      : getRecommendedVoice(voices);
+
+    if (voiceToUse) {
+      setVoice(voiceToUse);
+    }
+
+    // Stop any current speech
     stop();
+    
+    // Small delay to ensure voice is set
+    setTimeout(() => {
     const sample = 'Hi! I am your interview mentor. Let us prepare together.';
     speak(sample);
+    }, 100);
   };
 
   const voiceSummary = useMemo(() => {
-    const name = voiceSettings.voiceName || 'System default';
+    const recommended = getRecommendedVoice(voices);
+    const name = voiceSettings.voiceName || recommended?.name || 'System default';
     return `${name} • ${voiceSettings.rate.toFixed(2)}x • pitch ${voiceSettings.pitch.toFixed(2)} • volume ${voiceSettings.volume.toFixed(2)}`;
-  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume]);
+  }, [voiceSettings.pitch, voiceSettings.rate, voiceSettings.voiceName, voiceSettings.volume, voices]);
 
   useEffect(() => {
     loadSubscription();
@@ -237,82 +273,82 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-primary py-8">
+    <div className="min-h-screen bg-surface-primary py-4 sm:py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-8">
           <Link
             to="/dashboard"
-            className="inline-flex items-center gap-2 text-electric-blue hover:text-electric-blue/80 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-electric-blue hover:text-electric-blue/80 transition-colors mb-3 sm:mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="body-default font-medium">Back to Dashboard</span>
+            <span className="body-default font-medium text-sm sm:text-base">Back to Dashboard</span>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <SettingsIcon className="w-6 h-6 text-electric-blue" />
-            <h1 className="heading-page">Settings</h1>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <SettingsIcon className="w-5 h-5 sm:w-6 sm:h-6 text-electric-blue" />
+            <h1 className="heading-page text-2xl sm:text-3xl">Settings</h1>
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <Card className="p-4 mb-8 border-status-error bg-status-error/10">
-            <p className="text-status-error">{error}</p>
+          <Card className="p-3 sm:p-4 mb-4 sm:mb-8 border-status-error bg-status-error/10">
+            <p className="text-status-error text-sm sm:text-base">{error}</p>
           </Card>
         )}
 
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-6 lg:space-y-8">
           {/* Account Summary */}
           {user && (
-            <Card className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <User className="w-5 h-5 text-electric-blue" />
-                <h2 className="heading-section">Account Overview</h2>
+            <Card className="p-4 sm:p-6 lg:p-8">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 lg:mb-8">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+                <h2 className="heading-section text-lg sm:text-xl">Account Overview</h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <User className="w-5 h-5 text-electric-blue" />
+              <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+                <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-electric-blue" />
                   </div>
-                  <div>
-                    <p className="text-xs text-text-tertiary">Name</p>
-                    <p className="font-medium text-text-primary">{user.full_name || 'Not set'}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-text-tertiary mb-0.5">Name</p>
+                    <p className="text-sm sm:text-base font-medium text-text-primary truncate">{user.full_name || 'Not set'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-electric-blue" />
+                <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-electric-blue" />
                   </div>
-                  <div>
-                    <p className="text-xs text-text-tertiary">Member since</p>
-                    <p className="font-medium text-text-primary">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-text-tertiary mb-0.5">Member since</p>
+                    <p className="text-sm sm:text-base font-medium text-text-primary">
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <Target className="w-5 h-5 text-electric-blue" />
+                <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <Target className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-electric-blue" />
                   </div>
-                  <div>
-                    <p className="text-xs text-text-tertiary">Total interviews</p>
-                    <p className="font-medium text-text-primary">{user.total_interviews || 0}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-text-tertiary mb-0.5">Total interviews</p>
+                    <p className="text-sm sm:text-base font-medium text-text-primary">{user.total_interviews || 0}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-electric-blue/10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-electric-blue">
+                <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-electric-blue/10 flex items-center justify-center shrink-0">
+                    <span className="text-sm sm:text-base font-bold text-electric-blue">
                       {user.subscription_tier === 'pro' ? '★' : user.subscription_tier === 'team' ? '★★' : '○'}
                     </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-text-tertiary">Plan</p>
-                    <p className="font-medium text-text-primary capitalize">{user.subscription_tier || 'Free'}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-text-tertiary mb-0.5">Plan</p>
+                    <p className="text-sm sm:text-base font-medium text-text-primary capitalize">{user.subscription_tier || 'Free'}</p>
                   </div>
                 </div>
               </div>
@@ -320,13 +356,13 @@ export default function SettingsPage() {
           )}
 
           {/* Profile Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <User className="w-5 h-5 text-electric-blue" />
-              <h2 className="heading-section">Profile</h2>
+          <Card className="p-4 sm:p-6 lg:p-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 lg:mb-8">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+              <h2 className="heading-section text-lg sm:text-xl">Profile</h2>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4">
+            <form onSubmit={handleSaveProfile} className="space-y-4 sm:space-y-6">
               <div>
                 <label className="label mb-2 block">Full Name</label>
                 <input
@@ -386,82 +422,131 @@ export default function SettingsPage() {
           </Card>
 
           {/* Theme Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Palette className="w-5 h-5 text-electric-blue" />
-              <h2 className="heading-section">Appearance</h2>
+          <Card className="p-4 sm:p-6 lg:p-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 lg:mb-8">
+              <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+              <h2 className="heading-section text-lg sm:text-xl">Appearance</h2>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="label mb-3 block">Theme</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="group" aria-label="Theme selection">
+            <div>
+              <label className="label mb-3 sm:mb-4 block text-sm sm:text-base">Theme</label>
+              {/* Mobile: Compact horizontal layout */}
+              <div className="sm:hidden">
+                <div className="flex gap-2" role="group" aria-label="Theme selection">
                   <button
                     type="button"
                     onClick={() => setTheme('light')}
                     aria-pressed={theme === 'light'}
-                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'light'
-                      ? 'border-electric-blue bg-electric-blue/10'
-                      : 'border-border-light hover:border-electric-blue/50'
+                    className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 bg-[hsl(var(--card))] ${theme === 'light'
+                      ? 'border-electric-blue'
+                      : 'border-[hsl(var(--border))]'
                       }`}
                   >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg bg-white border border-border-light flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400"></div>
-                      </div>
-                      <span className="font-medium">Light</span>
-                      <span className="text-xs text-text-tertiary">Bright and clear</span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setTheme('dark')}
-                    aria-pressed={theme === 'dark'}
-                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'dark'
-                      ? 'border-electric-blue bg-electric-blue/10'
-                      : 'border-border-light hover:border-electric-blue/50'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500"></div>
-                      </div>
-                      <span className="font-medium">Dark</span>
-                      <span className="text-xs text-text-tertiary">Easy on the eyes</span>
-                    </div>
+                    <Sun className={`w-5 h-5 ${theme === 'light' ? 'text-electric-blue' : 'text-text-secondary'}`} />
+                    <span className="text-xs font-medium text-text-primary">Light</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setTheme('system')}
                     aria-pressed={theme === 'system'}
-                    className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 ${theme === 'system'
-                      ? 'border-electric-blue bg-electric-blue/10'
-                      : 'border-border-light hover:border-electric-blue/50'
+                    className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 bg-[hsl(var(--card))] ${theme === 'system'
+                      ? 'border-electric-blue'
+                      : 'border-[hsl(var(--border))]'
                       }`}
                   >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-gray-800 border border-border-light flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-electric-blue to-sky-500"></div>
-                      </div>
-                      <span className="font-medium">System</span>
-                      <span className="text-xs text-text-tertiary">Auto-adjust</span>
-                    </div>
+                    <Monitor className={`w-5 h-5 ${theme === 'system' ? 'text-electric-blue' : 'text-text-secondary'}`} />
+                    <span className="text-xs font-medium text-text-primary">System</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    aria-pressed={theme === 'dark'}
+                    className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 bg-[hsl(var(--card))] ${theme === 'dark'
+                      ? 'border-electric-blue'
+                      : 'border-[hsl(var(--border))]'
+                      }`}
+                  >
+                    <Moon className={`w-5 h-5 ${theme === 'dark' ? 'text-electric-blue' : 'text-text-secondary'}`} />
+                    <span className="text-xs font-medium text-text-primary">Dark</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Desktop: Larger cards with descriptions */}
+              <div className="hidden sm:grid grid-cols-3 gap-3 lg:gap-4" role="group" aria-label="Theme selection">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
+                  className={`p-4 lg:p-5 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 bg-[hsl(var(--card))] ${theme === 'light'
+                    ? 'border-electric-blue'
+                    : 'border-[hsl(var(--border))] hover:border-electric-blue/50'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2 lg:gap-3">
+                    <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center shadow-sm ${theme === 'light' ? 'bg-electric-blue/10' : 'bg-[hsl(var(--muted))]'}`}>
+                      <Sun className={`w-6 h-6 lg:w-7 lg:h-7 ${theme === 'light' ? 'text-electric-blue' : 'text-text-secondary'}`} />
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold text-text-primary block text-sm lg:text-base">Light</span>
+                      <span className="text-xs text-text-tertiary">Bright and clear</span>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme('system')}
+                  aria-pressed={theme === 'system'}
+                  className={`p-4 lg:p-5 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 bg-[hsl(var(--card))] ${theme === 'system'
+                    ? 'border-electric-blue'
+                    : 'border-[hsl(var(--border))] hover:border-electric-blue/50'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2 lg:gap-3">
+                    <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center shadow-sm ${theme === 'system' ? 'bg-electric-blue/10' : 'bg-[hsl(var(--muted))]'}`}>
+                      <Monitor className={`w-6 h-6 lg:w-7 lg:h-7 ${theme === 'system' ? 'text-electric-blue' : 'text-text-secondary'}`} />
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold text-text-primary block text-sm lg:text-base">System</span>
+                      <span className="text-xs text-text-tertiary">Auto-adjust</span>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
+                  className={`p-4 lg:p-5 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 bg-[hsl(var(--card))] ${theme === 'dark'
+                    ? 'border-electric-blue'
+                    : 'border-[hsl(var(--border))] hover:border-electric-blue/50'
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2 lg:gap-3">
+                    <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center shadow-sm ${theme === 'dark' ? 'bg-electric-blue/10' : 'bg-[hsl(var(--muted))]'}`}>
+                      <Moon className={`w-6 h-6 lg:w-7 lg:h-7 ${theme === 'dark' ? 'text-electric-blue' : 'text-text-secondary'}`} />
+                    </div>
+                    <div className="text-center">
+                      <span className="font-semibold text-text-primary block text-sm lg:text-base">Dark</span>
+                      <span className="text-xs text-text-tertiary">Easy on the eyes</span>
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
           </Card>
 
           {/* Voice & Conversation */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Volume2 className="w-5 h-5 text-electric-blue" />
-              <h2 className="heading-section">Voice & Conversation</h2>
+          <Card className="p-4 sm:p-6 lg:p-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 lg:mb-8">
+              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+              <h2 className="heading-section text-lg sm:text-xl">Voice & Conversation</h2>
             </div>
 
-            <div className="mb-3 text-sm text-text-secondary">
+            <div className="mb-3 text-xs sm:text-sm text-text-secondary">
               Configure the mentor voice used in conversational mode. Settings are stored on this device.
             </div>
 
@@ -480,13 +565,13 @@ export default function SettingsPage() {
           </Card>
 
           {/* Password Section */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Lock className="w-5 h-5 text-electric-blue" />
-              <h2 className="heading-section">Change Password</h2>
+          <Card className="p-4 sm:p-6 lg:p-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 lg:mb-8">
+              <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+              <h2 className="heading-section text-lg sm:text-xl">Change Password</h2>
             </div>
 
-            <form onSubmit={handleChangePassword} className="space-y-4">
+            <form onSubmit={handleChangePassword} className="space-y-4 sm:space-y-6">
               <div>
                 <label className="label mb-2 block">Current Password</label>
                 <input
@@ -495,6 +580,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                   className="input w-full"
                   placeholder="Enter current password"
+                  autoComplete="current-password"
                 />
               </div>
 
@@ -506,6 +592,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                   className="input w-full"
                   placeholder="Enter new password (min 8 characters)"
+                  autoComplete="new-password"
                 />
               </div>
 
@@ -517,6 +604,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                   className="input w-full"
                   placeholder="Confirm new password"
+                  autoComplete="new-password"
                 />
               </div>
 
@@ -548,11 +636,71 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Install App Section - Show on mobile if not installed */}
+          {!isInstalled && (canInstall || isIOS) && (
+            <Card className="p-4 sm:p-6 lg:p-8">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <Smartphone className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+                <h2 className="heading-section text-lg sm:text-xl">Install App</h2>
+              </div>
+
+              {isIOS ? (
+                <div className="space-y-4">
+                  <p className="text-text-secondary text-sm">
+                    Install this app on your iPhone for the best experience:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-2 text-sm text-text-secondary">
+                    <li>Tap the <span className="font-semibold text-text-primary">Share</span> button in Safari (bottom of screen)</li>
+                    <li>Scroll down and tap <span className="font-semibold text-text-primary">Add to Home Screen</span></li>
+                    <li>Tap <span className="font-semibold text-text-primary">Add</span> in the top right</li>
+                  </ol>
+                  <div className="flex items-center gap-2 p-3 bg-surface-secondary rounded-lg">
+                    <Download className="w-4 h-4 text-text-tertiary" />
+                    <span className="text-xs text-text-tertiary">
+                      The app will appear on your home screen
+                    </span>
+                  </div>
+                </div>
+              ) : canInstall ? (
+                <div className="space-y-4">
+                  <p className="text-text-secondary text-sm">
+                    Install this app for quick access and offline practice.
+                  </p>
+                  <button
+                    onClick={promptInstall}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Install App
+                  </button>
+                </div>
+              ) : null}
+            </Card>
+          )}
+
+          {/* Sign Out Section - Visible on mobile for easy access */}
+          <Card className="p-4 sm:p-6 lg:p-8 md:hidden">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-text-secondary" />
+              <h2 className="heading-section text-lg sm:text-xl">Session</h2>
+            </div>
+            <p className="text-text-secondary text-sm mb-4">
+              Sign out of your account on this device.
+            </p>
+            <button
+              onClick={logout}
+              className="btn-ghost text-status-error border-status-error/50 hover:bg-status-error/10 flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </Card>
+
           {/* Danger Zone */}
-          <Card className="p-6 border-status-error/20">
-            <div className="flex items-center gap-3 mb-6">
-              <AlertTriangle className="w-5 h-5 text-status-error" />
-              <h2 className="heading-section text-status-error">Danger Zone</h2>
+          <Card className="p-4 sm:p-6 lg:p-8 border-status-error/20">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 lg:mb-8">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-status-error" />
+              <h2 className="heading-section text-lg sm:text-xl text-status-error">Danger Zone</h2>
             </div>
 
             {!showDeleteConfirm ? (

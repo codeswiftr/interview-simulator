@@ -43,8 +43,12 @@ export default function CoachOverlay({
   onToggle,
   isCollapsed,
 }: CoachOverlayProps) {
-  const [internalExpanded, setInternalExpanded] = useState(isCollapsed !== true);
+  // Default to collapsed on mobile for less intrusive experience
+  const [internalExpanded, setInternalExpanded] = useState(
+    isCollapsed !== undefined ? !isCollapsed : window.innerWidth >= 768
+  );
   const [activeHint, setActiveHint] = useState(0);
+  const [starExpanded, setStarExpanded] = useState(false);
 
   // Derive resolved props for backwards compatibility
   const resolvedHint = dynamicHint ?? hint ?? null;
@@ -57,11 +61,11 @@ export default function CoachOverlay({
   const shouldBeExpanded = isCollapsed !== undefined ? !isCollapsed : internalExpanded;
   const isExpanded = shouldBeExpanded;
 
-  // Auto-collapse on mobile after 5 seconds
+  // Auto-collapse on mobile after 3 seconds (reduced from 5 for less intrusion)
   useEffect(() => {
     if (isCollapsed !== undefined) return; // controlled mode, don't override
     if (window.innerWidth < 768) {
-      const timer = setTimeout(() => setInternalExpanded(false), 5000);
+      const timer = setTimeout(() => setInternalExpanded(false), 3000);
       return () => clearTimeout(timer);
     }
   }, [isCollapsed]);
@@ -277,31 +281,43 @@ export default function CoachOverlay({
               )}
             </div>
 
-            {/* STAR Framework Quick Ref (Behavioral only) */}
+            {/* STAR Framework Quick Ref (Behavioral only) - Collapsible */}
             {questionType === 'behavioral' && (
-              <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-800/30">
-                <div className="flex items-center gap-2 mb-2 text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
-                  <Info size={12} />
-                  STAR Framework
-                </div>
-                <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
-                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
-                    <div className="font-bold text-blue-600 dark:text-blue-400">S</div>
-                    <div className="text-text-tertiary scale-90">Situation</div>
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800/30 overflow-hidden">
+                <button
+                  onClick={() => setStarExpanded(!starExpanded)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors"
+                  aria-expanded={starExpanded}
+                >
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                    <Info size={12} />
+                    STAR Framework
                   </div>
-                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
-                    <div className="font-bold text-blue-600 dark:text-blue-400">T</div>
-                    <div className="text-text-tertiary scale-90">Task</div>
+                  <ChevronRight
+                    size={14}
+                    className={`text-blue-600 dark:text-blue-400 transition-transform ${starExpanded ? 'rotate-90' : ''}`}
+                  />
+                </button>
+                {starExpanded && (
+                  <div className="px-3 pb-3 grid grid-cols-4 gap-1 text-center text-[10px] animate-fade-in">
+                    <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                      <div className="font-bold text-blue-600 dark:text-blue-400">S</div>
+                      <div className="text-text-tertiary scale-90">Situation</div>
+                    </div>
+                    <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                      <div className="font-bold text-blue-600 dark:text-blue-400">T</div>
+                      <div className="text-text-tertiary scale-90">Task</div>
+                    </div>
+                    <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                      <div className="font-bold text-blue-600 dark:text-blue-400">A</div>
+                      <div className="text-text-tertiary scale-90">Action</div>
+                    </div>
+                    <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                      <div className="font-bold text-blue-600 dark:text-blue-400">R</div>
+                      <div className="text-text-tertiary scale-90">Result</div>
+                    </div>
                   </div>
-                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
-                    <div className="font-bold text-blue-600 dark:text-blue-400">A</div>
-                    <div className="text-text-tertiary scale-90">Action</div>
-                  </div>
-                  <div className="p-1.5 rounded bg-white dark:bg-surface-dark border border-blue-100 dark:border-blue-800/30 shadow-sm">
-                    <div className="font-bold text-blue-600 dark:text-blue-400">R</div>
-                    <div className="text-text-tertiary scale-90">Result</div>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 

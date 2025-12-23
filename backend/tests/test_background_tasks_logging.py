@@ -4,10 +4,7 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import text
-from sqlmodel import SQLModel
 
-from app.db import SessionLocal, engine
 from app.models.interview import (
     InterviewResponse,
     InterviewSession,
@@ -20,31 +17,7 @@ from app.models.user import User
 from app.security import hash_password
 from app.services.background_tasks import BackgroundTaskService
 
-
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_db():
-    """Create tables once for the test session."""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-async def clean_db(prepare_db):
-    """Truncate tables between tests."""
-    async with engine.begin() as conn:
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
-    yield
-
-
-@pytest.fixture
-async def db_session():
-    """Create a test database session."""
-    async with SessionLocal() as session:
-        yield session
+# Use shared fixtures from conftest.py (db_session, clean_database, etc.)
 
 
 @pytest.fixture

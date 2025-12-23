@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AlertCircle } from 'lucide-react';
 import { PasswordStrengthIndicator } from '../components/ui/PasswordStrengthIndicator';
+import { trackConversion } from '../hooks/useAffiliateTracking';
 import type { ExperienceLevel } from '../types';
 import type { AxiosError } from 'axios';
 
@@ -46,9 +47,35 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, fullName, experienceLevel);
+      // Track affiliate conversion on successful signup
+      trackConversion(email);
     } catch (err) {
-      const axiosError = err as AxiosError<{ detail?: string }>;
-      setError(axiosError.response?.data?.detail || 'Registration failed. Please try again.');
+      console.error('[Register] Error:', err);
+      const axiosError = err as AxiosError<{ detail?: string | Array<{ msg: string }> }>;
+      console.error('[Register] Response status:', axiosError.response?.status);
+      console.error('[Register] Response data:', axiosError.response?.data);
+      const detail = axiosError.response?.data?.detail;
+
+      // Handle FastAPI validation errors (array format) vs simple string errors
+      let errorMessage: string;
+      if (Array.isArray(detail)) {
+        // Extract first validation error message
+        errorMessage = detail[0]?.msg || 'Validation failed. Please check your input.';
+      } else if (typeof detail === 'string') {
+        errorMessage = detail;
+      } else {
+        // Log the full error for debugging
+        console.error('[Register] Unknown error format, detail:', detail, 'full response:', axiosError.response);
+        errorMessage = 'Registration failed. Please try again.';
+      }
+
+      // Add helpful guidance for password-related errors
+      const isPasswordError = errorMessage.toLowerCase().includes('password');
+      if (isPasswordError) {
+        errorMessage += ' Please use a strong password with uppercase, lowercase, numbers, and special characters.';
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -64,8 +91,13 @@ export default function RegisterPage() {
 
         <div className="card p-8">
           {error && (
-            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div
+              id="register-error"
+              role="alert"
+              aria-live="assertive"
+              className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -84,6 +116,8 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 required
                 autoFocus
+                aria-invalid={!!error}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
@@ -99,6 +133,8 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="you@example.com"
                 required
+                aria-invalid={!!error}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
@@ -114,8 +150,13 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="••••••••"
                 required
+                autoComplete="new-password"
+                aria-invalid={!!error && typeof error === 'string' && error.toLowerCase().includes('password')}
+                aria-describedby="password-strength register-error"
               />
-              <PasswordStrengthIndicator password={password} />
+              <div id="password-strength">
+                <PasswordStrengthIndicator password={password} />
+              </div>
             </div>
 
             <div>
@@ -130,6 +171,9 @@ export default function RegisterPage() {
                 className="input"
                 placeholder="••••••••"
                 required
+                autoComplete="new-password"
+                aria-invalid={!!error && typeof error === 'string' && error.toLowerCase().includes('match')}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
@@ -142,12 +186,13 @@ export default function RegisterPage() {
                 value={experienceLevel}
                 onChange={(e) => setExperienceLevel(e.target.value as ExperienceLevel)}
                 className="input"
+                aria-describedby="experience-hint"
               >
                 <option value="junior">Junior (0-2 years)</option>
                 <option value="mid">Mid-Level (2-5 years)</option>
                 <option value="senior">Senior (5+ years)</option>
               </select>
-              <p className="mt-1 text-xs text-text-tertiary">
+              <p id="experience-hint" className="mt-1 text-xs text-text-tertiary">
                 This helps us tailor feedback to your experience level
               </p>
             </div>

@@ -154,6 +154,7 @@ export default function RecordingSection() {
             onResume={resumeRecording}
             onCancel={handleExit}
             onConfirm={handleConfirmSubmit}
+            onSkip={handleSkipQuestion}
             disabled={isSubmitting}
             onTranscriptChange={handleTranscriptChange}
           />

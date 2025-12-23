@@ -11,9 +11,9 @@ from passlib.hash import pbkdf2_sha256
 from sqlmodel import select
 
 from app.models.user import User
+from tests.conftest import get_test_engine
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
+# Use shared fixtures from conftest.py (client, db_session, clean_database, etc.)
 
 
 class TestLoginMigration:
@@ -53,8 +53,9 @@ class TestLoginMigration:
 
         # Check that password was migrated in database
         # Need a new session since the API uses its own session
-        async with SessionLocal() as new_session:
-            result = await new_db_session.exec(select(User).where(User.email == email))
+        _, TestSessionLocal = get_test_engine()
+        async with TestSessionLocal() as new_session:
+            result = await new_session.exec(select(User).where(User.email == email))
             updated_user = result.first()
 
             # Password should now be bcrypt
@@ -67,7 +68,7 @@ class TestLoginMigration:
 
     @pytest.mark.asyncio
     async def test_login_bcrypt_password_no_migration(
-        self, client: AsyncClient, session
+        self, client: AsyncClient, db_session
     ):
         """Test that login with bcrypt password doesn't trigger migration."""
         from app.security import hash_password
@@ -108,7 +109,7 @@ class TestLoginMigration:
 
     @pytest.mark.asyncio
     async def test_login_legacy_wrong_password(
-        self, client: AsyncClient, session
+        self, client: AsyncClient, db_session
     ):
         """Test that login fails with wrong password for legacy hashes."""
         # Create user with legacy pbkdf2 password
@@ -140,10 +141,9 @@ class TestLoginMigration:
 
     @pytest.mark.asyncio
     async def test_change_password_migrates_to_bcrypt(
-        self, client: AsyncClient, session
+        self, client: AsyncClient, db_session
     ):
         """Test that password change creates bcrypt hash even for legacy users."""
-        from app.security import hash_password
 
         # Create user with legacy pbkdf2 password
         email = "change@example.com"
@@ -180,8 +180,9 @@ class TestLoginMigration:
         assert change_response.status_code == 200
 
         # Check that new password is bcrypt
-        async with SessionLocal() as new_session:
-            result = await new_db_session.exec(select(User).where(User.email == email))
+        _, TestSessionLocal = get_test_engine()
+        async with TestSessionLocal() as new_session:
+            result = await new_session.exec(select(User).where(User.email == email))
             updated_user = result.first()
 
             assert updated_user.hashed_password.startswith("$2b$")
@@ -203,7 +204,7 @@ class TestLoginMigration:
 
     @pytest.mark.asyncio
     async def test_new_user_uses_bcrypt(
-        self, client: AsyncClient, session
+        self, client: AsyncClient, db_session
     ):
         """Test that new users are created with bcrypt passwords."""
         email = "newuser@example.com"
@@ -221,11 +222,13 @@ class TestLoginMigration:
 
         assert register_response.status_code == 201
 
-        # Check that password is bcrypt
-        result = await db_session.exec(select(User).where(User.email == email))
-        new_user = result.first()
+        # Check that password is bcrypt (need new session since API creates user in its own session)
+        _, TestSessionLocal = get_test_engine()
+        async with TestSessionLocal() as new_session:
+            result = await new_session.exec(select(User).where(User.email == email))
+            new_user = result.first()
 
-        assert new_user.hashed_password.startswith("$2b$")
+            assert new_user.hashed_password.startswith("$2b$")
 
         # Verify login works
         login_response = await client.post(
@@ -236,7 +239,7 @@ class TestLoginMigration:
 
     @pytest.mark.asyncio
     async def test_last_login_updated_with_migration(
-        self, client: AsyncClient, session
+        self, client: AsyncClient, db_session
     ):
         """Test that last_login_at is updated when password is migrated."""
         import datetime
@@ -270,8 +273,9 @@ class TestLoginMigration:
         assert login_response.status_code == 200
 
         # Check last_login was updated
-        async with SessionLocal() as new_session:
-            result = await new_db_session.exec(select(User).where(User.email == email))
+        _, TestSessionLocal = get_test_engine()
+        async with TestSessionLocal() as new_session:
+            result = await new_session.exec(select(User).where(User.email == email))
             updated_user = result.first()
 
             assert updated_user.last_login_at is not None

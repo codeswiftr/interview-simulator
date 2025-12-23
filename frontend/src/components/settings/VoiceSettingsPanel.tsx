@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
-import { Star } from 'lucide-react';
+import { useMemo, useEffect } from 'react';
 import type { VoiceSettings } from '../../hooks/useVoicePreferences';
-import { getVoiceQuality, sortVoicesByQuality, getRecommendedVoice } from '../../lib/voice-quality';
+import { getRecommendedVoice } from '../../lib/voice-quality';
 
 interface VoiceSettingsPanelProps {
   settings: VoiceSettings;
@@ -20,17 +19,19 @@ export function VoiceSettingsPanel({
   onTestVoice,
   onReset,
 }: VoiceSettingsPanelProps) {
-  // Sort voices by quality (premium first)
-  const sortedVoices = useMemo(() => sortVoicesByQuality(voices), [voices]);
+  // Automatically select the best neural voice when voices are loaded
   const recommendedVoice = useMemo(() => getRecommendedVoice(voices), [voices]);
 
-  // Check if current selected voice is premium
-  const selectedVoice = voices.find((v) => v.name === settings.voiceName);
-  const isCurrentPremium = selectedVoice ? getVoiceQuality(selectedVoice) === 'premium' : false;
+  // Auto-select recommended voice if no voice is set and voices are available
+  useEffect(() => {
+    if (recommendedVoice && !settings.voiceName && voices.length > 0) {
+      onChange({ voiceName: recommendedVoice.name });
+    }
+  }, [recommendedVoice, settings.voiceName, voices.length, onChange]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <label className="inline-flex items-center gap-2 text-sm font-medium text-text-primary">
           <input
             type="checkbox"
@@ -38,58 +39,31 @@ export function VoiceSettingsPanel({
             onChange={(e) => onChange({ enabled: e.target.checked })}
             className="h-4 w-4"
           />
-          Enable mentor voice (TTS)
+          <span className="text-xs sm:text-sm">Enable mentor voice (TTS)</span>
         </label>
         {!isSupported && (
-          <span className="text-xs text-text-secondary">Not supported in this browser</span>
+          <span className="text-xs text-text-secondary">Not supported</span>
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="label">Voice</label>
-            {isCurrentPremium && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 rounded-full">
-                <Star size={10} className="fill-current" />
-                Premium
-              </span>
-            )}
+      <div className="space-y-3 sm:space-y-4">
+        {recommendedVoice && (
+          <div className="p-2.5 sm:p-3 bg-electric-blue/5 dark:bg-electric-blue/10 rounded-lg border border-electric-blue/20">
+            <p className="text-xs sm:text-sm text-text-secondary">
+              <span className="font-medium text-text-primary">Using premium neural voice:</span>{' '}
+              <span className="break-all">{recommendedVoice.name}</span> ({recommendedVoice.lang})
+            </p>
+            <p className="text-xs text-text-tertiary mt-1 hidden sm:block">
+              Automatically selected for the best interview coaching experience
+            </p>
           </div>
-          <select
-            className="input w-full"
-            value={settings.voiceName ?? ''}
-            onChange={(e) => onChange({ voiceName: e.target.value || null })}
-            disabled={!isSupported || voices.length === 0}
-          >
-            {voices.length === 0 && <option value="">Loading voices...</option>}
-            {voices.length > 0 && <option value="">System default</option>}
-            {recommendedVoice && !settings.voiceName && (
-              <option value={recommendedVoice.name} disabled className="text-text-tertiary">
-                --- Recommended ---
-              </option>
-            )}
-            {sortedVoices.map((voice) => {
-              const isPremium = getVoiceQuality(voice) === 'premium';
-              return (
-                <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
-                  {isPremium ? '★ ' : ''}{voice.name} ({voice.lang})
-                </option>
-              );
-            })}
-          </select>
-          <p className="text-xs text-text-tertiary">
-            {recommendedVoice && !settings.voiceName
-              ? `Recommended: ${recommendedVoice.name}`
-              : 'Voices with ★ are premium quality.'
-            }
-          </p>
-        </div>
+        )}
 
+        {/* Rate - Full width on mobile, half on desktop */}
         <div className="space-y-2">
-          <label className="label flex items-center justify-between">
-            Rate
-            <span className="text-xs text-text-tertiary">{settings.rate.toFixed(2)}x</span>
+          <label className="label flex items-center justify-between text-sm">
+            <span>Rate</span>
+            <span className="text-xs text-text-tertiary font-mono">{settings.rate.toFixed(2)}x</span>
           </label>
           <input
             type="range"
@@ -102,43 +76,44 @@ export function VoiceSettingsPanel({
           />
           <p className="text-xs text-text-tertiary">1.0 is normal speed.</p>
         </div>
+
+        {/* Pitch & Volume - Stack on mobile, side-by-side on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="space-y-2">
+            <label className="label flex items-center justify-between text-sm">
+              <span>Pitch</span>
+              <span className="text-xs text-text-tertiary font-mono">{settings.pitch.toFixed(2)}</span>
+            </label>
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.05}
+              value={settings.pitch}
+              onChange={(e) => onChange({ pitch: Number(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="label flex items-center justify-between text-sm">
+              <span>Volume</span>
+              <span className="text-xs text-text-tertiary font-mono">{settings.volume.toFixed(2)}</span>
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.volume}
+              onChange={(e) => onChange({ volume: Number(e.target.value) })}
+              className="w-full"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label className="label flex items-center justify-between">
-            Pitch
-            <span className="text-xs text-text-tertiary">{settings.pitch.toFixed(2)}</span>
-          </label>
-          <input
-            type="range"
-            min={0.5}
-            max={2}
-            step={0.05}
-            value={settings.pitch}
-            onChange={(e) => onChange({ pitch: Number(e.target.value) })}
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="label flex items-center justify-between">
-            Volume
-            <span className="text-xs text-text-tertiary">{settings.volume.toFixed(2)}</span>
-          </label>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={settings.volume}
-            onChange={(e) => onChange({ volume: Number(e.target.value) })}
-            className="w-full"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-[hsl(var(--border))]">
         <label className="inline-flex items-center gap-2 text-sm font-medium text-text-primary">
           <input
             type="checkbox"
@@ -146,19 +121,19 @@ export function VoiceSettingsPanel({
             onChange={(e) => onChange({ autoListen: e.target.checked })}
             className="h-4 w-4"
           />
-          Auto-listen after mentor speaks
+          <span className="text-xs sm:text-sm">Auto-listen after mentor speaks</span>
         </label>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="btn-ghost text-sm"
+            className="btn-ghost text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2"
             onClick={onReset}
           >
             Reset
           </button>
           <button
             type="button"
-            className="btn-secondary text-sm"
+            className="btn-secondary text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2"
             onClick={onTestVoice}
             disabled={!isSupported || !settings.enabled}
           >

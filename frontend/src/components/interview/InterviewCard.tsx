@@ -70,6 +70,9 @@ export default function InterviewCard({ session, onClick }: InterviewCardProps) 
       variant="interactive"
       className={onClick ? 'cursor-pointer' : ''}
       onClick={onClick}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? 'button' : undefined}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">

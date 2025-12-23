@@ -17,25 +17,25 @@ const categoryConfig = {
     label: 'Behavioral',
     icon: Briefcase,
     color: 'bg-blue-500',
-    lightColor: 'bg-blue-100 text-blue-700',
+    lightColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
   },
   technical: {
     label: 'Technical',
     icon: Code,
     color: 'bg-purple-500',
-    lightColor: 'bg-purple-100 text-purple-700',
+    lightColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
   },
   system_design: {
     label: 'System Design',
     icon: Layout,
     color: 'bg-orange-500',
-    lightColor: 'bg-orange-100 text-orange-700',
+    lightColor: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
   },
   mixed: {
     label: 'Mixed',
     icon: Shuffle,
     color: 'bg-gray-500',
-    lightColor: 'bg-gray-100 text-gray-700',
+    lightColor: 'bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300',
   },
 };
 

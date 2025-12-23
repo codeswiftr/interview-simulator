@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { getReferralCode } from '../hooks/useAffiliateTracking';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -8,6 +9,20 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Generate UUID with fallback for non-secure contexts (HTTP)
+function generateUUID(): string {
+  // crypto.randomUUID() only works in secure contexts (HTTPS or localhost)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for HTTP contexts
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -19,7 +34,7 @@ api.interceptors.request.use(
 
     // Add correlation ID for tracing
     if (!config.headers['X-Correlation-ID']) {
-      config.headers['X-Correlation-ID'] = crypto.randomUUID();
+      config.headers['X-Correlation-ID'] = generateUUID();
     }
 
     return config;
@@ -297,8 +312,13 @@ export const subscriptionsAPI = {
 
   getPricing: () => api.get<{ pro_monthly_price_id: string | null; pro_annual_price_id: string | null }>('/subscriptions/pricing'),
 
-  createCheckout: (priceId: string) =>
-    api.post('/subscriptions/checkout', { price_id: priceId }),
+  createCheckout: (priceId: string) => {
+    const referralCode = getReferralCode();
+    return api.post('/subscriptions/checkout', {
+      price_id: priceId,
+      ...(referralCode && { referral_code: referralCode }),
+    });
+  },
 
   createPortalSession: () =>
     api.post<{ url: string }>('/subscriptions/portal'),

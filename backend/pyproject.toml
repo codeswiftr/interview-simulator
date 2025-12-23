@@ -43,6 +43,8 @@ dev = [
     "ruff>=0.7.0",
     "mypy>=1.11.0",
     "pre-commit>=4.0.0",
+    "html-sanitizer>=2.3.0",  # For XSS security tests
+    "aiosqlite>=0.20.0",  # SQLite async driver for tests
 ]
 
 [build-system]

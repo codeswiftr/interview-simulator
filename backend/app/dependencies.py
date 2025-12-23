@@ -4,7 +4,6 @@ from datetime import UTC
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -24,13 +23,12 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = decode_token(token)
-        user_id: str | None = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except (JWTError, ValueError):
-        raise credentials_exception from None
+    payload = decode_token(token)
+    if payload is None:
+        raise credentials_exception
+    user_id: str | None = payload.get("sub")
+    if user_id is None:
+        raise credentials_exception
 
     result = await session.exec(select(User).where(User.id == user_id))
     user = result.first()

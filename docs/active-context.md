@@ -1,100 +1,39 @@
 # Active Context - CareerSwiftr Interview Simulator
 
-## Current Status
+**Last Updated**: 2025-12-16  
+**Status**: Launch-ready (v2 UI complete)
 
-**Phase**: Sprint 9 COMPLETE - Conversational Voice Mentor
-**Last Updated**: 2025-12-10
+## Current Focus
 
-## What We're Working On
+**Phase**: Post-v2 UI Implementation  
+**Next**: Frontend testing, production deployment
 
-### Sprint 9: Conversational Voice Mentor ✅ COMPLETE
-Transform text-based mentor Q&A into a phone-call-like voice conversation:
-- [x] Epic 1: Voice Mentor TTS Integration (ICE 8.4/10)
-- [x] Epic 2: Conversational Mode - Phone-like Experience (ICE 7.2/10)
-- [x] Epic 3: Premium Voice Quality (ICE 5.4/10)
-- [x] Epic 4: Enable Prepare for Free Tier (ICE 7.0/10)
+## In Progress
 
-See `docs/PLAN.md` for detailed implementation phases.
-
-### Completed (All Sprints)
-- [x] Project structure created
-- [x] Living documentation initialized
-- [x] Backend scaffolding with FastAPI + UV
-- [x] Question bank data model + API (filtering, random selection)
-- [x] Interview session API (create, start, end, cancel)
-- [x] User authentication (JWT, PBKDF2 hashing, protected routes)
-- [x] Alembic migrations (10+ versions applied)
-- [x] Docker Compose for Postgres + Redis
-- [x] Pre-commit hooks (ruff, mypy)
-- [x] Test infrastructure with pytest-asyncio
-- [x] Seed questions auto-load (105 questions with 60 sample answers)
-- [x] Design System document created (CodeSwiftr branding)
-- [x] React + Vite + TailwindCSS frontend
-- [x] WebRTC audio capture with Safari compatibility
-- [x] Interview room with recording
-- [x] Feedback dashboard with AI analysis
-- [x] Auth pages (login, register, password reset)
-- [x] Dashboard with interview history and stats
-- [x] Stripe payment integration
-- [x] Dark mode with system detection
-- [x] Mobile navigation (hamburger menu)
-- [x] Custom branded assets (logo, hero, favicons)
-- [x] OpenGraph meta tags
-- [x] Complete UI screen flow documentation
-- [x] Epic 4: Real-Time AI Coaching Hints (Complete)
-- [x] Epic 5: E2E Testing (4 Playwright suites)
-- [x] Epic 6: AI Ghostwriter MVP (Detective Q&A + Draft Generation)
-- [x] Sprint 7: Voice-Enabled Practice Mode
-- [x] Sprint 8: Onboarding & Mentor Mode Enhancement (Complete 2025-12-10)
-- [x] Sprint 9: Conversational Voice Mentor (Complete 2025-12-10)
-
-### Active Tasks
-- Sprint 9 complete - all epics implemented
-- Next: Sprint 10 planning (TBD)
+- [ ] Frontend test coverage (target: 60%)
+- [ ] Production deployment preparation
+- [ ] Beta user onboarding
 
 ## Recent Decisions
 
-### 2025-12-10: Sprint 9 - Conversational Voice Mentor COMPLETE
-**Implementation:**
-- Epic 1: useSpeechSynthesis hook + TTS integration in PreparationPage
-- Epic 2: useConversationMode state machine (mentor_speaking → user_turn → processing)
-- Epic 3: Voice quality assessment with premium badges
-- Epic 4: Free tier prepare access (3/month limit, usePrepUsage hook)
+### 2025-12-16: v2 UI Complete
+- Stack: React 19 + Vite + TailwindCSS v4 + shadcn/ui
+- Components: 12 UI primitives + layout components
+- Mobile-first with bottom nav, FAB, drawer patterns
+- HSL color space (OKLCH deferred)
 
-**Key Files Created:**
-- `frontend/src/hooks/useSpeechSynthesis.ts` - TTS wrapper
-- `frontend/src/hooks/useConversationMode.ts` - Conversation state machine
-- `frontend/src/hooks/useVoicePreferences.ts` - Settings persistence
-- `frontend/src/hooks/usePrepUsage.ts` - Free tier usage tracking
-- `frontend/src/components/interview/ConversationIndicator.tsx` - Turn indicator UI
-- `frontend/src/components/settings/VoiceSettingsPanel.tsx` - Voice settings UI
-
-**Post-Sprint Bugfix:**
-- Fixed dual STT conflict (VoiceInputButton vs conversation mode)
-- Hide VoiceInputButton when conversation mode active
-- Added proper listening indicators and Start/Done speaking buttons
-
-### 2025-12-10: Sprint 8 - Onboarding & Mentor Mode Enhancement
-- Fixed CoachOverlay dual-interface props (canonical + alias for PreparationPage)
-- Added Draft Voice Dictation with replace/append modes
-- Created FirstSessionPrompt modal for new user onboarding
-- Built ContextualTooltip component with hover/click/always triggers
-- Implemented HintHistoryPanel for coaching hint history
-- Extended useOnboarding hook with session tracking
-- All 6 phases complete, build passing
-
-### 2025-12-02: Soft Launch Readiness
-- Completed comprehensive UI screen flow validation
-- All 10 screens validated feature-complete
-- Generated branded image assets (logo, hero, empty state, OG)
-- Fixed dark mode CSS variable issues
-- Verdict: **GO for Soft Launch**
+### 2025-12-10: Sprint 9 Complete
+- Conversational voice mentor implemented
+- Free tier prepare access enabled (3/month)
+- Voice quality assessment with premium badges
 
 ### AI Provider Selection
-- **Primary**: Claude API (content analysis via OpenRouter/Groq)
-- **Transcription**: OpenAI Whisper
-- **Audio Analysis**: Librosa (local processing)
-- **Real-Time Coaching**: Gemini 2.5 Flash (via Google AI)
+| Provider | Use Case |
+|----------|----------|
+| Claude API | Content analysis (via OpenRouter/Groq) |
+| OpenAI Whisper | Transcription |
+| Librosa | Audio analysis (local) |
+| Gemini 2.5 Flash | Real-time coaching (Google AI) |
 
 ## Current Blockers
 
@@ -105,53 +44,49 @@ None - application is launch-ready.
 ### Week 1 (Monitoring)
 1. Monitor auth token expiry (no refresh mechanism yet)
 2. Collect user feedback
-3. Fix any critical issues
+3. Fix critical issues
 
 ### Month 1 (Polish)
-1. Implement refresh token mechanism
-2. Add email verification for profile changes
-3. Improve microphone permission UX
-4. Add frontend test coverage (target 60%)
+1. Refresh token mechanism
+2. Email verification for profile changes
+3. Microphone permission UX improvements
+4. Frontend test coverage (target 60%)
 
 ## Performance Targets
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| API Response Time | < 200ms | ✅ Met |
-| Transcription Time | < 30s | ✅ Met |
-| Feedback Generation | < 60s | ✅ Met |
-| Audio Analysis | < 10s | ✅ Met |
+| API Response Time | < 200ms | Met |
+| Transcription Time | < 30s | Met |
+| Feedback Generation | < 60s | Met |
+| Audio Analysis | < 10s | Met |
 
-## Files to Watch
+## Key Files
 
-- `frontend/src/pages/` - All 11 UI screens
-- `backend/app/main.py` - FastAPI application entry
-- `backend/app/ai/` - AI pipeline implementations
-- `backend/app/api/coaching.py` - Real-time coaching hints (Epic 4)
-- `backend/app/api/preparation.py` - Ghostwriter + practice APIs (Epic 6)
-- `frontend/src/hooks/useCoachingHint.ts` - Coaching hint hook (Epic 4)
-- `frontend/src/hooks/useSpeechRecognition.ts` - Voice input hook (Sprint 7)
-- `frontend/src/hooks/useSpeechSynthesis.ts` - TTS hook (Sprint 9)
-- `frontend/src/hooks/useConversationMode.ts` - Conversation state machine (Sprint 9)
-- `frontend/src/hooks/usePrepUsage.ts` - Free tier usage tracking (Sprint 9)
-- `frontend/src/components/common/ContextualTooltip.tsx` - Tooltip component (Sprint 8)
-- `frontend/src/components/onboarding/FirstSessionPrompt.tsx` - Onboarding modal (Sprint 8)
-- `frontend/src/components/interview/HintHistoryPanel.tsx` - Hint history (Sprint 8)
-- `frontend/src/components/interview/ConversationIndicator.tsx` - Turn indicator (Sprint 9)
-- `frontend/src/components/settings/VoiceSettingsPanel.tsx` - Voice settings (Sprint 9)
-- `docs/UI_SCREEN_FLOW.md` - Complete screen validation
-- `docs/PLAN.md` - Current milestone planning
+**Backend**:
+- backend/app/main.py - FastAPI app
+- backend/app/ai/ - AI pipeline
+- backend/app/api/coaching.py - Real-time coaching hints
+- backend/app/api/preparation.py - Ghostwriter + practice APIs
+
+**Frontend**:
+- src/ - v2 UI implementation (React 19 + Vite)
+- src/components/ui/ - UI primitives (12 components)
+- src/views/ - Page components (7 pages)
+- src/hooks/useInterviewStateMachine.ts - Interview state management
+
+**Documentation**:
+- docs/DESIGN_SYSTEM.md - v2 design system
+- docs/PLAN.md - Current milestone planning
 
 ## Launch Checklist
 
 - [x] All routes accessible
-- [x] Auth flow working (register, login, logout)
-- [x] Interview recording and submission working
+- [x] Auth flow working
+- [x] Interview recording working
 - [x] Feedback display working
 - [x] Settings updates persisting
 - [x] Error boundaries in place
 - [x] Loading states on all pages
-- [x] Dark mode functional
-- [x] Mobile responsive (hamburger menu)
+- [x] Mobile responsive
 - [x] Branded assets integrated
-- [x] OG meta tags for social sharing

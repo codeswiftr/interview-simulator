@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { feedbackAPI } from '../../lib/api';
 import type { AxiosError } from 'axios';
@@ -20,6 +20,8 @@ interface ProcessingStatusData {
 interface ProcessingStatusProps {
   sessionId: string;
   onComplete?: () => void;
+  onStuck?: () => void; // Called when all responses processed but session feedback not generated
+  checkFeedbackExists?: () => Promise<boolean>; // Optional callback to directly check if feedback exists
 }
 
 const stepLabels: Record<string, string> = {
@@ -31,10 +33,13 @@ const stepLabels: Record<string, string> = {
   failed: 'Processing failed',
 };
 
-export default function ProcessingStatus({ sessionId, onComplete }: ProcessingStatusProps) {
+export default function ProcessingStatus({ sessionId, onComplete, onStuck, checkFeedbackExists }: ProcessingStatusProps) {
   const [status, setStatus] = useState<ProcessingStatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stuckCount, setStuckCount] = useState(0);
+  const stuckNotified = React.useRef(false);
+  const feedbackCheckCount = React.useRef(0);
 
   useEffect(() => {
     let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -59,6 +64,37 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
             if (onComplete && data.current_step === 'complete') {
               onComplete();
             }
+          }
+
+          // Detect stuck state: all responses processed but feedback not generated
+          // Also consider stuck if we've been polling for too long (30+ seconds)
+          const isStuckInGenerating = data.all_processed && data.current_step === 'generating_feedback' && !data.has_session_feedback;
+          const isPollingTooLong = data.current_step === 'generating_feedback' && !data.has_session_feedback;
+
+          if (isStuckInGenerating || isPollingTooLong) {
+            setStuckCount(prev => prev + 1);
+
+            // Every 3rd stuck poll (6 seconds), directly check if feedback exists
+            // This handles the case where backend status isn't updating properly
+            feedbackCheckCount.current++;
+            if (feedbackCheckCount.current >= 3 && checkFeedbackExists) {
+              feedbackCheckCount.current = 0;
+              checkFeedbackExists().then(exists => {
+                if (exists && isMounted) {
+                  // Feedback exists! Stop polling and notify
+                  if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                  }
+                  onComplete?.();
+                }
+              }).catch(() => {
+                // Ignore errors from feedback check
+              });
+            }
+          } else {
+            setStuckCount(0);
+            feedbackCheckCount.current = 0;
           }
         }
       } catch (err) {
@@ -87,6 +123,14 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
       }
     };
   }, [sessionId, onComplete]);
+
+  // Call onStuck after 3 consecutive stuck polls (6 seconds)
+  useEffect(() => {
+    if (stuckCount >= 3 && onStuck && !stuckNotified.current) {
+      stuckNotified.current = true;
+      onStuck();
+    }
+  }, [stuckCount, onStuck]);
 
   if (loading && !status) {
     return (
@@ -118,6 +162,7 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
   const isComplete = status.current_step === 'complete';
   const isFailed = status.current_step === 'failed';
   const isProcessing = !isComplete && !isFailed && status.total_responses > 0;
+  const isTakingLong = stuckCount >= 5; // 10+ seconds in generating_feedback
 
   return (
     <div className="card p-6 mb-8">
@@ -163,6 +208,21 @@ export default function ProcessingStatus({ sessionId, onComplete }: ProcessingSt
                 width: `${((status.status_counts.completed + status.status_counts.failed) / status.total_responses) * 100}%`,
               }}
             />
+          </div>
+        )}
+
+        {/* Show message when taking too long */}
+        {isTakingLong && isProcessing && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <p className="text-sm text-amber-600 dark:text-amber-400 mb-2">
+              Taking longer than expected. AI feedback generation may be processing in the background.
+            </p>
+            <button
+              onClick={() => onStuck?.()}
+              className="text-sm font-medium text-electric-blue hover:underline"
+            >
+              Skip ahead and generate manually
+            </button>
           </div>
         )}
       </div>

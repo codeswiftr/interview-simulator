@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { analytics, Events } from '../lib/analytics';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -44,8 +45,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
+    const oldTheme = theme;
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
+
+    // Track theme changes
+    if (oldTheme !== newTheme) {
+      analytics.track(Events.THEME_CHANGED, {
+        new_theme: newTheme,
+        previous_theme: oldTheme,
+      });
+    }
   };
 
   return (

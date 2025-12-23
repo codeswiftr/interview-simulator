@@ -9,25 +9,25 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-surface-primary overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+      <section className="relative pt-16 sm:pt-24 lg:pt-48 pb-12 sm:pb-16 lg:pb-32 overflow-hidden">
         {/* Abstract Background Elements - Theme Aware */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
           <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-electric-blue/20 dark:bg-electric-blue/10 blur-[100px] animate-pulse-glow" />
           <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
         </div>
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-surface-secondary/80 border border-white/60 dark:border-border-light backdrop-blur-sm shadow-sm mb-8 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[hsl(var(--card))]/50 dark:bg-[hsl(var(--card))]/80 border border-[hsl(var(--border))]/60 backdrop-blur-sm shadow-sm mb-6 sm:mb-8 animate-fade-in">
               <span className="flex h-2 w-2 rounded-full bg-[#FF6B9D]"></span>
-              <span className="text-sm font-medium text-text-secondary">AI-Powered Interview Coach</span>
+              <span className="text-xs sm:text-sm font-medium text-text-secondary">AI-Powered Interview Coach</span>
             </div>
 
-            <h1 className="heading-hero mb-6 text-text-primary animate-slide-up">
+            <h1 className="text-3xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold leading-tight mb-4 sm:mb-6 text-text-primary animate-slide-up">
               Master Your Interview Skills with <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-indigo-600">Real-Time AI Feedback</span>
             </h1>
 
-            <p className="body-large text-text-secondary mb-10 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <p className="text-base sm:text-lg text-text-secondary mb-6 sm:mb-8 lg:mb-10 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
               Simulate real interview scenarios, record your answers, and get instant, actionable feedback to land your dream job.
             </p>
 
@@ -55,26 +55,26 @@ export default function HomePage() {
           </div>
 
           {/* Hero Visual */}
-          <div className="mt-20 relative max-w-5xl mx-auto animate-scale-in" style={{ animationDelay: '0.3s' }}>
+          <div className="mt-12 sm:mt-16 lg:mt-20 relative max-w-5xl mx-auto animate-scale-in" style={{ animationDelay: '0.3s' }}>
             <div className="absolute -inset-1 bg-gradient-to-r from-electric-blue to-indigo-600 rounded-2xl blur opacity-20 dark:opacity-10"></div>
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/20 dark:border-border-light bg-white/50 dark:bg-surface-secondary/30 backdrop-blur-xl">
+            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-[hsl(var(--border))]/20 bg-[hsl(var(--card))]/50 dark:bg-[hsl(var(--card))]/30 backdrop-blur-xl">
               <img
                 src="/images/hero-illustration.png"
                 alt="Dashboard Preview"
-                className="w-full h-auto rounded-2xl"
+                className="w-full h-auto rounded-xl sm:rounded-2xl"
                 loading="eager"
                 decoding="async"
                 fetchPriority="high"
               />
               {/* Floating Elements */}
-              <div className="absolute top-10 right-10 p-4 bg-white/90 dark:bg-surface-secondary/90 backdrop-blur-md rounded-xl shadow-lg border border-white/50 dark:border-border-light animate-float hidden md:block">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#FF6B9D]/10 dark:bg-[#FF6B9D]/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-[#FF6B9D]" />
+              <div className="absolute top-4 right-4 sm:top-10 sm:right-10 p-3 sm:p-4 bg-[hsl(var(--card))]/90 backdrop-blur-md rounded-lg sm:rounded-xl shadow-lg border border-[hsl(var(--border))]/50 animate-float hidden sm:block">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FF6B9D]/10 dark:bg-[#FF6B9D]/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6B9D]" />
                   </div>
                   <div>
                     <p className="text-xs text-text-secondary font-medium uppercase">Audio Score</p>
-                    <p className="text-xl font-bold text-charcoal dark:text-text-primary">92/100</p>
+                    <p className="text-lg sm:text-xl font-bold text-text-primary">92/100</p>
                   </div>
                 </div>
               </div>
@@ -84,52 +84,52 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-surface-secondary relative">
-        <div className="container mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="heading-section mb-4">Everything you need to excel</h2>
-            <p className="body-default text-text-secondary">
+      <section className="py-12 sm:py-16 lg:py-24 bg-[hsl(var(--muted))] relative">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-3 sm:mb-4 text-text-primary">Everything you need to excel</h2>
+            <p className="text-sm sm:text-base text-text-secondary">
               Our platform provides comprehensive tools to help you prepare for behavioral, technical, and system design interviews.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
-              <div className="w-14 h-14 rounded-2xl bg-electric-blue/10 flex items-center justify-center mb-6">
-                <Mic className="w-7 h-7 text-electric-blue" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <Card variant="elevated" className="p-4 sm:p-6 lg:p-8 hover:translate-y-[-4px] transition-transform duration-300">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-electric-blue/10 flex items-center justify-center mb-4 sm:mb-6">
+                <Mic className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-electric-blue" />
               </div>
-              <h3 className="heading-card mb-3">Voice Recording</h3>
-              <p className="body-small text-text-secondary leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-text-primary">Voice Recording</h3>
+              <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
                 Practice your answers out loud. Our advanced audio capture simulates real interview conditions.
               </p>
             </Card>
 
-            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300 hover:shadow-[0_0_20px_rgba(255,107,157,0.1)]">
-              <div className="w-14 h-14 rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center mb-6">
-                <BarChart2 className="w-7 h-7 text-[#FF6B9D]" />
+            <Card variant="elevated" className="p-4 sm:p-6 lg:p-8 hover:translate-y-[-4px] transition-transform duration-300">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-[#FF6B9D]/10 flex items-center justify-center mb-4 sm:mb-6">
+                <BarChart2 className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-[#FF6B9D]" />
               </div>
-              <h3 className="heading-card mb-3">AI Feedback</h3>
-              <p className="body-small text-text-secondary leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-text-primary">AI Feedback</h3>
+              <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
                 Get instant, detailed analysis of your content, delivery, and structure with actionable tips.
               </p>
             </Card>
 
-            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
-                <TrendingUp className="w-7 h-7 text-amber-500" />
+            <Card variant="elevated" className="p-4 sm:p-6 lg:p-8 hover:translate-y-[-4px] transition-transform duration-300">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4 sm:mb-6">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-amber-500" />
               </div>
-              <h3 className="heading-card mb-3">Track Progress</h3>
-              <p className="body-small text-text-secondary leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-text-primary">Track Progress</h3>
+              <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
                 Monitor your improvement over time with detailed analytics and performance metrics.
               </p>
             </Card>
 
-            <Card variant="glass" className="p-8 hover:translate-y-[-4px] transition-transform duration-300">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6">
-                <MessageSquare className="w-7 h-7 text-indigo-500" />
+            <Card variant="elevated" className="p-4 sm:p-6 lg:p-8 hover:translate-y-[-4px] transition-transform duration-300">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-4 sm:mb-6">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-indigo-500" />
               </div>
-              <h3 className="heading-card mb-3">Question Bank</h3>
-              <p className="body-small text-text-secondary leading-relaxed">
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 text-text-primary">Question Bank</h3>
+              <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
                 Access hundreds of real interview questions across multiple categories and difficulty levels.
               </p>
             </Card>
@@ -138,30 +138,27 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-charcoal -z-20"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-charcoal to-gray-900 -z-10"></div>
-
+      <section className="py-12 sm:py-16 lg:py-24 relative overflow-hidden bg-charcoal dark:bg-surface-dark-alt">
         {/* Background Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-electric-blue/20 blur-[150px] rounded-full pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] h-[600px] sm:h-[800px] bg-electric-blue/20 blur-[100px] sm:blur-[150px] rounded-full pointer-events-none"></div>
 
-        <div className="container mx-auto px-6 text-center relative z-10">
-          <h2 className="heading-section text-4xl mb-6 text-white">Ready to Ace Your Next Interview?</h2>
-          <p className="body-large mb-10 text-gray-300 max-w-2xl mx-auto">
+        <div className="container mx-auto px-4 sm:px-6 text-center relative z-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold mb-4 sm:mb-6 text-text-inverse">Ready to Ace Your Next Interview?</h2>
+          <p className="text-base sm:text-lg mb-6 sm:mb-8 lg:mb-10 text-text-secondary max-w-2xl mx-auto">
             Join thousands of engineers who have improved their interview skills with our AI-powered simulator.
           </p>
 
           {isAuthenticated ? (
             <Link
               to="/dashboard"
-              className="inline-flex items-center justify-center px-8 py-4 rounded-xl font-bold bg-white text-charcoal hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
+              className="btn-primary inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-[hsl(var(--card))] text-text-primary hover:opacity-90"
             >
               Go to Dashboard
             </Link>
           ) : (
             <Link
               to="/register"
-              className="inline-flex items-center justify-center px-8 py-4 rounded-xl font-bold bg-electric-blue text-white hover:bg-sky-400 transition-all shadow-lg hover:shadow-electric-blue/50 hover:-translate-y-1"
+              className="btn-primary inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4"
             >
               Get Started Now
             </Link>

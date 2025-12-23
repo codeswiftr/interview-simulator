@@ -2,7 +2,8 @@ import { forwardRef, useState } from 'react';
 import type { ButtonHTMLAttributes, ReactNode, MouseEvent } from 'react';
 import { cn } from '../../lib/utils';
 import { Spinner } from './Spinner';
-import { useRipple, Ripples } from './ButtonRipple';
+import { useRipple } from '../../hooks/useRipple';
+import { Ripples } from './ButtonRipple';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';

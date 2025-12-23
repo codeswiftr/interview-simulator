@@ -10,9 +10,9 @@
  * - Authentication flow security
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { authAPI, interviewsAPI, questionsAPI, responsesAPI, feedbackAPI, uploadAPI, subscriptionsAPI, userAPI } from '../api';
+import { authAPI, uploadAPI } from '../api';
 
 // Mock crypto.randomUUID using vi.stubGlobal
 vi.stubGlobal('crypto', {
@@ -51,7 +51,7 @@ describe.skip('API Security Tests', () => {
       localStorageMock.getItem.mockReturnValue('test-access-token');
 
       const mockResponse = { data: { user: { id: '1', email: 'test@example.com' } } };
-      const axiosSpy = vi.spyOn(axios, 'create').mockReturnValue({
+      vi.spyOn(axios, 'create').mockReturnValue({
         get: vi.fn().mockResolvedValue(mockResponse),
         post: vi.fn().mockResolvedValue(mockResponse),
         patch: vi.fn().mockResolvedValue(mockResponse),
@@ -63,7 +63,7 @@ describe.skip('API Security Tests', () => {
       } as any);
 
       // Import API to trigger interceptor setup
-      const apiModule = await import('../api');
+      await import('../api');
 
       // Verify token is retrieved
       expect(localStorageMock.getItem).toHaveBeenCalledWith('access_token');
@@ -72,7 +72,7 @@ describe.skip('API Security Tests', () => {
     it('should not include authorization header when no token exists', async () => {
       localStorageMock.getItem.mockReturnValue(null);
 
-      const axiosSpy = vi.spyOn(axios, 'create').mockReturnValue({
+      vi.spyOn(axios, 'create').mockReturnValue({
         get: vi.fn().mockResolvedValue({ data: {} }),
         post: vi.fn().mockResolvedValue({ data: {} }),
         patch: vi.fn().mockResolvedValue({ data: {} }),
@@ -311,7 +311,7 @@ describe.skip('API Security Tests', () => {
 
       localStorageMock.getItem.mockReturnValue('refresh-token');
 
-      const apiModule = await import('../api');
+      await import('../api');
 
       // Verify tokens are stored securely (not in URL)
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
@@ -359,7 +359,6 @@ describe.skip('API Security Tests', () => {
   describe('XSS Prevention', () => {
     it('should escape HTML in user inputs', async () => {
       const xssPayload = '<script>alert("XSS")</script>';
-      const escapedPayload = '&lt;script&gt;alert("XSS")&lt;/script&gt;';
 
       const mockPost = vi.fn();
       const axiosInstance = {
@@ -402,7 +401,7 @@ describe.skip('API Security Tests', () => {
 
       vi.spyOn(axios, 'create').mockReturnValue(axiosInstance as any);
 
-      const apiModule = await import('../api');
+      await import('../api');
 
       // Response should be parsed safely as JSON
       expect(maliciousResponse.message).toContain('<img');
@@ -525,7 +524,7 @@ describe.skip('API Security Tests', () => {
 
       vi.spyOn(axios, 'create').mockReturnValue(axiosInstance as any);
 
-      const apiModule = await import('../api');
+      await import('../api');
 
       // Should handle rate limit without exposing sensitive info
       expect(rateLimitError.response.status).toBe(429);
@@ -604,7 +603,6 @@ describe('Frontend XSS Prevention', () => {
 
     it('should sanitize HTML when using innerHTML', () => {
       const element = document.createElement('div');
-      const safeHTML = '<p>Safe content</p>';
       const dangerousHTML = '<script>alert("XSS")</script>';
 
       // If innerHTML must be used, it should be sanitized first
@@ -644,12 +642,12 @@ describe('Frontend XSS Prevention', () => {
     });
 
     it('should validate callback functions', () => {
-      const callbacks: { [key: string]: Function } = {};
+      const callbacks: { [key: string]: () => void } = {};
 
       // Should validate callbacks before execution
-      const addCallback = (name: string, fn: Function) => {
+      const addCallback = (name: string, fn: unknown) => {
         if (typeof fn === 'function') {
-          callbacks[name] = fn;
+          callbacks[name] = fn as () => void;
         }
       };
 

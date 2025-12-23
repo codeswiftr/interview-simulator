@@ -6,12 +6,10 @@ strategies including IP-based and user-based limits.
 """
 
 import hashlib
-import hmac
 import time
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -51,13 +49,8 @@ class SecureRateLimiter:
         client_ip = self._get_trusted_client_ip(request)
 
         # Create a composite key that includes both IP and user ID
-        if user_id:
-            # For authenticated users, use user ID for per-user limits
-            # but also include IP to prevent token sharing abuse
-            key_data = f"user:{user_id}:ip:{client_ip}"
-        else:
-            # For anonymous requests, use IP only
-            key_data = f"ip:{client_ip}"
+        # For authenticated users, include user ID to prevent token sharing abuse
+        key_data = f"user:{user_id}:ip:{client_ip}" if user_id else f"ip:{client_ip}"
 
         # Hash the key to prevent information leakage
         return hashlib.sha256(key_data.encode()).hexdigest()[:32]
@@ -71,8 +64,7 @@ class SecureRateLimiter:
         3. X-Forwarded-For with strict validation (limited hops)
         4. Direct connection IP
         """
-        from app.core.config import get_settings
-        settings = get_settings()
+        from app.config import settings
 
         # 1. Cloudflare header - most trusted, but verify it's from Cloudflare
         cf_ray = request.headers.get("CF-RAY")
@@ -135,7 +127,6 @@ class SecureRateLimiter:
     def _is_valid_ip_format(self, ip: str) -> bool:
         """Comprehensive IP format validation."""
         import ipaddress
-        import re
 
         # Check for obvious injection attacks
         if not ip or len(ip) > 45:  # Max IPv6 length
@@ -152,10 +143,9 @@ class SecureRateLimiter:
 
         try:
             # Try parsing as IP address
-            ip_obj = ipaddress.ip_address(ip)
+            ipaddress.ip_address(ip)
 
             # Reject private IPs in proxy headers (they can't be real clients)
-            proxy_headers = ["X-Forwarded-For", "X-Real-IP", "CF-Connecting-IP"]
             # This check will be done at call site
 
             # Accept valid IPs
@@ -187,7 +177,7 @@ class SecureRateLimiter:
 
         # Log structured data for security monitoring
         logger.warning(
-            f"Rate limit bypass attempt detected",
+            "Rate limit bypass attempt detected",
             extra={
                 "event": "rate_limit_bypass_attempt",
                 "client_ip": client_ip,

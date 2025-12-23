@@ -99,7 +99,10 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
 
   // Computed values
   const currentQuestion = questions[currentQuestionIndex];
-  const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+  // Progress based on completed questions (submitted responses), not just current position
+  // Shows 0% until first answer is submitted, then calculates based on completed questions
+  const completedQuestions = submittedResponses.length;
+  const progress = questions.length > 0 ? (completedQuestions / questions.length) * 100 : 0;
 
   // Ref for polling to access latest state
   const submittedResponsesRef = useRef<SubmittedResponse[]>([]);
@@ -138,8 +141,8 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
           question_count: questionsResponse.data.length,
         });
       } catch (err) {
-        const error = err as { response?: { data?: { message?: string } } };
-        setError(error.response?.data?.message || 'Failed to load interview');
+        const error = err as { response?: { data?: { detail?: string; message?: string } } };
+        setError(error.response?.data?.detail || error.response?.data?.message || 'Failed to load interview');
       } finally {
         setIsLoading(false);
       }
@@ -269,8 +272,8 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
 
       navigate(`/interview/${id}/feedback`);
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to end interview');
+      const error = err as { response?: { data?: { detail?: string; message?: string } } };
+      setError(error.response?.data?.detail || error.response?.data?.message || 'Failed to end interview');
     }
   }, [id, navigate, session, sessionStartTime, submittedResponses.length, questions.length]);
 
@@ -322,10 +325,11 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
         await handleEndInterview();
       }
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to submit answer. Click retry to try again.');
+      const error = err as { response?: { data?: { detail?: string; message?: string }; status?: number } };
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to submit answer. Click retry to try again.';
+      setError(errorMessage);
       setLastFailedUpload({ blob, questionId: questions[currentQuestionIndex].id, mimeType });
-      toast.error('Upload failed', 'Your answer could not be uploaded. Please retry.');
+      toast.error('Upload failed', errorMessage);
     } finally {
       setIsSubmitting(false);
       setSubmitProgress(null);
@@ -353,8 +357,8 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
         await handleEndInterview();
       }
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to skip question');
+      const error = err as { response?: { data?: { detail?: string; message?: string } } };
+      setError(error.response?.data?.detail || error.response?.data?.message || 'Failed to skip question');
     } finally {
       setIsSubmitting(false);
     }
@@ -390,9 +394,10 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
         await handleEndInterview();
       }
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error('Upload failed', 'Please check your connection and try again');
-      setError(error.response?.data?.message || 'Failed to upload. Click retry to try again.');
+      const error = err as { response?: { data?: { detail?: string; message?: string } } };
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to upload. Click retry to try again.';
+      toast.error('Upload failed', errorMessage);
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

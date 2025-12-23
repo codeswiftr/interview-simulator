@@ -244,6 +244,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
+    redirect_slashes=False,  # Prevent 307 redirects that break CORS
 )
 
 # Correlation ID middleware (add early for request tracing)
@@ -253,20 +254,37 @@ app.add_middleware(CorrelationIDMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS configuration - restricted for security
-# Validate origins in production to prevent wildcards
+# In development: allow localhost on any port via regex
+# In production: use explicit origins list
 origins = settings.cors_origins
-if not settings.debug:
+allow_origin_regex = None
+
+if settings.debug:
+    # Development: allow localhost on any port + .local domains (Caddy proxy)
+    allow_origin_regex = r"^https?://(localhost|127\.0\.0\.1|[\w.-]+\.local)(:\d+)?$"
+    origins = []  # Use regex instead of explicit list
+else:
     # In production, ensure no wildcard origins
     if "*" in origins or "http://*" in origins or "https://*" in origins:
-        logger.error("CORS origins contain wildcards in production - this is a security risk")
+        logging.error("CORS origins contain wildcards in production - this is a security risk")
         raise ValueError("Wildcard CORS origins are not allowed in production")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Requested-With"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Correlation-ID",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+    ],
+    expose_headers=["X-Correlation-ID"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Secure rate limiting (only in production)

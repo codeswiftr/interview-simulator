@@ -1,0 +1,11 @@
+# Environment files with secrets
+.env.staging
+.env.production
+.env
+
+# Logs directory
+logs/
+
+# Temporary files
+*.tmp
+*.log

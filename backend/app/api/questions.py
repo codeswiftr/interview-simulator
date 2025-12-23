@@ -15,7 +15,7 @@ from app.models.user import User
 router = APIRouter()
 
 
-@router.get("/", response_model=list[QuestionRead])
+@router.get("", response_model=list[QuestionRead])
 async def list_questions(
     category: QuestionCategory | None = None,
     difficulty: Difficulty | None = None,
@@ -79,7 +79,7 @@ async def get_question(question_id: UUID, session: AsyncSession = Depends(get_se
     return question
 
 
-@router.post("/", response_model=QuestionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuestionRead, status_code=status.HTTP_201_CREATED)
 async def create_question(
     payload: QuestionCreate,
     session: AsyncSession = Depends(get_session),

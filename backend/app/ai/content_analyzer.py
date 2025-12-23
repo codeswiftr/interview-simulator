@@ -129,7 +129,7 @@ When providing feedback, please:
                 base_url="https://openrouter.ai/api/v1",
             )
             self.anthropic_client = None
-            logger.info("ContentAnalyzer using OpenRouter provider")
+            logger.info("ContentAnalyzer using OpenRouter provider (Gemini 2.0 Flash)")
         else:
             self.anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
             self.openrouter_client = None
@@ -170,9 +170,10 @@ When providing feedback, please:
 
         try:
             if self.provider == "openrouter":
-                # Use OpenRouter with Claude via OpenAI-compatible API
+                # Use OpenRouter with Gemini 2.0 Flash (fast, cheap, high quality)
+                # Pricing: $0.10/M input, $0.40/M output
                 response = await self.openrouter_client.chat.completions.create(
-                    model="anthropic/claude-haiku-4.5",
+                    model="google/gemini-2.0-flash-001",
                     max_tokens=2048,
                     temperature=0.3,
                     messages=[{"role": "user", "content": prompt}],

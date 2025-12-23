@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
 import { BottomNav } from './components/layout/BottomNav';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -16,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AffiliatePage from './pages/AffiliatePage';
 
 // Lazy load heavier pages for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -25,6 +27,9 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PreparationPage = lazy(() => import('./pages/PreparationPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
+
+// Dev-only preview page (lazy loaded, only in development)
+const DevPreviewPage = lazy(() => import('./pages/DevPreviewPage'));
 
 // Loading fallback component
 const PageLoadingFallback = () => (
@@ -55,6 +60,7 @@ function App() {
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/affiliates" element={<AffiliatePage />} />
                   <Route
                     path="/dashboard"
                     element={
@@ -120,9 +126,14 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  {/* Dev-only preview route */}
+                  {import.meta.env.DEV && (
+                    <Route path="/dev-preview" element={<DevPreviewPage />} />
+                  )}
                 </Routes>
               </Suspense>
             </main>
+            <Footer />
             <BottomNav />
             <InstallPrompt />
           </div>

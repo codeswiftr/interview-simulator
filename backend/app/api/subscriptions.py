@@ -46,6 +46,7 @@ class CheckoutRequest(BaseModel):
     """Request model for checkout session creation."""
 
     price_id: str
+    referral_code: str | None = None  # Rewardful referral code for affiliate tracking
 
 
 @router.post("/checkout", response_model=CheckoutSessionResponse)
@@ -104,21 +105,28 @@ async def create_checkout_session(
         if isinstance(trial_days, int) and trial_days > 0:
             subscription_data["trial_period_days"] = trial_days
 
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=["card"],
-            line_items=[
+        # Build checkout session params
+        checkout_params = {
+            "customer": customer_id,
+            "payment_method_types": ["card"],
+            "line_items": [
                 {
                     "price": payload.price_id,
                     "quantity": 1,
                 }
             ],
-            mode="subscription",
-            success_url=f"{settings.frontend_url}/settings?success=true",
-            cancel_url=f"{settings.frontend_url}/settings?canceled=true",
-            metadata={"user_id": str(current_user.id)},
-            subscription_data=subscription_data,
-        )
+            "mode": "subscription",
+            "success_url": f"{settings.frontend_url}/settings?success=true",
+            "cancel_url": f"{settings.frontend_url}/settings?canceled=true",
+            "metadata": {"user_id": str(current_user.id)},
+            "subscription_data": subscription_data,
+        }
+
+        # Add Rewardful referral code for affiliate tracking
+        if payload.referral_code:
+            checkout_params["client_reference_id"] = payload.referral_code
+
+        checkout_session = stripe.checkout.Session.create(**checkout_params)
 
         return CheckoutSessionResponse(url=checkout_session.url)
 

@@ -15,12 +15,10 @@ Options:
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
 
 import pytest
 
@@ -120,7 +118,7 @@ class SecurityTestRunner:
         # Generate report
         self._generate_report()
 
-    def _run_test_category(self, category: str, test_files: List[str]) -> None:
+    def _run_test_category(self, category: str, test_files: list[str]) -> None:
         """Run tests for a specific category."""
         # Build pytest arguments
         args = [
@@ -135,11 +133,11 @@ class SecurityTestRunner:
 
         # Run pytest
         try:
-            result = pytest.main(args)
+            pytest.main(args)
 
             # Read JSON report if available
             try:
-                with open(f"/tmp/{category}_report.json", "r") as f:
+                with open(f"/tmp/{category}_report.json") as f:
                     report = json.load(f)
 
                     # Extract summary
@@ -264,11 +262,11 @@ class SecurityTestRunner:
         ]
 
         try:
-            result = pytest.main(args)
+            pytest.main(args)
 
             # Read coverage report
             try:
-                with open("coverage.json", "r") as f:
+                with open("coverage.json") as f:
                     coverage = json.load(f)
                     self.results["coverage"] = {
                         "total_coverage": coverage.get("totals", {}).get("percent_covered", 0),
@@ -324,7 +322,7 @@ def main():
     print("\n🔐 Security testing complete!")
     print(f"   View detailed report: {args.output_report}")
     if args.coverage:
-        print(f"   View coverage report: coverage_html/index.html")
+        print("   View coverage report: coverage_html/index.html")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Zap, BarChart2, Target, Building2, MessageSquare, Terminal, Server, Layers, CheckCircle2, ChevronDown } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Card } from '../ui/Card';
 import type { CreateInterviewFormData } from '../../types';
 
 interface NewInterviewModalProps {
@@ -45,9 +46,12 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
     question_count: 2,
     difficulty: 'medium',
   });
-  const { resolvedTheme } = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const containerRef = useFocusTrap({
+    isActive: isOpen,
+    onEscape: isSubmitting ? undefined : onClose,
+  });
 
   if (!isOpen) return null;
 
@@ -76,26 +80,31 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
   };
 
   return (
-    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div
-        className="backdrop-blur-xl max-w-4xl w-full rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] animate-scale-in"
-        style={{ backgroundColor: resolvedTheme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)' }}
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      <Card
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-interview-modal-title"
+        variant="elevated"
+        className="max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh] animate-scale-in"
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border-light dark:border-white/10">
+        <div className="flex items-center justify-between p-6 border-b border-[hsl(var(--border))]">
           <div>
-            <h2 className="heading-section text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-electric-blue to-indigo-600">
+            <h2 id="new-interview-modal-title" className="heading-section text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-electric-blue to-indigo-600 dark:from-electric-blue dark:to-indigo-400">
               New Interview Session
             </h2>
-            <p className="body-small text-text-secondary dark:text-gray-400 mt-1">
+            <p className="body-small text-text-secondary mt-1">
               Customize your practice environment
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-secondary dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 text-text-tertiary hover:text-text-primary hover:bg-[hsl(var(--muted))] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2"
             disabled={isSubmitting}
+            aria-label="Close modal"
           >
             <X size={24} />
           </button>
@@ -103,11 +112,11 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8">
+          <form id="new-interview-form" onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8">
 
             {/* Left Column: Interview Type */}
             <div className="flex-1 space-y-4">
-              <label className="text-sm font-semibold text-text-tertiary dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-sm font-semibold text-text-tertiary dark:text-text-secondary uppercase tracking-wider flex items-center gap-2">
                 1. Select Interview Type
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -121,9 +130,10 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       onClick={() => setFormData({ ...formData, interview_type: type.value as CreateInterviewFormData['interview_type'] })}
                       className={`
                         relative group p-4 rounded-xl text-left border-2 transition-all duration-200
+                        focus:outline-none focus-visible:ring-2 focus-visible:ring-electric-blue focus-visible:ring-offset-2
                         ${isSelected
-                          ? `border-electric-blue bg-electric-blue/5 dark:bg-electric-blue/10 shadow-lg shadow-electric-blue/10`
-                          : 'border-transparent bg-surface-secondary dark:bg-[#1F2937] hover:bg-surface-tertiary dark:hover:bg-[#334155]'
+                          ? `border-electric-blue bg-electric-blue/10 dark:bg-electric-blue/15 shadow-lg shadow-electric-blue/20 scale-[1.02]`
+                          : 'border-transparent bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 hover:border-[hsl(var(--border))] hover:scale-[1.01]'
                         }
                       `}
                     >
@@ -133,8 +143,8 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       `}>
                         <Icon size={20} />
                       </div>
-                      <div className={`font-semibold mb-1 ${isSelected ? 'text-text-primary dark:text-white' : 'text-text-primary dark:text-gray-200'}`}>{type.label}</div>
-                      <div className={`text-xs ${isSelected ? 'text-text-secondary dark:text-gray-300' : 'text-text-secondary dark:text-gray-400'}`}>{type.description}</div>
+                      <div className={`font-semibold mb-1 ${isSelected ? 'text-text-primary dark:text-white' : 'text-text-primary dark:text-text-inverse'}`}>{type.label}</div>
+                      <div className={`text-xs ${isSelected ? 'text-text-secondary dark:text-text-tertiary' : 'text-text-secondary dark:text-text-secondary'}`}>{type.description}</div>
 
                       {isSelected && (
                         <div className="absolute top-3 right-3 text-electric-blue animate-scale-in">
@@ -148,21 +158,21 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
             </div>
 
             {/* Right Column: Configuration */}
-            <div className="flex-1 space-y-8 lg:border-l border-border-light dark:border-white/10 lg:pl-8">
+            <div className="flex-1 space-y-8 lg:border-l border-[hsl(var(--border))] lg:pl-8">
 
               {/* Target Company */}
               <div className="space-y-3">
-                <label className="text-sm font-semibold text-text-tertiary dark:text-gray-400 uppercase tracking-wider">
+                <label className="text-sm font-semibold text-text-tertiary dark:text-text-secondary uppercase tracking-wider">
                   2. Target Company (Optional)
                 </label>
                 <div className="relative group">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary group-hover:text-electric-blue transition-colors">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary dark:text-text-secondary group-hover:text-electric-blue transition-colors">
                     <Building2 size={18} />
                   </div>
                   <select
                     value={formData.target_company || ''}
                     onChange={(e) => setFormData({ ...formData, target_company: e.target.value || undefined })}
-                    className="w-full pl-10 pr-10 py-3 bg-surface-secondary dark:bg-[#1F2937] border border-transparent hover:border-border-medium dark:hover:border-[#334155] focus:border-electric-blue rounded-xl text-text-primary dark:text-white outline-none transition-all appearance-none cursor-pointer"
+                    className="w-full pl-10 pr-10 py-3 bg-[hsl(var(--muted))] border border-transparent hover:border-[hsl(var(--border))] focus:border-electric-blue focus:ring-2 focus:ring-electric-blue focus:ring-offset-1 rounded-xl text-text-primary outline-none transition-all appearance-none cursor-pointer"
                   >
                     {targetCompanies.map((company) => (
                       <option key={company.value} value={company.value}>
@@ -170,7 +180,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                       </option>
                     ))}
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary dark:text-text-secondary pointer-events-none">
                     <ChevronDown size={16} />
                   </div>
                 </div>
@@ -178,7 +188,7 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
 
               {/* Difficulty */}
               <div className="space-y-3">
-                <label className="text-sm font-semibold text-text-tertiary dark:text-gray-400 uppercase tracking-wider">
+                <label className="text-sm font-semibold text-text-tertiary dark:text-text-secondary uppercase tracking-wider">
                   3. Difficulty Level
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -193,8 +203,8 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                         className={`
                           flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200
                           ${isSelected
-                            ? `border-current ${level.color} bg-current/5`
-                            : 'border-transparent bg-surface-secondary dark:bg-[#1F2937] hover:bg-surface-tertiary dark:hover:bg-[#334155] text-text-secondary dark:text-gray-400'
+                            ? `border-current ${level.color} bg-current/5 dark:bg-current/10`
+                            : 'border-transparent bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 text-text-secondary hover:text-text-primary'
                           }
                         `}
                       >
@@ -208,10 +218,10 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
 
               {/* Question Count */}
               <div className="space-y-3">
-                <label className="text-sm font-semibold text-text-tertiary dark:text-gray-400 uppercase tracking-wider">
+                <label className="text-sm font-semibold text-text-tertiary dark:text-text-secondary uppercase tracking-wider">
                   4. Number of Questions
                 </label>
-                <div className="flex justify-between bg-surface-secondary dark:bg-[#1F2937] p-1 rounded-xl">
+                <div className="flex justify-between bg-[hsl(var(--muted))] p-1 rounded-xl gap-1">
                   {questionCounts.map((count) => {
                     const isSelected = formData.question_count === count;
                     return (
@@ -220,10 +230,10 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
                         type="button"
                         onClick={() => setFormData({ ...formData, question_count: count })}
                         className={`
-                          flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-200
+                          flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-1
                           ${isSelected
-                            ? 'bg-white dark:bg-[#334155] text-electric-blue dark:text-white shadow-sm scale-105'
-                            : 'text-text-secondary dark:text-gray-400 hover:text-text-primary dark:hover:text-gray-200'
+                            ? 'bg-[hsl(var(--card))] text-electric-blue shadow-sm scale-105'
+                            : 'text-text-secondary hover:text-text-primary'
                           }
                         `}
                       >
@@ -246,25 +256,26 @@ export default function NewInterviewModal({ isOpen, onClose, onSubmit }: NewInte
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-border-light dark:border-white/10 bg-surface-primary dark:bg-[#111827] flex justify-end gap-3">
+        <div className="p-6 border-t border-[hsl(var(--border))] flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl font-medium text-text-secondary dark:text-gray-400 hover:bg-surface-secondary dark:hover:bg-white/10 transition-colors"
+            className="btn-secondary"
             disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
-            className="px-8 py-2.5 rounded-xl font-bold bg-gradient-to-r from-electric-blue to-indigo-600 text-white shadow-lg shadow-electric-blue/25 hover:shadow-electric-blue/40 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            type="submit"
+            form="new-interview-form"
+            className="btn-primary"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Starting...' : 'Start Interview'}
           </button>
         </div>
 
-      </div>
+      </Card>
     </div>
   );
 }

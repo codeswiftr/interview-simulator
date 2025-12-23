@@ -6,13 +6,11 @@ from uuid import uuid4
 
 import pytest
 import stripe
-from httpx import AsyncClient
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 
 from app.models.user import SubscriptionTier, User
+from tests.conftest import get_test_engine, register_and_login
 
-# Import register_and_login from conftest.py
-from tests.conftest import register_and_login
 
 @pytest.mark.asyncio
 async def test_get_subscription_status_returns_correct_tier(client, db_session):
@@ -20,7 +18,7 @@ async def test_get_subscription_status_returns_correct_tier(client, db_session):
     token = await register_and_login(client)
 
     response = await client.get(
-        "/api/v1/subscriptionsstatus",
+        "/api/v1/subscriptions/status",
         headers={"Authorization": token},
     )
 
@@ -53,7 +51,7 @@ async def test_create_checkout_session_returns_url(client, db_session):
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         response = await client.post(
-            "/api/v1/subscriptionscheckout",
+            "/api/v1/subscriptions/checkout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )
@@ -83,7 +81,7 @@ async def test_create_checkout_session_creates_customer(client, db_session):
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         await client.post(
-            "/api/v1/subscriptionscheckout",
+            "/api/v1/subscriptions/checkout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )
@@ -135,7 +133,7 @@ async def test_webhook_checkout_completed_upgrades_user(client, db_session):
         mock_stripe.Subscription.retrieve.return_value = mock_subscription
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -149,7 +147,8 @@ async def test_webhook_subscription_deleted_downgrades_user(client, db_session):
     token = await register_and_login(client)
 
     # Create user with Pro subscription
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -176,13 +175,14 @@ async def test_webhook_subscription_deleted_downgrades_user(client, db_session):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
 
         # Verify user was downgraded
-        async with SessionLocal() as session:
+        _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
             result = await session.exec(
                 select(User).where(User.id == user_id)
             )
@@ -217,7 +217,7 @@ async def test_checkout_with_invalid_price_id(client, db_session):
         mock_stripe.checkout.Session.create.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptionscheckout",
+            "/api/v1/subscriptions/checkout",
             json={"price_id": "price_invalid"},
             headers={"Authorization": token},
         )
@@ -231,7 +231,8 @@ async def test_checkout_with_already_subscribed_user(client, db_session):
     token = await register_and_login(client)
 
     # Set user as already subscribed
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -255,7 +256,7 @@ async def test_checkout_with_already_subscribed_user(client, db_session):
         mock_stripe.Subscription.list.return_value = mock_sub_list
 
         response = await client.post(
-            "/api/v1/subscriptionscheckout",
+            "/api/v1/subscriptions/checkout",
             json={"price_id": "price_pro_monthly"},
             headers={"Authorization": token},
         )
@@ -281,7 +282,7 @@ async def test_webhook_invalid_signature(client, db_session):
         mock_stripe.Webhook.construct_event.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json={"type": "checkout.session.completed", "data": {}},
             headers={"stripe-signature": "invalid_signature"},
         )
@@ -305,7 +306,7 @@ async def test_webhook_unknown_event_type(client, db_session):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -320,7 +321,8 @@ async def test_get_subscription_status_expired(client, db_session):
     token = await register_and_login(client)
 
     # Set user with expired subscription
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -332,7 +334,7 @@ async def test_get_subscription_status_expired(client, db_session):
         await session.commit()
 
     response = await client.get(
-        "/api/v1/subscriptionsstatus",
+        "/api/v1/subscriptions/status",
         headers={"Authorization": token},
     )
 
@@ -347,7 +349,8 @@ async def test_portal_session_creation(client, db_session):
     token = await register_and_login(client)
 
     # Set user with subscription
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -365,7 +368,7 @@ async def test_portal_session_creation(client, db_session):
         mock_stripe.billing_portal.Session.create.return_value = mock_session
 
         response = await client.post(
-            "/api/v1/subscriptionsportal",
+            "/api/v1/subscriptions/portal",
             headers={"Authorization": token},
         )
 
@@ -379,7 +382,8 @@ async def test_portal_error_handling(client, db_session):
     token = await register_and_login(client)
 
     # Set user with customer_id so we can test Stripe error
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -406,7 +410,7 @@ async def test_portal_error_handling(client, db_session):
         mock_stripe.billing_portal.Session.create.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptionsportal",
+            "/api/v1/subscriptions/portal",
             headers={"Authorization": token},
         )
 
@@ -420,7 +424,8 @@ async def test_cancel_subscription(client, db_session):
     token = await register_and_login(client)
 
     # Set user with active subscription
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -440,7 +445,7 @@ async def test_cancel_subscription(client, db_session):
         mock_stripe.Subscription.modify.return_value = mock_subscription
 
         response = await client.post(
-            "/api/v1/subscriptionscancel",
+            "/api/v1/subscriptions/cancel",
             headers={"Authorization": token},
         )
 
@@ -453,7 +458,8 @@ async def test_cancel_already_cancelled_subscription(client, db_session):
     token = await register_and_login(client)
 
     # Set user with cancelled subscription
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -479,7 +485,7 @@ async def test_cancel_already_cancelled_subscription(client, db_session):
         mock_stripe.Subscription.modify.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptionscancel",
+            "/api/v1/subscriptions/cancel",
             headers={"Authorization": token},
         )
 
@@ -494,7 +500,7 @@ async def test_get_pricing_config(client):
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
         mock_settings.stripe_price_id_pro_annual = "price_pro_annual"
 
-        response = await client.get("/api/v1/subscriptionspricing")
+        response = await client.get("/api/v1/subscriptions/pricing")
 
         assert response.status_code == 200
         data = response.json()
@@ -510,7 +516,7 @@ async def test_get_pricing_config_null_values(client):
         mock_settings.stripe_price_id_pro_monthly = None
         mock_settings.stripe_price_id_pro_annual = None
 
-        response = await client.get("/api/v1/subscriptionspricing")
+        response = await client.get("/api/v1/subscriptions/pricing")
 
         assert response.status_code == 200
         data = response.json()
@@ -526,7 +532,7 @@ async def test_checkout_stripe_not_configured(client, db_session):
         mock_settings.stripe_secret_key = None
 
         response = await client.post(
-            "/api/v1/subscriptionscheckout",
+            "/api/v1/subscriptions/checkout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )
@@ -541,7 +547,7 @@ async def test_webhook_stripe_not_configured(client):
         mock_settings.stripe_webhook_secret = None
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json={"type": "checkout.session.completed", "data": {}},
             headers={"stripe-signature": "test_signature"},
         )
@@ -563,7 +569,7 @@ async def test_webhook_invalid_payload(client, db_session):
         mock_stripe.Webhook.construct_event.side_effect = ValueError("Invalid payload")
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json={"invalid": "payload"},
             headers={"stripe-signature": "test_signature"},
         )
@@ -580,7 +586,7 @@ async def test_portal_no_customer_id(client, db_session):
         mock_settings.stripe_secret_key = "sk_test_xxx"
 
         response = await client.post(
-            "/api/v1/subscriptionsportal",
+            "/api/v1/subscriptions/portal",
             headers={"Authorization": token},
         )
 
@@ -596,7 +602,7 @@ async def test_portal_stripe_not_configured(client, db_session):
         mock_settings.stripe_secret_key = None
 
         response = await client.post(
-            "/api/v1/subscriptionsportal",
+            "/api/v1/subscriptions/portal",
             headers={"Authorization": token},
         )
 
@@ -609,7 +615,7 @@ async def test_cancel_no_subscription(client, db_session):
     token = await register_and_login(client)
 
     response = await client.post(
-        "/api/v1/subscriptionscancel",
+        "/api/v1/subscriptions/cancel",
         headers={"Authorization": token},
     )
 
@@ -622,7 +628,8 @@ async def test_webhook_subscription_updated(client, db_session):
     token = await register_and_login(client)
 
     # Set user with customer ID
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -656,7 +663,7 @@ async def test_webhook_subscription_updated(client, db_session):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -684,7 +691,7 @@ async def test_webhook_checkout_missing_metadata(client, db_session):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -712,7 +719,7 @@ async def test_webhook_checkout_user_not_found(client, db_session):
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
         response = await client.post(
-            "/api/v1/subscriptionswebhook",
+            "/api/v1/subscriptions/webhook",
             json=webhook_payload,
             headers={"stripe-signature": "test_signature"},
         )
@@ -726,7 +733,8 @@ async def test_get_subscription_status_syncs_from_stripe(client, db_session):
     token = await register_and_login(client)
 
     # Set user with customer ID
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -757,7 +765,7 @@ async def test_get_subscription_status_syncs_from_stripe(client, db_session):
         mock_stripe.Subscription.list.return_value = mock_sub_list
 
         response = await client.get(
-            "/api/v1/subscriptionsstatus",
+            "/api/v1/subscriptions/status",
             headers={"Authorization": token},
         )
 
@@ -770,7 +778,8 @@ async def test_get_subscription_status_sync_error_handled(client, db_session):
     token = await register_and_login(client)
 
     # Set user with customer ID
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -788,7 +797,7 @@ async def test_get_subscription_status_sync_error_handled(client, db_session):
         mock_sync.side_effect = Exception("Stripe API error")
 
         response = await client.get(
-            "/api/v1/subscriptionsstatus",
+            "/api/v1/subscriptions/status",
             headers={"Authorization": token},
         )
 
@@ -801,7 +810,8 @@ async def test_cancel_subscription_stripe_error(client, db_session):
     token = await register_and_login(client)
 
     # Set user with subscription
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -825,7 +835,7 @@ async def test_cancel_subscription_stripe_error(client, db_session):
         mock_stripe.Subscription.modify.side_effect = error
 
         response = await client.post(
-            "/api/v1/subscriptionscancel",
+            "/api/v1/subscriptions/cancel",
             headers={"Authorization": token},
         )
 
@@ -838,7 +848,8 @@ async def test_checkout_reuses_existing_customer(client, db_session):
     token = await register_and_login(client)
 
     # Set user with existing customer ID
-    async with SessionLocal() as session:
+    _, TestSessionLocal = get_test_engine()
+    async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
         user_id = user_resp.json()["id"]
 
@@ -862,7 +873,7 @@ async def test_checkout_reuses_existing_customer(client, db_session):
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         response = await client.post(
-            "/api/v1/subscriptionscheckout",
+            "/api/v1/subscriptions/checkout",
             headers={"Authorization": token},
             json={"price_id": "price_test123"},
         )

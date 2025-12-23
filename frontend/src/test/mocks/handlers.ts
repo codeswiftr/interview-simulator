@@ -333,6 +333,28 @@ export const handlers = [
     });
   }),
 
+  http.get(`${API_URL}/preparation`, () => {
+    return HttpResponse.json({
+      preparations: [],
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/state`, () => {
+    return HttpResponse.json({
+      stage: 'detective',
+      question: {
+        id: 'question-test-id',
+        content: 'Tell me about a challenging project',
+        category: 'behavioral',
+        difficulty: 'medium',
+      },
+      current_question: 'Can you tell me about a specific project that relates to this question?',
+      qna: [],
+      draft_answer: null,
+      attempts: [],
+    });
+  }),
+
   http.post(`${API_URL}/preparation/:id/detective/question`, () => {
     return HttpResponse.json({
       question: 'Can you tell me about a specific project that relates to this question?',

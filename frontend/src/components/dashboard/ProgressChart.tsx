@@ -74,14 +74,11 @@ export default function ProgressChart({ data, height = 200 }: ProgressChartProps
 
   if (data.length === 0) {
     return (
-      <div className="card p-6">
-        <h3 className="heading-card mb-4">Score Progress</h3>
-        <div
-          className="flex items-center justify-center text-text-tertiary"
-          style={{ height }}
-        >
-          <p>Complete some interviews to see your progress</p>
-        </div>
+      <div
+        className="flex items-center justify-center text-text-tertiary"
+        style={{ height }}
+      >
+        <p>Complete some interviews to see your progress</p>
       </div>
     );
   }
@@ -90,9 +87,9 @@ export default function ProgressChart({ data, height = 200 }: ProgressChartProps
   const trendColor = trend.direction === 'up' ? 'text-status-success' : trend.direction === 'down' ? 'text-status-error' : 'text-text-tertiary';
 
   return (
-    <div className="card p-6">
+    <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="heading-card">Score Progress</h3>
+        <span className="text-sm text-text-secondary">Score Progress</span>
         <div className={`flex items-center gap-1 ${trendColor}`}>
           <TrendIcon size={16} />
           <span className="text-sm font-medium">
