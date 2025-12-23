@@ -16,9 +16,11 @@ export const Events = {
 
   // Upgrade / billing funnel events
   UPGRADE_MODAL_OPENED: 'upgrade_modal_opened',
+  UPGRADE_MODAL_CLOSED: 'upgrade_modal_closed',
   UPGRADE_CTA_CLICKED: 'upgrade_cta_clicked',
   CHECKOUT_STARTED: 'checkout_started',
   UPGRADE_REASON_SUBMITTED: 'upgrade_reason_submitted',
+  LIMIT_REACHED: 'limit_reached',
 
   // Interview lifecycle events
   INTERVIEW_CREATED: 'interview_created',
@@ -28,6 +30,7 @@ export const Events = {
 
   // Question/recording events
   QUESTION_VIEWED: 'question_viewed',
+  QUESTION_SKIPPED: 'question_skipped',
   RECORDING_STARTED: 'recording_started',
   RECORDING_COMPLETED: 'recording_completed',
 
@@ -41,6 +44,18 @@ export const Events = {
 
   // Payment events
   SUBSCRIPTION_CREATED: 'subscription_created',
+
+  // Settings events
+  THEME_CHANGED: 'theme_changed',
+  VOICE_SETTINGS_CHANGED: 'voice_settings_changed',
+
+  // Question bank events
+  QUESTION_FILTER_APPLIED: 'question_filter_applied',
+  QUESTION_PRACTICE_STARTED: 'question_practice_started',
+
+  // Error events
+  UPLOAD_FAILED: 'upload_failed',
+  API_ERROR: 'api_error',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

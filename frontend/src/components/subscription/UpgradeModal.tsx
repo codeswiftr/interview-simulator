@@ -25,7 +25,14 @@ export default function UpgradeModal({
   const [feedbackSent, setFeedbackSent] = useState(false);
   const containerRef = useFocusTrap({
     isActive: isOpen,
-    onEscape: onClose,
+    onEscape: () => {
+      analytics.track(Events.UPGRADE_MODAL_CLOSED, {
+        surface: 'upgrade_modal',
+        feedback_submitted: feedbackSent,
+        close_method: 'escape',
+      });
+      onClose();
+    },
   });
 
   // Fetch pricing configuration when modal opens
@@ -46,6 +53,15 @@ export default function UpgradeModal({
     if (!isOpen) return;
     analytics.track(Events.UPGRADE_MODAL_OPENED, { surface: 'upgrade_modal' });
   }, [isOpen]);
+
+  // Handle modal close with tracking
+  const handleClose = () => {
+    analytics.track(Events.UPGRADE_MODAL_CLOSED, {
+      surface: 'upgrade_modal',
+      feedback_submitted: feedbackSent,
+    });
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -115,7 +131,7 @@ export default function UpgradeModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close dialog"
             className="text-text-tertiary hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2 rounded-lg p-1"
           >

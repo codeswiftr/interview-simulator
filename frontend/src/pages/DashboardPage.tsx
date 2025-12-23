@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, AlertCircle, Lightbulb, Sparkles, Activity, Target, Mic, BarChart2 } from 'lucide-react';
+import { analytics, Events } from '../lib/analytics';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboardModals } from '../hooks/useDashboardModals';
 import { interviewsAPI, userAPI, preparationAPI } from '../lib/api';
@@ -120,6 +121,13 @@ export default function DashboardPage() {
     loadData();
   }, [loadData]);
 
+  // Listen for header contextual action to open new interview modal
+  useEffect(() => {
+    const handleOpenNewInterview = () => openNewInterview();
+    window.addEventListener('open-new-interview', handleOpenNewInterview);
+    return () => window.removeEventListener('open-new-interview', handleOpenNewInterview);
+  }, [openNewInterview]);
+
   const loadStats = async () => {
     try {
       const response = await userAPI.getStats();
@@ -181,6 +189,10 @@ export default function DashboardPage() {
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
       if (axiosError.response?.status === 402) {
+        analytics.track(Events.LIMIT_REACHED, {
+          limit_type: 'interview_sessions',
+          trigger: 'create_interview',
+        });
         openUpgrade();
         setError('Free tier limit reached. Upgrade to Pro for unlimited interviews.');
       } else {
@@ -573,6 +585,18 @@ export default function DashboardPage() {
         onCreateSession={createFirstSession}
         onSkip={skipFirstSession}
       />
+
+      {/* Mobile FAB - Start New Interview */}
+      {!isLoading && sessions.length > 0 && (
+        <button
+          onClick={openNewInterview}
+          className="fixed bottom-20 right-4 z-30 md:hidden w-14 h-14 rounded-full bg-electric-blue text-white shadow-lg shadow-electric-blue/30 flex items-center justify-center hover:bg-electric-blue/90 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-electric-blue focus:ring-offset-2"
+          aria-label="Start new interview"
+          title="Start new interview"
+        >
+          <Plus size={24} />
+        </button>
+      )}
     </div>
   );
 }

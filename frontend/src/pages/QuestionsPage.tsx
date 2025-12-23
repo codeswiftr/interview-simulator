@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, AlertCircle, Search, X, Play } from 'lucide-react';
 import { questionsAPI, interviewsAPI, preparationAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { usePrepUsage } from '../hooks/usePrepUsage';
+import { useScrollDirection } from '../hooks/useScrollDirection';
+import { analytics, Events } from '../lib/analytics';
 import QuestionCard from '../components/questions/QuestionCard';
 import QuestionFilters, { type QuestionFiltersState } from '../components/questions/QuestionFilters';
 import UpgradeModal from '../components/subscription/UpgradeModal';
@@ -21,6 +23,22 @@ export default function QuestionsPage() {
   const [isPracticing, setIsPracticing] = useState(false);
   const { user } = useAuth();
   const { isLimitReached, remaining, prepLimit, incrementUsage } = usePrepUsage();
+
+  // Scroll-aware filter behavior
+  const scrollDirection = useScrollDirection({ threshold: 15 });
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const prevScrollDirection = useRef(scrollDirection);
+
+  // Auto-collapse filter panel when scrolling down
+  useEffect(() => {
+    if (scrollDirection === 'down' && prevScrollDirection.current !== 'down' && isFilterExpanded) {
+      setIsFilterExpanded(false);
+    }
+    prevScrollDirection.current = scrollDirection;
+  }, [scrollDirection, isFilterExpanded]);
+
+  // Header hides on scroll down, so filter should move up
+  const headerHidden = scrollDirection === 'down';
 
   const [filters, setFilters] = useState<QuestionFiltersState>({
     category: '',
@@ -99,6 +117,10 @@ export default function QuestionsPage() {
       } catch (err: unknown) {
         const error = err as { response?: { status?: number; data?: { message?: string } } };
         if (error.response?.status === 402) {
+          analytics.track(Events.LIMIT_REACHED, {
+            limit_type: 'interview_sessions',
+            trigger: 'quick_practice',
+          });
           setShowUpgradeModal(true);
           toast.error('Limit reached', 'Upgrade to Pro for unlimited practice');
         } else {
@@ -115,12 +137,30 @@ export default function QuestionsPage() {
     setFilters(newFilters);
   }, []);
 
+  // Listen for header contextual action to start random practice
+  useEffect(() => {
+    const handleRandomPractice = () => {
+      if (filteredQuestions.length > 0 && !isPracticing) {
+        const randomIndex = Math.floor(Math.random() * filteredQuestions.length);
+        handlePractice(filteredQuestions[randomIndex]);
+      }
+    };
+    window.addEventListener('random-practice', handleRandomPractice);
+    return () => window.removeEventListener('random-practice', handleRandomPractice);
+  }, [filteredQuestions, isPracticing, handlePractice]);
+
   // Handle prepare answer
   const handlePrepare = useCallback(
     async (question: Question) => {
       // Check free tier limits (Pro/Team users bypass)
       const isPaidUser = user?.subscription_tier === 'pro' || user?.subscription_tier === 'team';
       if (!isPaidUser && isLimitReached) {
+        analytics.track(Events.LIMIT_REACHED, {
+          limit_type: 'preparations',
+          trigger: 'prepare_answer',
+          current_usage: prepLimit - remaining,
+          limit: prepLimit,
+        });
         setShowUpgradeModal(true);
         toast.error('Limit reached', `Free tier allows ${prepLimit} preparations per month. Upgrade for unlimited.`);
         return;
@@ -140,6 +180,10 @@ export default function QuestionsPage() {
       } catch (err: unknown) {
         const error = err as { response?: { status?: number; data?: { message?: string } } };
         if (error.response?.status === 402) {
+          analytics.track(Events.LIMIT_REACHED, {
+            limit_type: 'preparations',
+            trigger: 'prepare_answer_api',
+          });
           setShowUpgradeModal(true);
           toast.error('Upgrade required', 'Answer preparation is available for Pro and Premium subscribers');
         } else {
@@ -172,12 +216,20 @@ export default function QuestionsPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <QuestionFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          companyOptions={companyOptions}
-        />
+        {/* Filters - Sticky on mobile, moves up when header hides */}
+        <div
+          className={`sticky z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-[hsl(var(--background)/0.95)] backdrop-blur-md border-b border-border-light transition-all duration-300 ease-out md:relative md:top-0 md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-b-0 ${
+            headerHidden ? 'top-0' : 'top-[52px] sm:top-[60px]'
+          }`}
+        >
+          <QuestionFilters
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            companyOptions={companyOptions}
+            isExpanded={isFilterExpanded}
+            onExpandedChange={setIsFilterExpanded}
+          />
+        </div>
 
         {/* Results Count */}
         {!isLoading && !error && (

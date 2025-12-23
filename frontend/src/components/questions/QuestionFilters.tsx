@@ -1,6 +1,7 @@
 import { Search, Filter, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '../../lib/utils';
+import { analytics, Events } from '../../lib/analytics';
 
 export interface QuestionFiltersState {
   category: string;
@@ -15,6 +16,10 @@ interface QuestionFiltersProps {
   companyOptions?: string[];
   totalCount?: number;
   filteredCount?: number;
+  /** Controlled expanded state */
+  isExpanded?: boolean;
+  /** Callback when expanded state changes */
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 const categoryOptions = [
@@ -84,10 +89,22 @@ export default function QuestionFilters({
   filters,
   onFilterChange,
   companyOptions = [],
+  isExpanded: controlledExpanded,
+  onExpandedChange,
 }: QuestionFiltersProps) {
   const [localSearch, setLocalSearch] = useState(filters.search);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // Support both controlled and uncontrolled mode
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const setIsExpanded = (value: boolean) => {
+    if (onExpandedChange) {
+      onExpandedChange(value);
+    } else {
+      setInternalExpanded(value);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -114,14 +131,32 @@ export default function QuestionFilters({
 
   const handleCategoryChange = (category: string) => {
     onFilterChange({ ...filters, category });
+    if (category) {
+      analytics.track(Events.QUESTION_FILTER_APPLIED, {
+        filter_type: 'category',
+        filter_value: category,
+      });
+    }
   };
 
   const handleDifficultyChange = (difficulty: string) => {
     onFilterChange({ ...filters, difficulty });
+    if (difficulty) {
+      analytics.track(Events.QUESTION_FILTER_APPLIED, {
+        filter_type: 'difficulty',
+        filter_value: difficulty,
+      });
+    }
   };
 
   const handleCompanyChange = (company: string) => {
     onFilterChange({ ...filters, company });
+    if (company) {
+      analytics.track(Events.QUESTION_FILTER_APPLIED, {
+        filter_type: 'company',
+        filter_value: company,
+      });
+    }
   };
 
   const handleClearFilters = () => {
@@ -143,21 +178,21 @@ export default function QuestionFilters({
   const hasActiveFilters = activeFilterCount > 0 || filters.search;
 
   return (
-    <div ref={filterRef} className="mb-6 space-y-3">
+    <div ref={filterRef} className="mb-4 md:mb-6 space-y-2 md:space-y-3">
       {/* Search Bar Row */}
       <div className="flex gap-2">
         {/* Search Input */}
         <div className="flex-1 relative group">
           <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary group-focus-within:text-electric-blue transition-colors"
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary group-focus-within:text-electric-blue transition-colors z-10"
           />
           <input
             type="text"
             placeholder="Search questions..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            className="input w-full pl-10 pr-10 h-11"
+            className="w-full pl-9 pr-9 h-10 rounded-lg bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-electric-blue focus:ring-2 focus:ring-electric-blue/20 transition-all text-sm"
           />
           {localSearch && (
             <button
@@ -175,22 +210,21 @@ export default function QuestionFilters({
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            'flex items-center gap-2 px-4 h-11 rounded-xl border font-medium transition-all',
+            'flex items-center gap-1.5 px-3 h-10 rounded-lg border text-sm font-medium transition-all',
             'active:scale-95',
             isExpanded || activeFilterCount > 0
               ? 'bg-electric-blue text-white border-electric-blue'
-              : 'bg-[hsl(var(--card))] text-text-secondary border-[hsl(var(--border))] hover:border-electric-blue/50'
+              : 'bg-[hsl(var(--muted))] text-text-secondary border-[hsl(var(--border))] hover:border-electric-blue/50'
           )}
         >
-          <SlidersHorizontal size={18} />
-          <span className="hidden sm:inline">Filters</span>
+          <SlidersHorizontal size={16} />
           {activeFilterCount > 0 && (
-            <span className="flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-white/20">
+            <span className="flex items-center justify-center min-w-[18px] h-[18px] text-[10px] font-bold rounded-full bg-white/20 px-1">
               {activeFilterCount}
             </span>
           )}
           <ChevronDown
-            size={16}
+            size={14}
             className={cn(
               'transition-transform duration-200',
               isExpanded && 'rotate-180'
@@ -203,11 +237,10 @@ export default function QuestionFilters({
           <button
             type="button"
             onClick={handleClearFilters}
-            className="flex items-center gap-1.5 px-3 h-11 rounded-xl text-text-tertiary hover:text-status-error hover:bg-status-error/10 transition-colors"
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-text-tertiary hover:text-status-error hover:bg-status-error/10 transition-colors"
             aria-label="Clear all filters"
           >
-            <X size={18} />
-            <span className="hidden sm:inline text-sm font-medium">Clear</span>
+            <X size={16} />
           </button>
         )}
       </div>

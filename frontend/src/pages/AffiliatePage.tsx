@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom';
-import { DollarSign, Users, TrendingUp, CheckCircle, ArrowRight, ExternalLink } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, CheckCircle, ArrowRight, Mail } from 'lucide-react';
+import { analytics } from '../lib/analytics';
 
-const REWARDFUL_SIGNUP_URL = 'https://interview-simulator.getrewardful.com/signup';
+const AFFILIATE_EMAIL = 'affiliates@codeswiftr.com';
+const MAILTO_LINK = `mailto:${AFFILIATE_EMAIL}?subject=Affiliate%20Program%20Interest&body=Hi%2C%0A%0AI'm%20interested%20in%20joining%20the%20Interview%20Simulator%20affiliate%20program.%0A%0AMy%20platform%2Faudience%3A%20%0A%0AThanks!`;
+
+// Track affiliate interest in PostHog
+const trackAffiliateInterest = (source: string) => {
+  analytics.track('affiliate_interest_clicked', { source });
+};
 
 const benefits = [
   {
@@ -36,26 +43,30 @@ export default function AffiliatePage() {
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="inline-block px-4 py-1.5 bg-electric-blue/10 text-electric-blue rounded-full text-sm font-medium mb-6">
-            Affiliate Program
-          </span>
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <span className="inline-block px-4 py-1.5 bg-electric-blue/10 text-electric-blue rounded-full text-sm font-medium">
+              Affiliate Program
+            </span>
+            <span className="inline-block px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full text-xs font-semibold">
+              Coming Soon
+            </span>
+          </div>
           <h1 className="heading-display mb-6">
             Earn Money Helping Engineers<br />
             <span className="text-electric-blue">Land Their Dream Jobs</span>
           </h1>
           <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
-            Join our affiliate program and earn 25% recurring commission for every customer you refer.
-            Help engineers prepare for interviews while building passive income.
+            Our affiliate program is launching soon. Register your interest now to be among the first affiliates
+            and earn 25% recurring commission for every customer you refer.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href={REWARDFUL_SIGNUP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={MAILTO_LINK}
+              onClick={() => trackAffiliateInterest('hero_cta')}
               className="btn-primary inline-flex items-center gap-2"
             >
-              Become an Affiliate
-              <ExternalLink size={18} />
+              Register Interest
+              <Mail size={18} />
             </a>
             <Link to="/register" className="btn-secondary inline-flex items-center gap-2">
               Try the Product First
@@ -142,9 +153,9 @@ export default function AffiliatePage() {
             </div>
             <div className="card p-8 text-center">
               <p className="text-text-secondary mb-2">Example earnings</p>
-              <p className="text-4xl font-bold text-electric-blue mb-2">$2,970/year</p>
+              <p className="text-4xl font-bold text-electric-blue mb-2">$870/year</p>
               <p className="text-sm text-text-tertiary">
-                From just 10 Pro monthly referrals @ $99/month
+                From just 10 Pro monthly referrals @ $29/month
               </p>
             </div>
           </div>
@@ -154,21 +165,21 @@ export default function AffiliatePage() {
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="heading-page mb-4">Ready to Start Earning?</h2>
+          <h2 className="heading-page mb-4">Be the First to Know</h2>
           <p className="text-text-secondary mb-8">
-            Join hundreds of content creators, career coaches, and tech influencers who earn passive income with our affiliate program.
+            Our affiliate program is launching soon. Register your interest now and we'll notify you
+            as soon as signups open. Early affiliates get priority onboarding and support.
           </p>
           <a
-            href={REWARDFUL_SIGNUP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={MAILTO_LINK}
+            onClick={() => trackAffiliateInterest('bottom_cta')}
             className="btn-primary inline-flex items-center gap-2 text-lg px-8 py-4"
           >
-            Join the Affiliate Program
-            <ExternalLink size={20} />
+            Register Your Interest
+            <Mail size={20} />
           </a>
           <p className="text-sm text-text-tertiary mt-4">
-            Questions? Email us at affiliates@codeswiftr.com
+            Questions? Email us at {AFFILIATE_EMAIL}
           </p>
         </div>
       </section>
