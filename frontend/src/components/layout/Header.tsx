@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LogOut, Menu, X, Settings, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { ThemeSlider } from '../ThemeSlider';
+import { useScrollDirection } from '../../hooks/useScrollDirection';
 
 export default function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -11,6 +12,10 @@ export default function Header() {
   const location = useLocation();
   const prevPathname = useRef(location.pathname);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const scrollDirection = useScrollDirection({ threshold: 15 });
+
+  // Determine if header should be hidden on mobile (only when scrolling down and authenticated)
+  const shouldHideOnMobile = isAuthenticated && scrollDirection === 'down';
 
   // Close mobile menu on route change
   useLayoutEffect(() => {
@@ -61,7 +66,11 @@ export default function Header() {
         Skip to main content
       </a>
 
-      <header className="sticky top-0 z-50 glass border-b border-border-light">
+      <header
+        className={`sticky top-0 z-50 glass border-b border-border-light transition-transform duration-300 ease-out ${
+          shouldHideOnMobile ? 'md:translate-y-0 -translate-y-full' : 'translate-y-0'
+        }`}
+      >
         <div className="container mx-auto px-4 sm:px-6 py-2.5 sm:py-3">
           <div className="flex items-center justify-between h-12 sm:h-14">
             {/* Logo */}

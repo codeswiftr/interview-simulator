@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2, Calendar, Target, Sun, Moon, Monitor } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Loader2, User, Lock, Trash2, AlertTriangle, Check, Palette, Volume2, Calendar, Target, Sun, Moon, Monitor, LogOut, Download, Smartphone } from 'lucide-react';
 import { subscriptionsAPI, userAPI, authAPI } from '../lib/api';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../hooks/useAuth';
@@ -14,12 +14,14 @@ import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 import VoiceSettingsPanel from '../components/settings/VoiceSettingsPanel';
 import { getRecommendedVoice } from '../lib/voice-quality';
 import type { SubscriptionStatus, ExperienceLevel } from '../types';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const toast = useToast();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const { canInstall, isInstalled, isIOS, promptInstall } = usePWAInstall();
   const { theme, setTheme } = useTheme();
   const { settings: voiceSettings, updateSettings: updateVoiceSettings, resetSettings: resetVoiceSettings } = useVoicePreferences();
   const {
@@ -633,6 +635,66 @@ export default function SettingsPage() {
               <BillingInfo subscription={subscription} onSubscriptionChange={loadSubscription} />
             </div>
           )}
+
+          {/* Install App Section - Show on mobile if not installed */}
+          {!isInstalled && (canInstall || isIOS) && (
+            <Card className="p-4 sm:p-6 lg:p-8">
+              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <Smartphone className="w-4 h-4 sm:w-5 sm:h-5 text-electric-blue" />
+                <h2 className="heading-section text-lg sm:text-xl">Install App</h2>
+              </div>
+
+              {isIOS ? (
+                <div className="space-y-4">
+                  <p className="text-text-secondary text-sm">
+                    Install this app on your iPhone for the best experience:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-2 text-sm text-text-secondary">
+                    <li>Tap the <span className="font-semibold text-text-primary">Share</span> button in Safari (bottom of screen)</li>
+                    <li>Scroll down and tap <span className="font-semibold text-text-primary">Add to Home Screen</span></li>
+                    <li>Tap <span className="font-semibold text-text-primary">Add</span> in the top right</li>
+                  </ol>
+                  <div className="flex items-center gap-2 p-3 bg-surface-secondary rounded-lg">
+                    <Download className="w-4 h-4 text-text-tertiary" />
+                    <span className="text-xs text-text-tertiary">
+                      The app will appear on your home screen
+                    </span>
+                  </div>
+                </div>
+              ) : canInstall ? (
+                <div className="space-y-4">
+                  <p className="text-text-secondary text-sm">
+                    Install this app for quick access and offline practice.
+                  </p>
+                  <button
+                    onClick={promptInstall}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Install App
+                  </button>
+                </div>
+              ) : null}
+            </Card>
+          )}
+
+          {/* Sign Out Section - Visible on mobile for easy access */}
+          <Card className="p-4 sm:p-6 lg:p-8 md:hidden">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5 text-text-secondary" />
+              <h2 className="heading-section text-lg sm:text-xl">Session</h2>
+            </div>
+            <p className="text-text-secondary text-sm mb-4">
+              Sign out of your account on this device.
+            </p>
+            <button
+              onClick={logout}
+              className="btn-ghost text-status-error border-status-error/50 hover:bg-status-error/10 flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </Card>
 
           {/* Danger Zone */}
           <Card className="p-4 sm:p-6 lg:p-8 border-status-error/20">
