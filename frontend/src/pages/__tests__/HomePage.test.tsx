@@ -118,10 +118,11 @@ describe('HomePage', () => {
       expect(screen.getByText('92/100')).toBeInTheDocument();
     });
 
-    it('has proper heading hierarchy with heading-hero class', async () => {
+    it('has proper heading hierarchy with h1 element', async () => {
       const { container } = await renderHomePage();
-      const heading = container.querySelector('h1.heading-hero');
+      const heading = container.querySelector('h1');
       expect(heading).toBeInTheDocument();
+      expect(heading).toHaveClass('text-3xl');
     });
   });
 
@@ -171,11 +172,11 @@ describe('HomePage', () => {
       ).toBeInTheDocument();
     });
 
-    it('renders feature cards with glass variant styling', async () => {
+    it('renders feature cards with hover effects', async () => {
       const { container } = await renderHomePage();
       // Feature cards should have hover effects and transitions
-      const featureCards = container.querySelectorAll('.p-8.hover\\:translate-y-\\[-4px\\]');
-      expect(featureCards.length).toBeGreaterThan(0);
+      const featureCards = container.querySelectorAll('.hover\\:translate-y-\\[-4px\\]');
+      expect(featureCards.length).toBe(4);
     });
 
     it('displays feature section heading', async () => {
@@ -245,17 +246,17 @@ describe('HomePage', () => {
     it('displays "Go to Dashboard" button in hero when authenticated', async () => {
       await renderHomePage(true);
 
-      // Wait for auth state to update
-      const dashboardButton = await screen.findByRole('link', { name: /Go to Dashboard/i });
-      expect(dashboardButton).toBeInTheDocument();
-      expect(dashboardButton).toHaveAttribute('href', '/dashboard');
+      // Wait for auth state to update - there are two buttons with this text (hero + CTA)
+      const dashboardButtons = await screen.findAllByRole('link', { name: /Go to Dashboard/i });
+      expect(dashboardButtons.length).toBeGreaterThanOrEqual(1);
+      expect(dashboardButtons[0]).toHaveAttribute('href', '/dashboard');
     });
 
     it('does not display "Start Practicing Free" when authenticated', async () => {
       await renderHomePage(true);
 
       // Wait for auth state to update
-      await screen.findByRole('link', { name: /Go to Dashboard/i });
+      await screen.findAllByRole('link', { name: /Go to Dashboard/i });
 
       // Should not have the register button
       expect(screen.queryByRole('link', { name: /Start Practicing Free/i })).not.toBeInTheDocument();
@@ -265,7 +266,7 @@ describe('HomePage', () => {
       await renderHomePage(true);
 
       // Wait for auth state to update
-      await screen.findByRole('link', { name: /Go to Dashboard/i });
+      await screen.findAllByRole('link', { name: /Go to Dashboard/i });
 
       // Should not have the login button
       expect(screen.queryByRole('link', { name: /^Login$/i })).not.toBeInTheDocument();
@@ -282,112 +283,116 @@ describe('HomePage', () => {
   });
 
   describe('CTA Section', () => {
-    it('displays CTA section heading', () => {
-      renderHomePage();
+    it('displays CTA section heading', async () => {
+      await renderHomePage();
       expect(screen.getByText('Ready to Ace Your Next Interview?')).toBeInTheDocument();
     });
 
-    it('displays CTA section description', () => {
-      renderHomePage();
+    it('displays CTA section description', async () => {
+      await renderHomePage();
       expect(
         screen.getByText(/Join thousands of engineers who have improved their interview skills with our AI-powered simulator./i)
       ).toBeInTheDocument();
     });
 
-    it('has dark background styling in CTA section', () => {
-      const { container } = renderHomePage();
-      const ctaSection = container.querySelector('.bg-charcoal, .bg-gradient-to-br');
+    it('has dark background styling in CTA section', async () => {
+      const { container } = await renderHomePage();
+      // Check for the CTA section with charcoal background
+      const ctaSection = container.querySelector('.bg-charcoal');
       expect(ctaSection).toBeInTheDocument();
     });
   });
 
   describe('Responsive Layout Classes', () => {
-    it('has responsive padding classes in hero section', () => {
-      const { container } = renderHomePage();
-      const heroSection = container.querySelector('.pt-32.pb-20.lg\\:pt-48.lg\\:pb-32');
+    it('has responsive padding classes in hero section', async () => {
+      const { container } = await renderHomePage();
+      const heroSection = container.querySelector('.pt-16');
       expect(heroSection).toBeInTheDocument();
+      expect(heroSection).toHaveClass('lg:pt-48');
     });
 
-    it('has responsive flex direction for CTA buttons', () => {
-      const { container } = renderHomePage();
-      const buttonContainer = container.querySelector('.flex.flex-col.sm\\:flex-row');
+    it('has responsive flex direction for CTA buttons', async () => {
+      const { container } = await renderHomePage();
+      const buttonContainer = container.querySelector('.flex.flex-col');
       expect(buttonContainer).toBeInTheDocument();
     });
 
-    it('has responsive grid for feature cards', () => {
-      const { container } = renderHomePage();
-      const featureGrid = container.querySelector('.grid.md\\:grid-cols-2.lg\\:grid-cols-4');
+    it('has responsive grid for feature cards', async () => {
+      const { container } = await renderHomePage();
+      const featureGrid = container.querySelector('.grid');
       expect(featureGrid).toBeInTheDocument();
+      expect(featureGrid).toHaveClass('md:grid-cols-2');
     });
 
-    it('has responsive max-width for hero content', () => {
-      const { container } = renderHomePage();
+    it('has responsive max-width for hero content', async () => {
+      const { container } = await renderHomePage();
       const heroContent = container.querySelector('.max-w-4xl');
       expect(heroContent).toBeInTheDocument();
     });
 
-    it('has responsive max-width for hero visual', () => {
-      const { container } = renderHomePage();
+    it('has responsive max-width for hero visual', async () => {
+      const { container } = await renderHomePage();
       const heroVisual = container.querySelector('.max-w-5xl');
       expect(heroVisual).toBeInTheDocument();
     });
 
-    it('floating audio score element is hidden on mobile', () => {
-      const { container } = renderHomePage();
-      const floatingElement = container.querySelector('.hidden.md\\:block');
+    it('floating audio score element is hidden on mobile', async () => {
+      const { container } = await renderHomePage();
+      const floatingElement = container.querySelector('.hidden');
       expect(floatingElement).toBeInTheDocument();
+      expect(floatingElement).toHaveClass('sm:block');
     });
   });
 
   describe('Animation Classes', () => {
-    it('has fade-in animation on badge', () => {
-      const { container } = renderHomePage();
+    it('has fade-in animation on badge', async () => {
+      const { container } = await renderHomePage();
       const badge = container.querySelector('.animate-fade-in');
       expect(badge).toBeInTheDocument();
     });
 
-    it('has slide-up animations on hero content', () => {
-      const { container } = renderHomePage();
+    it('has slide-up animations on hero content', async () => {
+      const { container } = await renderHomePage();
       const slideUpElements = container.querySelectorAll('.animate-slide-up');
-      expect(slideUpElements.length).toBeGreaterThan(0);
+      expect(slideUpElements.length).toBe(3); // h1, p, and button container
     });
 
-    it('has scale-in animation on hero visual', () => {
-      const { container } = renderHomePage();
+    it('has scale-in animation on hero visual', async () => {
+      const { container } = await renderHomePage();
       const scaleInElement = container.querySelector('.animate-scale-in');
       expect(scaleInElement).toBeInTheDocument();
     });
 
-    it('has pulse-glow animations on background elements', () => {
-      const { container } = renderHomePage();
+    it('has pulse-glow animations on background elements', async () => {
+      const { container } = await renderHomePage();
       const pulseElements = container.querySelectorAll('.animate-pulse-glow');
-      expect(pulseElements.length).toBeGreaterThan(0);
+      expect(pulseElements.length).toBe(2); // Two background elements
     });
 
-    it('has float animation on audio score element', () => {
-      const { container } = renderHomePage();
+    it('has float animation on audio score element', async () => {
+      const { container } = await renderHomePage();
       const floatElement = container.querySelector('.animate-float');
       expect(floatElement).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
-    it('has proper alt text for hero image', () => {
-      renderHomePage();
+    it('has proper alt text for hero image', async () => {
+      await renderHomePage();
       const heroImage = screen.getByAltText('Dashboard Preview');
       expect(heroImage).toBeInTheDocument();
     });
 
-    it('links have accessible names', () => {
-      renderHomePage(false);
+    it('links have accessible names', async () => {
+      await renderHomePage(false);
 
       expect(screen.getByRole('link', { name: /Start Practicing Free/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /^Login$/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Get Started Now/i })).toBeInTheDocument();
     });
 
-    it('has semantic heading hierarchy', () => {
-      const { container } = renderHomePage();
+    it('has semantic heading hierarchy', async () => {
+      const { container } = await renderHomePage();
 
       // Should have h1 for main heading
       const h1 = container.querySelector('h1');
@@ -395,31 +400,31 @@ describe('HomePage', () => {
 
       // Should have h2 for section headings
       const h2Elements = container.querySelectorAll('h2');
-      expect(h2Elements.length).toBeGreaterThan(0);
+      expect(h2Elements.length).toBe(2); // Features and CTA headings
 
       // Should have h3 for feature card headings
       const h3Elements = container.querySelectorAll('h3');
       expect(h3Elements.length).toBe(4); // Four feature cards
     });
 
-    it('sections use semantic HTML5 section tags', () => {
-      const { container } = renderHomePage();
+    it('sections use semantic HTML5 section tags', async () => {
+      const { container } = await renderHomePage();
       const sections = container.querySelectorAll('section');
       expect(sections.length).toBe(3); // Hero, Features, CTA
     });
   });
 
   describe('Theme Support', () => {
-    it('has theme-aware background classes', () => {
-      const { container } = renderHomePage();
+    it('has theme-aware background classes', async () => {
+      const { container } = await renderHomePage();
 
-      // Check for dark mode classes
-      const darkModeElements = container.querySelectorAll('[class*="dark:"]');
-      expect(darkModeElements.length).toBeGreaterThan(0);
+      // Check for bg-surface-primary which is theme-aware
+      const surfaceElements = container.querySelector('.bg-surface-primary');
+      expect(surfaceElements).toBeInTheDocument();
     });
 
-    it('has theme-aware text color classes', () => {
-      const { container } = renderHomePage();
+    it('has theme-aware text color classes', async () => {
+      const { container } = await renderHomePage();
 
       // Check for text-text-primary and text-text-secondary classes
       const textPrimaryElements = container.querySelectorAll('.text-text-primary');

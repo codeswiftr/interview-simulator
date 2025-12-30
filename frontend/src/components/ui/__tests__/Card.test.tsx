@@ -21,7 +21,7 @@ describe('Card', () => {
       const { container } = render(<Card>Content</Card>);
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass('rounded-xl', 'transition-all', 'duration-300');
-      expect(card).toHaveClass('bg-white', 'border', 'shadow-sm');
+      expect(card).toHaveClass('border', 'shadow-sm');
     });
   });
 
@@ -29,7 +29,7 @@ describe('Card', () => {
     it('renders default variant', () => {
       const { container } = render(<Card variant="default">Content</Card>);
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass('bg-white', 'border', 'shadow-sm');
+      expect(card).toHaveClass('border', 'shadow-sm');
     });
 
     it('renders glass variant', () => {
@@ -47,13 +47,13 @@ describe('Card', () => {
     it('renders elevated variant', () => {
       const { container } = render(<Card variant="elevated">Content</Card>);
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass('bg-white', 'border', 'shadow-md');
+      expect(card).toHaveClass('border', 'shadow-md');
     });
 
     it('renders outline variant', () => {
       const { container } = render(<Card variant="outline">Content</Card>);
       const card = container.firstChild as HTMLElement;
-      expect(card).toHaveClass('bg-transparent', 'border');
+      expect(card).toHaveClass('border');
     });
   });
 

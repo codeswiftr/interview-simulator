@@ -16,19 +16,24 @@ import {
   Minus,
   CheckCircle2,
   AlertTriangle,
-  BarChart
+  BarChart,
+  Target,
+  Share2
 } from 'lucide-react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import ScoreRing from '../components/feedback/ScoreRing';
 import MetricCard from '../components/feedback/MetricCard';
 import ResponseAccordion from '../components/feedback/ResponseAccordion';
 import ProcessingStatus from '../components/feedback/ProcessingStatus';
+import QuestionRecommendationCard from '../components/feedback/QuestionRecommendationCard';
+import { ExportButton } from '../components/interview/ExportButton';
+import { ShareModal } from '../components/interview/ShareModal';
 import { Skeleton, SkeletonScoreRing, SkeletonText } from '../components/ui/Skeleton';
 import { Card } from '../components/ui/Card';
-import { feedbackAPI, interviewsAPI, responsesAPI } from '../lib/api';
+import { feedbackAPI, interviewsAPI, responsesAPI, questionsAPI } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { analytics, Events } from '../lib/analytics';
-import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback } from '../types';
+import type { InterviewSession, InterviewResponse, SessionFeedback, ContentFeedback, Question } from '../types';
 
 interface FeedbackState {
   session: InterviewSession | null;
@@ -72,6 +77,9 @@ export default function FeedbackPage() {
   });
   const [comparison, setComparison] = useState<ComparisonData | null>(null);
   const [processingComplete, setProcessingComplete] = useState(false);
+  const [recommendedQuestions, setRecommendedQuestions] = useState<Question[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Sticky CTA tracking
   const heroRef = useRef<HTMLDivElement>(null);
@@ -236,6 +244,32 @@ export default function FeedbackPage() {
     return interviewTypeLabels[type] || type;
   };
 
+  // Load recommended questions when feedback is available
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!feedbackState.sessionFeedback?.next_question_ids || feedbackState.sessionFeedback.next_question_ids.length === 0) {
+        return;
+      }
+
+      try {
+        setLoadingRecommendations(true);
+        const questionPromises = feedbackState.sessionFeedback.next_question_ids.map(id =>
+          questionsAPI.getById(id)
+        );
+        const questionResponses = await Promise.all(questionPromises);
+        const questions = questionResponses.map(res => res.data);
+        setRecommendedQuestions(questions);
+      } catch (err) {
+        console.error('Error loading recommended questions:', err);
+        // Fail silently - recommendations are not critical
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    loadRecommendations();
+  }, [feedbackState.sessionFeedback?.next_question_ids]);
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -310,30 +344,46 @@ export default function FeedbackPage() {
               <span className="body-default font-medium">Back to Dashboard</span>
             </Link>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="heading-page mb-2 text-[var(--fg-primary)]">Interview Feedback</h1>
-                <div className="flex items-center gap-4 text-text-secondary dark:text-text-tertiary">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span className="body-small">{formatDate(session.created_at)}</span>
-                  </div>
-                  {session.duration_seconds && (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="heading-page mb-2 text-[var(--fg-primary)]">Interview Feedback</h1>
+                  <div className="flex items-center gap-4 text-text-secondary dark:text-text-tertiary">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span className="body-small">{formatDuration(session.duration_seconds)}</span>
+                      <Calendar className="w-4 h-4" />
+                      <span className="body-small">{formatDate(session.created_at)}</span>
                     </div>
-                  )}
+                    {session.duration_seconds && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        <span className="body-small">{formatDuration(session.duration_seconds)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="badge bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-text-secondary shadow-sm font-medium">
+                    {getTypeLabel(session.interview_type)}
+                  </span>
+                  <span className="badge bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-text-secondary shadow-sm font-medium">
+                    {session.question_count} questions
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="badge bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-text-secondary shadow-sm font-medium">
-                  {getTypeLabel(session.interview_type)}
-                </span>
-                <span className="badge bg-[hsl(var(--card))] border border-[hsl(var(--border))] text-text-secondary shadow-sm font-medium">
-                  {session.question_count} questions
-                </span>
-              </div>
+
+              {/* Export and Share buttons - only show if feedback exists */}
+              {hasFeedback && (
+                <div className="flex flex-wrap gap-3">
+                  <ExportButton interviewId={session.id} />
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="btn-secondary inline-flex items-center gap-2"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share Results
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -552,6 +602,36 @@ export default function FeedbackPage() {
                 </Card>
               )}
 
+              {/* Recommended Next Questions */}
+              {(loadingRecommendations || recommendedQuestions.length > 0) && (
+                <div>
+                  <h2 className="text-lg font-semibold mb-6 flex items-center gap-2 text-text-primary">
+                    <Target className="w-5 h-5 text-electric-blue" />
+                    Recommended Next Steps
+                  </h2>
+                  {loadingRecommendations ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Card key={i} className="p-5">
+                          <div className="flex gap-2 mb-3">
+                            <Skeleton variant="rectangular" width={80} height={24} className="rounded-full" />
+                            <Skeleton variant="rectangular" width={60} height={24} className="rounded-full" />
+                          </div>
+                          <SkeletonText lines={2} className="mb-4" />
+                          <Skeleton variant="rectangular" width="100%" height={40} className="rounded-lg" />
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {recommendedQuestions.map((question) => (
+                        <QuestionRecommendationCard key={question.id} question={question} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Questions & Responses */}
               {responses.length > 0 && (
                 <div>
@@ -621,6 +701,15 @@ export default function FeedbackPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {id && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          interviewId={id}
+        />
       )}
     </ErrorBoundary>
   );

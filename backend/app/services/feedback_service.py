@@ -24,6 +24,7 @@ from app.models.interview import (
 )
 from app.models.question import Question
 from app.models.user import User
+from app.services.question_recommender import recommend_next_questions
 from app.services.video_service import VideoService
 
 
@@ -244,6 +245,21 @@ class FeedbackService:
         if avg_star < 70 and avg_star > 0:
             practice_areas.append("STAR method application")
 
+        # Get recommended next questions based on the last response
+        next_question_ids: list[str] = []
+        if responses:
+            last_response = responses[-1]
+            try:
+                next_question_ids = await recommend_next_questions(
+                    session=session,
+                    user_id=interview.user_id,
+                    question_id=last_response.question_id,
+                    feedback_score=overall_score,
+                )
+            except Exception:
+                # Fallback to empty if recommendation fails
+                pass
+
         # Create session feedback
         session_feedback = SessionFeedback(
             session_id=session_id,
@@ -253,7 +269,7 @@ class FeedbackService:
             top_strengths=top_strengths,
             top_improvements=top_improvements,
             recommended_practice_areas=practice_areas,
-            next_question_ids=[],  # TODO: Implement intelligent question recommendations
+            next_question_ids=next_question_ids,
         )
 
         session.add(session_feedback)

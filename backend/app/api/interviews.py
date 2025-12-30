@@ -445,3 +445,140 @@ async def create_quick_practice(
     await session.commit()
     await session.refresh(interview)
     return interview
+
+
+# ============================================================================
+# Export & Share Endpoints
+# ============================================================================
+
+from fastapi.responses import Response
+
+from app.models.interview_share import (
+    InterviewShare,
+    InterviewShareCreate,
+    InterviewShareRead,
+    SharedInterviewRead,
+)
+from app.services.pdf_export_service import PDFExportService
+from app.services.share_service import ShareService
+
+pdf_service = PDFExportService()
+share_service = ShareService()
+
+
+@router.get("/{interview_id}/export")
+async def export_interview_pdf(
+    interview_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Export interview as PDF document.
+
+    Returns PDF file with interview results, feedback, and scores.
+    """
+    try:
+        pdf_bytes = await pdf_service.generate_interview_pdf(
+            session, interview_id, current_user.id
+        )
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="interview-{interview_id}.pdf"'
+            },
+        )
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        if "denied" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/{interview_id}/share", response_model=InterviewShareRead)
+async def create_share_link(
+    interview_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> InterviewShareRead:
+    """Create a shareable link for an interview.
+
+    Link expires after 7 days. Returns existing link if one already exists.
+    """
+    try:
+        share = await share_service.create_share_link(
+            session, interview_id, current_user.id
+        )
+        return InterviewShareRead(
+            id=share.id,
+            interview_id=share.interview_id,
+            token=share.token,
+            expires_at=share.expires_at,
+            view_count=share.view_count,
+            created_at=share.created_at,
+            share_url=f"/shared/{share.token}",
+        )
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.get("/{interview_id}/shares", response_model=list[InterviewShareRead])
+async def list_share_links(
+    interview_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[InterviewShareRead]:
+    """List all share links for an interview."""
+    shares = await share_service.get_shares_for_interview(
+        session, interview_id, current_user.id
+    )
+    return [
+        InterviewShareRead(
+            id=s.id,
+            interview_id=s.interview_id,
+            token=s.token,
+            expires_at=s.expires_at,
+            view_count=s.view_count,
+            created_at=s.created_at,
+            share_url=f"/shared/{s.token}",
+        )
+        for s in shares
+    ]
+
+
+@router.delete("/shares/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_share_link(
+    share_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Revoke (delete) a share link."""
+    try:
+        await share_service.revoke_share_link(session, share_id, current_user.id)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+# Public endpoint - no auth required
+@router.get("/shared/{token}", response_model=SharedInterviewRead)
+async def get_shared_interview(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+) -> SharedInterviewRead:
+    """View a shared interview (public, no auth required).
+
+    Returns read-only interview data if token is valid and not expired.
+    """
+    try:
+        return await share_service.get_shared_interview(session, token)
+    except ValueError as e:
+        if "expired" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="Share link has expired",
+            )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

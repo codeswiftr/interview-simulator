@@ -7,8 +7,12 @@ import { AuthProvider } from './hooks/useAuth';
 import { analytics } from './lib/analytics';
 import { captureUTMFromLocation } from './lib/utm';
 import { queryClient } from './lib/queryClient';
+import { initSentry } from './lib/sentry';
 import App from './App';
 import './styles/globals.css';
+
+// Initialize Sentry error tracking (must be first)
+initSentry();
 
 // Capture UTM params early so they're available on first auth events
 captureUTMFromLocation();

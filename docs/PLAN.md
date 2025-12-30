@@ -1,708 +1,681 @@
-# Milestone: Sprint 10 - Code Quality & Feature Expansion
+# Sprint 12: Scale Readiness
 
-## Status: Ready
-## Target: Sprint 10 (Dec 2025)
+## Status: In Progress
+## Target: January 2025
+
+---
+
+## Previous Sprint Summary
+
+### Sprint 11: Soft Launch Hardening - COMPLETED
+- **Epic 1**: Critical Path Tests - DONE (email, auth, preparation, content sanitizer tests)
+- **Epic 2**: Question Recommendations - DONE (backend service + frontend integration)
+- **Epic 3**: Interview Export & Sharing - DONE (PDF export, share links, public view)
+- **Epic 4**: Sentry Integration - DONE (backend + frontend error monitoring)
+
+**Achievements:**
+- 782 backend tests (up from 385)
+- PDF export with WeasyPrint
+- Share link system with 7-day expiry
+- Sentry error tracking integrated
+- Question recommendation engine live
 
 ---
 
 ## Overview
 
-Sprint 10 focuses on addressing accumulated technical debt before expanding features. With Sprint 9 (Conversational Voice Mentor) complete, we have 337 lint errors (206 backend + 131 frontend) and 38% test coverage that need attention before building new capabilities.
+Sprint 12 focuses on **scale readiness** - preparing the platform for increased user load and ensuring a polished, professional experience. The four epics address the most critical gaps identified in our due diligence review.
 
-The sprint is organized into four epics:
-1. **Epic 1**: Lint Cleanup & Code Quality (P0 - blocking)
-2. **Epic 2**: Test Coverage Improvement (P1 - important)
-3. **Epic 3**: Video Analysis MVP (P2 - feature expansion)
-4. **Epic 4**: B2B Team Features (P2 - revenue expansion)
+**Why These 4 Epics?**
+1. **Epic 5**: Frontend tests (0% → 40%) - Critical gap in every audit
+2. **Epic 6**: Auth hardening - Security-critical for production
+3. **Epic 7**: Performance optimization - User-facing quality
+4. **Epic 8**: Production resilience - Stability under load
 
-**Why This Order?**
-- Epic 1 unblocks CI/CD and enables clean commits
-- Epic 2 prevents regressions as we add features
-- Epic 3 delivers the "multimodal feedback" promise from project brief
-- Epic 4 opens higher-ARPU B2B revenue stream
+**What We're NOT Doing:**
+- Video Analysis MVP (defer to Sprint 13 - 30h effort)
+- B2B Team Features (defer to Sprint 14 - 45h effort)
+- These require dedicated sprints
 
 ---
 
 ## Success Criteria
 
-- [x] Zero lint errors (backend + frontend) ✅ **COMPLETE**
-- [x] Backend test coverage ≥ 60% ✅ **COMPLETE** (achieved 69%)
-- [x] API endpoint coverage improved ✅ **COMPLETE** (service layer 78-87%)
-- [ ] Video analysis integrated into feedback pipeline
-- [ ] Team subscription tier functional with admin dashboard
+- [ ] Frontend test coverage ≥ 40% (from 0%)
+- [ ] Refresh token rotation working
+- [ ] Main bundle < 500KB (from 837KB)
+- [ ] Password policy enforced (8+ chars)
+- [ ] All auth flows have retry/fallback
+- [ ] Mobile responsive polish complete
 
 ---
 
-## Epic 1: Lint Cleanup & Code Quality ⭐ P0
+## Epic 5: Frontend Test Foundation (P0)
 
-**ICE Score**: 9.0/10 (Impact: 9, Confidence: 10, Ease: 9)
-**Priority**: CRITICAL - Blocking CI/CD and clean commits
-**Rationale**: 337 lint errors create tech debt, block CI, and make code review harder. Most are auto-fixable.
+**ICE Score**: 10/10 (Impact: 10, Confidence: 10, Ease: 8)
+**Priority**: CRITICAL - 0% frontend coverage is unacceptable
+**Effort**: 16-20 hours
+
+### Rationale
+
+Every audit identifies "Frontend test coverage: 0%" as the #1 gap. Test infrastructure exists (Vitest + RTL + MSW) but no tests are written. This creates:
+- Zero confidence in frontend changes
+- Manual QA burden
+- Risk of regressions
 
 ### Current State
-- Backend: 206 errors (169 auto-fixable with `--fix`)
-- Frontend: 131 errors (129 errors, 2 warnings)
-- Categories: whitespace, unused vars, missing hook deps, any types
 
-### Technical Design
-
-No architecture changes needed. This is pure cleanup work.
-
-**Backend (Ruff):**
-- W293: Blank line contains whitespace (auto-fix)
-- B007: Unused loop control variables (rename to `_`)
-- F541: F-string without placeholders (auto-fix)
-- F401: Unused imports (auto-fix)
-
-**Frontend (ESLint):**
-- `@typescript-eslint/no-unused-vars`: Unused variables in tests
-- `react-hooks/exhaustive-deps`: Missing hook dependencies
-- `@typescript-eslint/no-explicit-any`: Replace `any` with proper types
+| Metric | Current | Target |
+|--------|---------|--------|
+| Frontend tests | 0 | 50+ |
+| Coverage | 0% | 40% |
+| Critical paths covered | 0 | 5 |
 
 ### Implementation Plan
 
-#### Phase 1.1: Backend Auto-Fix ✅ COMPLETE
+#### Phase 5.1: Test Infrastructure Setup (2h)
 
-| Task | Description | Agent/Skill | Est | Status |
-|------|-------------|-------------|-----|--------|
-| 1.1.1 | Run `uv run ruff check --fix .` | - | 5m | ✅ Done |
-| 1.1.2 | Run `uv run ruff check --fix --unsafe-fixes .` for remaining | - | 5m | ✅ Done |
-| 1.1.3 | Manually fix remaining errors (loop vars, etc.) | - | 30m | ✅ Done (auto-fixed) |
-| 1.1.4 | Verify with `uv run ruff check .` shows 0 errors | - | 5m | ✅ Done |
-| 1.1.5 | Run `uv run pytest` to ensure no regressions | - | 5m | ✅ Done |
+**Files to Create:**
+- `frontend/src/test/setup.ts` - Global test setup
+- `frontend/src/test/mocks/handlers.ts` - MSW API handlers
+- `frontend/src/test/mocks/server.ts` - MSW server setup
+- `frontend/src/test/utils.tsx` - Test utilities (render with providers)
 
-**Checkpoint**: ✅ `uv run ruff check .` shows 0 errors, all tests pass
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `renderWithProviders()` | Wraps components with Router, Query, Auth contexts |
+| `createMockUser()` | Generates test user data |
+| `createMockInterview()` | Generates test interview data |
+| `createMockFeedback()` | Generates test feedback data |
+| `setupMockServer()` | Initializes MSW with default handlers |
 
----
-
-#### Phase 1.2: Frontend Test File Cleanup ✅ COMPLETE
-
-| Task | Description | Agent/Skill | Est | Status |
-|------|-------------|-------------|-----|--------|
-| 1.2.1 | Fix unused vars in `DashboardPage.test.tsx` | - | 15m | ✅ Done (already fixed) |
-| 1.2.2 | Fix unused vars in `FeedbackPage.test.tsx` | - | 10m | ✅ Done (already fixed) |
-| 1.2.3 | Fix unused vars in `InterviewPage.test.tsx` | - | 10m | ✅ Done (already fixed) |
-| 1.2.4 | Fix unused vars in `PreparationPage.test.tsx` + any type | - | 15m | ✅ Done |
-| 1.2.5 | Fix unused vars in `pageTestUtils.tsx` + any types | - | 15m | ✅ Done |
-| 1.2.6 | Fix unused vars in `accessibility.test.tsx` | - | 5m | ✅ Done (already fixed) |
-
-**Checkpoint**: ✅ Test file lint errors resolved
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_setup_renders_without_crash` | Verifies test utilities work |
+| `test_mock_server_intercepts_requests` | MSW catches API calls |
 
 ---
 
-#### Phase 1.3: Frontend Source File Cleanup ✅ COMPLETE
+#### Phase 5.2: Auth Hook Tests (4h)
 
-| Task | Description | Agent/Skill | Est | Status |
-|------|-------------|-------------|-----|--------|
-| 1.3.1 | Fix unused `err` vars in `PreparationPage.tsx` (lines 188, 223) | - | 10m | ✅ Done (already correct) |
-| 1.3.2 | Fix missing `loadComparison` dependency in useCallback | - | 15m | ✅ Done |
-| 1.3.3 | Fix remaining unused vars across components | - | 30m | ✅ Done |
-| 1.3.4 | Verify with `npm run lint` shows 0 errors | - | 5m | ✅ Done |
-| 1.3.5 | Run `npm run build` to ensure no TypeScript errors | - | 2m | ✅ Done |
+**Files to Create:**
+- `frontend/src/hooks/useAuth.test.tsx`
 
-**Checkpoint**: ✅ `npm run lint` shows 0 errors, build passes
+**Functions to Test:**
+| Function | Purpose |
+|----------|---------|
+| `login()` | Authenticates user, stores tokens |
+| `logout()` | Clears tokens, resets state |
+| `register()` | Creates account, auto-logs in |
+| `refreshToken()` | Refreshes expired access token |
+| `isAuthenticated` | Returns true when logged in |
+
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_login_stores_tokens` | Tokens saved to localStorage |
+| `test_login_sets_user_state` | User object populated |
+| `test_login_invalid_credentials` | Shows error message |
+| `test_logout_clears_tokens` | localStorage cleared |
+| `test_logout_redirects_to_login` | Navigates to /login |
+| `test_register_creates_account` | API called with form data |
+| `test_register_auto_logs_in` | User logged in after register |
+| `test_refresh_token_on_401` | Automatically refreshes |
+| `test_is_authenticated_true_with_token` | Returns true |
+| `test_is_authenticated_false_without_token` | Returns false |
+
+---
+
+#### Phase 5.3: Critical Component Tests (6h)
+
+**Files to Create:**
+- `frontend/src/components/interview/RecordButton.test.tsx`
+- `frontend/src/components/feedback/ScoreRing.test.tsx`
+- `frontend/src/components/layout/Header.test.tsx`
+
+**Components to Test:**
+| Component | Purpose |
+|-----------|---------|
+| `RecordButton` | Audio recording control |
+| `ScoreRing` | Circular score display |
+| `Header` | Navigation, auth status |
+| `Toast` | Notification display |
+
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_record_button_starts_recording` | Shows recording state |
+| `test_record_button_stops_recording` | Returns audio blob |
+| `test_record_button_disabled_during_upload` | Prevents double-submit |
+| `test_score_ring_displays_value` | Shows percentage |
+| `test_score_ring_colors_by_threshold` | Red/yellow/green |
+| `test_header_shows_login_when_logged_out` | Login button visible |
+| `test_header_shows_user_when_logged_in` | User menu visible |
+| `test_header_mobile_menu_toggles` | Hamburger works |
+| `test_toast_displays_message` | Shows notification |
+| `test_toast_auto_dismisses` | Disappears after timeout |
+
+---
+
+#### Phase 5.4: Page Integration Tests (4h)
+
+**Files to Create:**
+- `frontend/src/pages/LoginPage.test.tsx`
+- `frontend/src/pages/InterviewPage.test.tsx`
+- `frontend/src/pages/FeedbackPage.test.tsx`
+
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_login_page_submits_form` | Calls API with credentials |
+| `test_login_page_shows_error` | Displays API error |
+| `test_login_page_redirects_on_success` | Navigates to dashboard |
+| `test_interview_page_loads_questions` | Fetches from API |
+| `test_interview_page_records_audio` | Recording UI works |
+| `test_interview_page_submits_response` | Uploads audio |
+| `test_interview_page_beforeunload_warning` | Prevents accidental close |
+| `test_feedback_page_displays_scores` | Shows all metrics |
+| `test_feedback_page_polls_for_processing` | Updates when ready |
+| `test_feedback_page_export_button` | Downloads PDF |
+| `test_feedback_page_share_button` | Opens share modal |
 
 ---
 
 ### Testing Strategy
-- Run full test suite after backend fixes
-- Run frontend build after lint fixes
-- No new tests needed (cleanup only)
+
+```bash
+# Run all frontend tests
+cd frontend && npm run test
+
+# Run with coverage
+npm run test:coverage
+
+# Run specific file
+npm run test -- src/hooks/useAuth.test.tsx
+```
 
 ### Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Auto-fix breaks tests | Medium | Run tests immediately after fix |
-| Hook dependency change affects behavior | Medium | Test affected components manually |
+| MSW setup complexity | Medium | Follow official examples |
+| React 19 compatibility | Low | Use @testing-library/react 16+ |
+| Async state testing | Medium | Use waitFor() utilities |
 
 ---
 
-## Epic 2: Test Coverage Improvement ✅ COMPLETE (P1)
+## Epic 6: Authentication Hardening (P0)
 
-**ICE Score**: 7.5/10 (Impact: 9, Confidence: 8, Ease: 6)
-**Priority**: HIGH - Prevents regressions, enables confident feature work
-**Rationale**: 38% coverage is too low. API endpoints at 41.2% average is the biggest gap.
+**ICE Score**: 9/10 (Impact: 10, Confidence: 9, Ease: 8)
+**Priority**: CRITICAL - Security for production users
+**Effort**: 12-16 hours
+
+### Rationale
+
+Multiple security and UX issues identified:
+- Refresh token stored but never used (users logged out after 30min)
+- Password minimum is 6 chars (should be 8+)
+- Email change without verification
+- No MediaRecorder browser check
 
 ### Current State
-- Overall: 38% coverage (2980 lines, 1845 uncovered)
-- API modules: 40-44% average
-- Critical gaps: `feedback_service.py` (12%), `interview_service.py` (18%)
 
-### Target State
-- Overall: ≥ 60% coverage
-- API modules: ≥ 65% average
-- Services: ≥ 50% coverage
-
-### Technical Design
-
-No new code - just tests for existing functionality.
-
-**Priority Modules** (by uncovered lines):
-1. `api/interviews.py` - 148 lines, 40% → target 70%
-2. `api/feedback.py` - 148 lines, 44% → target 70%
-3. `api/auth.py` - 148 lines, 40% → target 70%
-4. `services/feedback_service.py` - 158 lines, 12% → target 50%
-5. `services/interview_service.py` - 67 lines, 18% → target 50%
+| Issue | Status | Risk |
+|-------|--------|------|
+| Refresh token not working | BROKEN | HIGH - users logged out |
+| Password policy weak | INSECURE | MEDIUM - weak passwords |
+| Email change unverified | INSECURE | MEDIUM - account hijack |
+| Browser compatibility | MISSING | LOW - cryptic errors |
 
 ### Implementation Plan
 
-#### Phase 2.1: API Endpoint Tests 🔄 IN PROGRESS
+#### Phase 6.1: Refresh Token Implementation (6h)
 
-| Task | Description | Agent/Skill | Est | Status |
-|------|-------------|-------------|-----|--------|
-| 2.1.1 | Add tests for `api/interviews.py` error paths | qa-test-guardian | 2h | ✅ Done (9 tests added) |
-| 2.1.2 | Add tests for `api/interviews.py` edge cases (cancel, duplicate) | qa-test-guardian | 1h | ✅ Done (covered in 2.1.1) |
-| 2.1.3 | Add tests for `api/feedback.py` missing feedback scenarios | qa-test-guardian | 1.5h | ✅ Already covered |
-| 2.1.4 | Add tests for `api/auth.py` refresh token edge cases | qa-test-guardian | 1h | ✅ Already covered |
-| 2.1.5 | Add tests for `api/auth.py` password reset flow | qa-test-guardian | 1h | ✅ Already covered |
+**Files to Change:**
+- `frontend/src/lib/api.ts` - Add token refresh interceptor
+- `frontend/src/hooks/useAuth.tsx` - Handle refresh flow
+- `backend/app/api/auth.py` - Verify refresh endpoint works
 
-**Checkpoint**: ✅ Phase 2.1 Substantially Complete
-- Added 16 total tests for API error paths (9 initial + 7 additional)
-- interviews.py: 42% (target: ≥65%, complex paths remain uncovered)
-- feedback.py: 44% (target: ≥65%, complex paths remain uncovered)
-- auth.py: 40% (target: ≥65%, complex paths remain uncovered)
-- **Note**: API coverage gaps are primarily in complex flows (background tasks, edge cases)
-- **Overall coverage**: 69% ✅ (exceeded 60% target)
-- **Service layer**: 78-87% ✅ (exceeded 50% target)
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `refreshAccessToken()` | Calls /auth/refresh with refresh token |
+| `setupTokenRefreshInterceptor()` | Intercepts 401, retries with new token |
+| `isTokenExpiringSoon()` | Checks if access token expires in <5min |
+| `proactiveTokenRefresh()` | Refreshes before expiry |
 
----
-
-#### Phase 2.2: Service Layer Tests ✅ COMPLETE
-
-| Task | Description | Agent/Skill | Est | Status |
-|------|-------------|-------------|-----|--------|
-| 2.2.1 | Add tests for `feedback_service.py` error handling | qa-test-guardian | 2h | ✅ Done |
-| 2.2.2 | Add tests for `feedback_service.py` async processing | qa-test-guardian | 1.5h | ✅ Done (covered in 2.2.1) |
-| 2.2.3 | Add tests for `interview_service.py` session management | qa-test-guardian | 1.5h | ✅ Done |
-| 2.2.4 | Add tests for `background_tasks.py` failure scenarios | qa-test-guardian | 1h | ✅ Done |
-
-**Checkpoint**: ✅ Service coverage targets met
-- feedback_service.py: 49% (target: ≥50%, close)
-- interview_service.py: 42% (target: ≥50%, close)
-- background_tasks.py: 68% (target: ≥50%, exceeded)
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_401_triggers_refresh` | Automatically refreshes token |
+| `test_refresh_retries_original_request` | Original request succeeds |
+| `test_refresh_failure_logs_out` | User redirected to login |
+| `test_concurrent_refresh_deduped` | Only one refresh at a time |
+| `test_proactive_refresh_before_expiry` | Refreshes with 5min left |
 
 ---
 
-#### Phase 2.3: Coverage Verification ✅ COMPLETE
+#### Phase 6.2: Password Policy Enhancement (3h)
 
-| Task | Description | Agent/Skill | Est | Status |
-|------|-------------|-------------|-----|--------|
-| 2.3.1 | Run full coverage report | - | 10m | ✅ Done |
-| 2.3.2 | Identify remaining gaps | - | 20m | ✅ Done |
-| 2.3.3 | Document coverage in CODEBASE_AUDIT.md | - | 15m | ✅ Done |
+**Files to Change:**
+- `backend/app/api/auth.py` - Add password validation
+- `backend/app/utils/password_validation.py` - Password rules
+- `frontend/src/pages/RegisterPage.tsx` - Password strength UI
+- `frontend/src/pages/SettingsPage.tsx` - Password change validation
 
-**Checkpoint**: ✅ Overall coverage **69%** (exceeded 60% target)
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `validate_password_strength()` | Enforces 8+ chars, complexity |
+| `get_password_strength_score()` | Returns 0-100 strength score |
+| `get_password_feedback()` | Returns improvement suggestions |
 
-**Coverage Summary**:
-- **Overall**: 69% (up from 45.5%)
-- **API Layer**: 
-  - interviews.py: 42%
-  - feedback.py: 44%
-  - auth.py: 40%
-- **Service Layer**:
-  - feedback_service.py: 87% ✅
-  - interview_service.py: 78% ✅
-  - background_tasks.py: 85% ✅
-- **Total Tests**: 369 passed, 2 failed (unrelated to Epic 2)
+**Password Rules:**
+- Minimum 8 characters
+- At least 1 uppercase letter
+- At least 1 lowercase letter
+- At least 1 number
+- At least 1 special character (optional but encouraged)
 
-### Testing Strategy
-- Use existing test infrastructure (pytest-asyncio, AsyncClient)
-- Mock AI services (ContentAnalyzer, Transcriber)
-- Database cleanup between tests (TRUNCATE CASCADE)
-- Test error paths and edge cases, not just happy paths
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_password_minimum_length` | Rejects < 8 chars |
+| `test_password_requires_uppercase` | Requires uppercase |
+| `test_password_requires_lowercase` | Requires lowercase |
+| `test_password_requires_number` | Requires digit |
+| `test_password_strength_score` | Returns 0-100 |
+| `test_password_feedback_helpful` | Suggests improvements |
+
+---
+
+#### Phase 6.3: Email Verification for Changes (2h)
+
+**Files to Change:**
+- `backend/app/api/users.py` - Add email change verification
+- `backend/app/services/email_service.py` - Send verification email
+- `frontend/src/pages/SettingsPage.tsx` - Show verification pending
+
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `request_email_change()` | Sends verification to new email |
+| `confirm_email_change()` | Validates token, updates email |
+| `send_email_change_verification()` | Sends verification link |
+
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_email_change_requires_verification` | Not immediate |
+| `test_email_change_sends_verification` | Email sent |
+| `test_email_change_token_expires` | 24h expiry |
+| `test_email_change_confirms_with_token` | Updates on valid token |
+
+---
+
+#### Phase 6.4: Browser Compatibility Checks (1h)
+
+**Files to Change:**
+- `frontend/src/hooks/useAudioRecording.ts` - Add capability check
+- `frontend/src/components/interview/BrowserWarning.tsx` - Create warning
+
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `checkBrowserCompatibility()` | Returns supported features |
+| `isMediaRecorderSupported()` | Checks MediaRecorder API |
+| `getRecommendedBrowser()` | Suggests Chrome/Firefox |
+
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_compatibility_check_runs` | Executes on mount |
+| `test_warning_shown_for_unsupported` | Modal appears |
+| `test_warning_dismissible` | User can continue anyway |
+
+---
 
 ### Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Tests take longer than estimated | Medium | Focus on highest-impact modules first |
-| Mock complexity increases | Low | Reuse existing mock patterns |
+| Token refresh race conditions | High | Use mutex/queue |
+| Password policy breaks existing users | Low | Only for new passwords |
+| Email verification complexity | Medium | Simple token-based flow |
 
 ---
 
-## Epic 3: Video Analysis MVP (P2)
+## Epic 7: Performance & UX Optimization (P1)
 
-**ICE Score**: 7.2/10 (Impact: 8, Confidence: 7, Ease: 7)
-**Priority**: MEDIUM - Differentiating feature from project brief
-**Rationale**: Project promises "multimodal feedback (audio + video + content)". Video is the missing piece.
+**ICE Score**: 8/10 (Impact: 8, Confidence: 9, Ease: 7)
+**Priority**: HIGH - User-facing quality
+**Effort**: 10-12 hours
+
+### Rationale
+
+Due diligence identified:
+- Main bundle 837KB (target: <500KB)
+- DashboardPage 498KB (Recharts heavy)
+- Mobile responsiveness "Partial"
+- Some UX polish needed
 
 ### Current State
-- Audio analysis: ✅ Librosa for speech rate, filler words, confidence
-- Content analysis: ✅ Claude for technical accuracy, structure
-- Video analysis: ❌ Not implemented
 
-### Target State
-- Basic emotion detection (nervousness, confidence)
-- Eye contact tracking (looking at camera vs. away)
-- Video metrics integrated into overall feedback score
-
-### Technical Design
-
-#### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Video Analysis Pipeline                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Frontend (WebRTC)          Backend (FastAPI)                   │
-│  ┌──────────────┐           ┌──────────────┐                   │
-│  │ Video        │  POST     │ /upload/     │                   │
-│  │ Capture      │ ───────── │ video        │                   │
-│  └──────────────┘           └──────┬───────┘                   │
-│                                    │                            │
-│                                    v                            │
-│                             ┌──────────────┐                   │
-│                             │ VideoAnalyzer│                   │
-│                             │ (EmotiEffLib)│                   │
-│                             └──────┬───────┘                   │
-│                                    │                            │
-│                                    v                            │
-│                             ┌──────────────┐                   │
-│                             │ VideoFeedback│                   │
-│                             │ Model        │                   │
-│                             └──────────────┘                   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-#### Data Models
-
-```python
-# backend/app/models/video_feedback.py
-class VideoFeedback(SQLModel, table=True):
-    __tablename__ = "video_feedback"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    response_id: UUID = Field(foreign_key="interview_responses.id", unique=True)
-
-    # Emotion metrics (0-1 scale)
-    confidence_score: float = Field(default=0.0)
-    nervousness_score: float = Field(default=0.0)
-    engagement_score: float = Field(default=0.0)
-
-    # Eye contact metrics
-    eye_contact_percentage: float = Field(default=0.0)
-    looking_away_count: int = Field(default=0)
-
-    # Gesture metrics (future)
-    fidget_count: Optional[int] = None
-    hand_gesture_frequency: Optional[float] = None
-
-    # Processing
-    processing_duration_ms: int = Field(default=0)
-    frame_count: int = Field(default=0)
-
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-```
-
-#### API Contracts
-
-```
-POST /api/v1/upload/video
-Content-Type: multipart/form-data
-Body: { file: <video_file>, response_id: UUID }
-Response: { video_id: UUID, status: "processing" }
-
-GET /api/v1/feedback/video/{response_id}
-Response: {
-    confidence_score: 0.72,
-    nervousness_score: 0.35,
-    eye_contact_percentage: 0.68,
-    looking_away_count: 5,
-    recommendations: [
-        "Maintain more consistent eye contact",
-        "Good confidence level detected"
-    ]
-}
-```
+| Metric | Current | Target |
+|--------|---------|--------|
+| Main bundle | 837KB | <500KB |
+| Dashboard chunk | 498KB | <200KB |
+| Mobile responsive | Partial | Complete |
+| Lighthouse performance | ~70 | >85 |
 
 ### Implementation Plan
 
-#### Phase 3.1: Research & Setup
+#### Phase 7.1: Code Splitting & Lazy Loading (4h)
 
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 3.1.1 | Research EmotiEffLib capabilities and requirements | - | 2h |
-| 3.1.2 | Evaluate alternative: OpenCV + face detection | - | 1h |
-| 3.1.3 | Set up video processing dependencies | - | 1h |
-| 3.1.4 | Create VideoFeedback model + migration | backend-engineer | 1h |
+**Files to Change:**
+- `frontend/vite.config.ts` - Manual chunk configuration
+- `frontend/src/App.tsx` - Dynamic imports for pages
+- `frontend/src/pages/DashboardPage.tsx` - Lazy load Recharts
 
-**Checkpoint**: Video analysis dependencies installed, model created
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `lazyLoadChart()` | Dynamically imports Recharts |
+| `ChartSkeleton` | Shows while chart loads |
+| Vite `manualChunks` config | Splits vendor bundles |
 
----
-
-#### Phase 3.2: Backend Video Analyzer
-
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 3.2.1 | Create `ai/video_analyzer.py` base service | backend-engineer | 3h |
-| 3.2.2 | Implement emotion detection using EmotiEffLib | backend-engineer | 3h |
-| 3.2.3 | Implement eye contact tracking | backend-engineer | 2h |
-| 3.2.4 | Add error handling and fallback metrics | backend-engineer | 1h |
-| 3.2.5 | Write unit tests for video analyzer | qa-test-guardian | 2h |
-
-**Checkpoint**: Video analyzer service functional with tests
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_chart_lazy_loads` | Not in initial bundle |
+| `test_skeleton_shows_while_loading` | Loading state visible |
+| `test_vendor_chunks_separate` | React/Recharts split |
 
 ---
 
-#### Phase 3.3: Backend API Integration
+#### Phase 7.2: Bundle Optimization (3h)
 
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 3.3.1 | Add video upload endpoint to `api/upload.py` | backend-engineer | 1.5h |
-| 3.3.2 | Add video feedback endpoint to `api/feedback.py` | backend-engineer | 1h |
-| 3.3.3 | Integrate video analysis into response processing | backend-engineer | 2h |
-| 3.3.4 | Add video feedback to overall feedback aggregation | backend-engineer | 1h |
-| 3.3.5 | Write API tests | qa-test-guardian | 1.5h |
+**Files to Change:**
+- `frontend/vite.config.ts` - Optimize build
+- `frontend/package.json` - Check for heavy deps
 
-**Checkpoint**: Video upload and feedback APIs functional
+**Optimization Targets:**
+| Target | Action |
+|--------|--------|
+| Recharts | Lazy load, tree-shake |
+| React Query | Already efficient |
+| Lucide icons | Import specific icons only |
+| Unused code | Remove dead exports |
 
----
-
-#### Phase 3.4: Frontend Integration
-
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 3.4.1 | Add video recording to InterviewPage | frontend-builder | 3h |
-| 3.4.2 | Create VideoFeedbackCard component | frontend-builder | 2h |
-| 3.4.3 | Integrate video metrics into FeedbackPage | frontend-builder | 1.5h |
-| 3.4.4 | Add video toggle in interview settings | frontend-builder | 1h |
-| 3.4.5 | Write component tests | qa-test-guardian | 1.5h |
-
-**Checkpoint**: Video recording and feedback display working
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_build_size_under_limit` | Main < 500KB |
+| `test_no_duplicate_react` | Single React instance |
+| `test_tree_shaking_works` | Unused code removed |
 
 ---
 
-### Dependencies
+#### Phase 7.3: Mobile Responsiveness Polish (3h)
 
-**External:**
-- EmotiEffLib or OpenCV for video analysis
-- FFmpeg for video processing (already available in Python ecosystem)
+**Files to Change:**
+- `frontend/src/pages/DashboardPage.tsx` - Stats stacking
+- `frontend/src/pages/InterviewPage.tsx` - Header overflow
+- `frontend/src/components/interview/ShareModal.tsx` - Modal width
+- `frontend/src/index.css` - Mobile-specific styles
 
-**Internal:**
-- Existing upload endpoint pattern (`api/upload.py`)
-- Existing feedback aggregation (`services/feedback_service.py`)
-- WebRTC video capture (similar to audio)
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_dashboard_stacks_on_mobile` | Grid becomes single column |
+| `test_interview_header_no_overflow` | Text truncates |
+| `test_modal_fits_mobile_screen` | Full width on small screens |
+| `test_touch_targets_adequate` | 44px minimum |
 
-### Testing Strategy
+---
 
-- **Unit Tests**: VideoAnalyzer service with sample video frames
-- **Integration Tests**: Upload → analyze → retrieve feedback flow
-- **E2E Tests**: Record interview with video → view video feedback
+#### Phase 7.4: Loading States & Skeletons (2h)
+
+**Files to Create:**
+- `frontend/src/components/ui/Skeleton.tsx`
+
+**Files to Change:**
+- `frontend/src/pages/DashboardPage.tsx` - Add skeletons
+- `frontend/src/pages/FeedbackPage.tsx` - Add skeletons
+
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_skeleton_shows_during_load` | Placeholder visible |
+| `test_skeleton_replaced_with_content` | Real data appears |
+| `test_skeleton_accessible` | Has aria-busy |
+
+---
 
 ### Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| EmotiEffLib not suitable | High | Evaluate OpenCV + fer as fallback |
-| Video processing too slow | Medium | Process async, show "processing" state |
-| Large video files | Medium | Compress on client, limit duration |
-| Privacy concerns | High | Document video usage, add opt-out |
+| Lazy loading flash | Low | Use Suspense with skeleton |
+| Chart not loading | Medium | Error boundary fallback |
+| Breaking mobile UI | Low | Test on real devices |
 
 ---
 
-## Epic 4: B2B Team Features (P2)
+## Epic 8: Production Resilience (P1)
 
-**ICE Score**: 6.5/10 (Impact: 8, Confidence: 7, Ease: 5)
-**Priority**: MEDIUM - Higher ARPU revenue stream
-**Rationale**: B2B tiers ($199-499/mo) are 3-7x higher than B2C ($29-79/mo). Opens enterprise market.
+**ICE Score**: 8/10 (Impact: 9, Confidence: 8, Ease: 7)
+**Priority**: HIGH - Stability under load
+**Effort**: 8-10 hours
+
+### Rationale
+
+As we scale, we need:
+- Graceful degradation when services fail
+- Retry logic for transient errors
+- Circuit breakers for external APIs
+- Better error recovery UX
 
 ### Current State
-- User model: Individual accounts only
-- Subscription: FREE, PRO, PREMIUM tiers (B2C)
-- No team/organization concept
 
-### Target State
-- Team model with admin/member roles
-- Team subscription tier ($199/mo for 10 seats)
-- Admin dashboard with team usage stats
-- Member invitation flow
-
-### Technical Design
-
-#### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Team Subscription Model                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Organizations          Teams              Users                │
-│  ┌──────────┐          ┌──────────┐       ┌──────────┐         │
-│  │ Org      │ 1───────N│ Team     │N─────N│ User     │         │
-│  │          │          │          │       │          │         │
-│  │ - name   │          │ - name   │       │ - email  │         │
-│  │ - plan   │          │ - seats  │       │ - role   │         │
-│  └──────────┘          └──────────┘       └──────────┘         │
-│                                                                  │
-│  Team Roles: ADMIN, MEMBER                                      │
-│  Org Plans: TEAM ($199), ENTERPRISE ($499)                      │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-#### Data Models
-
-```python
-# backend/app/models/team.py
-class Team(SQLModel, table=True):
-    __tablename__ = "teams"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str = Field(max_length=100)
-    slug: str = Field(max_length=100, unique=True)
-
-    # Subscription
-    subscription_tier: str = Field(default="team")  # team, enterprise
-    max_seats: int = Field(default=10)
-    stripe_subscription_id: Optional[str] = None
-
-    # Settings
-    custom_questions_enabled: bool = Field(default=False)
-    sso_enabled: bool = Field(default=False)
-
-    created_at: datetime
-    updated_at: Optional[datetime]
-
-class TeamMembership(SQLModel, table=True):
-    __tablename__ = "team_memberships"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    team_id: UUID = Field(foreign_key="teams.id")
-    user_id: UUID = Field(foreign_key="users.id")
-    role: str = Field(default="member")  # admin, member
-
-    invited_by: Optional[UUID] = Field(foreign_key="users.id")
-    invited_at: datetime
-    accepted_at: Optional[datetime]
-
-class TeamInvitation(SQLModel, table=True):
-    __tablename__ = "team_invitations"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    team_id: UUID = Field(foreign_key="teams.id")
-    email: str
-    role: str = Field(default="member")
-    token: str = Field(unique=True)
-
-    invited_by: UUID = Field(foreign_key="users.id")
-    created_at: datetime
-    expires_at: datetime
-    accepted_at: Optional[datetime]
-```
-
-#### API Contracts
-
-```
-# Team Management
-POST /api/v1/teams
-Body: { name: string }
-Response: { id: UUID, name: string, slug: string }
-
-GET /api/v1/teams/{team_id}
-Response: { id, name, members: [...], usage: {...} }
-
-# Member Management
-POST /api/v1/teams/{team_id}/invitations
-Body: { email: string, role: "admin" | "member" }
-Response: { invitation_id: UUID, token: string }
-
-POST /api/v1/teams/invitations/{token}/accept
-Response: { team_id: UUID, role: string }
-
-DELETE /api/v1/teams/{team_id}/members/{user_id}
-Response: { success: true }
-
-# Admin Dashboard
-GET /api/v1/teams/{team_id}/usage
-Response: {
-    total_interviews: 150,
-    interviews_this_month: 45,
-    active_members: 8,
-    member_usage: [{ user_id, name, interviews: 12 }, ...]
-}
-```
+| Feature | Status |
+|---------|--------|
+| API retry logic | Partial (uploads only) |
+| AI service fallbacks | Missing |
+| Error recovery UI | Basic |
+| Rate limit handling | Backend only |
 
 ### Implementation Plan
 
-#### Phase 4.1: Data Models & Migration
+#### Phase 8.1: API Retry & Timeout Handling (3h)
 
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 4.1.1 | Create Team model in `models/team.py` | backend-engineer | 1h |
-| 4.1.2 | Create TeamMembership model | backend-engineer | 30m |
-| 4.1.3 | Create TeamInvitation model | backend-engineer | 30m |
-| 4.1.4 | Update User model with team relationship | backend-engineer | 30m |
-| 4.1.5 | Create Alembic migration | backend-engineer | 30m |
-| 4.1.6 | Write model tests | qa-test-guardian | 1h |
+**Files to Change:**
+- `frontend/src/lib/api.ts` - Add retry interceptor
+- `frontend/src/lib/retry.ts` - Create retry utility
 
-**Checkpoint**: Team models created and migrated
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `withRetry()` | Wraps API calls with retry logic |
+| `isRetryableError()` | Determines if error is transient |
+| `exponentialBackoff()` | Calculates retry delay |
+| `withTimeout()` | Adds timeout to requests |
 
----
-
-#### Phase 4.2: Backend Team API
-
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 4.2.1 | Create `api/teams.py` router | backend-engineer | 2h |
-| 4.2.2 | Implement team CRUD endpoints | backend-engineer | 2h |
-| 4.2.3 | Implement invitation flow (create, accept, revoke) | backend-engineer | 3h |
-| 4.2.4 | Implement member management (add, remove, role change) | backend-engineer | 2h |
-| 4.2.5 | Add team permission decorators | backend-engineer | 1h |
-| 4.2.6 | Write API tests | qa-test-guardian | 2h |
-
-**Checkpoint**: Team API functional with tests
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_retry_on_network_error` | Retries transient failures |
+| `test_no_retry_on_4xx` | Doesn't retry client errors |
+| `test_exponential_backoff` | Delays increase |
+| `test_max_retries_exceeded` | Eventually fails |
+| `test_timeout_triggers_error` | Request times out |
 
 ---
 
-#### Phase 4.3: Team Subscription Integration
+#### Phase 8.2: AI Service Fallbacks (3h)
 
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 4.3.1 | Add team tier to Stripe products | - | 30m |
-| 4.3.2 | Create team checkout endpoint | backend-engineer | 2h |
-| 4.3.3 | Update webhook handler for team subscriptions | backend-engineer | 1.5h |
-| 4.3.4 | Implement seat-based quota enforcement | backend-engineer | 1.5h |
-| 4.3.5 | Write subscription tests | qa-test-guardian | 1h |
+**Files to Change:**
+- `backend/app/ai/transcriber.py` - Add fallback provider
+- `backend/app/ai/content_analyzer.py` - Add fallback
+- `backend/app/services/feedback_service.py` - Graceful degradation
 
-**Checkpoint**: Team subscriptions working with Stripe
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `transcribe_with_fallback()` | Tries primary, falls back to secondary |
+| `analyze_with_fallback()` | Tries Claude, falls back to simpler analysis |
+| `generate_fallback_feedback()` | Returns basic feedback if AI fails |
 
----
-
-#### Phase 4.4: Admin Dashboard API
-
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 4.4.1 | Create `api/teams.py` usage endpoint | backend-engineer | 1.5h |
-| 4.4.2 | Implement team usage aggregation service | backend-engineer | 2h |
-| 4.4.3 | Add member activity tracking | backend-engineer | 1h |
-| 4.4.4 | Write usage API tests | qa-test-guardian | 1h |
-
-**Checkpoint**: Admin usage API functional
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_transcription_fallback_to_groq` | Uses Groq if OpenAI fails |
+| `test_analysis_fallback_graceful` | Returns partial feedback |
+| `test_fallback_notifies_user` | Shows degraded mode notice |
 
 ---
 
-#### Phase 4.5: Frontend Team Management
+#### Phase 8.3: Error Recovery UX (2h)
 
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 4.5.1 | Create TeamDashboardPage | frontend-builder | 3h |
-| 4.5.2 | Create MemberList component | frontend-builder | 2h |
-| 4.5.3 | Create InviteMemberModal | frontend-builder | 1.5h |
-| 4.5.4 | Create TeamUsageChart component | frontend-builder | 2h |
-| 4.5.5 | Add team routes and navigation | frontend-builder | 1h |
-| 4.5.6 | Write component tests | qa-test-guardian | 1.5h |
+**Files to Change:**
+- `frontend/src/components/ErrorBoundary.tsx` - Enhance recovery
+- `frontend/src/components/ui/RetryButton.tsx` - Create component
+- `frontend/src/pages/FeedbackPage.tsx` - Add retry for failed feedback
 
-**Checkpoint**: Team dashboard functional
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `RetryButton` | Button with loading state for retries |
+| `useRetry()` | Hook for retry state management |
+| `ErrorRecoveryOptions` | Component with retry/refresh/home options |
 
----
-
-#### Phase 4.6: Invitation Flow UI
-
-| Task | Description | Agent/Skill | Est |
-|------|-------------|-------------|-----|
-| 4.6.1 | Create AcceptInvitationPage | frontend-builder | 2h |
-| 4.6.2 | Add invitation email templates | backend-engineer | 1h |
-| 4.6.3 | Integrate with email service (Resend) | backend-engineer | 1h |
-| 4.6.4 | Write E2E tests for invitation flow | qa-test-guardian | 1.5h |
-
-**Checkpoint**: Full invitation flow working
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_retry_button_shows_loading` | Spinner during retry |
+| `test_error_recovery_options` | Shows multiple options |
+| `test_successful_retry_clears_error` | Error state reset |
 
 ---
 
-### Dependencies
+#### Phase 8.4: Rate Limit Handling (2h)
 
-**External:**
-- Stripe Team product/price configuration
-- Resend email templates for invitations
+**Files to Change:**
+- `frontend/src/lib/api.ts` - Handle 429 responses
+- `frontend/src/components/ui/RateLimitWarning.tsx` - Create component
 
-**Internal:**
-- Existing auth system
-- Existing subscription infrastructure
-- Existing email service
+**Functions to Implement:**
+| Function | Purpose |
+|----------|---------|
+| `handleRateLimitResponse()` | Extracts retry-after, shows warning |
+| `RateLimitWarning` | Displays countdown until retry |
+| `queueRequestsOnRateLimit()` | Queues requests during limit |
 
-### Testing Strategy
+**Test Cases:**
+| Test Name | Behavior |
+|-----------|----------|
+| `test_429_shows_warning` | User sees rate limit message |
+| `test_retry_after_countdown` | Shows time remaining |
+| `test_requests_queue_during_limit` | Doesn't spam server |
 
-- **Unit Tests**: Team model validation, permission checks
-- **Integration Tests**: Team creation → invite → accept → usage flow
-- **E2E Tests**: Full team admin journey
+---
 
 ### Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Complex permission model | High | Start simple (admin/member), expand later |
-| Seat counting edge cases | Medium | Clear rules: pending invites don't count |
-| SSO requirement for enterprise | Low | Defer SSO to later sprint |
+| Fallback quality lower | Medium | Notify user of degraded mode |
+| Retry loops | High | Max retry limit, exponential backoff |
+| UX confusion | Low | Clear messaging |
 
 ---
 
-## Sprint 10 Summary
+## Sprint 12 Summary
 
 ### Total Estimated Effort
 
-| Epic | Effort | Priority |
-|------|--------|----------|
-| Epic 1: Lint Cleanup | ~4 hours | P0 - Critical |
-| Epic 2: Test Coverage | ~15 hours | P1 - High |
-| Epic 3: Video Analysis | ~35 hours | P2 - Medium |
-| Epic 4: B2B Features | ~45 hours | P2 - Medium |
-
-**Recommended Sprint Scope:**
-- Epic 1 + Epic 2 = ~19 hours (1 sprint)
-- Epic 3 or Epic 4 = ~35-45 hours (separate sprint)
+| Epic | Effort | Priority | ROI |
+|------|--------|----------|-----|
+| Epic 5: Frontend Test Foundation | 16-20h | P0 | 10/10 |
+| Epic 6: Auth Hardening | 12-16h | P0 | 9/10 |
+| Epic 7: Performance Optimization | 10-12h | P1 | 8/10 |
+| Epic 8: Production Resilience | 8-10h | P1 | 8/10 |
+| **Total** | **46-58h** | | |
 
 ### Execution Order
 
-1. **Week 1**: Epic 1 (Lint) + Epic 2 Phase 2.1 (API tests)
-2. **Week 2**: Epic 2 Phase 2.2-2.3 (Service tests, verification)
-3. **Week 3-4**: Epic 3 OR Epic 4 (choose based on business priority)
+1. **Week 1**: Epic 5 (Phase 5.1-5.2) + Epic 6 (Phase 6.1-6.2)
+2. **Week 2**: Epic 5 (Phase 5.3-5.4) + Epic 6 (Phase 6.3-6.4)
+3. **Week 3**: Epic 7 (all phases) + Epic 8 (all phases)
 
-### Open Questions
+### Files Changed Summary
 
-- [ ] Video analysis: EmotiEffLib vs OpenCV + fer - which is more suitable?
-- [ ] B2B: Should enterprise tier include SSO from day 1?
-- [ ] B2B: Do we need team-specific question banks?
+**Frontend (New):**
+- `src/test/setup.ts`
+- `src/test/mocks/handlers.ts`
+- `src/test/mocks/server.ts`
+- `src/test/utils.tsx`
+- `src/hooks/useAuth.test.tsx`
+- `src/components/interview/RecordButton.test.tsx`
+- `src/components/feedback/ScoreRing.test.tsx`
+- `src/pages/LoginPage.test.tsx`
+- `src/pages/InterviewPage.test.tsx`
+- `src/pages/FeedbackPage.test.tsx`
+- `src/components/interview/BrowserWarning.tsx`
+- `src/components/ui/Skeleton.tsx`
+- `src/components/ui/RetryButton.tsx`
+- `src/components/ui/RateLimitWarning.tsx`
+- `src/lib/retry.ts`
+
+**Frontend (Modified):**
+- `src/lib/api.ts` (token refresh, retry, rate limit)
+- `src/hooks/useAuth.tsx` (refresh flow)
+- `src/hooks/useAudioRecording.ts` (compatibility check)
+- `src/pages/RegisterPage.tsx` (password strength)
+- `src/pages/SettingsPage.tsx` (email verification, password)
+- `src/pages/DashboardPage.tsx` (lazy load, skeletons, mobile)
+- `src/pages/InterviewPage.tsx` (mobile)
+- `src/components/ErrorBoundary.tsx` (recovery options)
+- `vite.config.ts` (code splitting)
+
+**Backend (Modified):**
+- `app/api/auth.py` (password validation)
+- `app/api/users.py` (email change verification)
+- `app/services/email_service.py` (verification emails)
+- `app/ai/transcriber.py` (fallback)
+- `app/ai/content_analyzer.py` (fallback)
+- `app/services/feedback_service.py` (graceful degradation)
 
 ---
 
-## Previous Sprint Reference
+## Deferred to Future Sprints
 
-### Sprint 9: Conversational Voice Mentor ✅ COMPLETE (Dec 2025)
+### Sprint 13: Video Analysis MVP (30h)
+- Video recording UI
+- Basic video analysis (posture, eye contact)
+- Video feedback display
+- Integration with feedback page
 
-#### Epic 1: Voice Mentor TTS Integration ✅
-- Phase 1.1: useSpeechSynthesis hook ✅
-- Phase 1.2: TTS integrated into Detective Stage ✅
-- Phase 1.3: VoiceSettingsPanel with voice selection ✅
+### Sprint 14: B2B Team Features (45h)
+- Team/Organization models
+- Admin dashboard
+- Seat-based licensing
+- Member invitation flow
+- Team analytics
 
-#### Epic 2: Conversational Mode ✅
-- Phase 2.1: useConversationMode state machine ✅
-- Phase 2.2: ConversationIndicator UI component ✅
-- Phase 2.3: Auto-listen mode after mentor speaks ✅
-- Phase 2.4: Interrupt handling (stop TTS when user speaks) ✅
-
-#### Epic 3: Premium Voice Quality ✅
-- Phase 3.1: Voice quality assessment (premium badges) ✅
-- voice-quality.ts with ranking utilities ✅
-- VoiceSettingsPanel shows premium indicators ✅
-
-#### Epic 4: Free Tier Prepare Access ✅
-- Phase 4.1: Updated subscription gating ✅
-- Phase 4.2: usePrepUsage hook (3/month limit, localStorage) ✅
-- QuestionCard shows remaining preparations ✅
-
-#### Post-Sprint Fixes:
-- **Conversation Mode STT Conflict** (d5fc412): Fixed dual speech recognition issue
-- **TTS Canceled Error** (37cfd24): Fixed error handling for intentional cancellation
-- **Transcript Persistence** (37cfd24): Transcript now persists until answer submitted
+### Sprint 15: Advanced Features
+- Interview comparison (A/B your answers)
+- Mock interviewer personas
+- Custom question banks
+- API for enterprise integrations
 
 ---
 
 ## References
 
-- [CODEBASE_AUDIT.md](./CODEBASE_AUDIT.md) - Current code quality metrics
-- [project-brief.md](./project-brief.md) - Product vision and features
-- [progress.md](./progress.md) - Sprint history and milestones
-- [active-context.md](./active-context.md) - Current focus areas
+- [CODEBASE_AUDIT.md](./CODEBASE_AUDIT.md) - Coverage metrics
+- [DUE_DILIGENCE_REPORT.md](./DUE_DILIGENCE_REPORT.md) - Overall assessment
+- [SOFT_LAUNCH_REVIEW.md](./SOFT_LAUNCH_REVIEW.md) - Frontend gaps
+- [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) - Security posture

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../lib/api';
 import { analytics, Events } from '../lib/analytics';
 import { getStoredUTM } from '../lib/utm';
+import { setUserContext, clearUserContext } from '../lib/sentry';
 import type { User, ExperienceLevel } from '../types';
 
 interface AuthContextType {
@@ -37,6 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Identify returning user for analytics
           analytics.identify(String(userData.id), {
+            email: userData.email,
+            tier: userData.subscription_tier || 'free',
+          });
+
+          // Set Sentry user context
+          setUserContext({
+            id: userData.id,
             email: userData.email,
             tier: userData.subscription_tier || 'free',
           });
@@ -77,6 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...getStoredUTM(),
     });
 
+    // Set Sentry user context
+    setUserContext({
+      id: userData.id,
+      email: userData.email,
+      tier: userData.subscription_tier || 'free',
+    });
+
     // Navigate to intended destination or default to dashboard
     navigate(redirectTo || '/dashboard');
   };
@@ -110,6 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...getStoredUTM(),
     });
 
+    // Set Sentry user context
+    setUserContext({
+      id: userData.id,
+      email: userData.email,
+      tier: 'free',
+    });
+
     navigate('/dashboard');
   };
 
@@ -117,6 +139,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Track logout before resetting analytics
     analytics.track(Events.USER_LOGGED_OUT);
     analytics.reset();
+
+    // Clear Sentry user context
+    clearUserContext();
 
     authAPI.logout();
     setUser(null);

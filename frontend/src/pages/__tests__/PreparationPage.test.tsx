@@ -75,7 +75,7 @@ describe('PreparationPage', () => {
       renderPage(<PreparationPage />, { initialRoute: '/preparation/test-id' });
 
       await waitFor(() => {
-        expect(screen.getByText(/help us understand your experience/i)).toBeInTheDocument();
+        expect(screen.getByText(/answer questions to help craft your personalized response/i)).toBeInTheDocument();
       });
     });
 

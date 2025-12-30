@@ -27,6 +27,7 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PreparationPage = lazy(() => import('./pages/PreparationPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
+const SharedInterviewPage = lazy(() => import('./pages/SharedInterviewPage'));
 
 // Dev-only preview page (lazy loaded, only in development)
 const DevPreviewPage = lazy(() => import('./pages/DevPreviewPage'));
@@ -61,6 +62,8 @@ function App() {
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/affiliates" element={<AffiliatePage />} />
+                  {/* Public shared interview view - no auth required */}
+                  <Route path="/shared/:token" element={<SharedInterviewPage />} />
                   <Route
                     path="/dashboard"
                     element={

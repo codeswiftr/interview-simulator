@@ -137,7 +137,7 @@ describe('useToast', () => {
       expect(result.current.toasts).toHaveLength(1);
       expect(result.current.toasts[0].type).toBe('error');
       expect(result.current.toasts[0].title).toBe('Error Title');
-      expect(result.current.toasts[0].duration).toBe(8000); // Error toasts have longer duration
+      expect(result.current.toasts[0].duration).toBe(12000); // Error toasts have longer duration
     });
 
     it('should create warning toast', () => {

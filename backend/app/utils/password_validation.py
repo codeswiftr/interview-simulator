@@ -1,6 +1,6 @@
 """Password validation utilities.
 
-Relaxed validation that allows simple passwords like 'secret25'.
+Requires minimum 8 characters and blocks common passwords.
 Use get_password_strength() for frontend warnings about weak passwords.
 """
 
@@ -10,7 +10,7 @@ from enum import Enum
 
 class PasswordValidationError(str, Enum):
     """Password validation error codes."""
-    TOO_SHORT = "Password must be at least 6 characters long"
+    TOO_SHORT = "Password must be at least 8 characters long"
     COMMON_PASSWORD = "Password is too common and easily guessed"
 
 
@@ -30,11 +30,11 @@ class PasswordValidator:
     # Special characters (for strength scoring only)
     SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;:,.<>?"
 
-    def __init__(self, min_length: int = 6):
+    def __init__(self, min_length: int = 8):
         """Initialize password validator.
 
         Args:
-            min_length: Minimum password length (default: 6)
+            min_length: Minimum password length (default: 8)
         """
         self.min_length = min_length
 

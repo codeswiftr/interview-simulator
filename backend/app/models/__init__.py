@@ -10,6 +10,7 @@ from app.models.interview import (
     InterviewStatus,
     InterviewType,
 )
+from app.models.interview_share import InterviewShare
 from app.models.password_reset import PasswordResetToken
 from app.models.preparation import (
     AnswerPreparation,
@@ -38,6 +39,7 @@ __all__ = [
     "SessionFeedback",
     "VideoFeedback",
     "PasswordResetToken",
+    "InterviewShare",
     "AnswerPreparation",
     "PreparationQnA",
     "DeliveryAttempt",

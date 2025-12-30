@@ -89,6 +89,7 @@ export interface SessionFeedback {
   top_strengths: string[];
   top_improvements: string[];
   recommended_practice_areas: string[];
+  next_question_ids?: string[];
   created_at?: string;
 }
 

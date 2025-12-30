@@ -214,6 +214,60 @@ export const interviewsAPI = {
   getResponses: (id: string) => api.get(`/interviews/${id}/responses`),
 
   delete: (id: string) => api.delete(`/interviews/${id}`),
+
+  // Export interview as PDF
+  exportPDF: async (id: string) => {
+    const response = await api.get(`/interviews/${id}/export`, {
+      responseType: 'blob',
+    });
+    return response;
+  },
+
+  // Share management
+  createShare: (id: string) =>
+    api.post<{
+      id: string;
+      interview_id: string;
+      token: string;
+      expires_at: string;
+      view_count: number;
+      created_at: string;
+      share_url: string | null;
+    }>(`/interviews/${id}/share`),
+
+  getShares: (id: string) =>
+    api.get<Array<{
+      id: string;
+      interview_id: string;
+      token: string;
+      expires_at: string;
+      view_count: number;
+      created_at: string;
+      share_url: string | null;
+    }>>(`/interviews/${id}/shares`),
+
+  revokeShare: (shareId: string) =>
+    api.delete(`/interviews/shares/${shareId}`),
+
+  getSharedInterview: (token: string) =>
+    api.get<{
+      interview_type: string;
+      overall_score: number | null;
+      audio_score: number | null;
+      content_score: number | null;
+      question_count: number;
+      created_at: string;
+      shared_by: string;
+      responses: Array<{
+        question: string;
+        transcript: string | null;
+        audio_url: string | null;
+        overall_content_score: number | null;
+        strengths: string[];
+        improvements: string[];
+        detailed_feedback: string | null;
+      }>;
+    }>(`/interviews/shared/${token}`),
 };
 
 // Questions API

@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { captureError } from '../lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -34,45 +35,18 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to console
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
-    // Optionally report to error tracking service (gated behind env flag)
-    const errorReportingEnabled = import.meta.env.VITE_ENABLE_ERROR_REPORTING === 'true';
-    if (errorReportingEnabled) {
-      this.reportError(error, errorInfo);
-    }
-    
+
+    // Report to Sentry with component stack context
+    captureError(error, {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: true,
+    });
+
     this.setState({
       error,
       errorInfo,
     });
   }
-
-  reportError = async (error: Error, errorInfo: ErrorInfo) => {
-    // Report error to backend logging endpoint (no PII)
-    try {
-      const errorData = {
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
-      };
-      
-      // Only report if API endpoint exists (graceful degradation)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-      await fetch(`${apiUrl}/errors/report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(errorData),
-      }).catch(() => {
-        // Silently fail if endpoint doesn't exist
-      });
-    } catch (reportError) {
-      // Silently fail error reporting to avoid cascading errors
-      console.warn('Failed to report error:', reportError);
-    }
-  };
 
   handleReset = () => {
     this.setState({

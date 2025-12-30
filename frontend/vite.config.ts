@@ -5,6 +5,22 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 // Port 5173 - Interview Simulator (primary CodeSwiftr frontend)
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor libraries into separate chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'recharts': ['recharts'],
+          'query': ['@tanstack/react-query'],
+          'ui-vendor': ['lucide-react', 'clsx', 'tailwind-merge'],
+          'sentry': ['@sentry/react'],
+        },
+      },
+    },
+    // Increase warning limit for larger chunks during development
+    chunkSizeWarningLimit: 600,
+  },
   plugins: [
     react(),
     VitePWA({

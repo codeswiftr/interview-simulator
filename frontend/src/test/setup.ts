@@ -1,10 +1,23 @@
 // Polyfills are loaded first via vitest.config.ts setupFiles
 import '@testing-library/jest-dom';
 import * as matchers from 'vitest-axe/matchers';
-import { expect, afterEach, beforeEach, afterAll, beforeAll } from 'vitest';
+import { expect, afterEach, beforeEach, afterAll, beforeAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 expect.extend(matchers);
+
+// Mock PostHog globally to prevent initialization issues
+vi.mock('posthog-js', () => ({
+  default: {
+    init: vi.fn(),
+    identify: vi.fn(),
+    capture: vi.fn(),
+    reset: vi.fn(),
+    has_opted_out_capturing: vi.fn(() => false),
+    opt_out_capturing: vi.fn(),
+    opt_in_capturing: vi.fn(),
+  },
+}));
 
 // MSW server - dynamically imported to ensure polyfills run first
 let server: Awaited<typeof import('./mocks/server')>['server'];
@@ -46,3 +59,6 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => true,
   }),
 });
+
+// Mock Element.scrollIntoView for components that use it
+Element.prototype.scrollIntoView = () => {};

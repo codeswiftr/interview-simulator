@@ -1,7 +1,7 @@
 """Test password validation utility.
 
-Tests for relaxed password validation that allows simple passwords
-while blocking only trivially weak ones.
+Tests for password validation with 8-character minimum
+while blocking common passwords.
 """
 
 import pytest
@@ -23,28 +23,28 @@ class TestPasswordValidator:
         self.validator = PasswordValidator()
 
     def test_min_length_requirement(self):
-        """Test password minimum length validation (6 chars)."""
-        # Too short (5 chars)
-        errors = self.validator.validate("abcde")
+        """Test password minimum length validation (8 chars)."""
+        # Too short (7 chars)
+        errors = self.validator.validate("secret1")
         assert PasswordValidationError.TOO_SHORT.value in errors
 
-        # Just right (6 chars)
-        assert self.validator.is_valid("secret") is True
+        # Just right (8 chars)
+        assert self.validator.is_valid("secret25") is True
 
         # Longer passwords work
-        assert self.validator.is_valid("secret25") is True
         assert self.validator.is_valid("mysecretpassword") is True
+        assert self.validator.is_valid("longpassword123") is True
 
     def test_simple_passwords_allowed(self):
-        """Test that simple passwords are allowed (relaxed validation)."""
-        # These should all pass - no complexity requirements
+        """Test that simple passwords are allowed (no complexity requirements)."""
+        # These should all pass - 8+ chars, not common
         simple_passwords = [
-            "secret25",      # lowercase + numbers
-            "mypassword",    # just lowercase
-            "SECRET99",      # just uppercase + numbers
-            "testing123",    # common word + numbers (but not blocked)
-            "abcdef",        # just 6 lowercase letters
-            "987654321",     # just numbers (not in blocked list)
+            "secret25",       # lowercase + numbers (8 chars)
+            "mypassword",     # just lowercase (10 chars)
+            "SECRETPW99",     # just uppercase + numbers (10 chars)
+            "testing1234",    # common word + numbers (11 chars)
+            "abcdefgh",       # just 8 lowercase letters
+            "9876543210",     # just numbers (10 chars, not in blocked list)
         ]
 
         for password in simple_passwords:
@@ -177,7 +177,7 @@ class TestPasswordValidationIntegration:
                 password="weak",
                 full_name="Test User"
             )
-        assert "Password must be at least 6 characters long" in str(exc_info.value)
+        assert "Password must be at least 8 characters long" in str(exc_info.value)
 
     def test_password_change_validation(self):
         """Test password validation in PasswordChange model."""
@@ -219,14 +219,16 @@ class TestPasswordValidationIntegration:
 
 
 @pytest.mark.parametrize("password,expected", [
-    ("secret25", True),           # Simple valid password
+    ("secret25", True),           # Simple valid password (8 chars)
     ("password123", False),       # Common password
-    ("weak", False),              # Too short
+    ("weak", False),              # Too short (4 chars)
     ("123456", False),            # Common password
     ("qwerty", False),            # Common password
-    ("mypassword", True),         # Simple but allowed
-    ("Testing123", True),         # Mixed case + numbers (allowed)
-    ("abcdefgh", True),           # Just letters (allowed if 6+ chars)
+    ("mypassword", True),         # Simple but allowed (10 chars)
+    ("Testing123", True),         # Mixed case + numbers (10 chars)
+    ("abcdefgh", True),           # Just letters (8 chars)
+    ("short", False),             # Too short (5 chars)
+    ("seven77", False),           # Too short (7 chars)
 ])
 def test_password_validation_parametrized(password, expected):
     """Parametrized test for various password scenarios."""

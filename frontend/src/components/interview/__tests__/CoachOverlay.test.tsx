@@ -193,12 +193,19 @@ describe('CoachOverlay', () => {
   });
 
   describe('STAR Framework Display', () => {
-    it('should display STAR framework for behavioral questions', () => {
+    it('should display STAR framework for behavioral questions', async () => {
+      const user = userEvent.setup({ delay: null });
       render(<CoachOverlay {...defaultProps} questionType="behavioral" />);
 
-      // STAR Framework appears both in hint title and as section header
+      // STAR Framework appears in hint title and as collapsible section header
       const starTexts = screen.getAllByText('STAR Framework');
       expect(starTexts.length).toBeGreaterThan(0);
+
+      // Find and click the STAR Framework toggle button to expand it
+      const starToggle = screen.getByRole('button', { name: /STAR Framework/i });
+      await user.click(starToggle);
+
+      // Now the S, T, A, R letters should be visible
       expect(screen.getByText('S')).toBeInTheDocument();
       expect(screen.getByText('Situation')).toBeInTheDocument();
       expect(screen.getByText('T')).toBeInTheDocument();
@@ -323,7 +330,7 @@ describe('CoachOverlay', () => {
   });
 
   describe('Mobile Auto-Collapse', () => {
-    it('should set up timer on mobile viewport', () => {
+    it('should start collapsed on mobile viewport', () => {
       // Mock mobile viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -331,19 +338,18 @@ describe('CoachOverlay', () => {
         value: 500,
       });
 
-      vi.useFakeTimers();
       render(<CoachOverlay {...defaultProps} />);
 
-      // Should start expanded
-      expect(screen.getByText('Dismiss Coach')).toBeInTheDocument();
+      // On mobile (< 768px), component starts collapsed
+      // Should render the toggle button but not the content
+      const buttons = screen.getAllByRole('button');
+      expect(buttons.length).toBeGreaterThan(0);
 
-      // Verify a timer was set (component creates a timeout on mobile)
-      expect(vi.getTimerCount()).toBeGreaterThan(0);
-
-      vi.useRealTimers();
+      // Dismiss Coach is only visible when expanded
+      expect(screen.queryByText('Dismiss Coach')).not.toBeInTheDocument();
     });
 
-    it('should not set up auto-collapse timer on desktop', () => {
+    it('should start expanded on desktop viewport', () => {
       // Mock desktop viewport
       Object.defineProperty(window, 'innerWidth', {
         writable: true,
@@ -353,7 +359,8 @@ describe('CoachOverlay', () => {
 
       render(<CoachOverlay {...defaultProps} />);
 
-      // Should start expanded
+      // Should start expanded on desktop (>= 768px)
+      expect(screen.getByText('AI Coach')).toBeInTheDocument();
       expect(screen.getByText('Dismiss Coach')).toBeInTheDocument();
     });
   });
@@ -410,7 +417,8 @@ describe('CoachOverlay', () => {
 
   describe('Edge Cases', () => {
     it('should handle rapid hint navigation', async () => {
-      const user = userEvent.setup();
+      // Use faster delay for rapid clicks
+      const user = userEvent.setup({ delay: null });
       render(<CoachOverlay {...defaultProps} questionType="behavioral" />);
 
       const buttons = screen.getAllByRole('button');

@@ -14,10 +14,20 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       exclude: ['node_modules/', 'src/test/', '**/*.d.ts'],
     },
+    env: {
+      VITE_API_URL: 'http://localhost:8000/api/v1',
+    },
     environmentOptions: {
       jsdom: {
         url: 'http://localhost:3000/',
         resources: 'usable',
+      },
+    },
+    // Disable threads to avoid memory issues
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
       },
     },
     // Force MSW and is-node-process to be processed after jsdom environment is ready

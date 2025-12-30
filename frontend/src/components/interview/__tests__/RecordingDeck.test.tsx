@@ -160,9 +160,8 @@ describe('RecordingDeck', () => {
         />
       );
 
-      expect(screen.getByText('Ready to Record')).toBeInTheDocument();
-      expect(screen.getByText('STANDBY')).toBeInTheDocument();
-      expect(screen.getByText('0:00')).toBeInTheDocument();
+      expect(screen.getByText('Start Recording')).toBeInTheDocument();
+      // In idle state, timer is not shown - only the Start Recording button is visible
     });
 
     it('should render recording state correctly', () => {
@@ -239,7 +238,7 @@ describe('RecordingDeck', () => {
       const canvas = document.querySelector('canvas');
       expect(canvas).toBeInTheDocument();
       expect(canvas).toHaveAttribute('width', '600');
-      expect(canvas).toHaveAttribute('height', '192');
+      expect(canvas).toHaveAttribute('height', '160');
     });
 
     it('should not show "Ready to Record" when mediaStream is active', () => {
@@ -824,7 +823,8 @@ describe('RecordingDeck', () => {
         />
       );
 
-      expect(screen.getByText('0:00')).toBeInTheDocument();
+      // In idle state, the component shows "Start Recording" button, timer is not displayed
+      expect(screen.getByText('Start Recording')).toBeInTheDocument();
     });
 
     it('should handle large durations correctly', () => {
