@@ -147,8 +147,8 @@ class TestLoginMigration:
 
         # Create user with legacy pbkdf2 password
         email = "change@example.com"
-        old_password = "old123"
-        new_password = "new456"
+        old_password = "OldPass123!"
+        new_password = "NewSecure456!"
         legacy_hash = pbkdf2_sha256.hash(old_password)
 
         user = User(

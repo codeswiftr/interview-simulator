@@ -8,13 +8,42 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split vendor libraries into separate chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'recharts': ['recharts'],
-          'query': ['@tanstack/react-query'],
-          'ui-vendor': ['lucide-react', 'clsx', 'tailwind-merge'],
-          'sentry': ['@sentry/react'],
+        manualChunks: (id) => {
+          // Core React vendor bundle
+          if (id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/react-router-dom/') ||
+              id.includes('node_modules/react-router/') ||
+              id.includes('node_modules/@remix-run/')) {
+            return 'react-vendor';
+          }
+          // Chart library (lazy loaded with DashboardPage)
+          if (id.includes('node_modules/recharts/') ||
+              id.includes('node_modules/d3-')) {
+            return 'recharts';
+          }
+          // HTTP client
+          if (id.includes('node_modules/axios/')) {
+            return 'axios';
+          }
+          // React Query
+          if (id.includes('node_modules/@tanstack/')) {
+            return 'query';
+          }
+          // UI components and utilities
+          if (id.includes('node_modules/lucide-react/') ||
+              id.includes('node_modules/clsx/') ||
+              id.includes('node_modules/tailwind-merge/')) {
+            return 'ui-vendor';
+          }
+          // Error tracking
+          if (id.includes('node_modules/@sentry/')) {
+            return 'sentry';
+          }
+          // Analytics
+          if (id.includes('node_modules/posthog-js/')) {
+            return 'analytics';
+          }
         },
       },
     },

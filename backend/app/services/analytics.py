@@ -131,31 +131,38 @@ def get_analytics() -> Analytics:
 
 
 class Events:
-    """Standard event names for Interview Simulator tracking."""
+    """Standard event names for Interview Simulator tracking.
+
+    All events use the 'is_' prefix for consistent identification
+    across the FORGE analytics dashboard.
+
+    Naming convention: is_{entity}_{action}
+    Examples: is_interview_created, is_user_registered
+    """
 
     # User Events
-    USER_REGISTERED = "user_registered"
-    USER_LOGGED_IN = "user_logged_in"
-    USER_LOGGED_OUT = "user_logged_out"
-    USER_VERIFIED = "user_verified"
+    USER_REGISTERED = "is_user_registered"
+    USER_LOGGED_IN = "is_user_logged_in"
+    USER_LOGGED_OUT = "is_user_logged_out"
+    USER_VERIFIED = "is_user_verified"
 
     # Interview Events
-    INTERVIEW_CREATED = "interview_created"
-    INTERVIEW_STARTED = "interview_started"
-    INTERVIEW_COMPLETED = "interview_completed"
-    INTERVIEW_ABANDONED = "interview_abandoned"
+    INTERVIEW_CREATED = "is_interview_created"
+    INTERVIEW_STARTED = "is_interview_started"
+    INTERVIEW_COMPLETED = "is_interview_completed"
+    INTERVIEW_ABANDONED = "is_interview_abandoned"
 
     # Response Events
-    RESPONSE_SUBMITTED = "response_submitted"
-    TRANSCRIPTION_COMPLETED = "transcription_completed"
+    RESPONSE_SUBMITTED = "is_response_submitted"
+    TRANSCRIPTION_COMPLETED = "is_transcription_completed"
 
     # Feedback Events
-    FEEDBACK_GENERATED = "feedback_generated"
-    FEEDBACK_VIEWED = "feedback_viewed"
+    FEEDBACK_GENERATED = "is_feedback_generated"
+    FEEDBACK_VIEWED = "is_feedback_viewed"
 
     # Subscription Events
-    SUBSCRIPTION_CREATED = "subscription_created"
-    SUBSCRIPTION_UPGRADED = "subscription_upgraded"
-    SUBSCRIPTION_CANCELED = "subscription_canceled"
-    PAYMENT_PROCESSED = "payment_processed"
-    PAYMENT_FAILED = "payment_failed"
+    SUBSCRIPTION_CREATED = "is_subscription_created"
+    SUBSCRIPTION_UPGRADED = "is_subscription_upgraded"
+    SUBSCRIPTION_CANCELED = "is_subscription_canceled"
+    PAYMENT_PROCESSED = "is_payment_processed"
+    PAYMENT_FAILED = "is_payment_failed"

@@ -129,30 +129,50 @@ class TestBackgroundTasks:
         self, background_tasks, db_session, sample_response
     ):
         """Test that content feedback is created."""
-        with patch.object(
+        from unittest.mock import AsyncMock
+
+        with patch(
+            "app.services.background_tasks.SessionLocal"
+        ) as mock_session_local, patch.object(
             background_tasks.feedback_service,
             "generate_feedback",
-            return_value=MagicMock(),
-        ):
+            new_callable=AsyncMock,
+        ) as mock_generate:
+            # Mock the async context manager for SessionLocal
+            mock_session = AsyncMock()
+            mock_session.__aenter__.return_value = db_session
+            mock_session.__aexit__.return_value = None
+            mock_session_local.return_value = mock_session
+
             await background_tasks.generate_content_feedback_async(sample_response.id)
 
             # Verify feedback was created (mocked, so just check it was called)
-            background_tasks.feedback_service.generate_feedback.assert_called_once()
+            mock_generate.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_generate_session_feedback_async_creates_session_feedback(
         self, background_tasks, db_session, sample_interview_session, sample_response
     ):
         """Test that session feedback is created."""
-        with patch.object(
+        from unittest.mock import AsyncMock
+
+        with patch(
+            "app.services.background_tasks.SessionLocal"
+        ) as mock_session_local, patch.object(
             background_tasks.feedback_service,
             "generate_session_feedback",
-            return_value=MagicMock(),
-        ):
+            new_callable=AsyncMock,
+        ) as mock_generate:
+            # Mock the async context manager for SessionLocal
+            mock_session = AsyncMock()
+            mock_session.__aenter__.return_value = db_session
+            mock_session.__aexit__.return_value = None
+            mock_session_local.return_value = mock_session
+
             await background_tasks.generate_session_feedback_async(sample_interview_session.id)
 
             # Verify session feedback was created
-            background_tasks.feedback_service.generate_session_feedback.assert_called_once()
+            mock_generate.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_generate_session_feedback_async_waits_for_responses(

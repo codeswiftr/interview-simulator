@@ -8,6 +8,8 @@ interface ScoreRingProps {
   size?: ScoreSize;
   showLabel?: boolean;
   animated?: boolean;
+  /** Enable responsive sizing that adapts to container width */
+  responsive?: boolean;
 }
 
 interface ScoreConfig {
@@ -63,6 +65,7 @@ export default function ScoreRing({
   size = 'large',
   showLabel = true,
   animated = true,
+  responsive = false,
 }: ScoreRingProps) {
   const [animatedScore, setAnimatedScore] = useState(animated ? 0 : Math.round(score * 10) / 10);
   const { resolvedTheme } = useTheme();
@@ -99,9 +102,14 @@ export default function ScoreRing({
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (animatedScore / 100) * circumference;
 
+  // Responsive wrapper classes - constrain max width on mobile
+  const wrapperClasses = responsive
+    ? 'flex flex-col items-center gap-2 sm:gap-3 w-full max-w-[120px] sm:max-w-none mx-auto'
+    : 'flex flex-col items-center gap-3';
+
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative" style={{ width, height }}>
+    <div className={wrapperClasses}>
+      <div className="relative flex-shrink-0" style={{ width, height }}>
         <svg width={width} height={height} className="transform -rotate-90">
           {/* Background circle */}
           <circle

@@ -167,8 +167,12 @@ async def test_reset_password_with_very_short_password(client, db_session):
     # Request reset
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    # Get token
-    result = await db_session.exec(select(PasswordResetToken))
+    # Get user and their token
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result = await db_session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+    )
     reset_token = result.first()
 
     # Try to reset with very short password
@@ -187,13 +191,15 @@ async def test_reset_password_deletes_inactive_user_token(client, db_session):
     # Request reset
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    # Get token
-    result = await db_session.exec(select(PasswordResetToken))
+    # Get user and their token
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result = await db_session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+    )
     reset_token = result.first()
 
     # Deactivate user
-    user_result = await db_session.exec(select(User).where(User.email == email))
-    user = user_result.first()
     user.is_active = False
     await db_session.commit()
 
@@ -209,20 +215,25 @@ async def test_reset_password_deletes_inactive_user_token(client, db_session):
 async def test_forgot_password_case_insensitive_email(client, db_session):
     """Test forgot password with different email casing."""
     # Create user with lowercase email
-    await create_test_user(client, email="test@example.com")
+    email = "casetest@example.com"
+    await create_test_user(client, email=email)
 
     # Request reset with uppercase email
     resp = await client.post(
         "/api/v1/auth/forgot-password",
-        json={"email": "TEST@EXAMPLE.COM"},
+        json={"email": email.upper()},
     )
     assert resp.status_code == 200
 
-    # Verify token was created (emails are normalized to lowercase)
-    result = await db_session.exec(select(PasswordResetToken))
+    # Verify token was created for the user
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result = await db_session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+    )
     tokens = list(result.all())
     # Should have token because emails are case-insensitive
-    assert len(tokens) >= 0  # Depends on implementation
+    assert len(tokens) >= 1
 
 @pytest.mark.asyncio
 async def test_forgot_password_with_whitespace_email(client):
@@ -243,8 +254,12 @@ async def test_multiple_password_reset_requests(client, db_session):
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    # Verify multiple tokens were created
-    result = await db_session.exec(select(PasswordResetToken))
+    # Verify multiple tokens were created for this user
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result = await db_session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+    )
     tokens = list(result.all())
     assert len(tokens) == 2
 
@@ -256,8 +271,14 @@ async def test_reset_password_with_oldest_token_when_multiple_exist(client, db_s
     # Create first token
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    # Get first token
-    result1 = await db_session.exec(select(PasswordResetToken))
+    # Get user and first token
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result1 = await db_session.exec(
+        select(PasswordResetToken)
+        .where(PasswordResetToken.user_id == user.id)
+        .order_by(PasswordResetToken.created_at.asc())
+    )
     first_token = result1.first()
 
     # Create second token
@@ -285,12 +306,17 @@ async def test_reset_password_clears_refresh_tokens(client, db_session):
     # Request and perform password reset
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    result = await db_session.exec(select(PasswordResetToken))
+    # Get user and their token
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result = await db_session.exec(
+        select(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
+    )
     reset_token = result.first()
 
     await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "newpass456"},
+        json={"token": reset_token.token, "new_password": "NewSecure789!"},
     )
 
     # Old refresh token should still work (password reset doesn't invalidate it)
@@ -321,7 +347,7 @@ async def test_reset_password_token_timing_attack_protection(client, db_session)
     # Try with invalid token
     resp1 = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": "invalid-token-12345678901234567890", "new_password": "newpass"},
+        json={"token": "invalid-token-12345678901234567890", "new_password": "NewSecurePass123!"},
     )
     assert resp1.status_code == 400
 
@@ -329,13 +355,20 @@ async def test_reset_password_token_timing_attack_protection(client, db_session)
     email = await create_test_user(client, email="timing@example.com")
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
-    result = await db_session.exec(select(PasswordResetToken))
+    # Get user to find their specific token
+    user_result = await db_session.exec(select(User).where(User.email == email))
+    user = user_result.first()
+    result = await db_session.exec(
+        select(PasswordResetToken)
+        .where(PasswordResetToken.user_id == user.id)
+        .where(PasswordResetToken.used == False)
+    )
     valid_token = result.first()
 
     # Use valid token
     resp2 = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": valid_token.token, "new_password": "newpass"},
+        json={"token": valid_token.token, "new_password": "NewSecurePass123!"},
     )
     assert resp2.status_code == 200
 
@@ -376,7 +409,7 @@ async def test_reset_password_very_long_token(client):
 
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": long_token, "new_password": "newpass"},
+        json={"token": long_token, "new_password": "NewSecurePass123!"},
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()

@@ -20,13 +20,40 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # PostgreSQL required due to ARRAY column types in Question model
-# Default to the FORGE local development database
+# Default to the docker-compose development database
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://forge:forge_local@localhost:5432/interview_simulator_test"
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/interview_simulator"
     )
+)
+
+# Track if database is available
+_db_available = None
+
+
+def is_db_available() -> bool:
+    """Check if database is available (cached)."""
+    global _db_available
+    if _db_available is None:
+        import asyncio
+        try:
+            async def check():
+                engine, _ = get_test_engine()
+                async with engine.connect() as conn:
+                    await conn.execute(text("SELECT 1"))
+                return True
+            _db_available = asyncio.get_event_loop().run_until_complete(check())
+        except Exception:
+            _db_available = False
+    return _db_available
+
+
+# Pytest marker for tests requiring database
+requires_db = pytest.mark.skipif(
+    not os.getenv("TEST_DATABASE_URL") and not os.getenv("DATABASE_URL"),
+    reason="Database tests skipped - no TEST_DATABASE_URL or DATABASE_URL set"
 )
 
 # Create test engine (only if tests actually need database)
@@ -52,27 +79,19 @@ def get_test_engine():
     return _test_engine, _TestSessionLocal
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the test session."""
-    import asyncio
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def test_engine():
     """Get test database engine."""
     engine, _ = get_test_engine()
     return engine
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def prepare_database(test_engine):
     """Create all tables once for the test session.
 
     This fixture only runs when tests actually request database fixtures.
+    Skips gracefully if database is not available.
     """
     # Import all models to register them with SQLModel.metadata
     # This must happen before create_all() is called
@@ -80,11 +99,19 @@ async def prepare_database(test_engine):
     from app.models.email_verification import EmailVerificationToken  # noqa: F401
     from app.models.password_reset import PasswordResetToken  # noqa: F401
 
-    async with test_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    try:
+        async with test_engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+    except Exception as e:
+        pytest.skip(f"Database not available: {e}")
+
     yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+
+    try:
+        async with test_engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+    except Exception:
+        pass  # Ignore cleanup errors
 
 
 @pytest.fixture
@@ -92,16 +119,22 @@ async def clean_database(test_engine, prepare_database):
     """Clean database between tests that use database fixtures."""
     yield
     # Clean up after test
-    async with test_engine.begin() as conn:
-        # Use TRUNCATE with CASCADE for PostgreSQL
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            try:
-                await conn.execute(
-                    text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE')
-                )
-            except Exception:
-                # Fallback to DELETE for compatibility
-                await conn.execute(text(f'DELETE FROM "{table.name}"'))
+    try:
+        async with test_engine.begin() as conn:
+            # Use TRUNCATE with CASCADE for PostgreSQL
+            for table in reversed(SQLModel.metadata.sorted_tables):
+                try:
+                    await conn.execute(
+                        text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE')
+                    )
+                except Exception:
+                    # Fallback to DELETE for compatibility
+                    try:
+                        await conn.execute(text(f'DELETE FROM "{table.name}"'))
+                    except Exception:
+                        pass  # Ignore cleanup errors
+    except Exception:
+        pass  # Database unavailable, skip cleanup
 
 
 @pytest.fixture

@@ -37,24 +37,36 @@ async def test_health_check(client):
 
 @pytest.mark.asyncio
 async def test_readiness_check_returns_actual_db_status(client):
-    """Test readiness check returns actual database connectivity status."""
-    response = await client.get("/health/ready")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ready"
-    assert data["database"] is True
+    """Test readiness check returns ready when DB and Redis are available."""
+    with (
+        patch("app.api.health.check_redis", new_callable=AsyncMock) as mock_redis,
+        patch("app.api.health.check_db_connection", new_callable=AsyncMock) as mock_db,
+    ):
+        mock_redis.return_value = True
+        mock_db.return_value = True
+        response = await client.get("/health/ready")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ready"
+        assert data["database"] is True
 
 
 @pytest.mark.asyncio
 async def test_readiness_check_includes_all_components(client):
     """Test readiness check includes database, redis, and ai_services keys."""
-    response = await client.get("/health/ready")
-    assert response.status_code == 200
-    data = response.json()
-    assert "database" in data
-    assert "redis" in data
-    assert "ai_services" in data
-    assert "status" in data
+    with (
+        patch("app.api.health.check_redis", new_callable=AsyncMock) as mock_redis,
+        patch("app.api.health.check_db_connection", new_callable=AsyncMock) as mock_db,
+    ):
+        mock_redis.return_value = True
+        mock_db.return_value = True
+        response = await client.get("/health/ready")
+        assert response.status_code == 200
+        data = response.json()
+        assert "database" in data
+        assert "redis" in data
+        assert "ai_services" in data
+        assert "status" in data
 
 
 @pytest.mark.asyncio

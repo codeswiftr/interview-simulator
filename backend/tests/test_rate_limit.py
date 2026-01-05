@@ -99,130 +99,171 @@ async def test_rate_limit_multiple_clients(client, db_session):
     assert resp1.status_code == 200
     assert resp2.status_code == 200
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
-async def test_rate_limit_reset_after_window(client, db_session):
+async def test_rate_limit_reset_after_window():
     """Test that rate limit resets after time window."""
-    from app.config import settings
+    from unittest.mock import MagicMock
 
-    if settings.debug:
-        pytest.skip("Rate limiting disabled in debug mode")
+    from app.middleware.rate_limit import SecureRateLimiter
 
-    # This test would require waiting for the time window to expire
-    # For unit testing, we test the RateLimiter class directly
-    from app.middleware.rate_limit import RateLimiter
+    limiter = SecureRateLimiter(RateLimitConfig(requests_per_minute=2))
 
-    limiter = RateLimiter(RateLimitConfig(requests_per_minute=2))
+    # Create mock request
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "192.0.2.1"  # TEST-NET-1 (public IP for testing)
+    request.url = MagicMock()
+    request.url.path = "/api/test"
+    request.url.hostname = "example.com"
 
     # Make 2 requests (should succeed)
-    key = "test_client"
-    allowed1, _ = limiter.is_allowed(key)
-    allowed2, _ = limiter.is_allowed(key)
+    allowed1, _ = limiter.is_allowed(request)
+    allowed2, _ = limiter.is_allowed(request)
     assert allowed1 is True
     assert allowed2 is True
 
     # Third request should be blocked
-    allowed3, headers = limiter.is_allowed(key)
+    allowed3, headers = limiter.is_allowed(request)
     assert allowed3 is False
     assert "X-RateLimit-Remaining" in headers or "X-RateLimit-Limit" in headers
 
-    # Wait for window to reset (simulate by clearing old requests)
-    # In real scenario, time would pass
-    limiter._requests[key] = []
-    allowed4, _ = limiter.is_allowed(key)
+    # Clear all stored requests to simulate window reset
+    limiter._requests.clear()
+    allowed4, _ = limiter.is_allowed(request)
     assert allowed4 is True
 
 # Direct RateLimiter Unit Tests
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limiter_allows_requests_within_limit():
-    """Test that RateLimiter allows requests within the limit."""
-    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
+    """Test that SecureRateLimiter allows requests within the limit."""
+    from unittest.mock import MagicMock
 
-    limiter = RateLimiter(RateLimitConfig(requests_per_minute=5, requests_per_hour=100))
-    key = "test_client"
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
+
+    limiter = SecureRateLimiter(RateLimitConfig(requests_per_minute=5, requests_per_hour=100))
+
+    # Create mock request
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "192.0.2.1"  # TEST-NET-1 (public IP for testing)
+    request.url = MagicMock()
+    request.url.path = "/api/test"
+    request.url.hostname = "example.com"
 
     # First 5 requests should be allowed
     for _i in range(5):
-        allowed, headers = limiter.is_allowed(key)
+        allowed, headers = limiter.is_allowed(request)
         assert allowed is True
         assert "X-RateLimit-Limit" in headers
         assert "X-RateLimit-Remaining" in headers
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_requests_over_minute_limit():
-    """Test that RateLimiter blocks requests exceeding per-minute limit."""
-    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
+    """Test that SecureRateLimiter blocks requests exceeding per-minute limit."""
+    from unittest.mock import MagicMock
 
-    limiter = RateLimiter(RateLimitConfig(requests_per_minute=3, requests_per_hour=100))
-    key = "test_client"
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
+
+    limiter = SecureRateLimiter(RateLimitConfig(requests_per_minute=3, requests_per_hour=100))
+
+    # Create mock request
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "192.0.2.2"  # Different IP for this test
+    request.url = MagicMock()
+    request.url.path = "/api/test"
+    request.url.hostname = "example.com"
 
     # First 3 requests allowed
     for _i in range(3):
-        allowed, _ = limiter.is_allowed(key)
+        allowed, _ = limiter.is_allowed(request)
         assert allowed is True
 
     # 4th request should be blocked
-    allowed, headers = limiter.is_allowed(key)
+    allowed, headers = limiter.is_allowed(request)
     assert allowed is False
     assert headers["X-RateLimit-Remaining"] == "0"
     assert "X-RateLimit-Reset" in headers
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_requests_over_hour_limit():
-    """Test that RateLimiter blocks requests exceeding per-hour limit."""
-    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
+    """Test that SecureRateLimiter blocks requests exceeding per-hour limit."""
+    from unittest.mock import MagicMock
 
-    limiter = RateLimiter(RateLimitConfig(requests_per_minute=100, requests_per_hour=5))
-    key = "test_client"
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
+
+    limiter = SecureRateLimiter(RateLimitConfig(requests_per_minute=100, requests_per_hour=5))
+
+    # Create mock request
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "192.0.2.3"  # Different IP for this test
+    request.url = MagicMock()
+    request.url.path = "/api/test"
+    request.url.hostname = "example.com"
 
     # First 5 requests allowed
     for _i in range(5):
-        allowed, _ = limiter.is_allowed(key)
+        allowed, _ = limiter.is_allowed(request)
         assert allowed is True
 
     # 6th request should be blocked (hour limit)
-    allowed, headers = limiter.is_allowed(key)
+    allowed, headers = limiter.is_allowed(request)
     assert allowed is False
     assert headers["X-RateLimit-Remaining"] == "0"
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limiter_cleans_old_requests():
-    """Test that RateLimiter cleans up old requests."""
-    from app.middleware.rate_limit import RateLimitConfig, RateLimiter
+    """Test that SecureRateLimiter cleans up old requests."""
+    from unittest.mock import MagicMock
 
-    limiter = RateLimiter(RateLimitConfig(requests_per_minute=2, requests_per_hour=10))
-    key = "test_client"
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
+
+    limiter = SecureRateLimiter(RateLimitConfig(requests_per_minute=2, requests_per_hour=10))
+
+    # Create mock request
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "192.0.2.4"  # Different IP for this test
+    request.url = MagicMock()
+    request.url.path = "/api/test"
+    request.url.hostname = "example.com"
 
     # Make 2 requests (at the limit)
-    limiter.is_allowed(key)
-    limiter.is_allowed(key)
+    limiter.is_allowed(request)
+    limiter.is_allowed(request)
 
     # Next should be blocked
-    allowed, _ = limiter.is_allowed(key)
+    allowed, _ = limiter.is_allowed(request)
     assert allowed is False
 
-    # Manually clean old requests (simulate time passing)
-    limiter._requests[key] = []
+    # Clear all stored requests to simulate time passing
+    limiter._requests.clear()
 
     # Now should be allowed again
-    allowed, _ = limiter.is_allowed(key)
+    allowed, _ = limiter.is_allowed(request)
     assert allowed is True
 
 # SecureRateLimitMiddleware Tests
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_excludes_health_paths():
     """Test that middleware excludes specified paths."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from fastapi import Request
     from starlette.applications import Starlette
+    from starlette.responses import Response
 
     from app.middleware.rate_limit import RateLimitConfig
 
@@ -234,89 +275,102 @@ async def test_rate_limit_middleware_excludes_health_paths():
     )
 
     # Create mock request for excluded path
-    request = MagicMock(spec=Request)
+    request = MagicMock()
+    request.url = MagicMock()
     request.url.path = "/api/v1/health"
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
 
-    call_next = AsyncMock(return_value=MagicMock(headers={}))
+    call_next = AsyncMock(return_value=Response(content="OK", status_code=200))
 
     # Should not apply rate limiting
-    await middleware.dispatch(request, call_next)
+    response = await middleware.dispatch(request, call_next)
     assert call_next.called
+    assert response.status_code == 200
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_uses_forwarded_header():
-    """Test that middleware extracts IP from X-Forwarded-For header."""
+    """Test that limiter extracts IP from X-Forwarded-For header."""
     from unittest.mock import MagicMock
 
-    from fastapi import Request
-    from starlette.applications import Starlette
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
 
-    from app.middleware.rate_limit import RateLimitConfig
-
-    app = Starlette()
-    middleware = SecureRateLimitMiddleware(app, config=RateLimitConfig())
+    limiter = SecureRateLimiter(RateLimitConfig())
 
     # Create mock request with X-Forwarded-For header
-    request = MagicMock(spec=Request)
-    request.headers.get = lambda key: "192.168.1.100, 10.0.0.1" if key == "X-Forwarded-For" else None
+    # The limiter takes rightmost IP from X-Forwarded-For when no trusted proxies configured
+    # Using truly public IPs (not TEST-NET which Python classifies as private)
+    def mock_headers_get(key):
+        headers = {
+            "X-Forwarded-For": "8.8.8.8, 1.1.1.1",  # Use truly public IPs (Google DNS, Cloudflare DNS)
+            "CF-RAY": None,
+            "CF-Connecting-IP": None,
+            "X-Real-IP": None,
+            "User-Agent": "Test",
+        }
+        return headers.get(key)
 
-    key = middleware._default_key_func(request)
-    assert key == "192.168.1.100"
-
-@pytest.mark.skip(reason="Tests internal API that was refactored")
-@pytest.mark.asyncio
-async def test_rate_limit_middleware_uses_client_host():
-    """Test that middleware falls back to client host when no forwarded header."""
-    from unittest.mock import MagicMock
-
-    from fastapi import Request
-    from starlette.applications import Starlette
-
-    from app.middleware.rate_limit import RateLimitConfig
-
-    app = Starlette()
-    middleware = SecureRateLimitMiddleware(app, config=RateLimitConfig())
-
-    # Create mock request without X-Forwarded-For
-    request = MagicMock(spec=Request)
-    request.headers.get = lambda key: None
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = mock_headers_get
     request.client = MagicMock()
     request.client.host = "127.0.0.1"
+    request.url = MagicMock()
+    request.url.hostname = "example.com"
 
-    key = middleware._default_key_func(request)
-    assert key == "127.0.0.1"
+    # Get trusted client IP - takes rightmost (closest) when no trusted proxies
+    ip = limiter._get_trusted_client_ip(request)
+    assert ip == "1.1.1.1"  # Rightmost public IP
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
-async def test_rate_limit_middleware_handles_no_client():
-    """Test that middleware handles requests with no client info."""
+async def test_rate_limit_middleware_uses_client_host():
+    """Test that limiter falls back to client host when no forwarded header."""
     from unittest.mock import MagicMock
 
-    from fastapi import Request
-    from starlette.applications import Starlette
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
 
-    from app.middleware.rate_limit import RateLimitConfig
+    limiter = SecureRateLimiter(RateLimitConfig())
 
-    app = Starlette()
-    middleware = SecureRateLimitMiddleware(app, config=RateLimitConfig())
+    # Create mock request without X-Forwarded-For
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "192.0.2.50"  # Public IP for testing
+    request.url = MagicMock()
+    request.url.hostname = "example.com"
+
+    ip = limiter._get_trusted_client_ip(request)
+    assert ip == "192.0.2.50"
+
+@pytest.mark.asyncio
+async def test_rate_limit_middleware_handles_no_client():
+    """Test that limiter handles requests with no client info."""
+    from unittest.mock import MagicMock
+
+    from app.middleware.rate_limit import RateLimitConfig, SecureRateLimiter
+
+    limiter = SecureRateLimiter(RateLimitConfig())
 
     # Create mock request with no client
-    request = MagicMock(spec=Request)
+    request = MagicMock()
+    request.headers = MagicMock()
     request.headers.get = lambda key: None
     request.client = None
+    request.url = MagicMock()
+    request.url.hostname = "example.com"
 
-    key = middleware._default_key_func(request)
-    assert key == "unknown"
+    ip = limiter._get_trusted_client_ip(request)
+    # Falls back to 0.0.0.0 when no client info
+    assert ip == "0.0.0.0"
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_returns_429_with_headers():
     """Test that middleware returns 429 with proper headers when blocked."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from fastapi import Request
     from starlette.applications import Starlette
+    from starlette.responses import Response
 
     from app.middleware.rate_limit import RateLimitConfig
 
@@ -324,35 +378,41 @@ async def test_rate_limit_middleware_returns_429_with_headers():
     middleware = SecureRateLimitMiddleware(
         app,
         config=RateLimitConfig(requests_per_minute=1),
+        enable_ddos_headers=False,  # Simplify test by disabling DDoS headers
     )
 
-    # Create mock request
-    request = MagicMock(spec=Request)
+    # Create mock request with state attribute
+    request = MagicMock()
+    request.url = MagicMock()
     request.url.path = "/api/test"
+    request.headers = MagicMock()
     request.headers.get = lambda key: None
     request.client = MagicMock()
-    request.client.host = "127.0.0.1"
+    request.client.host = "192.0.2.60"  # Public IP for testing
+    request.url.hostname = "example.com"
+    request.state = MagicMock()
+    request.state.user_id = None
 
-    call_next = AsyncMock()
+    mock_response = Response(content="OK", status_code=200)
+    call_next = AsyncMock(return_value=mock_response)
 
     # First request should succeed
-    await middleware.dispatch(request, call_next)
-    assert call_next.called
+    response1 = await middleware.dispatch(request, call_next)
+    assert response1.status_code == 200
 
-    # Second request should be blocked
+    # Second request should be blocked (limit is 1 per minute)
     response2 = await middleware.dispatch(request, call_next)
     assert response2.status_code == 429
     assert "X-RateLimit-Limit" in response2.headers
     assert "detail" in response2.body.decode()
 
-@pytest.mark.skip(reason="Tests internal API that was refactored")
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_adds_headers_to_success_response():
     """Test that middleware adds rate limit headers to successful responses."""
     from unittest.mock import AsyncMock, MagicMock
 
-    from fastapi import Request, Response
     from starlette.applications import Starlette
+    from starlette.responses import Response
 
     from app.middleware.rate_limit import RateLimitConfig
 
@@ -360,14 +420,20 @@ async def test_rate_limit_middleware_adds_headers_to_success_response():
     middleware = SecureRateLimitMiddleware(
         app,
         config=RateLimitConfig(requests_per_minute=10),
+        enable_ddos_headers=False,  # Simplify test
     )
 
     # Create mock request
-    request = MagicMock(spec=Request)
+    request = MagicMock()
+    request.url = MagicMock()
     request.url.path = "/api/test"
+    request.headers = MagicMock()
     request.headers.get = lambda key: None
     request.client = MagicMock()
-    request.client.host = "127.0.0.1"
+    request.client.host = "192.0.2.70"  # Public IP for testing
+    request.url.hostname = "example.com"
+    request.state = MagicMock()
+    request.state.user_id = None
 
     # Mock successful response
     mock_response = Response(content="OK", status_code=200)

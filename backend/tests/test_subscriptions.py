@@ -109,8 +109,13 @@ async def test_webhook_checkout_completed_upgrades_user(client, db_session):
         },
     }
 
+    # Create a mock async generator for get_session that yields the test db_session
+    async def mock_get_session():
+        yield db_session
+
     with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
+         patch("app.api.subscriptions.stripe") as mock_stripe, \
+         patch("app.api.subscriptions.get_session", mock_get_session):
         # Mock settings to enable Stripe
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
@@ -656,8 +661,13 @@ async def test_webhook_subscription_updated(client, db_session):
         "id": "evt_test123",
     }
 
+    # Create a mock async generator for get_session that yields the test db_session
+    async def mock_get_session():
+        yield db_session
+
     with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
+         patch("app.api.subscriptions.stripe") as mock_stripe, \
+         patch("app.api.subscriptions.get_session", mock_get_session):
         mock_settings.stripe_webhook_secret = "whsec_test"
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
@@ -685,8 +695,13 @@ async def test_webhook_checkout_missing_metadata(client, db_session):
         "id": "evt_test123",
     }
 
+    # Create a mock async generator for get_session that yields the test db_session
+    async def mock_get_session():
+        yield db_session
+
     with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
+         patch("app.api.subscriptions.stripe") as mock_stripe, \
+         patch("app.api.subscriptions.get_session", mock_get_session):
         mock_settings.stripe_webhook_secret = "whsec_test"
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
@@ -713,8 +728,13 @@ async def test_webhook_checkout_user_not_found(client, db_session):
         "id": "evt_test123",
     }
 
+    # Create a mock async generator for get_session that yields the test db_session
+    async def mock_get_session():
+        yield db_session
+
     with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
+         patch("app.api.subscriptions.stripe") as mock_stripe, \
+         patch("app.api.subscriptions.get_session", mock_get_session):
         mock_settings.stripe_webhook_secret = "whsec_test"
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 

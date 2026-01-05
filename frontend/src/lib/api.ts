@@ -3,6 +3,72 @@ import { getReferralCode } from '../hooks/useAffiliateTracking';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+// Token expiry check - refresh if less than 5 minutes remaining
+const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+// Track refresh state globally to prevent concurrent refresh attempts
+let isRefreshing = false;
+let failedQueue: { resolve: (token: string) => void; reject: (error: unknown) => void }[] = [];
+
+/**
+ * Decode JWT payload to get expiration time.
+ * Returns null if token is invalid or cannot be decoded.
+ */
+function getTokenExpiry(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(atob(payload));
+    return decoded.exp ? decoded.exp * 1000 : null; // Convert to milliseconds
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if access token is expiring soon (within threshold).
+ */
+function isTokenExpiringSoon(): boolean {
+  const token = localStorage.getItem('access_token');
+  if (!token) return false;
+
+  const expiry = getTokenExpiry(token);
+  if (!expiry) return false;
+
+  return expiry - Date.now() < TOKEN_REFRESH_THRESHOLD_MS;
+}
+
+/**
+ * Proactively refresh the access token if it's expiring soon.
+ * Called before API requests to prevent 401 errors.
+ */
+async function proactiveTokenRefresh(): Promise<void> {
+  if (!isTokenExpiringSoon()) return;
+
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) return;
+
+  // Prevent concurrent refresh attempts
+  if (isRefreshing) return;
+
+  try {
+    isRefreshing = true;
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      refresh_token: refreshToken,
+    });
+
+    const { access_token, refresh_token: newRefreshToken } = response.data;
+    localStorage.setItem('access_token', access_token);
+    if (newRefreshToken) {
+      localStorage.setItem('refresh_token', newRefreshToken);
+    }
+  } catch {
+    // Proactive refresh failed - let the 401 interceptor handle it
+  } finally {
+    isRefreshing = false;
+  }
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -24,9 +90,16 @@ function generateUUID(): string {
   });
 }
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and proactively refresh expiring tokens
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Proactively refresh token if expiring soon (before the request)
+    // Skip for auth endpoints to avoid infinite loops
+    const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/users/login');
+    if (!isAuthEndpoint) {
+      await proactiveTokenRefresh();
+    }
+
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -43,9 +116,6 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle token refresh
-let isRefreshing = false;
-let failedQueue: { resolve: (token: string) => void; reject: (error: unknown) => void }[] = [];
-
 const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {

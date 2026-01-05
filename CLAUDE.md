@@ -1,6 +1,13 @@
-# Interview Simulator Project Rules
+# Interview Simulator - Claude Instructions
 
-## Project Overview
+## Project Context
+
+- **Domain:** codeswiftr-com
+- **Status:** LIVE (app.codeswiftr.com)
+- **Stack:** FastAPI + SQLModel + PostgreSQL + React 19 + Redis
+- **Deploy:** Railway (backend) + Cloudflare Pages (frontend)
+
+## Overview
 AI-powered interview practice platform for software engineers. Practice behavioral
 and technical interviews with real-time audio analysis, transcription via Whisper,
 and Claude-generated feedback.

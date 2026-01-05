@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from fastapi.responses import JSONResponse
+
 from app.api import (
     auth,
     coaching,
@@ -26,6 +28,7 @@ from app.api import (
     users,
 )
 from app.config import settings
+from app.exceptions import AppError
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal, check_db_connection, close_db_connections
 from app.middleware.rate_limit import RateLimitConfig, SecureRateLimitMiddleware
@@ -246,6 +249,21 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
     redirect_slashes=False,  # Prevent 307 redirects that break CORS
 )
+
+
+# Exception handler for structured AppError exceptions
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    """Convert AppError exceptions to structured JSON responses.
+
+    All AppError subclasses are automatically converted to consistent
+    error responses with machine-readable codes and user-friendly messages.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.to_dict(),
+    )
+
 
 # Correlation ID middleware (add early for request tracing)
 app.add_middleware(CorrelationIDMiddleware)

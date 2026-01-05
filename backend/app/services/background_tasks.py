@@ -40,6 +40,7 @@ class BackgroundTaskService:
         response_id: UUID | None = None,
         session_id: UUID | None = None,
         task_name: str | None = None,
+        exc_info: bool = False,
         **kwargs,
     ) -> None:
         """Log message with correlation fields for background tasks.
@@ -50,6 +51,7 @@ class BackgroundTaskService:
             response_id: Optional response ID for correlation
             session_id: Optional session ID for correlation
             task_name: Optional task name for correlation
+            exc_info: Whether to include exception info in log
             **kwargs: Additional fields to include in log
         """
         extra = {}
@@ -61,7 +63,7 @@ class BackgroundTaskService:
             extra["task_name"] = task_name
 
         extra.update(kwargs)
-        logger.log(level, message, extra=extra)
+        logger.log(level, message, extra=extra, exc_info=exc_info)
 
     async def process_response_audio_async(
         self,
