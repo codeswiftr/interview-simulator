@@ -257,3 +257,137 @@ class TestPDFExportServiceIntegration:
             result = await service.generate_interview_pdf(mock_session, interview_id, user_id)
 
         assert result == b"%PDF-1.4 mock pdf"
+
+    @pytest.mark.asyncio
+    async def test_generate_interview_pdf_with_responses(self):
+        """Should generate PDF including response data with questions and feedback."""
+        service = PDFExportService()
+
+        # Create mock data
+        user_id = uuid4()
+        interview_id = uuid4()
+        question_id = uuid4()
+        response_id = uuid4()
+
+        interview = InterviewSession(
+            id=interview_id,
+            user_id=user_id,
+            interview_type=InterviewType.BEHAVIORAL,
+            status=InterviewStatus.COMPLETED,
+        )
+
+        user = User(
+            id=user_id,
+            email="test@example.com",
+            hashed_password="hash",
+        )
+
+        session_feedback = SessionFeedback(
+            id=uuid4(),
+            session_id=interview_id,
+            overall_score=85.0,
+            audio_score=80.0,
+            content_score=90.0,
+            key_strengths=["Good"],
+            areas_for_improvement=["Better"],
+            next_steps=["Practice"],
+        )
+
+        # Create mock response
+        mock_response = MagicMock()
+        mock_response.id = response_id
+        mock_response.question_id = question_id
+        mock_response.transcript = "My answer is..."
+        mock_response.duration_seconds = 120
+        mock_response.created_at = datetime.now(UTC)
+
+        # Create mock question
+        mock_question = MagicMock()
+        mock_question.id = question_id
+        mock_question.content = "Tell me about yourself"
+        mock_question.category = QuestionCategory.BEHAVIORAL
+        mock_question.difficulty = Difficulty.MEDIUM
+
+        # Create mock content feedback
+        mock_feedback = MagicMock()
+        mock_feedback.response_id = response_id
+        mock_feedback.overall_content_score = 78.5
+        mock_feedback.strengths = ["Good structure"]
+        mock_feedback.improvements = ["Be more specific"]
+
+        # Mock session to return data including responses - covers lines 94-104
+        mock_session = AsyncMock()
+
+        call_count = 0
+        async def mock_exec(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            result = MagicMock()
+
+            if call_count == 1:  # Interview query
+                result.first.return_value = interview
+            elif call_count == 2:  # User query
+                result.first.return_value = user
+            elif call_count == 3:  # Session feedback query
+                result.first.return_value = session_feedback
+            elif call_count == 4:  # Responses query
+                result.all.return_value = [mock_response]
+            elif call_count == 5:  # Question query (for the response)
+                result.first.return_value = mock_question
+            elif call_count == 6:  # Content feedback query (for the response)
+                result.first.return_value = mock_feedback
+            else:
+                result.first.return_value = None
+                result.all.return_value = []
+
+            return result
+
+        mock_session.exec = mock_exec
+
+        # Mock PDF conversion
+        with patch.object(service, "_html_to_pdf", return_value=b"%PDF-1.4 mock pdf"):
+            result = await service.generate_interview_pdf(mock_session, interview_id, user_id)
+
+        assert result == b"%PDF-1.4 mock pdf"
+        # Verify we made 6 queries (including question and feedback for response)
+        assert call_count == 6
+
+
+class TestPDFExportServiceHtmlToPdf:
+    """Tests for HTML to PDF conversion method - covers lines 381-390."""
+
+    def test_html_to_pdf_weasyprint_import_error(self):
+        """Should raise ValueError when WeasyPrint not installed."""
+        service = PDFExportService()
+
+        import builtins
+        original_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "weasyprint" or "weasyprint" in str(name):
+                raise ImportError("No module named 'weasyprint'")
+            return original_import(name, *args, **kwargs)
+
+        with patch.object(builtins, "__import__", mock_import):
+            with pytest.raises(ValueError, match="WeasyPrint not installed"):
+                service._html_to_pdf("<html><body>Test</body></html>")
+
+    def test_html_to_pdf_generation_error(self):
+        """Should raise ValueError when PDF generation fails."""
+        service = PDFExportService()
+
+        # Mock weasyprint.HTML to raise an exception during PDF generation
+        mock_html_class = MagicMock()
+        mock_html_instance = MagicMock()
+        mock_html_instance.write_pdf.side_effect = Exception("Font rendering error")
+        mock_html_class.return_value = mock_html_instance
+
+        with patch.dict("sys.modules", {"weasyprint": MagicMock(HTML=mock_html_class)}):
+            import sys
+            sys.modules["weasyprint"] = MagicMock(HTML=mock_html_class)
+            try:
+                with pytest.raises(ValueError, match="PDF generation failed"):
+                    service._html_to_pdf("<html><body>Test</body></html>")
+            finally:
+                if "weasyprint" in sys.modules:
+                    del sys.modules["weasyprint"]
