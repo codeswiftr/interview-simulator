@@ -98,6 +98,7 @@ async def transcribe_audio(
 
     # Write to temp file
     suffix = Path(file.filename).suffix or ".webm"
+    tmp_path = None  # Initialize before try to avoid UnboundLocalError in finally
     try:
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
             tmp.write(content)
@@ -141,11 +142,12 @@ async def transcribe_audio(
             detail=f"Transcription failed: {e!s}",
         ) from None
     finally:
-        # Clean up temp file
-        import contextlib
+        # Clean up temp file (only if it was created)
+        if tmp_path is not None:
+            import contextlib
 
-        with contextlib.suppress(Exception):
-            Path(tmp_path).unlink(missing_ok=True)
+            with contextlib.suppress(Exception):
+                Path(tmp_path).unlink(missing_ok=True)
 
 
 @router.get("/supported-formats")

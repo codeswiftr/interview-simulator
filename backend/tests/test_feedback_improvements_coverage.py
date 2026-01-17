@@ -447,7 +447,9 @@ class TestGetUserSkillsGap:
 
             audio_feedback = AudioFeedback(
                 response_id=response.id,
+                speech_rate_wpm=140.0,  # Required field
                 speech_rate_score=75,
+                filler_words={},  # Required field
                 filler_word_score=80,
                 confidence_score=70,
                 volume_consistency=78,
