@@ -32,6 +32,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user for security
+RUN groupadd --gid 1000 appgroup && \
+    useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
+
 # Copy virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
 
@@ -40,8 +44,8 @@ COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
-# Create uploads directory
-RUN mkdir -p uploads/audio
+# Create uploads directory and set ownership
+RUN mkdir -p uploads/audio && chown -R appuser:appgroup /app
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
@@ -57,6 +61,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Default port (Railway provides PORT env var)
 ENV PORT=8000
+
+# Switch to non-root user for security
+USER appuser
 
 # Run the application using shell form to expand PORT
 # --proxy-headers: Trust X-Forwarded-Proto from Railway's proxy (fixes HTTPS redirects)

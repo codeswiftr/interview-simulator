@@ -1,1 +1,9 @@
 interview_simulator.db
+
+# Environment files with secrets - NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Keep .env.example for documentation
+!.env.example
