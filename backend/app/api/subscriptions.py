@@ -128,6 +128,16 @@ async def create_checkout_session(
 
         checkout_session = stripe.checkout.Session.create(**checkout_params)
 
+        get_analytics().capture(
+            user_id=str(current_user.id),
+            event=Events.UPGRADE_STARTED,
+            properties={
+                "price_id": payload.price_id,
+                "referral_code": payload.referral_code,
+                "checkout_session_id": checkout_session.id,
+            },
+        )
+
         return CheckoutSessionResponse(url=checkout_session.url)
 
     except stripe.error.StripeError as e:
@@ -239,6 +249,16 @@ async def _handle_checkout_completed(session_obj: dict, db_session: AsyncSession
         get_analytics().capture(
             user_id=user_id,
             event=Events.SUBSCRIPTION_CREATED,
+            properties={
+                "tier": tier.value,
+                "subscription_id": subscription_id,
+                "amount": subscription.get("plan", {}).get("amount"),
+                "currency": subscription.get("plan", {}).get("currency"),
+            },
+        )
+        get_analytics().capture(
+            user_id=user_id,
+            event=Events.UPGRADE_COMPLETED,
             properties={
                 "tier": tier.value,
                 "subscription_id": subscription_id,

@@ -172,6 +172,26 @@ async def start_interview(
     interview.started_at = interview.started_at or _get_time()
     await session.commit()
     await session.refresh(interview)
+
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_STARTED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+            "difficulty": interview.difficulty,
+            "company_style": interview.company_style,
+        },
+    )
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.ACTIVATION_STARTED,
+        properties={
+            "activation_type": "interview",
+            "interview_id": str(interview.id),
+        },
+    )
     return interview
 
 
@@ -228,6 +248,26 @@ async def end_interview(
     interview.duration_seconds = int((interview.ended_at - interview.started_at).total_seconds())
     await session.commit()
     await session.refresh(interview)
+
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_COMPLETED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+            "difficulty": interview.difficulty,
+            "duration_seconds": interview.duration_seconds,
+        },
+    )
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.ACTIVATION_COMPLETED,
+        properties={
+            "activation_type": "interview",
+            "interview_id": str(interview.id),
+        },
+    )
 
     # Trigger background session feedback generation
     asyncio.create_task(background_tasks.generate_session_feedback_async(interview_id))
@@ -444,6 +484,16 @@ async def create_quick_practice(
 
     await session.commit()
     await session.refresh(interview)
+
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_CREATED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+        },
+    )
     return interview
 
 

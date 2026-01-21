@@ -1,9 +1,11 @@
 """PostHog analytics service for Interview Simulator event tracking."""
 
+import asyncio
 import logging
+from collections.abc import Awaitable
 from typing import Any
 
-import posthog
+from forge_shared.analytics import PostHogClient
 
 from app.config import settings
 
@@ -20,10 +22,13 @@ class Analytics:
     def __init__(self) -> None:
         """Initialize PostHog with API key and host."""
         self._enabled = False
+        self._client: PostHogClient | None = None
         if settings.posthog_api_key:
-            posthog.project_api_key = settings.posthog_api_key
-            posthog.host = settings.posthog_host
-            posthog.disabled = False
+            self._client = PostHogClient(
+                api_key=settings.posthog_api_key,
+                host=settings.posthog_host,
+                enabled=True,
+            )
             self._enabled = True
             logger.info("PostHog analytics initialized")
         else:
@@ -33,6 +38,16 @@ class Analytics:
     def enabled(self) -> bool:
         """Check if analytics is enabled."""
         return self._enabled
+
+    def _run_async(self, coro: Awaitable[None]) -> None:
+        """Run analytics calls without blocking the request path."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(coro)
+            return
+
+        loop.create_task(coro)
 
     def _get_base_properties(self) -> dict[str, Any]:
         """Get base properties included in all events."""
@@ -63,14 +78,19 @@ class Analytics:
         if not self._enabled:
             return
 
+        if self._client is None:
+            return
+
         try:
-            posthog.capture(
-                distinct_id=self.get_user_id(user_id),
-                event=event,
-                properties={
-                    **self._get_base_properties(),
-                    **(properties or {}),
-                },
+            self._run_async(
+                self._client.track(
+                    event=event,
+                    distinct_id=self.get_user_id(user_id),
+                    properties={
+                        **self._get_base_properties(),
+                        **(properties or {}),
+                    },
+                )
             )
             logger.debug(f"Captured event '{event}' for user {user_id}")
         except Exception as e:
@@ -93,14 +113,19 @@ class Analytics:
         if not self._enabled:
             return
 
+        if self._client is None:
+            return
+
         try:
-            posthog.identify(
-                distinct_id=self.get_user_id(user_id),
-                properties={
-                    **properties,
-                    "product": "interview-simulator",
-                    "domain": "codeswiftr.com",
-                },
+            self._run_async(
+                self._client.identify(
+                    distinct_id=self.get_user_id(user_id),
+                    properties={
+                        **properties,
+                        "product": "interview-simulator",
+                        "domain": "codeswiftr.com",
+                    },
+                )
             )
             logger.debug(f"Identified user {user_id}")
         except Exception as e:
@@ -108,8 +133,8 @@ class Analytics:
 
     def shutdown(self) -> None:
         """Flush events and shutdown PostHog client."""
-        if self._enabled:
-            posthog.shutdown()
+        if self._enabled and self._client is not None:
+            self._client.shutdown()
             logger.info("PostHog shutdown complete")
 
 
@@ -159,6 +184,14 @@ class Events:
     # Feedback Events
     FEEDBACK_GENERATED = "is_feedback_generated"
     FEEDBACK_VIEWED = "is_feedback_viewed"
+
+    # Activation Events
+    ACTIVATION_STARTED = "is_activation_started"
+    ACTIVATION_COMPLETED = "is_activation_completed"
+
+    # Upgrade Events
+    UPGRADE_STARTED = "is_upgrade_started"
+    UPGRADE_COMPLETED = "is_upgrade_completed"
 
     # Subscription Events
     SUBSCRIPTION_CREATED = "is_subscription_created"
