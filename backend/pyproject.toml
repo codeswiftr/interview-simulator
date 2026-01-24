@@ -33,7 +33,11 @@ dependencies = [
     "resend>=2.0.0",
     "posthog>=3.7.0",
     "sentry-sdk[fastapi]>=2.48.0",
-    "weasyprint>=67.0",
+    "weasyprint>=68.0",
+    "forge-shared @ {root:uri}/../../../forge-shared",
+    "filelock>=3.20.3",
+    "pyasn1>=0.6.2",
+    "urllib3>=2.6.3",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +56,9 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -84,5 +91,6 @@ plugins = ["pydantic.mypy"]
 
 [dependency-groups]
 dev = [
+    "pip-audit>=2.10.0",
     "ruff>=0.14.6",
 ]
