@@ -58,7 +58,7 @@ export default function ResponseAccordion({
           </div>
         </div>
 
-        <div className={`p-2 rounded-full transition-all duration-300 ${isOpen ? 'bg-electric-blue/10 rotate-180' : 'bg-transparent'}`}>
+        <div className={`p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all duration-300 ${isOpen ? 'bg-electric-blue/10 rotate-180' : 'bg-transparent hover:bg-surface-secondary'}`}>
             <ChevronDown
             className={`w-5 h-5 text-text-secondary dark:text-text-tertiary transition-colors ${
                 isOpen ? 'text-electric-blue' : ''
