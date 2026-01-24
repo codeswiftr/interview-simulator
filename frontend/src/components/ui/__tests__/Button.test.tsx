@@ -32,22 +32,22 @@ describe('Button', () => {
   });
 
   describe('Sizes', () => {
-    it('renders medium size by default', () => {
+    it('renders medium size by default with mobile touch target', () => {
       render(<Button>Click me</Button>);
       const button = screen.getByRole('button', { name: /click me/i });
-      expect(button).toHaveClass('px-6', 'py-3');
+      expect(button).toHaveClass('px-6', 'py-3', 'min-h-[44px]');
     });
 
-    it('renders small size', () => {
+    it('renders small size with mobile touch target', () => {
       render(<Button size="sm">Click me</Button>);
       const button = screen.getByRole('button', { name: /click me/i });
-      expect(button).toHaveClass('px-3', 'py-1.5', 'text-sm');
+      expect(button).toHaveClass('px-3', 'py-2', 'text-sm', 'min-h-[44px]');
     });
 
-    it('renders large size', () => {
+    it('renders large size with mobile touch target', () => {
       render(<Button size="lg">Click me</Button>);
       const button = screen.getByRole('button', { name: /click me/i });
-      expect(button).toHaveClass('px-8', 'py-4', 'text-lg');
+      expect(button).toHaveClass('px-8', 'py-4', 'text-lg', 'min-h-[48px]');
     });
   });
 
