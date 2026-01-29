@@ -4,7 +4,7 @@ Generates professional PDF reports from interview sessions with feedback.
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 from uuid import UUID
 
@@ -112,7 +112,7 @@ class PDFExportService:
             "user": user,
             "session_feedback": session_feedback,
             "responses": response_data,
-            "generated_at": datetime.utcnow(),
+            "generated_at": datetime.now(UTC),
         }
 
     def _render_interview_html(self, data: dict) -> str:

@@ -3,7 +3,7 @@
 Tests the Analytics class methods without making actual API calls.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -25,10 +25,10 @@ class TestAnalyticsInit:
         with patch("app.services.analytics.settings") as mock_settings:
             mock_settings.posthog_api_key = "test_api_key"
             mock_settings.posthog_host = "https://app.posthog.com"
-            with patch("app.services.analytics.posthog") as mock_posthog:
+            with patch("app.services.analytics.PostHogClient") as mock_client:
                 analytics = Analytics()
                 assert analytics.enabled is True
-                assert mock_posthog.project_api_key == "test_api_key"
+                mock_client.assert_called_once()
 
 
 class TestGetUserId:
@@ -80,9 +80,7 @@ class TestCapture:
             mock_settings.posthog_api_key = None
             analytics = Analytics()
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
-                analytics.capture("user123", "test_event", {"key": "value"})
-                mock_posthog.capture.assert_not_called()
+            analytics.capture("user123", "test_event", {"key": "value"})
 
     def test_captures_event_when_enabled(self):
         """Test captures event with properties when enabled."""
@@ -91,12 +89,15 @@ class TestCapture:
             mock_settings.posthog_host = "https://app.posthog.com"
             mock_settings.environment = "test"
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
+            mock_posthog = MagicMock()
+            mock_posthog.track = AsyncMock()
+
+            with patch("app.services.analytics.PostHogClient", return_value=mock_posthog):
                 analytics = Analytics()
                 analytics.capture("user123", "test_event", {"custom": "property"})
 
-                mock_posthog.capture.assert_called_once()
-                call_kwargs = mock_posthog.capture.call_args[1]
+                mock_posthog.track.assert_awaited_once()
+                call_kwargs = mock_posthog.track.call_args.kwargs
                 assert call_kwargs["distinct_id"] == "forge_user123"
                 assert call_kwargs["event"] == "test_event"
                 assert "custom" in call_kwargs["properties"]
@@ -109,8 +110,10 @@ class TestCapture:
             mock_settings.posthog_host = "https://app.posthog.com"
             mock_settings.environment = "test"
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
-                mock_posthog.capture.side_effect = Exception("API error")
+            mock_posthog = MagicMock()
+            mock_posthog.track = AsyncMock(side_effect=Exception("API error"))
+
+            with patch("app.services.analytics.PostHogClient", return_value=mock_posthog):
                 analytics = Analytics()
 
                 # Should not raise
@@ -123,11 +126,14 @@ class TestCapture:
             mock_settings.posthog_host = "https://app.posthog.com"
             mock_settings.environment = "test"
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
+            mock_posthog = MagicMock()
+            mock_posthog.track = AsyncMock()
+
+            with patch("app.services.analytics.PostHogClient", return_value=mock_posthog):
                 analytics = Analytics()
                 analytics.capture("user123", "test_event")
 
-                mock_posthog.capture.assert_called_once()
+                mock_posthog.track.assert_awaited_once()
 
 
 class TestIdentify:
@@ -139,9 +145,7 @@ class TestIdentify:
             mock_settings.posthog_api_key = None
             analytics = Analytics()
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
-                analytics.identify("user123", {"email": "test@example.com"})
-                mock_posthog.identify.assert_not_called()
+            analytics.identify("user123", {"email": "test@example.com"})
 
     def test_identifies_user_when_enabled(self):
         """Test identifies user with properties when enabled."""
@@ -149,12 +153,15 @@ class TestIdentify:
             mock_settings.posthog_api_key = "test_key"
             mock_settings.posthog_host = "https://app.posthog.com"
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
+            mock_posthog = MagicMock()
+            mock_posthog.identify = AsyncMock()
+
+            with patch("app.services.analytics.PostHogClient", return_value=mock_posthog):
                 analytics = Analytics()
                 analytics.identify("user123", {"email": "test@example.com", "tier": "pro"})
 
-                mock_posthog.identify.assert_called_once()
-                call_kwargs = mock_posthog.identify.call_args[1]
+                mock_posthog.identify.assert_awaited_once()
+                call_kwargs = mock_posthog.identify.call_args.kwargs
                 assert call_kwargs["distinct_id"] == "forge_user123"
                 assert call_kwargs["properties"]["email"] == "test@example.com"
                 assert call_kwargs["properties"]["tier"] == "pro"
@@ -166,8 +173,10 @@ class TestIdentify:
             mock_settings.posthog_api_key = "test_key"
             mock_settings.posthog_host = "https://app.posthog.com"
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
-                mock_posthog.identify.side_effect = Exception("API error")
+            mock_posthog = MagicMock()
+            mock_posthog.identify = AsyncMock(side_effect=Exception("API error"))
+
+            with patch("app.services.analytics.PostHogClient", return_value=mock_posthog):
                 analytics = Analytics()
 
                 # Should not raise
@@ -183,7 +192,9 @@ class TestShutdown:
             mock_settings.posthog_api_key = "test_key"
             mock_settings.posthog_host = "https://app.posthog.com"
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
+            mock_posthog = MagicMock()
+
+            with patch("app.services.analytics.PostHogClient", return_value=mock_posthog):
                 analytics = Analytics()
                 analytics.shutdown()
                 mock_posthog.shutdown.assert_called_once()
@@ -193,10 +204,8 @@ class TestShutdown:
         with patch("app.services.analytics.settings") as mock_settings:
             mock_settings.posthog_api_key = None
 
-            with patch("app.services.analytics.posthog") as mock_posthog:
-                analytics = Analytics()
-                analytics.shutdown()
-                mock_posthog.shutdown.assert_not_called()
+            analytics = Analytics()
+            analytics.shutdown()
 
 
 class TestGetAnalytics:

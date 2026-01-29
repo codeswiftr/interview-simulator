@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mic, BarChart2, TrendingUp, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mic, BarChart2, TrendingUp, MessageSquare, ArrowRight, CheckCircle2, Crown, Check } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Card } from '../components/ui/Card';
 
@@ -132,6 +132,78 @@ export default function HomePage() {
               <p className="text-sm sm:text-base text-text-secondary leading-relaxed">
                 Access hundreds of real interview questions across multiple categories and difficulty levels.
               </p>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Preview Section */}
+      <section className="py-12 sm:py-16 lg:py-24 bg-surface-primary">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold mb-3 sm:mb-4 text-text-primary">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-sm sm:text-base text-text-secondary">
+              Start free with 5 interviews per month. Upgrade for unlimited access.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Free Plan */}
+            <Card className="p-6 border-2 border-border-light">
+              <h3 className="text-lg font-bold mb-2 text-text-primary">Free</h3>
+              <div className="text-3xl font-bold mb-4 text-text-primary">
+                $0<span className="text-lg font-normal text-text-secondary">/month</span>
+              </div>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center gap-2 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-status-success" />
+                  5 interviews per month
+                </li>
+                <li className="flex items-center gap-2 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-status-success" />
+                  Basic AI feedback
+                </li>
+                <li className="flex items-center gap-2 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-status-success" />
+                  Progress tracking
+                </li>
+              </ul>
+              <Link to="/register" className="btn-secondary w-full text-center">
+                Get Started Free
+              </Link>
+            </Card>
+
+            {/* Pro Plan */}
+            <Card className="p-6 border-2 border-[#FF6B9D] bg-[#FF6B9D]/5 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#FF6B9D] text-white text-xs font-semibold rounded-full">
+                7-DAY FREE TRIAL
+              </span>
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-5 h-5 text-[#FF6B9D]" />
+                <h3 className="text-lg font-bold text-text-primary">Pro</h3>
+              </div>
+              <div className="text-3xl font-bold mb-4 text-text-primary">
+                $29<span className="text-lg font-normal text-text-secondary">/month</span>
+              </div>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center gap-2 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-status-success" />
+                  Unlimited interviews
+                </li>
+                <li className="flex items-center gap-2 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-status-success" />
+                  Advanced AI feedback
+                </li>
+                <li className="flex items-center gap-2 text-text-secondary text-sm">
+                  <Check className="w-4 h-4 text-status-success" />
+                  Company-specific questions
+                </li>
+              </ul>
+              <Link to="/pricing" className="btn-primary w-full text-center">
+                View Full Pricing
+              </Link>
             </Card>
           </div>
         </div>

@@ -54,10 +54,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Permissions-Policy (formerly Feature-Policy)
+        # Note: microphone and camera must be allowed for interview recording
         permissions = [
             "geolocation=()",
-            "microphone=()",
-            "camera=()",
+            "microphone=(self)",
+            "camera=(self)",
             "payment=()",
         ]
         response.headers["Permissions-Policy"] = ", ".join(permissions)

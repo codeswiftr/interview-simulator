@@ -400,17 +400,17 @@ describe('HomePage', () => {
 
       // Should have h2 for section headings
       const h2Elements = container.querySelectorAll('h2');
-      expect(h2Elements.length).toBe(2); // Features and CTA headings
+      expect(h2Elements.length).toBe(3); // Features, Pricing, and CTA headings
 
       // Should have h3 for feature card headings
       const h3Elements = container.querySelectorAll('h3');
-      expect(h3Elements.length).toBe(4); // Four feature cards
+      expect(h3Elements.length).toBe(6); // Four feature cards + two pricing cards
     });
 
     it('sections use semantic HTML5 section tags', async () => {
       const { container } = await renderHomePage();
       const sections = container.querySelectorAll('section');
-      expect(sections.length).toBe(3); // Hero, Features, CTA
+      expect(sections.length).toBe(4); // Hero, Features, Pricing, CTA
     });
   });
 

@@ -1,7 +1,7 @@
 """Content analysis service using Claude for semantic evaluation.
 
 Supports multiple providers:
-- Anthropic (direct)
+- Anthropic (via forge_shared.ai)
 - OpenRouter (via OpenAI-compatible API)
 """
 
@@ -9,8 +9,9 @@ import json
 import logging
 from dataclasses import dataclass
 
-from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
+
+from forge_shared.ai import create_client, extract_json, RetryConfig
 
 from app.config import settings
 
@@ -131,9 +132,19 @@ When providing feedback, please:
             self.anthropic_client = None
             logger.info("ContentAnalyzer using OpenRouter provider (Gemini 2.0 Flash)")
         else:
-            self.anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+            # Use forge_shared.ai client with built-in retry
+            self.anthropic_client = create_client(
+                provider="anthropic",
+                api_key=settings.anthropic_api_key,
+                default_model="claude-3-5-haiku-20241022",
+                retry_config=RetryConfig(
+                    max_retries=3,
+                    base_delay=2.0,
+                    max_delay=10.0,
+                ),
+            )
             self.openrouter_client = None
-            logger.info("ContentAnalyzer using Anthropic provider")
+            logger.info("ContentAnalyzer using Anthropic provider (via forge_shared.ai)")
 
     async def analyze(
         self,
@@ -180,17 +191,12 @@ When providing feedback, please:
                 )
                 content = response.choices[0].message.content
             else:
-                # Use Anthropic directly
-                response = await self.anthropic_client.messages.create(
-                    model="claude-3-5-haiku-20241022",
+                # Use forge_shared.ai client
+                content = await self.anthropic_client.generate(
+                    prompt=prompt,
                     max_tokens=2048,
                     temperature=0.3,
-                    messages=[{"role": "user", "content": prompt}],
                 )
-                first_block = response.content[0]
-                if not hasattr(first_block, "text"):
-                    raise ValueError("Response does not contain text content")
-                content = first_block.text
             logger.debug(f"Raw Claude response: {content}")
 
             # Extract JSON from the response (it might be wrapped in markdown)

@@ -1,7 +1,7 @@
 """Tests for content analysis service using Claude API."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -19,7 +19,7 @@ def mock_settings():
 
 @pytest.fixture
 def mock_anthropic_response():
-    """Create a mock Anthropic API response."""
+    """Create a mock Anthropic API response content string."""
 
     def _create_response(
         technical_accuracy: float = 85.0,
@@ -27,7 +27,7 @@ def mock_anthropic_response():
         answer_structure: float = 80.0,
         completeness: float = 90.0,
         relevance: float = 88.0,
-    ) -> MagicMock:
+    ) -> str:
         response_data = {
             "technical_accuracy": technical_accuracy,
             "star_adherence": star_adherence,
@@ -48,12 +48,7 @@ def mock_anthropic_response():
             "communication skills. You effectively used specific examples to illustrate your points.",
         }
 
-        mock_response = MagicMock()
-        mock_content = MagicMock()
-        mock_content.text = json.dumps(response_data)
-        mock_response.content = [mock_content]
-
-        return mock_response
+        return json.dumps(response_data)
 
     return _create_response
 
@@ -65,7 +60,7 @@ async def test_analyze_behavioral_question(mock_settings, mock_anthropic_respons
 
     mock_response = mock_anthropic_response(star_adherence=85.0)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Tell me about a time you faced a challenging project deadline.",
             transcript="In my previous role, we had a critical feature release scheduled. "
@@ -94,7 +89,7 @@ async def test_analyze_technical_question(mock_settings, mock_anthropic_response
         star_adherence=0.0,  # Not applicable for technical questions
     )
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Explain the difference between SQL and NoSQL databases.",
             transcript="SQL databases are relational with structured schemas, while NoSQL "
@@ -121,7 +116,7 @@ async def test_analyze_system_design_question(mock_settings, mock_anthropic_resp
         star_adherence=0.0,
     )
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Design a URL shortening service like bit.ly.",
             transcript="I would use a hash function to generate short codes, store mappings in "
@@ -153,12 +148,9 @@ async def test_analyze_handles_json_in_markdown(mock_settings):
     }
 
     # Simulate response wrapped in markdown
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = f"```json\n{json.dumps(response_data)}\n```"
-    mock_response.content = [mock_content]
+    mock_response = f"```json\n{json.dumps(response_data)}\n```"
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Test question",
             transcript="Test answer",
@@ -175,8 +167,8 @@ async def test_analyze_handles_api_errors(mock_settings):
     analyzer = ContentAnalyzer()
 
     with patch.object(
-        analyzer.anthropic_client.messages,
-        "create",
+        analyzer.anthropic_client,
+        "generate",
         side_effect=Exception("API connection failed"),
     ):
         metrics = await analyzer.analyze(
@@ -201,12 +193,9 @@ async def test_analyze_handles_malformed_json(mock_settings):
     """Test that analyzer handles malformed JSON responses gracefully."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = "This is not valid JSON at all"
-    mock_response.content = [mock_content]
+    mock_response = "This is not valid JSON at all"
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=AsyncMock(return_value=mock_response)):
+    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
         metrics = await analyzer.analyze(
             question="Test question",
             transcript="Test answer",
@@ -289,9 +278,7 @@ async def test_prompt_includes_star_instruction_for_behavioral(mock_settings):
     """Test that STAR instruction is included for behavioral questions."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = json.dumps(
+    mock_response = json.dumps(
         {
             "technical_accuracy": 80,
             "star_adherence": 85,
@@ -303,11 +290,10 @@ async def test_prompt_includes_star_instruction_for_behavioral(mock_settings):
             "detailed_feedback": "test",
         }
     )
-    mock_response.content = [mock_content]
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client, "generate", new=create_mock):
         await analyzer.analyze(
             question="Tell me about a challenge",
             transcript="I faced a challenge...",
@@ -316,7 +302,7 @@ async def test_prompt_includes_star_instruction_for_behavioral(mock_settings):
 
     # Check that the prompt included STAR instruction
     call_args = create_mock.call_args
-    prompt_content = call_args[1]["messages"][0]["content"]
+    prompt_content = call_args[1]["prompt"]
     assert "STAR" in prompt_content
     assert "Situation" in prompt_content
     assert "Task" in prompt_content
@@ -329,9 +315,7 @@ async def test_prompt_excludes_star_instruction_for_technical(mock_settings):
     """Test that STAR instruction is excluded for technical questions."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = json.dumps(
+    mock_response = json.dumps(
         {
             "technical_accuracy": 80,
             "star_adherence": 0,
@@ -343,11 +327,10 @@ async def test_prompt_excludes_star_instruction_for_technical(mock_settings):
             "detailed_feedback": "test",
         }
     )
-    mock_response.content = [mock_content]
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client, "generate", new=create_mock):
         await analyzer.analyze(
             question="What is polymorphism?",
             transcript="Polymorphism is...",
@@ -356,7 +339,7 @@ async def test_prompt_excludes_star_instruction_for_technical(mock_settings):
 
     # Check that the prompt did not include STAR instruction
     call_args = create_mock.call_args
-    prompt_content = call_args[1]["messages"][0]["content"]
+    prompt_content = call_args[1]["prompt"]
     assert "STAR" not in prompt_content or "STAR Adherence" not in prompt_content
 
 
@@ -365,9 +348,7 @@ async def test_prompt_includes_junior_experience_context(mock_settings):
     """Test that junior experience level context is included in the prompt."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = json.dumps(
+    mock_response = json.dumps(
         {
             "technical_accuracy": 80,
             "star_adherence": 0,
@@ -379,11 +360,10 @@ async def test_prompt_includes_junior_experience_context(mock_settings):
             "detailed_feedback": "test",
         }
     )
-    mock_response.content = [mock_content]
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client, "generate", new=create_mock):
         await analyzer.analyze(
             question="What is a REST API?",
             transcript="A REST API is...",
@@ -393,7 +373,7 @@ async def test_prompt_includes_junior_experience_context(mock_settings):
 
     # Check that the prompt includes junior context
     call_args = create_mock.call_args
-    prompt_content = call_args[1]["messages"][0]["content"]
+    prompt_content = call_args[1]["prompt"]
     assert "JUNIOR engineer" in prompt_content
     assert "0-2 years experience" in prompt_content
     assert "encouraging" in prompt_content.lower()
@@ -404,9 +384,7 @@ async def test_prompt_includes_senior_experience_context(mock_settings):
     """Test that senior experience level context is included in the prompt."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = json.dumps(
+    mock_response = json.dumps(
         {
             "technical_accuracy": 80,
             "star_adherence": 0,
@@ -418,11 +396,10 @@ async def test_prompt_includes_senior_experience_context(mock_settings):
             "detailed_feedback": "test",
         }
     )
-    mock_response.content = [mock_content]
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client, "generate", new=create_mock):
         await analyzer.analyze(
             question="Design a distributed cache system",
             transcript="I would use consistent hashing...",
@@ -432,7 +409,7 @@ async def test_prompt_includes_senior_experience_context(mock_settings):
 
     # Check that the prompt includes senior context
     call_args = create_mock.call_args
-    prompt_content = call_args[1]["messages"][0]["content"]
+    prompt_content = call_args[1]["prompt"]
     assert "SENIOR engineer" in prompt_content
     assert "5+ years experience" in prompt_content
     assert "direct" in prompt_content.lower()
@@ -444,9 +421,7 @@ async def test_prompt_includes_mid_experience_context_by_default(mock_settings):
     """Test that mid experience level context is used by default."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = json.dumps(
+    mock_response = json.dumps(
         {
             "technical_accuracy": 80,
             "star_adherence": 0,
@@ -458,11 +433,10 @@ async def test_prompt_includes_mid_experience_context_by_default(mock_settings):
             "detailed_feedback": "test",
         }
     )
-    mock_response.content = [mock_content]
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client, "generate", new=create_mock):
         # Don't pass experience_level - should default to mid
         await analyzer.analyze(
             question="What is polymorphism?",
@@ -472,7 +446,7 @@ async def test_prompt_includes_mid_experience_context_by_default(mock_settings):
 
     # Check that the prompt includes mid-level context
     call_args = create_mock.call_args
-    prompt_content = call_args[1]["messages"][0]["content"]
+    prompt_content = call_args[1]["prompt"]
     assert "MID-LEVEL engineer" in prompt_content
     assert "2-5 years experience" in prompt_content
 
@@ -482,9 +456,7 @@ async def test_prompt_uses_mid_for_unknown_experience_level(mock_settings):
     """Test that unknown experience levels fall back to mid."""
     analyzer = ContentAnalyzer()
 
-    mock_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = json.dumps(
+    mock_response = json.dumps(
         {
             "technical_accuracy": 80,
             "star_adherence": 0,
@@ -496,11 +468,10 @@ async def test_prompt_uses_mid_for_unknown_experience_level(mock_settings):
             "detailed_feedback": "test",
         }
     )
-    mock_response.content = [mock_content]
 
     create_mock = AsyncMock(return_value=mock_response)
 
-    with patch.object(analyzer.anthropic_client.messages, "create", new=create_mock):
+    with patch.object(analyzer.anthropic_client, "generate", new=create_mock):
         await analyzer.analyze(
             question="What is polymorphism?",
             transcript="Polymorphism is...",
@@ -510,5 +481,5 @@ async def test_prompt_uses_mid_for_unknown_experience_level(mock_settings):
 
     # Should fall back to mid-level context
     call_args = create_mock.call_args
-    prompt_content = call_args[1]["messages"][0]["content"]
+    prompt_content = call_args[1]["prompt"]
     assert "MID-LEVEL engineer" in prompt_content

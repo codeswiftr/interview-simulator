@@ -126,7 +126,7 @@ export default function RecordingSection() {
         />
       )}
 
-      <Card variant="glass" className="p-8 shadow-xl border-white/50 bg-white/80 backdrop-blur-xl">
+      <Card variant="glass" className="p-4 sm:p-8 shadow-xl border-white/50 bg-white/80 backdrop-blur-xl">
         {isPreviewMode ? (
           /* Preview Mode */
           <AudioPreview

@@ -1,18 +1,25 @@
-"""FastAPI application entry point for Interview Simulator."""
+"""FastAPI application entry point for Interview Simulator.
+
+Migrated to use forge-shared middleware (2025-01).
+"""
 
 import logging
 import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
-
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from forge_shared.analytics import AnalyticsMiddleware
+from forge_shared.middleware import (
+    RateLimitMiddleware,
+    RequestIDMiddleware,
+    SecurityMiddleware,
+)
+from forge_shared.utm import UTMMiddleware, get_utm_params
 
 from app.api import (
     auth,
@@ -28,11 +35,9 @@ from app.api import (
     users,
 )
 from app.config import settings
-from app.exceptions import AppError
 from app.data.seed_questions import seed_questions
 from app.db import SessionLocal, check_db_connection, close_db_connections
-from app.middleware.rate_limit import RateLimitConfig, SecureRateLimitMiddleware
-from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.exceptions import AppError
 
 
 def configure_logging() -> None:
@@ -90,29 +95,7 @@ def configure_logging() -> None:
     )
 
 
-class CorrelationIDMiddleware(BaseHTTPMiddleware):
-    """Middleware to add correlation ID to requests for log tracing."""
 
-    async def dispatch(self, request: Request, call_next):
-        correlation_id = request.headers.get("X-Correlation-ID", str(uuid4()))
-        request.state.correlation_id = correlation_id
-
-        # Add to logging context
-        old_factory = logging.getLogRecordFactory()
-
-        def record_factory(*args, **kwargs):
-            record = old_factory(*args, **kwargs)
-            record.correlation_id = correlation_id
-            return record
-
-        logging.setLogRecordFactory(record_factory)
-
-        try:
-            response = await call_next(request)
-            response.headers["X-Correlation-ID"] = correlation_id
-            return response
-        finally:
-            logging.setLogRecordFactory(old_factory)
 
 
 def init_error_monitoring() -> None:
@@ -265,11 +248,24 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     )
 
 
-# Correlation ID middleware (add early for request tracing)
-app.add_middleware(CorrelationIDMiddleware)
+# forge-shared middleware (migrated from custom implementations)
+# UTMMiddleware for attribution tracking
+app.add_middleware(UTMMiddleware)
 
-# Security headers middleware
-app.add_middleware(SecurityHeadersMiddleware)
+# RequestIDMiddleware replaces custom CorrelationIDMiddleware
+app.add_middleware(RequestIDMiddleware)
+
+# SecurityMiddleware replaces custom SecurityHeadersMiddleware
+app.add_middleware(SecurityMiddleware, x_frame_options="DENY")
+
+# Analytics middleware for PostHog tracking
+posthog_api_key = getattr(settings, "posthog_api_key", None)
+if posthog_api_key:
+    app.add_middleware(
+        AnalyticsMiddleware,
+        api_key=posthog_api_key,
+        host=getattr(settings, "posthog_host", "https://app.posthog.com"),
+    )
 
 # CORS configuration - restricted for security
 # In development: allow localhost on any port via regex
@@ -305,18 +301,14 @@ app.add_middleware(
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 
-# Secure rate limiting (only in production)
+# Rate limiting with forge-shared RateLimitMiddleware (only in production)
 if not settings.debug:
     app.add_middleware(
-        SecureRateLimitMiddleware,
-        config=RateLimitConfig(
-            requests_per_minute=60,
-            requests_per_hour=1000,
-            user_requests_per_minute=120,
-            user_requests_per_hour=2000,
-        ),
+        RateLimitMiddleware,
+        redis_url=settings.redis_url,
+        requests_per_minute=60,
+        requests_per_hour=1000,
         exclude_paths=["/api/v1/health", "/docs", "/openapi.json", "/", "/favicon.ico", "/static"],
-        enable_ddos_headers=True,
     )
 
 # Include routers

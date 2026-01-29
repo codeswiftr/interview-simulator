@@ -49,6 +49,49 @@ frontend/src/App.tsx           - Added verify-email route
 
 ---
 
+## Sprint 12.5: Revenue Optimization - DONE
+
+### Epic 9: Dedicated Pricing Page - DONE
+
+**Objective**: Create a standalone pricing page to improve SEO and conversion for visitors who want to see pricing before signing up.
+
+#### Implementation Details
+
+**New Files:**
+```
+frontend/src/pages/PricingPage.tsx                     - Full pricing page
+frontend/src/pages/__tests__/PricingPage.test.tsx      - 40 tests
+```
+
+**Modified Files:**
+```
+frontend/src/App.tsx                    - Added /pricing route
+frontend/src/components/layout/Header.tsx - Added Pricing nav link (desktop + mobile)
+frontend/src/pages/HomePage.tsx         - Added pricing preview section with 7-day trial badge
+```
+
+**Features:**
+- **Monthly/Annual Toggle**: Switch between $29/month and $24/month (annual, save 17%)
+- **7-Day Free Trial Badge**: Prominently displayed on Pro plan
+- **Feature Comparison Table**: Side-by-side Free vs Pro comparison
+- **FAQ Section**: Expandable FAQs addressing common objections
+- **Team Plan Teaser**: Coming soon notification with email signup
+- **Responsive Design**: Optimized for mobile and desktop
+- **Analytics**: Page view and CTA click tracking
+
+**Revenue Impact:**
+1. **SEO**: `/pricing` page can rank for "interview simulator pricing" searches
+2. **Conversion**: Visitors can evaluate pricing before signup (reduces friction)
+3. **Transparency**: Clear pricing builds trust
+4. **Marketing**: Direct linking from ads/content to pricing page
+5. **Trial Visibility**: 7-day free trial is now prominently displayed
+
+**Tests:**
+- 40 tests covering rendering, billing toggle, plan cards, FAQ, accessibility
+- All 686 frontend tests passing
+
+---
+
 ## Remaining Work
 
 ### Sprint 12 Completion (3-5h)

@@ -228,6 +228,12 @@ export default function Header() {
               ) : (
                 <>
                   <Link
+                    to="/pricing"
+                    className="px-3 py-1.5 rounded-lg text-text-secondary hover:text-text-primary transition-colors font-medium text-sm"
+                  >
+                    Pricing
+                  </Link>
+                  <Link
                     to="/login"
                     className="px-3 py-1.5 rounded-lg text-text-secondary hover:text-text-primary transition-colors font-medium text-sm"
                   >
@@ -292,6 +298,12 @@ export default function Header() {
                 <div className="px-2">
                   <ThemeSlider />
                 </div>
+                <Link
+                  to="/pricing"
+                  className="px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium text-center text-sm"
+                >
+                  Pricing
+                </Link>
                 <Link
                   to="/login"
                   className="px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors font-medium text-center border border-border-light text-sm"
