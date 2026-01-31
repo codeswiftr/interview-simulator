@@ -12,10 +12,9 @@ interface PricingConfig {
 }
 
 // Pricing constants
-const MONTHLY_PRICE = 29;
-const ANNUAL_PRICE = 290; // ~$24.17/month, save ~17%
-const ANNUAL_MONTHLY_EQUIVALENT = Math.round(ANNUAL_PRICE / 12);
-const ANNUAL_SAVINGS_PERCENT = Math.round((1 - ANNUAL_PRICE / (MONTHLY_PRICE * 12)) * 100);
+const MONTHLY_PRICE = 19;
+const ANNUAL_PRICE = 290; // $24/month, save 2 months
+const ANNUAL_MONTHLY_EQUIVALENT = 24;
 
 export default function PricingPage() {
   const { isAuthenticated, user } = useAuth();
@@ -177,7 +176,7 @@ export default function PricingPage() {
             >
               Annual
               <span className="px-2 py-0.5 bg-status-success/20 text-status-success text-xs rounded-full">
-                Save {ANNUAL_SAVINGS_PERCENT}%
+                2 months free
               </span>
             </button>
           </div>
@@ -244,6 +243,12 @@ export default function PricingPage() {
                   7-day free trial
                 </span>
               </div>
+              {/* Founding Member Badge */}
+              <div className="absolute top-4 left-4">
+                <span className="px-2.5 py-1 bg-amber-500/15 text-amber-700 text-xs font-semibold rounded-full border border-amber-500/30">
+                  Founding Member
+                </span>
+              </div>
 
               <div className="mb-6 mt-2">
                 <div className="flex items-center gap-2 mb-2">
@@ -258,9 +263,12 @@ export default function PricingPage() {
                   <span className="text-4xl font-bold text-text-primary">${currentPrice}</span>
                   <span className="text-text-secondary">/month</span>
                 </div>
+                <p className="text-xs text-amber-700 mt-1 font-medium">
+                  $19/mo for life — only 20 spots left
+                </p>
                 {billingPeriod === 'annual' && (
                   <p className="text-sm text-status-success mt-1">
-                    ${ANNUAL_PRICE}/year (save ${MONTHLY_PRICE * 12 - ANNUAL_PRICE})
+                    ${ANNUAL_PRICE}/year ($24/month, save 2 months)
                   </p>
                 )}
               </div>
