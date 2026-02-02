@@ -144,6 +144,58 @@ export const handlers = [
     });
   }),
 
+  http.get(`${API_URL}/users/me/improvements`, () => {
+    return HttpResponse.json({
+      delivery: {
+        current_score: 82,
+        previous_score: 78,
+        trend: 'improving',
+        improvements: ['Reduce filler words', 'Slow down pacing'],
+        areas_to_work_on: ['Eye contact', 'Vocal variety'],
+      },
+      behavioral: {
+        current_score: 79,
+        previous_score: 77,
+        trend: 'improving',
+        improvements: ['Use STAR format', 'Add more outcome detail'],
+        areas_to_work_on: ['Quantify impact', 'Show ownership'],
+      },
+      technical: {
+        current_score: 74,
+        previous_score: 75,
+        trend: 'declining',
+        improvements: ['Explain trade-offs', 'Clarify assumptions'],
+        areas_to_work_on: ['Edge cases', 'Complexity analysis'],
+      },
+      sessions_analyzed: 6,
+      data_available: true,
+    });
+  }),
+
+  http.get(`${API_URL}/users/me/skills-gap`, () => {
+    return HttpResponse.json({
+      dimensions: [
+        {
+          name: 'System Design',
+          current_score: 72,
+          target_score: 85,
+          sessions_with_data: 5,
+          trend: 'improving',
+        },
+        {
+          name: 'Behavioral',
+          current_score: 80,
+          target_score: 90,
+          sessions_with_data: 6,
+          trend: 'stable',
+        },
+      ],
+      sessions_analyzed: 6,
+      data_available: true,
+      last_updated: new Date().toISOString(),
+    });
+  }),
+
   // Interview handlers
   http.get(`${API_URL}/interviews`, () => {
     return HttpResponse.json([mockInterview]);

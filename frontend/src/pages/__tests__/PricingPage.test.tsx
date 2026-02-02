@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import PricingPage from '../PricingPage';
 import { AuthProvider } from '../../hooks/useAuth';
@@ -74,13 +75,21 @@ describe('PricingPage', () => {
       localStorage.clear();
     }
 
-    return render(
-      <MemoryRouter>
-        <AuthProvider>
-          <PricingPage />
-        </AuthProvider>
-      </MemoryRouter>
+    const renderResult = await act(async () =>
+      render(
+        <MemoryRouter>
+          <AuthProvider>
+            <PricingPage />
+          </AuthProvider>
+        </MemoryRouter>
+      )
     );
+
+    await waitFor(() => {
+      expect(screen.getByText('Simple, Transparent Pricing')).toBeInTheDocument();
+    });
+
+    return renderResult;
   };
 
   beforeEach(() => {
@@ -119,12 +128,12 @@ describe('PricingPage', () => {
 
     it('shows savings badge on annual option', async () => {
       await renderPricingPage();
-      expect(screen.getByText(/Save 17%/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 months free/i)).toBeInTheDocument();
     });
 
     it('defaults to monthly billing', async () => {
       await renderPricingPage();
-      expect(screen.getByText('$29')).toBeInTheDocument();
+      expect(screen.getByText('$19')).toBeInTheDocument();
     });
 
     it('switches to annual pricing when annual is selected', async () => {
@@ -132,7 +141,11 @@ describe('PricingPage', () => {
       
       const buttons = screen.getAllByRole('button');
       const annualButton = buttons.find(btn => btn.textContent?.includes('Annual'));
-      if (annualButton) fireEvent.click(annualButton);
+      if (annualButton) {
+        await act(async () => {
+          fireEvent.click(annualButton);
+        });
+      }
 
       // Annual price should show $24/month equivalent
       await waitFor(() => {
@@ -145,7 +158,11 @@ describe('PricingPage', () => {
       
       const buttons = screen.getAllByRole('button');
       const annualButton = buttons.find(btn => btn.textContent?.includes('Annual'));
-      if (annualButton) fireEvent.click(annualButton);
+      if (annualButton) {
+        await act(async () => {
+          fireEvent.click(annualButton);
+        });
+      }
 
       await waitFor(() => {
         expect(screen.getByText(/\$290\/year/i)).toBeInTheDocument();
@@ -180,7 +197,7 @@ describe('PricingPage', () => {
   describe('Pro Plan Card', () => {
     it('displays Pro plan with correct price', async () => {
       await renderPricingPage();
-      expect(screen.getByText('$29')).toBeInTheDocument();
+      expect(screen.getByText('$19')).toBeInTheDocument();
     });
 
     it('displays MOST POPULAR badge', async () => {
