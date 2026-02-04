@@ -1,0 +1,10 @@
+name = "interview-simulator"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+[vars]
+# Production API URL - Interview Simulator backend on Railway
+VITE_API_URL = "https://interview-simulator-api-production.up.railway.app/api/v1"
+
+# Forge Core URL (unified auth/billing)
+VITE_FORGE_CORE_URL = "https://api.codeswiftr.com"

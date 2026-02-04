@@ -45,13 +45,23 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_id_pro_monthly: str = ""
     stripe_price_id_pro_annual: str = ""
+    stripe_price_id_team_monthly: str = ""
+    stripe_price_id_team_annual: str = ""
     stripe_trial_days: int = 7
 
-    # CORS origins - can be overridden by environment variable
-    # In development, allow localhost ports
-    # In production, set to specific domains via CORS_ORIGINS env var
+    # CORS origins - set via CORS_ORIGINS env var
+    # Production: Set to specific domains only (e.g., "https://app.codeswiftr.com,https://interview-simulator-4bo.pages.dev")
+    # Development: Defaults include localhost ports for local development
     cors_origins: list[str] = [
-        # Development ports - Vite dev server (default: 5173)
+        # Production domains (always allowed)
+        "https://app.codeswiftr.com",
+        "https://interview-simulator-4bo.pages.dev",
+    ]
+
+    # Development-only CORS origins (automatically added when debug=True or environment=development)
+    # These are NOT included in production by default
+    _dev_cors_origins: list[str] = [
+        # Vite dev server (default: 5173)
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         # Vite preview server (default: 4173)
@@ -70,10 +80,19 @@ class Settings(BaseSettings):
         # Local development domain (via Caddy/reverse proxy)
         "http://app.codeswiftr.local:8080",
         "http://app.codeswiftr.local",
-        # Production domains
-        "https://app.codeswiftr.com",
-        "https://interview-simulator-4bo.pages.dev",
     ]
+
+    @property
+    def effective_cors_origins(self) -> list[str]:
+        """Get CORS origins based on environment.
+
+        In development/debug mode, includes localhost origins.
+        In production, only includes production domains.
+        """
+        origins = list(self.cors_origins)
+        if self.debug or self.environment == "development":
+            origins.extend(self._dev_cors_origins)
+        return origins
 
     # Storage
     storage_bucket: str = "interview-simulator-media"
@@ -152,9 +171,7 @@ class Settings(BaseSettings):
             if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
                 continue  # Allow localhost for development/testing
             if not origin.startswith("https://"):
-                security_issues.append(
-                    f"CORS origin '{origin}' should use HTTPS in production"
-                )
+                security_issues.append(f"CORS origin '{origin}' should use HTTPS in production")
 
         # Stripe (required for subscriptions, but allow if not using)
         # We'll only warn, not fail, for Stripe

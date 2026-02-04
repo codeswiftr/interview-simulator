@@ -335,6 +335,11 @@ def _get_tier_from_price(price_id: str) -> SubscriptionTier:
         or price_id == settings.stripe_price_id_pro_annual
     ):
         return SubscriptionTier.PRO
+    if (
+        price_id == settings.stripe_price_id_team_monthly
+        or price_id == settings.stripe_price_id_team_annual
+    ):
+        return SubscriptionTier.TEAM
     # Add more mappings as needed
     return SubscriptionTier.FREE
 
@@ -444,6 +449,8 @@ class PricingConfig(BaseModel):
 
     pro_monthly_price_id: str | None
     pro_annual_price_id: str | None
+    team_monthly_price_id: str | None
+    team_annual_price_id: str | None
 
 
 @router.get("/pricing", response_model=PricingConfig)
@@ -456,6 +463,8 @@ async def get_pricing_config() -> PricingConfig:
     return PricingConfig(
         pro_monthly_price_id=settings.stripe_price_id_pro_monthly or None,
         pro_annual_price_id=settings.stripe_price_id_pro_annual or None,
+        team_monthly_price_id=settings.stripe_price_id_team_monthly or None,
+        team_annual_price_id=settings.stripe_price_id_team_annual or None,
     )
 
 

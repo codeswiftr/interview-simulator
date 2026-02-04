@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from forge_shared.analytics import AnalyticsMiddleware
@@ -19,7 +20,7 @@ from forge_shared.middleware import (
     RequestIDMiddleware,
     SecurityMiddleware,
 )
-from forge_shared.utm import UTMMiddleware, get_utm_params
+from forge_shared.utm import UTMMiddleware
 
 from app.api import (
     auth,
@@ -93,9 +94,6 @@ def configure_logging() -> None:
     logging.getLogger("uvicorn.access").setLevel(
         logging.WARNING if not settings.debug else logging.INFO
     )
-
-
-
 
 
 def init_error_monitoring() -> None:
@@ -234,6 +232,38 @@ app = FastAPI(
 )
 
 
+def custom_openapi():
+    """Custom OpenAPI schema with JWT Bearer authentication."""
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    # Add JWT Bearer security scheme
+    if "components" not in openapi_schema:
+        openapi_schema["components"] = {}
+    if "securitySchemes" not in openapi_schema["components"]:
+        openapi_schema["components"]["securitySchemes"] = {}
+
+    openapi_schema["components"]["securitySchemes"]["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token obtained from /api/v1/auth/login endpoint",
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
 # Exception handler for structured AppError exceptions
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
@@ -269,8 +299,8 @@ if posthog_api_key:
 
 # CORS configuration - restricted for security
 # In development: allow localhost on any port via regex
-# In production: use explicit origins list
-origins = settings.cors_origins
+# In production: use explicit origins list (localhost origins excluded automatically)
+origins = settings.effective_cors_origins
 allow_origin_regex = None
 
 if settings.debug:

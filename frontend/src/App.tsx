@@ -30,6 +30,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PreparationPage = lazy(() => import('./pages/PreparationPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
 const SharedInterviewPage = lazy(() => import('./pages/SharedInterviewPage'));
+const BlogListPage = lazy(() => import('./pages/BlogListPage'));
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 
 // Dev-only preview page (lazy loaded, only in development)
 const DevPreviewPage = lazy(() => import('./pages/DevPreviewPage'));
@@ -66,6 +68,8 @@ function App() {
                   <Route path="/verify-email" element={<VerifyEmailPage />} />
                   <Route path="/pricing" element={<PricingPage />} />
                   <Route path="/affiliates" element={<AffiliatePage />} />
+                  <Route path="/blog" element={<BlogListPage />} />
+                  <Route path="/blog/:slug" element={<BlogPostPage />} />
                   {/* Public shared interview view - no auth required */}
                   <Route path="/shared/:token" element={<SharedInterviewPage />} />
                   <Route

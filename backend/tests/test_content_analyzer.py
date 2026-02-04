@@ -1,7 +1,7 @@
 """Tests for content analysis service using Claude API."""
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -483,3 +483,102 @@ async def test_prompt_uses_mid_for_unknown_experience_level(mock_settings):
     call_args = create_mock.call_args
     prompt_content = call_args[1]["prompt"]
     assert "MID-LEVEL engineer" in prompt_content
+
+
+
+# =============================================================================
+# OpenRouter Provider Tests (Coverage Gap Fix)
+# =============================================================================
+
+@pytest.fixture
+def mock_openrouter_settings():
+    """Mock settings to use OpenRouter provider."""
+    with patch("app.ai.content_analyzer.settings") as mock:
+        mock.content_analysis_provider = "openrouter"
+        mock.openrouter_api_key = "test_openrouter_key"
+        yield mock
+
+
+@pytest.mark.asyncio
+async def test_analyze_with_openrouter_provider(mock_openrouter_settings, mock_anthropic_response):
+    """Test analyzing with OpenRouter provider (Gemini 2.0 Flash).
+    
+    Covers lines 186-192 in content_analyzer.py
+    """
+    analyzer = ContentAnalyzer()
+
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = mock_anthropic_response(
+        technical_accuracy=88.0,
+        star_adherence=0.0,
+    )
+
+    with patch.object(
+        analyzer.openrouter_client.chat.completions,
+        "create",
+        new=AsyncMock(return_value=mock_response)
+    ):
+        metrics = await analyzer.analyze(
+            question="Explain the CAP theorem.",
+            transcript="The CAP theorem states that a distributed system can only guarantee two of three: consistency, availability, and partition tolerance.",
+            question_type="technical",
+        )
+
+    assert isinstance(metrics, ContentMetrics)
+    assert metrics.technical_accuracy == 88.0
+    assert metrics.star_adherence == 0.0
+
+
+@pytest.mark.asyncio
+async def test_openrouter_provider_json_in_markdown(mock_openrouter_settings):
+    """Test that OpenRouter handles JSON wrapped in markdown."""
+    analyzer = ContentAnalyzer()
+
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = """```json
+{
+    "technical_accuracy": 92.0,
+    "star_adherence": 0,
+    "answer_structure": 85.0,
+    "completeness": 88.0,
+    "relevance": 90.0,
+    "strengths": ["Clear explanation", "Good examples"],
+    "improvements": ["Add trade-offs"],
+    "detailed_feedback": "Great technical answer"
+}
+```"""
+
+    with patch.object(
+        analyzer.openrouter_client.chat.completions,
+        "create",
+        new=AsyncMock(return_value=mock_response)
+    ):
+        metrics = await analyzer.analyze(
+            question="What is a distributed system?",
+            transcript="A distributed system is...",
+            question_type="technical",
+        )
+
+    assert metrics.technical_accuracy == 92.0
+    assert len(metrics.strengths) == 2
+
+
+@pytest.mark.asyncio
+async def test_openrouter_provider_handles_api_errors(mock_openrouter_settings):
+    """Test error handling for OpenRouter API failures."""
+    analyzer = ContentAnalyzer()
+
+    with patch.object(
+        analyzer.openrouter_client.chat.completions,
+        "create",
+        side_effect=Exception("OpenRouter API Error")
+    ):
+        metrics = await analyzer.analyze(
+            question="Test question",
+            transcript="Test answer",
+            question_type="technical",
+        )
+
+    # Should return default error metrics
+    assert metrics.technical_accuracy == 50.0
+    assert "Analysis failed" in metrics.detailed_feedback
