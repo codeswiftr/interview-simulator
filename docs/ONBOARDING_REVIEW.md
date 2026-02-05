@@ -1,21 +1,27 @@
-# Interview Simulator - User Onboarding Flow Review
+# Interview Simulator - Onboarding Flow Review
 
-**Date:** January 30, 2026  
+**Date:** February 5, 2026  
 **App URL:** https://app.codeswiftr.com  
 **Status:** LIVE  
-**Reviewer:** Agent (Code Review)
+**Reviewer:** Agent Fleet (Code Review)
 
 ---
 
 ## Executive Summary
 
-| Aspect | Score | Status |
-|--------|-------|--------|
-| Sign-up Friction | 7/10 | 🟡 Good, minor improvements |
-| First Interview Experience | 8/10 | 🟢 Strong |
-| Conversion to Paid | 6/10 | 🟡 Needs attention |
+| Aspect | Score | Status | Change |
+|--------|-------|--------|--------|
+| Sign-up Friction | 7/10 | 🟡 Good, minor improvements | - |
+| First Interview Experience | 8/10 | 🟢 Strong | - |
+| Conversion to Paid | 5/10 | 🔴 Needs urgent work | ⬇️ |
 
-**Overall Assessment:** The onboarding flow is functional and well-designed, but has opportunities to reduce friction and improve conversion.
+**Overall Assessment:** The onboarding flow has solid UX foundations but critical conversion issues remain unaddressed since the last review (Jan 30). Price inconsistencies and missing usage indicators are leaving revenue on the table.
+
+### Changes Since Last Review (Jan 30, 2026)
+- ✅ `pending_plan` now triggers upgrade modal after registration
+- ⏸️ Price inconsistency still exists ($19 vs $29)
+- ❌ No usage progress bar added
+- ❌ No social auth added
 
 ---
 
@@ -23,91 +29,75 @@
 
 ### Current Flow
 ```
-Homepage → Register → Dashboard (with Welcome Modal)
+Homepage → Register Page → Dashboard (with Welcome Modal) → First Session Prompt
 ```
 
-### Friction Points Identified
+### Friction Points
 
-#### 1.1 ❌ Registration Form Has Too Many Fields
-**File:** `src/pages/RegisterPage.tsx`
+#### 1.1 ❌ Registration Form Has 5 Fields (Too Many)
+**File:** `frontend/src/pages/RegisterPage.tsx`
 
-**Current fields (5):**
-1. Full Name
-2. Email
-3. Password
-4. Confirm Password
-5. Experience Level
+**Current fields:**
+| Field | Required | Friction Level |
+|-------|----------|----------------|
+| Full Name | Yes | Low |
+| Email | Yes | Low |
+| Password | Yes | Low |
+| Confirm Password | Yes | **HIGH** |
+| Experience Level | Yes | Medium |
 
-**Issue:** Each additional field reduces conversion by ~10%. The "Confirm Password" field is outdated UX.
+**Issue:** Research shows each additional field reduces conversions by ~10%. "Confirm Password" is outdated UX when password visibility toggle exists.
+
+**Data Point:** Login page already has password visibility toggle (Eye/EyeOff icons) - RegisterPage lacks this consistency.
 
 **Recommendation:**
-```diff
-- Confirm Password field (use password visibility toggle instead ✅ already on login)
-- Move Experience Level to post-registration profile setup
-```
+1. Remove "Confirm Password" - add visibility toggle instead
+2. Move "Experience Level" to profile completion (post-first-interview)
+3. Estimated conversion lift: **+15-20% signup completion**
 
-**Priority:** 🔴 HIGH - Could increase signups by 15-20%
-
----
-
-#### 1.2 ⚠️ No Social Sign-in Options
-**File:** `src/pages/RegisterPage.tsx`, `src/pages/LoginPage.tsx`
-
-No OAuth/social login options available:
-- ❌ Google Sign-in
-- ❌ GitHub Sign-in  
-- ❌ LinkedIn Sign-in
-
-**Impact:** Engineers often prefer GitHub/Google auth. Missing this increases friction.
-
-**Recommendation:** Add Google OAuth at minimum (LinkedIn for enterprise credibility)
-
-**Priority:** 🟡 MEDIUM - Competitive disadvantage
+**Priority:** 🔴 HIGH
 
 ---
 
-#### 1.3 ✅ Good: Password Strength Indicator Present
-**File:** `src/components/ui/PasswordStrengthIndicator.tsx`
+#### 1.2 ❌ No Social Sign-in (Competitive Disadvantage)
+**Files:** `RegisterPage.tsx`, `LoginPage.tsx`
 
-Real-time feedback helps users create valid passwords on first try. Well implemented.
+| Competitor | Google Auth | GitHub Auth | LinkedIn |
+|------------|-------------|-------------|----------|
+| Pramp | ✅ | ❌ | ✅ |
+| Interviewing.io | ❌ | ✅ | ❌ |
+| Exponent | ✅ | ❌ | ✅ |
+| **Interview Simulator** | ❌ | ❌ | ❌ |
 
----
+**Impact:** Engineers prefer OAuth. GitHub login is particularly expected for technical interview tools.
 
-#### 1.4 ⚠️ No Email Verification During Signup
-**File:** `src/hooks/useAuth.tsx:92-121`
-
-Users go directly to dashboard after registration without email verification. While this reduces friction, it can lead to:
-- Invalid email addresses in database
-- Unable to send password reset emails
-- Lower email deliverability scores
-
-**Current:** Verify email only when user tries to change it later.
-
-**Recommendation:** Add soft verification prompt (non-blocking) on dashboard after first session.
-
-**Priority:** 🟢 LOW - Current approach is acceptable for growth stage
+**Priority:** 🟡 MEDIUM (Week 2-3)
 
 ---
 
-#### 1.5 ✅ Good: Plan Intent Preservation
-**File:** `src/pages/RegisterPage.tsx:24-29`
+#### 1.3 ✅ Password Strength Indicator Present
+**File:** `frontend/src/components/ui/PasswordStrengthIndicator.tsx`
+
+Real-time visual feedback helps users create valid passwords. Well implemented.
+
+---
+
+#### 1.4 ✅ Plan Intent Now Preserved
+**File:** `frontend/src/hooks/useDashboardModals.ts:47-55`
 
 ```typescript
+// Check for pending plan upgrade from registration
 useEffect(() => {
-  const plan = searchParams.get('plan');
-  if (plan) {
-    sessionStorage.setItem('pending_plan', plan);
+  const pendingPlan = sessionStorage.getItem('pending_plan');
+  if (!pendingPlan) return;
+  sessionStorage.removeItem('pending_plan');
+  if (pendingPlan === 'pro' && userSubscriptionTier === 'free') {
+    setIsUpgradeOpen(true);
   }
-}, [searchParams]);
+}, [userSubscriptionTier]);
 ```
 
-Users coming from `/pricing?plan=pro` have their intent preserved. However, this intent is stored but **not acted upon after registration**.
-
-**Issue:** `pending_plan` is stored but never read post-registration.
-
-**Recommendation:** After registration, check `sessionStorage.getItem('pending_plan')` and show upgrade modal immediately.
-
-**Priority:** 🔴 HIGH - Direct revenue impact
+**Status:** ✅ FIXED since last review. Users from pricing page now see upgrade modal immediately.
 
 ---
 
@@ -115,96 +105,92 @@ Users coming from `/pricing?plan=pro` have their intent preserved. However, this
 
 ### Current Flow
 ```
-Dashboard → New Interview Modal → Interview Type Selection → Start → Record Answer → Submit → Feedback
+Dashboard → Welcome Modal (3 steps) → First Session Prompt → New Interview Modal → Interview Page → Recording → Feedback
 ```
 
-### Strengths ✅
+### Strengths
 
-#### 2.1 ✅ Welcome Modal for New Users
-**File:** `src/components/onboarding/WelcomeModal.tsx`
+#### 2.1 ✅ Multi-Step Welcome Modal
+**File:** `frontend/src/components/onboarding/WelcomeModal.tsx`
 
-3-step onboarding tour:
-1. "You've Got This" - Emotional reassurance
-2. "Speak Naturally" - Sets expectations
-3. "Track Your Growth" - Shows value
+Three-step progressive onboarding:
+1. **"You've Got This"** - Emotional reassurance with social proof
+2. **"Speak Naturally"** - Sets recording expectations
+3. **"Track Your Growth"** - Shows value proposition
 
-**Well-designed:** Progressive disclosure, skip option, smooth animations.
+**Highlights:**
+- Personalized greeting with user's first name
+- Skip option respects user agency
+- Step indicators are clickable for non-linear navigation
+- Smooth CSS animations (`onboarding-step-enter`)
 
 ---
 
 #### 2.2 ✅ First Session Prompt
-**File:** `src/components/onboarding/FirstSessionPrompt.tsx`
+**File:** `frontend/src/components/onboarding/FirstSessionPrompt.tsx`
 
-Secondary prompt if user closes welcome modal without starting.
+Secondary modal if user closes welcome without starting. Includes helpful tip about STAR method.
 
 ---
 
-#### 2.3 ✅ Empty State Dashboard is Inviting
-**File:** `src/pages/DashboardPage.tsx:280-320`
+#### 2.3 ✅ Empty State Dashboard
+**File:** `frontend/src/pages/DashboardPage.tsx:270-320`
 
-Clear 3-step visual guide:
-1. Choose Topic
-2. Record Answer  
-3. Get Feedback
+Clear visual guide for new users:
+- Choose Topic (Target icon)
+- Record Answer (Mic icon) 
+- Get Feedback (BarChart2 icon)
 
-Large "Start Your First Interview" CTA.
+Large, prominent "Start Your First Interview" CTA.
 
 ---
 
 ### Friction Points
 
-#### 2.4 ⚠️ New Interview Modal Has Decision Overload
-**File:** `src/components/interview/NewInterviewModal.tsx`
+#### 2.4 ⚠️ Decision Overload in Interview Setup
+**File:** `frontend/src/components/interview/NewInterviewModal.tsx`
 
 **Current options:**
-- 4 interview types
-- 11 target companies
-- 4 difficulty levels
-- 5 question count options
+| Category | Options | 
+|----------|---------|
+| Interview Type | 4 (behavioral, technical, system_design, mixed) |
+| Target Company | 11 (including "Any") |
+| Difficulty | 4 (easy, medium, hard, mixed) |
+| Question Count | 5 (1, 2, 3, 5, 10) |
 
-**Total combinations:** 4 × 11 × 4 × 5 = **880 options**
+**Total combinations:** 4 × 11 × 4 × 5 = **880 possible configurations**
 
-**Impact:** Analysis paralysis for new users.
+**Impact:** Analysis paralysis for first-time users who just want to try the product.
 
-**Recommendation:** 
+**Recommendation:**
+```typescript
+// In NewInterviewModal.tsx
+const [isFirstSession] = useState(() => {
+  const onboarding = localStorage.getItem('interview_simulator_onboarding');
+  return !onboarding || !JSON.parse(onboarding).firstSessionCreated;
+});
+
+// Show simplified "Quick Start" for first-timers
+{isFirstSession && (
+  <div className="quick-start-panel">
+    <h3>Quick Start (Recommended)</h3>
+    <button onClick={() => submitWithDefaults()}>
+      Start Behavioral Interview (2 questions)
+    </button>
+  </div>
+)}
 ```
-First-time users: Show simplified "Quick Start"
-- "Behavioral" preset (most common)
-- 2 questions (quick win)
-- Medium difficulty
-- Skip company selection
 
-Returning users: Show full options
-```
-
-**Priority:** 🟡 MEDIUM - Affects time-to-first-value
+**Priority:** 🟡 MEDIUM
 
 ---
 
-#### 2.5 ⚠️ No Sample Question Preview
-**File:** `src/components/interview/NewInterviewModal.tsx`
+#### 2.5 ⚠️ No Demo/Preview Mode
+**Issue:** Users must commit to starting an interview (consuming 1 of 5 free sessions) without seeing what the experience looks like.
 
-Users commit to starting without seeing what questions they'll face.
+**Recommendation:** Add "Watch Demo" button that plays a pre-recorded 30-second video or animated walkthrough.
 
-**Recommendation:** Add "Preview sample question" link showing one example question per type.
-
-**Priority:** 🟢 LOW - Nice to have
-
----
-
-#### 2.6 ✅ Good: Browser Audio Permission Handled
-**File:** `src/pages/InterviewPage.tsx`
-
-Recording section handles microphone permissions gracefully.
-
----
-
-#### 2.7 ⚠️ No Practice/Demo Mode
-**Issue:** Users can't see what the full experience looks like without consuming one of their 5 free interviews.
-
-**Recommendation:** Add "Try Demo" that shows a pre-recorded interview flow (read-only).
-
-**Priority:** 🟡 MEDIUM - Reduces signup-to-first-interview anxiety
+**Priority:** 🟢 LOW
 
 ---
 
@@ -212,170 +198,246 @@ Recording section handles microphone permissions gracefully.
 
 ### Current Upgrade Triggers
 
-| Trigger | Location | Effectiveness |
-|---------|----------|---------------|
-| Free limit reached | `DashboardPage.tsx:164` | ✅ Captures intent |
-| Pricing page CTA | `PricingPage.tsx` | 🟡 Standard |
-| Homepage preview | `HomePage.tsx:145-180` | 🟡 Passive |
-| Upgrade modal | `UpgradeModal.tsx` | ✅ Good design |
+| Trigger | Location | Status |
+|---------|----------|--------|
+| Free limit reached (5/month) | `DashboardPage.tsx:164` | ✅ Works |
+| Pending plan from registration | `useDashboardModals.ts:47` | ✅ Fixed |
+| Pricing page CTA | `PricingPage.tsx` | 🟡 Works |
+| Homepage pricing preview | `HomePage.tsx:145` | 🟡 Works |
+| Upgrade modal | `UpgradeModal.tsx` | 🟡 Has friction |
 
-### Conversion Issues
+### Critical Issues
 
-#### 3.1 ❌ Price Inconsistency Across Pages
-**Files:** Multiple
+#### 3.1 🔴 CRITICAL: Price Inconsistency ($19 vs $29)
+**Status:** Still broken since last review
 
-| Location | Price Shown |
-|----------|-------------|
-| `HomePage.tsx:157` | $29/month |
-| `PricingPage.tsx:15` | $19/month (MONTHLY_PRICE) |
-| `UpgradeModal.tsx:131` | $29/month |
+| Location | Price Displayed |
+|----------|-----------------|
+| `PricingPage.tsx:15` | `MONTHLY_PRICE = 19` → **$19/month** |
+| `PricingPage.tsx:99` | Shows $19 as founding member price |
+| `HomePage.tsx:157` | **$29/month** (hardcoded) |
+| `UpgradeModal.tsx:131` | **$29/month** (hardcoded) |
 
-**Critical Issue:** Homepage and UpgradeModal show $29, but PricingPage shows $19.
+**User Journey Problem:**
+1. User sees $19 on pricing page → excited
+2. User clicks upgrade, sees $29 modal → confused
+3. User abandons checkout → lost sale
 
-**Recommendation:** Centralize pricing constants. Update all to match actual Stripe pricing.
+**Immediate Fix Required:**
+```typescript
+// Create shared constants file: src/lib/pricing.ts
+export const PRICING = {
+  PRO_MONTHLY: 19,
+  PRO_ANNUAL_MONTHLY_EQUIVALENT: 24,
+  PRO_ANNUAL_TOTAL: 290,
+};
 
-**Priority:** 🔴 CRITICAL - Trust/credibility issue
+// Update all hardcoded prices to use PRICING constants
+```
+
+**Priority:** 🔴 CRITICAL - Fix immediately
 
 ---
 
-#### 3.2 ⚠️ Trial Messaging is Inconsistent
-**File:** `src/pages/HomePage.tsx:142`
+#### 3.2 ❌ No Usage Limit Indicator
+**File:** `frontend/src/components/dashboard/StatsOverview.tsx`
 
-```tsx
-<span className="...">7-DAY FREE TRIAL</span>
+**Current state:** User has no visibility into "3 of 5 free interviews used" until they hit the limit.
+
+**Missing UI:**
+```
+┌─────────────────────────────────────────┐
+│  Free Plan: 3/5 interviews used         │
+│  ████████░░░░░░  |  Upgrade for unlimited → │
+└─────────────────────────────────────────┘
 ```
 
-But the `UpgradeModal.tsx` doesn't mention the trial at all.
+**Backend support exists:** The API returns session counts via `userStats.total_sessions`.
 
-**Recommendation:** Consistent trial messaging across all upgrade surfaces.
+**Implementation:**
+```typescript
+// In StatsOverview.tsx or as a new UsageBanner component
+const FREE_TIER_LIMIT = 5;
 
-**Priority:** 🔴 HIGH - Trial is a key conversion driver
-
----
-
-#### 3.3 ⚠️ No Usage Progress Bar
-**File:** `src/pages/DashboardPage.tsx`
-
-Users don't see "3 of 5 interviews used this month" until they hit the limit.
-
-**Recommendation:** Add subtle progress indicator in dashboard header:
-```
-Free Plan: 3/5 interviews used | Upgrade for unlimited →
+{user?.subscription_tier === 'free' && (
+  <Card className="bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium">
+          Free Plan: {totalSessions}/{FREE_TIER_LIMIT} interviews used
+        </span>
+        <div className="w-32 h-2 bg-surface-tertiary rounded-full">
+          <div 
+            className="h-full bg-electric-blue rounded-full"
+            style={{ width: `${(totalSessions / FREE_TIER_LIMIT) * 100}%` }}
+          />
+        </div>
+      </div>
+      <Link to="/pricing" className="text-electric-blue text-sm hover:underline">
+        Upgrade for unlimited →
+      </Link>
+    </div>
+  </Card>
+)}
 ```
 
 **Priority:** 🔴 HIGH - Creates urgency without frustration
 
 ---
 
-#### 3.4 ⚠️ Upgrade Modal Asks "Why" Before Checkout
-**File:** `src/components/subscription/UpgradeModal.tsx:157-190`
+#### 3.3 ⚠️ Upgrade Modal Pre-Checkout Friction
+**File:** `frontend/src/components/subscription/UpgradeModal.tsx:157-190`
 
-Asking for upgrade reason before letting user pay adds friction.
+Modal asks "What made you click upgrade?" with dropdown + text field **before** showing checkout button.
 
-**Recommendation:** Move feedback form to post-checkout thank you page.
+**Issue:** This adds cognitive load at the critical conversion moment.
 
-**Priority:** 🟡 MEDIUM - Reduces checkout completion
+**Recommendation:** 
+1. Move feedback collection to post-checkout success page
+2. Or make it collapsible/optional (currently required)
+
+**Priority:** 🟡 MEDIUM
 
 ---
 
-#### 3.5 ❌ pending_plan Not Used After Registration
-**File:** `src/pages/RegisterPage.tsx:24-29`
+#### 3.4 ⚠️ Trial Messaging Inconsistent
+| Location | Trial Mentioned |
+|----------|-----------------|
+| Homepage Pro card | "7-DAY FREE TRIAL" badge |
+| Pricing page | "7-day free trial" badge |
+| Upgrade modal | ❌ No mention |
 
-User clicks "Start Free Trial" from pricing → Registers → Lands on dashboard → **Trial intent lost**.
+**Recommendation:** Add trial badge to UpgradeModal header.
 
-The `pending_plan` is stored but never checked.
+**Priority:** 🟡 MEDIUM
 
-**Fix in `src/hooks/useAuth.tsx` register function:**
+---
+
+#### 3.5 ⚠️ No High-Score Conversion Prompt
+**File:** `frontend/src/pages/FeedbackPage.tsx`
+
+**Opportunity:** When user scores 85+ on an interview, they're in a positive emotional state - perfect for upgrade suggestion.
+
+**Missing:**
 ```typescript
-// After navigate('/dashboard')
-const pendingPlan = sessionStorage.getItem('pending_plan');
-if (pendingPlan === 'pro') {
-  // Trigger upgrade modal or redirect to checkout
-  sessionStorage.removeItem('pending_plan');
-}
+// In FeedbackPage, after showing score
+{overallScore >= 85 && user?.subscription_tier === 'free' && (
+  <Card className="bg-gradient-to-r from-electric-blue/10 to-indigo-500/10 p-4 mt-4">
+    <div className="flex items-center gap-3">
+      <Trophy className="w-6 h-6 text-amber-500" />
+      <div>
+        <p className="font-semibold">Great job! You scored {overallScore}%</p>
+        <p className="text-sm text-text-secondary">
+          You're interview-ready! Practice more with unlimited sessions.
+        </p>
+      </div>
+      <Button onClick={() => setShowUpgradeModal(true)}>
+        Upgrade to Pro
+      </Button>
+    </div>
+  </Card>
+)}
 ```
 
-**Priority:** 🔴 HIGH - Direct revenue loss
+**Priority:** 🟡 MEDIUM
 
 ---
 
-#### 3.6 ⚠️ No Upgrade Prompt After Great Performance
-**Issue:** When a user scores 85+ on their first interview, that's the perfect moment to say "You're ready! Upgrade to practice more."
+## 4. Analytics Gaps
 
-**Recommendation:** Add contextual upgrade prompt in `FeedbackPage.tsx` for high scores.
+### Missing Events
+| Event | Description | Where to Add |
+|-------|-------------|--------------|
+| `REGISTRATION_STARTED` | User lands on /register | `RegisterPage.tsx` onMount |
+| `REGISTRATION_FORM_INTERACTION` | User starts typing | First field focus |
+| `ONBOARDING_STEP_VIEWED` | Each welcome modal step | `WelcomeModal.tsx` |
+| `ONBOARDING_COMPLETED` | User finishes tour | After step 3 or skip |
+| `INTERVIEW_SETUP_STARTED` | Opens new interview modal | `NewInterviewModal.tsx` |
+| `USAGE_LIMIT_SHOWN` | When limit banner displays | New component |
 
-**Priority:** 🟡 MEDIUM - Positive reinforcement timing
+### Current Funnel Tracking (Incomplete)
+```
+? Homepage visits
+? → Register page views (no REGISTRATION_STARTED event)
+✅ → Registration complete (USER_REGISTERED)
+? → Onboarding completion  
+? → First interview started
+✅ → Interview completed (INTERVIEW_COMPLETED)
+✅ → Upgrade initiated (UPGRADE_CTA_CLICKED)
+✅ → Checkout started (CHECKOUT_STARTED)
+? → Subscription created (should come from webhook)
+```
+
+**Recommendation:** Add missing events to enable proper funnel analysis.
+
+**Priority:** 🟡 MEDIUM (for optimization)
 
 ---
 
-## 4. Recommended Action Items
+## 5. Action Items
 
-### Immediate (Week 1) - High Impact
+### Immediate (This Week) - Revenue Critical
 
-| # | Issue | File(s) | Impact |
-|---|-------|---------|--------|
-| 1 | Fix price inconsistency ($19 vs $29) | `HomePage.tsx`, `UpgradeModal.tsx` | Trust |
-| 2 | Implement `pending_plan` checkout flow | `useAuth.tsx`, `DashboardPage.tsx` | Revenue |
-| 3 | Add usage progress bar to dashboard | `DashboardPage.tsx` | Conversion |
-| 4 | Remove "Confirm Password" field | `RegisterPage.tsx` | Signups +15% |
+| # | Issue | File(s) | Est. Impact |
+|---|-------|---------|-------------|
+| 1 | **Fix price inconsistency** | `HomePage.tsx`, `UpgradeModal.tsx` | Trust, conversion |
+| 2 | **Add usage limit indicator** | New `UsageBanner.tsx`, `DashboardPage.tsx` | Urgency → conversion |
+| 3 | **Remove Confirm Password field** | `RegisterPage.tsx` | +15% signups |
 
 ### Short-term (Week 2-3)
 
-| # | Issue | File(s) | Impact |
-|---|-------|---------|--------|
-| 5 | Consistent trial messaging | `UpgradeModal.tsx`, `HomePage.tsx` | Trust |
-| 6 | Simplified first interview flow | `NewInterviewModal.tsx` | Time-to-value |
-| 7 | Move upgrade feedback to post-checkout | `UpgradeModal.tsx` | Conversion |
-| 8 | Add Google OAuth | `LoginPage.tsx`, `RegisterPage.tsx` | Signups |
+| # | Issue | File(s) | Est. Impact |
+|---|-------|---------|-------------|
+| 4 | Add trial badge to UpgradeModal | `UpgradeModal.tsx` | Clarity |
+| 5 | Move upgrade feedback to post-checkout | `UpgradeModal.tsx` | +5% checkout completion |
+| 6 | Add Google OAuth | `RegisterPage.tsx`, `LoginPage.tsx`, backend | +10-15% signups |
+| 7 | Add Quick Start for first-time users | `NewInterviewModal.tsx` | -30% time-to-first-interview |
 
 ### Medium-term (Month 1)
 
-| # | Issue | File(s) | Impact |
-|---|-------|---------|--------|
-| 9 | Demo/preview mode | New component | Reduces anxiety |
-| 10 | Contextual upgrade on high scores | `FeedbackPage.tsx` | Conversion |
-| 11 | Move experience level to profile | `RegisterPage.tsx`, `SettingsPage.tsx` | Signups |
+| # | Issue | File(s) | Est. Impact |
+|---|-------|---------|-------------|
+| 8 | High-score upgrade prompt | `FeedbackPage.tsx` | Emotional conversion |
+| 9 | Demo/preview mode | New component | Reduces signup anxiety |
+| 10 | Move experience level to profile | `RegisterPage.tsx`, `SettingsPage.tsx` | Further reduce friction |
+| 11 | Add missing analytics events | Multiple | Data for optimization |
 
 ---
 
-## 5. Metrics to Track
+## 6. Competitive Position
 
-### Funnel Metrics
+| Feature | Interview Simulator | Pramp | Interviewing.io |
+|---------|---------------------|-------|-----------------|
+| Free Tier | 5/month | Unlimited peer | Waitlist |
+| Social Auth | ❌ | Google, LinkedIn | GitHub |
+| Signup Fields | 5 | 4 | 3 |
+| Price | $19/mo | $50/mo | $100+/interview |
+| AI Feedback | ✅ Real-time | ❌ Peer only | ❌ Human only |
+
+**Our advantages:** AI feedback, lower price, no waitlist
+**Our gaps:** Social auth, signup friction
+
+---
+
+## 7. Recommended Metrics Dashboard
+
+### Key Conversion Metrics to Track
+
 ```
-Homepage visits → Register page → Registration complete → First interview started → First interview completed → Upgrade initiated → Upgrade complete
+1. Registration Funnel
+   - Register page views → Form started → Completed
+   
+2. Activation Funnel  
+   - Signup → Welcome complete → First interview started → First interview completed
+   
+3. Conversion Funnel
+   - Active free users → Upgrade modal views → Checkout started → Subscription created
+   
+4. Usage Metrics
+   - Avg interviews per free user/month
+   - % hitting 5-interview limit
+   - Time to first interview (from signup)
 ```
-
-### Key Conversion Points
-| Metric | Current (est.) | Target |
-|--------|----------------|--------|
-| Homepage → Register | Unknown | 15% |
-| Register → Complete signup | Unknown | 70% |
-| Signup → First interview | Unknown | 60% |
-| First interview → Complete | Unknown | 80% |
-| Free → Paid (of actives) | Unknown | 5% |
-
-**Recommendation:** Ensure PostHog/analytics tracks each step. Add `Events.REGISTRATION_STARTED` event on Register page load.
-
----
-
-## 6. Competitive Analysis Notes
-
-| Competitor | Sign-up Fields | Social Auth | Free Tier |
-|------------|---------------|-------------|-----------|
-| Pramp | 4 (no confirm pw) | Google, LinkedIn | Unlimited peer practice |
-| Interviewing.io | 3 | GitHub | Waitlist model |
-| Interview Simulator | 5 | None | 5/month |
-
-**Gap:** We have more friction with fewer free features than competitors.
-
----
-
-## 7. Technical Debt Identified
-
-1. **No loading state on registration submit** - Button shows "Creating account..." but no spinner
-2. **Error messages could be friendlier** - "Password validation failed" should be more specific
-3. **Welcome modal state persists incorrectly** - Uses localStorage, should reset on logout
-4. **Analytics events missing** - No `REGISTRATION_STARTED` event, only `USER_REGISTERED`
 
 ---
 
@@ -383,17 +445,23 @@ Homepage visits → Register page → Registration complete → First interview 
 
 | Component | Path | Purpose |
 |-----------|------|---------|
-| Registration | `src/pages/RegisterPage.tsx` | Sign-up form |
-| Login | `src/pages/LoginPage.tsx` | Login form |
-| Dashboard | `src/pages/DashboardPage.tsx` | Main hub, onboarding |
-| Homepage | `src/pages/HomePage.tsx` | Marketing, CTAs |
-| Pricing | `src/pages/PricingPage.tsx` | Pricing page |
-| Interview | `src/pages/InterviewPage.tsx` | Recording flow |
-| New Interview Modal | `src/components/interview/NewInterviewModal.tsx` | Session config |
-| Upgrade Modal | `src/components/subscription/UpgradeModal.tsx` | Upsell |
-| Welcome Modal | `src/components/onboarding/WelcomeModal.tsx` | New user tour |
-| Auth Hook | `src/hooks/useAuth.tsx` | Auth state |
+| Registration | `frontend/src/pages/RegisterPage.tsx` | Sign-up form |
+| Login | `frontend/src/pages/LoginPage.tsx` | Login form |
+| Dashboard | `frontend/src/pages/DashboardPage.tsx` | Main hub |
+| Homepage | `frontend/src/pages/HomePage.tsx` | Marketing landing |
+| Pricing | `frontend/src/pages/PricingPage.tsx` | Pricing page |
+| Interview | `frontend/src/pages/InterviewPage.tsx` | Recording flow |
+| Feedback | `frontend/src/pages/FeedbackPage.tsx` | Results display |
+| New Interview Modal | `frontend/src/components/interview/NewInterviewModal.tsx` | Session config |
+| Upgrade Modal | `frontend/src/components/subscription/UpgradeModal.tsx` | Upsell |
+| Welcome Modal | `frontend/src/components/onboarding/WelcomeModal.tsx` | New user tour |
+| First Session Prompt | `frontend/src/components/onboarding/FirstSessionPrompt.tsx` | Secondary CTA |
+| Stats Overview | `frontend/src/components/dashboard/StatsOverview.tsx` | Dashboard stats |
+| Auth Hook | `frontend/src/hooks/useAuth.tsx` | Auth state |
+| Onboarding Hook | `frontend/src/hooks/useOnboarding.ts` | Onboarding state |
+| Dashboard Modals Hook | `frontend/src/hooks/useDashboardModals.ts` | Modal orchestration |
+| Analytics | `frontend/src/lib/analytics.ts` | Event tracking |
 
 ---
 
-*Report generated from frontend code analysis. Recommend A/B testing before major changes.*
+*Report generated from code analysis. Revenue-critical items (#1, #2) should be addressed before any marketing spend increase.*
