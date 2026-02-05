@@ -48,3 +48,44 @@ Create a `.env` file in the `backend/` directory with the following variables:
    - URL: `https://abc123.ngrok.io/api/v1/subscriptions/webhook`
    - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 5. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET` in your `.env` file
+
+## CLI
+
+Interview Simulator includes an agent-friendly CLI for automation:
+
+```bash
+# Install CLI
+uv pip install -e .
+
+# Generate questions
+interview-sim generate-questions --topic leadership --count 5
+
+# Analyze transcript
+interview-sim analyze-transcript --file transcript.txt --session-id <uuid>
+
+# Export metrics
+interview-sim export-metrics --period weekly --json
+
+# Batch feedback generation
+interview-sim batch-feedback --session-ids sessions.txt
+```
+
+All commands support `--json` flag for structured output following FORGE standards.
+
+**Documentation:**
+- [CLI Guide](docs/CLI.md) - Complete documentation
+- [Quick Reference](docs/CLI_QUICK_REFERENCE.md) - One-page cheatsheet
+- [Automation Examples](examples/cli_automation.py) - Python automation patterns
+
+## Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=app --cov-report=html
+
+# Test CLI
+./scripts/test_cli.sh
+```
