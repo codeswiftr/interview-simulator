@@ -90,3 +90,4 @@ temp/
 
 # Old/duplicate project directories
 vite-app/
+backend/.env
