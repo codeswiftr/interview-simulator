@@ -62,7 +62,7 @@ async def create_interview(
     payload: InterviewSessionCreate,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> InterviewSession:
+) -> dict:
     """Create a new interview session.
 
     Enforces subscription quota limits (Free: 3/month, Pro: unlimited).
@@ -99,7 +99,27 @@ async def create_interview(
         },
     )
 
-    return interview
+    # Calculate remaining interviews for free users
+    from app.models.user import SubscriptionTier
+
+    FREE_TIER_LIMIT = 3
+    remaining = None
+    if current_user.subscription_tier == SubscriptionTier.FREE:
+        remaining = max(0, FREE_TIER_LIMIT - current_user.interviews_this_month)
+
+    # Return interview with remaining count
+    return {
+        "id": interview.id,
+        "interview_type": interview.interview_type,
+        "company_style": interview.company_style,
+        "target_company": interview.target_company,
+        "status": interview.status,
+        "question_count": interview.question_count,
+        "overall_score": interview.overall_score,
+        "duration_seconds": interview.duration_seconds,
+        "created_at": interview.created_at,
+        "remaining_interviews": remaining,
+    }
 
 
 @router.get("", response_model=list[InterviewSessionRead])
@@ -429,7 +449,7 @@ async def create_quick_practice(
     question_id: UUID,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> InterviewSession:
+) -> dict:
     """Create a 1-question practice session with a specific question.
 
     Allows users to practice individual questions from the question bank.
@@ -494,7 +514,28 @@ async def create_quick_practice(
             "question_count": interview.question_count,
         },
     )
-    return interview
+
+    # Calculate remaining interviews for free users
+    from app.models.user import SubscriptionTier
+
+    FREE_TIER_LIMIT = 3
+    remaining = None
+    if current_user.subscription_tier == SubscriptionTier.FREE:
+        remaining = max(0, FREE_TIER_LIMIT - current_user.interviews_this_month)
+
+    # Return interview with remaining count
+    return {
+        "id": interview.id,
+        "interview_type": interview.interview_type,
+        "company_style": interview.company_style,
+        "target_company": interview.target_company,
+        "status": interview.status,
+        "question_count": interview.question_count,
+        "overall_score": interview.overall_score,
+        "duration_seconds": interview.duration_seconds,
+        "created_at": interview.created_at,
+        "remaining_interviews": remaining,
+    }
 
 
 # ============================================================================

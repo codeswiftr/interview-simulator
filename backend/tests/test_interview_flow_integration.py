@@ -77,7 +77,7 @@ async def test_full_interview_flow(client, db_session):
 async def test_quota_enforcement_integration(client, db_session):
     """Test that free user is blocked after exceeding quota.
 
-    Free tier allows 5 interviews per month. The 6th should fail with 402.
+    Free tier allows 3 interviews per month. The 4th should fail with 402.
     """
     token = await register_and_login(client)
 
@@ -93,8 +93,8 @@ async def test_quota_enforcement_integration(client, db_session):
             headers={"Authorization": token},
         )
 
-    # Create 5 interviews (should succeed - free tier limit)
-    for _ in range(5):
+    # Create 3 interviews (should succeed - free tier limit)
+    for _ in range(3):
         resp = await client.post(
             "/api/v1/interviews",
             headers={"Authorization": token},
@@ -105,7 +105,7 @@ async def test_quota_enforcement_integration(client, db_session):
         )
         assert resp.status_code == 201
 
-    # 6th interview should fail with 402 (quota exceeded)
+    # 4th interview should fail with 402 (quota exceeded)
     resp = await client.post(
         "/api/v1/interviews",
         headers={"Authorization": token},
@@ -115,7 +115,9 @@ async def test_quota_enforcement_integration(client, db_session):
         },
     )
     assert resp.status_code == 402
-    assert "limit" in resp.json()["detail"].lower() or "upgrade" in resp.json()["detail"].lower()
+    detail = resp.json()["detail"]
+    assert detail["interviews_limit"] == 3
+    assert "limit" in detail["message"].lower()
 
 @pytest.mark.asyncio
 async def test_audio_processing_integration(client, db_session, tmp_path):

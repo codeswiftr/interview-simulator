@@ -1,5 +1,6 @@
 """SQLModel data models for Interview Simulator."""
 
+from app.models.analytics import InterviewAnalytics
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, VideoFeedback
 from app.models.interview import (
     InterviewQuestion,
@@ -38,6 +39,7 @@ __all__ = [
     "ContentFeedback",
     "SessionFeedback",
     "VideoFeedback",
+    "InterviewAnalytics",
     "PasswordResetToken",
     "InterviewShare",
     "AnswerPreparation",

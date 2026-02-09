@@ -9,7 +9,15 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_session
 from app.dependencies import get_current_user
-from app.models.question import Difficulty, Question, QuestionCategory, QuestionCreate, QuestionRead
+from app.models.question import (
+    Difficulty,
+    Industry,
+    Question,
+    QuestionCategory,
+    QuestionCreate,
+    QuestionRead,
+    Role,
+)
 from app.models.user import User
 
 router = APIRouter()
@@ -19,6 +27,8 @@ router = APIRouter()
 async def list_questions(
     category: QuestionCategory | None = None,
     difficulty: Difficulty | None = None,
+    industry: Industry | None = None,
+    role: Role | None = None,
     company: str | None = Query(None, description="Filter by company tag"),
     topic: str | None = Query(None, description="Filter by topic tag"),
     limit: int = Query(20, ge=1, le=100),
@@ -31,6 +41,10 @@ async def list_questions(
         stmt = stmt.where(Question.category == category)
     if difficulty:
         stmt = stmt.where(Question.difficulty == difficulty)
+    if industry:
+        stmt = stmt.where(Question.industry == industry)
+    if role:
+        stmt = stmt.where(Question.role == role)
     if company:
         stmt = stmt.where(Question.company_tags.contains([company]))
     if topic:
@@ -45,6 +59,8 @@ async def list_questions(
 async def get_random_question(
     category: QuestionCategory | None = None,
     difficulty: Difficulty | None = None,
+    industry: Industry | None = None,
+    role: Role | None = None,
     exclude_ids: list[UUID] | None = Query(None, description="Question IDs to exclude"),
     session: AsyncSession = Depends(get_session),
 ) -> Question:
@@ -54,6 +70,10 @@ async def get_random_question(
         stmt = stmt.where(Question.category == category)
     if difficulty:
         stmt = stmt.where(Question.difficulty == difficulty)
+    if industry:
+        stmt = stmt.where(Question.industry == industry)
+    if role:
+        stmt = stmt.where(Question.role == role)
     if exclude_ids:
         stmt = stmt.where(Question.id.not_in(exclude_ids))
 

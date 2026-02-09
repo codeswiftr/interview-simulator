@@ -23,6 +23,7 @@ from forge_shared.middleware import (
 from forge_shared.utm import UTMMiddleware
 
 from app.api import (
+    analytics,
     auth,
     coaching,
     feedback,
@@ -138,6 +139,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"Environment validation failed: {e}")
         if not settings.debug:
             raise  # Fail fast in production
+
+    # Initialize forge-shared auth
+    from forge_shared.auth.dependencies import set_jwt_auth
+
+    from app.security import get_jwt_auth_instance
+
+    jwt_auth = get_jwt_auth_instance()
+    set_jwt_auth(jwt_auth)
+    logger.info("Initialized forge-shared JWT authentication")
 
     # Initialize error monitoring
     init_error_monitoring()
@@ -338,7 +348,7 @@ if not settings.debug:
         redis_url=settings.redis_url,
         requests_per_minute=60,
         requests_per_hour=1000,
-        exclude_paths=["/api/v1/health", "/docs", "/openapi.json", "/", "/favicon.ico", "/static"],
+        exclude_paths=["/health", "/docs", "/openapi.json", "/", "/favicon.ico", "/static"],
     )
 
 # Include routers
@@ -353,6 +363,7 @@ app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["Subscriptions"])
 app.include_router(coaching.router, prefix="/api/v1/coaching", tags=["Coaching"])
 app.include_router(preparation.router, prefix="/api/v1/preparation", tags=["Preparation"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 # Mount static files for uploaded content
 uploads_dir = Path("uploads")

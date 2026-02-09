@@ -14,6 +14,7 @@ from app.models.interview import InterviewResponse, InterviewSession, InterviewS
 from app.models.question import Question
 from app.models.user import User
 from app.services.aggregation_service import AggregationService
+from app.services.behavioral_analytics_service import BehavioralAnalyticsService
 from app.services.feedback_persistence_service import FeedbackPersistenceService
 from app.services.question_recommender import recommend_next_questions
 from app.services.scoring_service import ScoringService
@@ -167,6 +168,16 @@ class FeedbackService:
         interview.audio_score = aggregated.audio_score
         interview.content_score = aggregated.content_score
         interview.status = InterviewStatus.ANALYZED
+
+        # Generate behavioral analytics for the session
+        analytics_service = BehavioralAnalyticsService()
+        try:
+            await analytics_service.calculate_session_analytics(
+                session, session_id, interview.user_id
+            )
+        except ValueError:
+            # Analytics already exist or failed to generate - log but don't fail feedback
+            pass
 
         await session.commit()
         await session.refresh(session_feedback)

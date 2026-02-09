@@ -1,5 +1,13 @@
 # Progress - CareerSwiftr Interview Simulator
 
+## 2026-02-06 - Frontend Production Readiness Audit
+
+- **Created** `docs/FRONTEND_AUDIT.md`: audit of Interview Simulator frontend (React 19, TypeScript, Vite, Tailwind v4) for build warnings, console/React warnings, a11y, mobile responsiveness, error boundaries, loading/skeletons, SEO meta, performance (bundle/lazy loading), and env config. Severity ratings (CRITICAL/HIGH/MEDIUM/LOW) and prioritized fix list included. Key findings: HIGH – Rewardful env placeholder in HTML not substituted at build; HIGH – Dashboard needs local ErrorBoundary; MEDIUM – QuestionsPage skeleton, a11y loading semantics, offline retry aria-label.
+
+## 2026-02-06 - Production Readiness Audit
+
+- **Created** `docs/PRODUCTION_READINESS.md`: PASS/FAIL audit for (1) config hardcoded secrets, (2) Dockerfile prod readiness, (3) health endpoint, (4) CORS for app.codeswiftr.com, (5) rate limiting, (6) logging. Findings: FAIL for default secret_key/database_url in config; FAIL for docker/Dockerfile.backend HEALTHCHECK using wrong path `/api/v1/health` (should be `/health`). All other checks PASS.
+
 ## 2025-12-29 - Session 20251229_200455
 
 Completed 1 issues: [4]

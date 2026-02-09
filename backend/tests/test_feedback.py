@@ -84,13 +84,14 @@ async def test_generate_feedback_success(db_session, mock_content_metrics):
     await db_session.commit()
     await db_session.refresh(response)
 
-    # Mock the content analyzer
-    with patch.object(
-        FeedbackService, "__init__", lambda self: setattr(self, "content_analyzer", MagicMock())
-    ):
+    # Mock the content analyzer (the only external dependency)
+    with patch("app.services.feedback_service.ContentAnalyzer") as MockAnalyzer:
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze = AsyncMock(return_value=mock_content_metrics)
+        mock_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
+        MockAnalyzer.return_value = mock_analyzer
+
         service = FeedbackService()
-        service.content_analyzer.analyze = AsyncMock(return_value=mock_content_metrics)
-        service.content_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
 
         # Generate feedback
         feedback = await service.generate_feedback(db_session, response.id)
@@ -266,13 +267,14 @@ async def test_generate_session_feedback_success(db_session, mock_content_metric
     await db_session.refresh(response1)
     await db_session.refresh(response2)
 
-    # Mock the content analyzer
-    with patch.object(
-        FeedbackService, "__init__", lambda self: setattr(self, "content_analyzer", MagicMock())
-    ):
+    # Mock the content analyzer (the only external dependency)
+    with patch("app.services.feedback_service.ContentAnalyzer") as MockAnalyzer:
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze = AsyncMock(return_value=mock_content_metrics)
+        mock_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
+        MockAnalyzer.return_value = mock_analyzer
+
         service = FeedbackService()
-        service.content_analyzer.analyze = AsyncMock(return_value=mock_content_metrics)
-        service.content_analyzer.calculate_overall_score = MagicMock(return_value=82.5)
 
         # Generate session feedback
         session_feedback = await service.generate_session_feedback(db_session, interview.id)

@@ -859,7 +859,7 @@ async def test_get_questions_ordering(client, db_session):
 
 @pytest.mark.asyncio
 async def test_quota_enforcement_free_tier_limit(client, db_session):
-    """Test that Free tier users are blocked after 5 interviews."""
+    """Test that Free tier users are blocked after 3 interviews."""
     token = await register_and_login(client, email="free_tier@example.com")
 
     # Create questions
@@ -872,8 +872,8 @@ async def test_quota_enforcement_free_tier_limit(client, db_session):
         db_session.add(question)
     await db_session.commit()
 
-    # Create 5 interviews (the limit)
-    for _ in range(5):
+    # Create 3 interviews (the free tier limit)
+    for _ in range(3):
         resp = await client.post(
             "/api/v1/interviews",
             json={"interview_type": "behavioral", "question_count": 1},
@@ -881,14 +881,16 @@ async def test_quota_enforcement_free_tier_limit(client, db_session):
         )
         assert resp.status_code == 201
 
-    # 6th interview should be blocked
+    # 4th interview should be blocked
     resp = await client.post(
         "/api/v1/interviews",
         json={"interview_type": "behavioral", "question_count": 1},
         headers={"Authorization": token},
     )
     assert resp.status_code == 402  # Payment Required
-    assert "limit reached" in resp.json()["detail"].lower()
+    detail = resp.json()["detail"]
+    assert detail["interviews_limit"] == 3
+    assert "limit" in detail["message"].lower()
 
 
 @pytest.mark.asyncio

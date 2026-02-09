@@ -367,15 +367,18 @@ async def get_subscription_status(
         except Exception as e:
             logger.warning(f"Failed to sync subscription from Stripe: {e}")
 
+    # Free tier limit: 3 interviews per month
+    FREE_TIER_LIMIT = 3
+
     # Determine interview limit based on tier
     interviews_limit = None
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        interviews_limit = 5
+        interviews_limit = FREE_TIER_LIMIT
     # Pro and Team have unlimited
 
     can_create_interview = True
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        can_create_interview = current_user.interviews_this_month < 5
+        can_create_interview = current_user.interviews_this_month < FREE_TIER_LIMIT
 
     return SubscriptionStatus(
         tier=current_user.subscription_tier,

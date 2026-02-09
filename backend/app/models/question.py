@@ -26,6 +26,28 @@ class Difficulty(str, Enum):
     HARD = "hard"
 
 
+class Industry(str, Enum):
+    """Industry categories for questions."""
+
+    SAAS = "saas"
+    FINTECH = "fintech"
+    HEALTHCARE = "healthcare"
+    GAMING = "gaming"
+    ECOMMERCE = "ecommerce"
+    GENERAL = "general"
+
+
+class Role(str, Enum):
+    """Role categories for questions."""
+
+    SOFTWARE_ENGINEER = "software_engineer"
+    ENGINEERING_MANAGER = "engineering_manager"
+    PRODUCT_MANAGER = "product_manager"
+    DATA_ENGINEER = "data_engineer"
+    DEVOPS = "devops"
+    GENERAL = "general"
+
+
 class Question(SQLModel, table=True):
     """Interview question model."""
 
@@ -39,6 +61,8 @@ class Question(SQLModel, table=True):
     content: str = Field(description="The question text")
     category: QuestionCategory = Field(sa_column=Column(String, index=True))
     difficulty: Difficulty = Field(default=Difficulty.MEDIUM, sa_column=Column(String, index=True))
+    industry: Industry = Field(default=Industry.GENERAL, sa_column=Column(String, index=True))
+    role: Role = Field(default=Role.GENERAL, sa_column=Column(String, index=True))
 
     # Tags for filtering
     company_tags: list[str] = Field(
@@ -73,6 +97,8 @@ class QuestionCreate(SQLModel):
     content: str
     category: QuestionCategory
     difficulty: Difficulty
+    industry: Industry = Industry.GENERAL
+    role: Role = Role.GENERAL
     company_tags: list[str] = []
     topic_tags: list[str] = []
     expected_duration_seconds: int = 180
@@ -87,6 +113,8 @@ class QuestionRead(SQLModel):
     content: str
     category: QuestionCategory
     difficulty: Difficulty
+    industry: Industry
+    role: Role
     company_tags: list[str]
     topic_tags: list[str]
     expected_duration_seconds: int

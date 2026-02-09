@@ -24,9 +24,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/interview_simulator"
-    )
+        "DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/interview_simulator"
+    ),
 )
 
 # Track if database is available
@@ -38,12 +37,15 @@ def is_db_available() -> bool:
     global _db_available
     if _db_available is None:
         import asyncio
+
         try:
+
             async def check():
                 engine, _ = get_test_engine()
                 async with engine.connect() as conn:
                     await conn.execute(text("SELECT 1"))
                 return True
+
             _db_available = asyncio.get_event_loop().run_until_complete(check())
         except Exception:
             _db_available = False
@@ -53,7 +55,7 @@ def is_db_available() -> bool:
 # Pytest marker for tests requiring database
 requires_db = pytest.mark.skipif(
     not os.getenv("TEST_DATABASE_URL") and not os.getenv("DATABASE_URL"),
-    reason="Database tests skipped - no TEST_DATABASE_URL or DATABASE_URL set"
+    reason="Database tests skipped - no TEST_DATABASE_URL or DATABASE_URL set",
 )
 
 # Create test engine (only if tests actually need database)
@@ -244,8 +246,15 @@ async def client(clean_database):
     with database session dependency overridden to use the test database.
     """
     # Lazy import to avoid triggering app initialization before test db is set up
+    # Initialize JWT auth for tests (needed because lifespan doesn't run in tests)
+    from forge_shared.auth.dependencies import set_jwt_auth
+
     from app.db import get_session
     from app.main import app
+    from app.security import get_jwt_auth_instance
+
+    jwt_auth = get_jwt_auth_instance()
+    set_jwt_auth(jwt_auth)
 
     _, TestSessionLocal = get_test_engine()
 
@@ -262,7 +271,9 @@ async def client(clean_database):
     app.dependency_overrides.clear()
 
 
-async def register_and_login(client: AsyncClient, email: str = "testuser@example.com", password: str = "TestPassword123!") -> str:
+async def register_and_login(
+    client: AsyncClient, email: str = "testuser@example.com", password: str = "TestPassword123!"
+) -> str:
     """Register a user and return the bearer token.
 
     Args:
@@ -274,14 +285,8 @@ async def register_and_login(client: AsyncClient, email: str = "testuser@example
         Bearer token string (e.g., "Bearer eyJ...")
     """
     # Register user
-    await client.post(
-        "/api/v1/users/register",
-        json={"email": email, "password": password}
-    )
+    await client.post("/api/v1/users/register", json={"email": email, "password": password})
     # Login and get token
-    resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": email, "password": password}
-    )
+    resp = await client.post("/api/v1/users/login", json={"email": email, "password": password})
     token = resp.json().get("access_token", "")
     return f"Bearer {token}"

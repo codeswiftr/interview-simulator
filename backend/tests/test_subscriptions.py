@@ -28,7 +28,7 @@ async def test_get_subscription_status_returns_correct_tier(client, db_session):
     assert data["tier"] == "free"
     assert "interviews_this_month" in data
     assert "interviews_limit" in data
-    assert data["interviews_limit"] == 5
+    assert data["interviews_limit"] == 3  # Updated from 5 to 3
     assert "can_create_interview" in data
 
 @pytest.mark.asyncio

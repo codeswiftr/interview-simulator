@@ -176,6 +176,8 @@ class InterviewSessionRead(SQLModel):
     overall_score: float | None
     duration_seconds: int | None
     created_at: datetime
+    # Optional usage tracking fields (populated by endpoint)
+    remaining_interviews: int | None = None
 
 
 class InterviewResponseCreate(SQLModel):

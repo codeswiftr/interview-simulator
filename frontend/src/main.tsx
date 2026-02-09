@@ -20,6 +20,23 @@ captureUTMFromLocation();
 // Initialize PostHog analytics
 analytics.init();
 
+// Load Rewardful affiliate tracking (only if API key is configured)
+const rewardfulKey = import.meta.env.VITE_REWARDFUL_API_KEY;
+if (rewardfulKey) {
+  // Initialize Rewardful queue
+  (window as any)._rwq = 'rewardful';
+  (window as any).rewardful = (window as any).rewardful || function() {
+    ((window as any).rewardful.q = (window as any).rewardful.q || []).push(arguments);
+  };
+
+  // Load Rewardful script
+  const script = document.createElement('script');
+  script.src = 'https://r.wdfl.co/rw.js';
+  script.dataset.rewardful = rewardfulKey;
+  script.async = true;
+  document.head.appendChild(script);
+}
+
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
   registerSW({

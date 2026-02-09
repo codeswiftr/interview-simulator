@@ -29,6 +29,7 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PreparationPage = lazy(() => import('./pages/PreparationPage'));
 const ProgressPage = lazy(() => import('./pages/ProgressPage'));
+const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 const SharedInterviewPage = lazy(() => import('./pages/SharedInterviewPage'));
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
@@ -102,6 +103,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <ProgressPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/analytics"
+                    element={
+                      <ProtectedRoute>
+                        <AnalyticsDashboardPage />
                       </ProtectedRoute>
                     }
                   />

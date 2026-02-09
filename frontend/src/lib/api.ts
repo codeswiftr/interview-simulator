@@ -594,4 +594,33 @@ export const userAPI = {
   deleteAccount: () => api.delete('/users/me'),
 };
 
+// Analytics API
+// Note: Backend has redirect_slashes=False, so no trailing slashes
+export const analyticsAPI = {
+  getProgress: () => api.get<{
+    data_points: Array<{
+      session_id: string;
+      created_at: string;
+      filler_words_per_minute: number;
+      speaking_pace_wpm: number;
+      star_compliance_score: number;
+      overall_confidence_score: number;
+    }>;
+    total_sessions: number;
+  }>('/analytics/progress'),
+
+  getSummary: () => api.get<{
+    avg_filler_words_per_minute: number;
+    avg_speaking_pace_wpm: number;
+    avg_star_compliance_score: number;
+    avg_confidence_score: number;
+    total_sessions_analyzed: number;
+    improvement_filler_words: number | null;
+    improvement_star_compliance: number | null;
+    improvement_confidence: number | null;
+  }>('/analytics/summary'),
+
+  getSessionAnalytics: (sessionId: string) => api.get(`/analytics/sessions/${sessionId}`),
+};
+
 export default api;

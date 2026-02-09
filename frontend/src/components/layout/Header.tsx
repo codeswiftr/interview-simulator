@@ -54,6 +54,14 @@ export default function Header() {
       };
     }
 
+    if (path === '/analytics') {
+      return {
+        icon: Play,
+        label: 'Practice',
+        to: '/practice',
+      };
+    }
+
     // Feedback page - /interview/:id/feedback
     if (path.match(/^\/interview\/[^/]+\/feedback$/)) {
       return {
@@ -167,6 +175,12 @@ export default function Header() {
                     className="text-text-secondary hover:text-text-primary transition-colors font-medium"
                   >
                     Progress
+                  </Link>
+                  <Link
+                    to="/analytics"
+                    className="text-text-secondary hover:text-text-primary transition-colors font-medium"
+                  >
+                    Analytics
                   </Link>
 
                   {/* User Menu Dropdown */}

@@ -289,7 +289,7 @@ async def test_free_tier_interview_limit_enforcement(client, db_session):
     """Test that free tier users cannot create interviews beyond limit."""
     token = await register_and_login(client)
 
-    # Set user to have 5 interviews this month (at limit)
+    # Set user to have 3 interviews this month (at limit)
     _, TestSessionLocal = get_test_engine()
     async with TestSessionLocal() as session:
         user_resp = await client.get("/api/v1/users/me", headers={"Authorization": token})
@@ -297,7 +297,7 @@ async def test_free_tier_interview_limit_enforcement(client, db_session):
 
         result = await session.exec(select(User).where(User.id == user_id))
         user = result.first()
-        user.interviews_this_month = 5
+        user.interviews_this_month = 3
         await session.commit()
 
     # Check subscription status shows limit reached
@@ -309,8 +309,8 @@ async def test_free_tier_interview_limit_enforcement(client, db_session):
     assert response.status_code == 200
     data = response.json()
     assert data["tier"] == "free"
-    assert data["interviews_this_month"] == 5
-    assert data["interviews_limit"] == 5
+    assert data["interviews_this_month"] == 3
+    assert data["interviews_limit"] == 3
     assert data["can_create_interview"] is False
 
 

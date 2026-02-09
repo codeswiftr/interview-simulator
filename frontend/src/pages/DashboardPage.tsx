@@ -19,6 +19,7 @@ import FirstSessionPrompt from '../components/onboarding/FirstSessionPrompt';
 import ContextualTooltip from '../components/common/ContextualTooltip';
 import { Skeleton, SkeletonStatsOverview, SkeletonInterviewList } from '../components/ui/Skeleton';
 import { Card } from '../components/ui/Card';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import type { InterviewSession, CreateInterviewFormData, ImprovementsByCriteriaResponse, SkillsGapResponse } from '../types';
 import type { AxiosError } from 'axios';
 import { useEffect } from 'react';
@@ -291,8 +292,22 @@ export default function DashboardPage() {
   }, [skillsGap]);
 
   return (
-    <div className="min-h-screen bg-surface-primary pb-12">
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+    <ErrorBoundary fallback={
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center p-6">
+        <div className="card p-8 max-w-md w-full text-center">
+          <AlertCircle className="w-16 h-16 text-status-error mx-auto mb-4" />
+          <h2 className="heading-section mb-4">Dashboard Error</h2>
+          <p className="body-default text-text-secondary mb-6">
+            We encountered an error loading your dashboard. Please refresh the page or contact support if the issue persists.
+          </p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-surface-primary pb-12">
+        <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -597,6 +612,7 @@ export default function DashboardPage() {
           <Plus size={24} />
         </button>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

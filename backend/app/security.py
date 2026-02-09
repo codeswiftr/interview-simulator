@@ -1,11 +1,16 @@
-"""Security utilities for password hashing and JWT handling."""
+"""Security utilities for password hashing and JWT handling.
+
+Migrated to forge-shared auth for JWT (2026-02).
+Password hashing remains local for backward compatibility.
+"""
 
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
-from jose import JWTError, jwt
+from forge_shared.auth.jwt import JWTAuth, JWTConfig
+from forge_shared.auth.models import Permission, PlanTier, UserRole
 from passlib.context import CryptContext
 from passlib.hash import pbkdf2_sha256
 
@@ -19,12 +24,33 @@ pwd_context = CryptContext(
     deprecated="auto",
 )
 
-ALGORITHM = "HS256"
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Password hash prefixes for identification
 BCRYPT_PREFIX = "$2b$"
 PBKDF2_PREFIX = "$pbkdf2-sha256$"
+
+# Initialize forge-shared JWT auth
+_jwt_auth_instance: JWTAuth | None = None
+
+
+def get_jwt_auth_instance() -> JWTAuth:
+    """Get or create the global JWT auth instance.
+
+    This is used by the app to initialize forge-shared auth on startup.
+    """
+    global _jwt_auth_instance
+    if _jwt_auth_instance is None:
+        config = JWTConfig(
+            secret_key=settings.secret_key,
+            algorithm="HS256",
+            access_token_expire_minutes=settings.access_token_expire_minutes,
+            refresh_token_expire_days=REFRESH_TOKEN_EXPIRE_DAYS,
+            issuer="interview-simulator",
+            audience="codeswiftr.com",
+        )
+        _jwt_auth_instance = JWTAuth(config)
+    return _jwt_auth_instance
 
 
 def hash_password(password: str) -> str:
@@ -36,14 +62,14 @@ def hash_password(password: str) -> str:
     This is a bcrypt limitation, not a security issue.
     """
     # Convert password to bytes and truncate to 72 bytes (bcrypt limit)
-    password_bytes = password.encode('utf-8')[:72]
+    password_bytes = password.encode("utf-8")[:72]
 
     # Generate salt and hash with 12 rounds
     salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(password_bytes, salt)
 
     # Return as string
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -56,8 +82,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         # Check if it's a bcrypt hash
         if hashed_password.startswith(BCRYPT_PREFIX):
             # Bcrypt verification (truncate to 72 bytes to match hashing)
-            password_bytes = plain_password.encode('utf-8')[:72]
-            hash_bytes = hashed_password.encode('utf-8')
+            password_bytes = plain_password.encode("utf-8")[:72]
+            hash_bytes = hashed_password.encode("utf-8")
             return bcrypt.checkpw(password_bytes, hash_bytes)
         else:
             # Legacy pbkdf2_sha256 verification
@@ -110,25 +136,47 @@ def migrate_password_hash(plain_password: str) -> str:
 
 
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
-    """Create a signed JWT access token."""
-    to_encode = data.copy()
-    now = datetime.now(UTC)
-    expire = now + timedelta(
-        minutes=expires_minutes or settings.access_token_expire_minutes
+    """Create a signed JWT access token using forge-shared.
+
+    Maintains backward compatibility with the previous API.
+    Expects data to have 'sub' (user_id) key.
+    """
+    auth = get_jwt_auth_instance()
+    user_id = data.get("sub")
+    if not user_id:
+        raise ValueError("Token data must include 'sub' (user_id)")
+
+    # Create token with minimal forge-shared structure
+    # Use defaults for optional fields since interview-simulator doesn't track them yet
+    return auth.create_access_token(
+        user_id=str(user_id),
+        email=data.get("email", f"{user_id}@example.com"),
+        domain="codeswiftr.com",
+        plan=PlanTier.FREE,  # Interview-simulator uses its own subscription_tier
+        products=["interview-simulator"],
+        roles=[UserRole.USER],
+        permissions=[Permission.READ_OWN, Permission.WRITE_OWN],
+        extra_claims={k: v for k, v in data.items() if k not in ["sub", "email"]},
     )
-    to_encode.update({"exp": expire, "iat": now})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> dict[str, Any] | None:
-    """Decode and validate a JWT token.
+    """Decode and validate a JWT token using forge-shared.
 
-    Returns:
-        The decoded payload if valid, None if invalid/expired.
+    Maintains backward compatibility with the previous API.
+    Returns the payload as a dict or None if invalid.
     """
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-    except JWTError:
+        auth = get_jwt_auth_instance()
+        payload = auth.decode_token(token)
+        # Convert ForgeTokenPayload to dict for backward compatibility
+        return {
+            "sub": payload.sub,
+            "email": payload.email,
+            "exp": payload.exp,
+            "iat": payload.iat,
+        }
+    except Exception:
         return None
 
 
