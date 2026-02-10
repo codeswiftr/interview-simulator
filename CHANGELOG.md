@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **LinkedIn Posts**: 5 LinkedIn posts for marketing content
+- **Typer CLI**: Command-line interface for interview automation
+- **Revenue Sprint**: Assets and pricing updates for revenue features
+- **Content**: 5 blog posts and social media content
+- **Analytics**: Activation and upgrade event tracking
+- **Test Coverage**: 92 new frontend tests for components and analytics
+- **Sharing**: Share functionality with PDF export
+- **Question Recommender**: AI-powered question recommendations
+
+### Changed
+- **Feedback Service**: Decomposed into focused services via XP pairing
+- **Documentation**: Security audit report updated (2026-02)
+
+### Fixed
+- **Mobile**: Improved touch targets and accessibility
+- **Dependencies**: Updated vulnerable packages
+- **Security**: Added non-root Docker user, enhanced .gitignore
+- **Tests**: Improved coverage from 66% to 68% with 56 new tests
+
+### Security
+- **Password Hashing**: Upgraded from PBKDF2-SHA256 to bcrypt
+- **CORS**: Secure configuration implemented
+- **Headers**: Security headers added to responses
+
+---
+
+## [2026-02-10]
+
+### Affiliate Program Integration
 - **Affiliate Program Integration**: Complete affiliate marketing toolkit with Rewardful tracking integration
   - Rewardful tracking script for referral and conversion tracking
   - Affiliate landing page (/affiliates) with program details
