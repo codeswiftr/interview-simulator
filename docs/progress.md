@@ -1,5 +1,14 @@
 # Progress - CareerSwiftr Interview Simulator
 
+## 2026-02-11 - T1.1 Content Library Phase 2 (Content Landing + SEO)
+
+- **Task:** dispatch-cursor-t1-1-content-library-phase2-2026-02-11.md
+- **Done:** Content landing page, SEO, routing, footer link
+- **Frontend:** `ContentPage.tsx` — hero, 5 category cards (Blog, Social, Email, Downloads, Video), lead magnet CTA, final CTA
+- **SEO:** `usePageMeta` hook for title/description/og; JSON-LD CollectionPage structured data
+- **Routing:** `/content` route in App.tsx; Footer link to Content Library
+- **SPA fallback:** `frontend/public/_redirects` for Cloudflare Pages (`/* /index.html 200`)
+
 ## 2026-02-11 - Stripe Pricing Tiers Deployment (Priority #5)
 
 - **Task:** dispatch-cursor-stripe-pricing-2026-02-11.md

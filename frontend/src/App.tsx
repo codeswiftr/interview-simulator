@@ -20,6 +20,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import AffiliatePage from './pages/AffiliatePage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import PricingPage from './pages/PricingPage';
+import ContentPage from './pages/ContentPage';
 
 // Lazy load heavier pages for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -69,6 +70,7 @@ function App() {
                   <Route path="/verify-email" element={<VerifyEmailPage />} />
                   <Route path="/pricing" element={<PricingPage />} />
                   <Route path="/affiliates" element={<AffiliatePage />} />
+                  <Route path="/content" element={<ContentPage />} />
                   <Route path="/blog" element={<BlogListPage />} />
                   <Route path="/blog/:slug" element={<BlogPostPage />} />
                   {/* Public shared interview view - no auth required */}

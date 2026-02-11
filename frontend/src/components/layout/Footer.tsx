@@ -29,6 +29,12 @@ export default function Footer() {
           {/* Links */}
           <nav className="flex items-center gap-6 text-sm">
             <Link
+              to="/content"
+              className="text-text-secondary hover:text-electric-blue transition-colors font-medium"
+            >
+              Content Library
+            </Link>
+            <Link
               to="/affiliates"
               className="text-text-secondary hover:text-electric-blue transition-colors font-medium"
             >
