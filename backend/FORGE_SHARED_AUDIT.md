@@ -14,14 +14,14 @@
 | Middleware | ✅ Migrated | Yes | DONE | DONE |
 | Analytics | ✅ Migrated | Yes | DONE | DONE |
 | AI Client | ✅ Migrated | Yes | DONE | DONE |
-| JWT Auth | ❌ Custom | Yes | HIGH | PENDING |
+| JWT Auth | ✅ Migrated | Yes | HIGH | DONE (2026-02) |
 | Password Hashing | ❌ Custom | No | N/A | N/A |
-| Billing/Stripe | ❌ Custom | Yes | MEDIUM | PENDING |
+| Billing/Stripe | ✅ Migrated | Yes | MEDIUM | DONE (2026-02) |
 | Health Checks | ❌ Custom | Yes | LOW | **SKIP** |
 | Config | ❌ Custom | Yes | LOW | **SKIP** |
 | Exceptions | ❌ Custom | Partial | LOW | KEEP CUSTOM |
 
-**Overall Adoption:** ~40% (Middleware, Analytics, AI) - No change from assessment
+**Overall Adoption:** ~60% (Middleware, Analytics, AI, Auth, Billing)
 
 ---
 
@@ -80,11 +80,11 @@
 
 | Action | Priority | Effort | Impact | Status |
 |--------|----------|--------|--------|--------|
-| Migrate JWT to forge-shared.auth | HIGH | 4-6h | Cross-service auth, RBAC | PENDING |
-| Migrate Stripe to forge-shared.billing | MEDIUM | 6-8h | Centralized pricing | PENDING |
-| Migrate Config | LOW | 4-6h | Standardization | **SKIP** |
-| Migrate Health Checks | LOW | 4-6h | Standardization | **SKIP** |
+| Migrate JWT to forge-shared.auth | HIGH | 4-6h | Cross-service auth, RBAC | DONE |
+| Migrate Stripe to forge-shared.billing | MEDIUM | 6-8h | Centralized pricing | DONE |
 | Delete deprecated middleware files | LOW | 30m | Code cleanup | PENDING |
+| Delete obsolete stripe_webhook.py | LOW | 10m | Code cleanup | DONE |
+| Add forge-shared health router | LOW | 30m | Standardization | **SKIP** |
 | Keep custom exceptions | - | 0 | Already superior | KEEP |
 | Keep custom rate limiter | - | 0 | Has unique security features | KEEP |
 | Keep password hashing | - | 0 | No forge-shared equivalent | KEEP |
@@ -402,33 +402,28 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 ## 6. Migration Roadmap
 
-### Phase 1: JWT Auth Migration (HIGH PRIORITY)
-**Estimated Time:** 4-6 hours
-**Files to Update:**
-- `app/security.py` - Replace JWT functions
-- `app/api/auth.py` - Update token refresh
-- `app/api/users.py` - Update user endpoints
-- `app/dependencies/auth.py` - Use forge-shared dependencies
+### Phase 1: JWT Auth Migration (COMPLETED 2026-02)
+**Status:** ✅ Complete
 
-**Steps:**
-1. Create adapter to maintain backward compatibility
-2. Update token payload structure to forge-core format
-3. Add domain/plan/products to tokens
-4. Update all `Depends(get_current_user)` usages
-5. Test existing sessions still work
+**Changes:**
+- `app/security.py` - Uses `forge_shared.auth.jwt.JWTAuth`
+- `app/api/auth.py` - Updated to use `get_current_user` from forge_shared
+- `app/api/users.py` - Updated to use forge-shared auth
+- `app/dependencies.py` - Uses `get_current_user` from forge_shared.auth
 
-### Phase 2: Billing Migration (MEDIUM PRIORITY)
-**Estimated Time:** 6-8 hours
-**Files to Update:**
-- `app/api/subscriptions.py`
-- `app/api/stripe_webhook.py`
-- `app/config.py` - Move price IDs to forge-shared config
+### Phase 2: Billing Migration (COMPLETED 2026-02)
+**Status:** ✅ Complete
 
-### Phase 3: Cleanup (LOW PRIORITY)
+**Changes:**
+- `app/api/subscriptions.py` - Uses `StripeClient`, `handle_webhook`, `BillingError`
+- `app/api/stripe_webhook.py` - **DELETED** (merged into subscriptions.py)
+- Added `_map_pricing_tier()` for tier mapping between forge-shared and local enums
+
+### Phase 3: Cleanup (PENDING)
 **Estimated Time:** 2 hours
 - Remove deprecated middleware files
 - Update imports
-- Add forge-shared health router
+- Add forge-shared health router (optional)
 
 ---
 
@@ -467,15 +462,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 | File | Purpose | forge-shared Alternative |
 |------|---------|-------------------------|
 | `app/main.py` | FastAPI app | ✅ Uses forge-shared middleware |
-| `app/security.py` | JWT + passwords | Partial (JWTAuth only) |
+| `app/security.py` | JWT + passwords | ✅ Uses forge_shared.auth |
 | `app/config.py` | Settings | Optional (BaseConfig) |
 | `app/exceptions.py` | Error handling | Keep (more comprehensive) |
 | `app/services/analytics.py` | PostHog | ✅ Uses forge-shared |
 | `app/ai/content_analyzer.py` | Claude | ✅ Uses forge-shared.ai |
 | `app/middleware/rate_limit.py` | Rate limiting | Keep (more secure) |
 | `app/middleware/security_headers.py` | Security | ❌ Delete (replaced) |
-| `app/api/subscriptions.py` | Stripe | Optional (billing module) |
-| `app/api/stripe_webhook.py` | Webhooks | Optional (billing module) |
+| `app/api/subscriptions.py` | Stripe | ✅ Uses forge_shared.billing |
+| `app/api/stripe_webhook.py` | Webhooks | ❌ Deleted (merged into subscriptions.py) |
 
 ---
 

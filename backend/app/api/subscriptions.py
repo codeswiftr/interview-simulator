@@ -1,10 +1,13 @@
-"""Subscription management endpoints for Stripe integration."""
+"""Subscription management endpoints for Stripe integration.
+
+Migrated to use forge-shared billing for webhook handling (2026-02).
+Checkout still uses local price IDs for interview-simulator-specific tiers.
+"""
 
 import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlmodel import select
@@ -15,14 +18,28 @@ from app.db import get_session
 from app.dependencies import get_current_user
 from app.models.user import SubscriptionTier, User
 from app.services.analytics import Events, get_analytics
+from forge_shared.billing import handle_webhook, verify_signature
+from forge_shared.billing.models import BillingError
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Initialize Stripe
-if settings.stripe_secret_key:
-    stripe.api_key = settings.stripe_secret_key
+# Initialize Stripe client for checkout operations (uses local price IDs)
+_stripe_client = None
+
+
+def get_stripe_client():
+    """Get or create the Stripe client."""
+    global _stripe_client
+    if _stripe_client is None and settings.stripe_secret_key:
+        from forge_shared.billing import StripeClient
+
+        _stripe_client = StripeClient(
+            api_key=settings.stripe_secret_key,
+            webhook_secret=settings.stripe_webhook_secret,
+        )
+    return _stripe_client
 
 
 class CheckoutSessionResponse(BaseModel):
@@ -76,34 +93,35 @@ async def create_checkout_session(
 
     try:
         # Get or create Stripe customer
+        client = get_stripe_client()
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Stripe is not configured",
+            )
+
         customer_id = current_user.stripe_customer_id
         if not customer_id:
-            customer = stripe.Customer.create(
+            # Create customer using forge-shared client
+            customer = await client.create_customer(
+                user_id=str(current_user.id),
                 email=current_user.email,
                 name=current_user.full_name,
-                metadata={"user_id": str(current_user.id)},
             )
             customer_id = customer.id
             current_user.stripe_customer_id = customer_id
             await session.commit()
         else:
-            # Check for existing active subscription
-            existing_subs = stripe.Subscription.list(
-                customer=customer_id,
-                status="active",
-                limit=1,
+            # Check for existing active subscription using forge-shared client
+            existing_subs = await client.get_customer_subscriptions(
+                customer_id=customer_id,
+                active_only=True,
             )
-            if existing_subs.data:
+            if existing_subs:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="You already have an active subscription. Use 'Manage Subscription' to make changes.",
                 )
-
-        # Create checkout session
-        subscription_data = {"metadata": {"user_id": str(current_user.id)}}
-        trial_days = getattr(settings, "stripe_trial_days", 0)
-        if isinstance(trial_days, int) and trial_days > 0:
-            subscription_data["trial_period_days"] = trial_days
 
         # Build checkout session params
         checkout_params = {
@@ -119,12 +137,26 @@ async def create_checkout_session(
             "success_url": f"{settings.frontend_url}/settings?success=true",
             "cancel_url": f"{settings.frontend_url}/settings?canceled=true",
             "metadata": {"user_id": str(current_user.id)},
-            "subscription_data": subscription_data,
         }
+
+        # Add trial days if configured
+        trial_days = getattr(settings, "stripe_trial_days", 0)
+        if isinstance(trial_days, int) and trial_days > 0:
+            checkout_params["subscription_data"] = {
+                "metadata": {"user_id": str(current_user.id)},
+                "trial_period_days": trial_days,
+            }
+        else:
+            checkout_params["subscription_data"] = {
+                "metadata": {"user_id": str(current_user.id)},
+            }
 
         # Add Rewardful referral code for affiliate tracking
         if payload.referral_code:
             checkout_params["client_reference_id"] = payload.referral_code
+
+        # Create checkout session using raw stripe for local price ID support
+        import stripe
 
         checkout_session = stripe.checkout.Session.create(**checkout_params)
 
@@ -140,11 +172,17 @@ async def create_checkout_session(
 
         return CheckoutSessionResponse(url=checkout_session.url)
 
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe error creating checkout session: {e}", exc_info=True)
+    except BillingError as e:
+        logger.error(f"Billing error creating checkout session: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create checkout session: {str(e)}",
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        logger.error(f"Error creating checkout session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create checkout session",
         ) from e
 
 
@@ -156,6 +194,8 @@ async def stripe_webhook(request: Request) -> dict:
     - checkout.session.completed: Upgrade user subscription
     - customer.subscription.updated: Update subscription status
     - customer.subscription.deleted: Downgrade to free tier
+
+    Uses forge-shared billing webhook handling for signature verification.
 
     Args:
         request: FastAPI request with Stripe webhook payload
@@ -172,35 +212,43 @@ async def stripe_webhook(request: Request) -> dict:
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
+    if not sig_header:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing stripe-signature header",
+        )
+
+    # Use forge-shared webhook handling for signature verification
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
-    except ValueError:
+        event = handle_webhook(payload, sig_header, settings.stripe_webhook_secret)
+    except BillingError as e:
+        logger.warning(f"Webhook verification failed: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload"
-        ) from None
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature"
-        ) from None
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
 
     # Get database session
     async for db_session in get_session():
         try:
-            if event["type"] == "checkout.session.completed":
-                await _handle_checkout_completed(event["data"]["object"], db_session)
-            elif event["type"] == "customer.subscription.updated":
-                await _handle_subscription_updated(event["data"]["object"], db_session)
-            elif event["type"] == "customer.subscription.deleted":
-                await _handle_subscription_deleted(event["data"]["object"], db_session)
-            else:
-                logger.debug(f"Ignoring webhook event type: {event['type']}")
+            event_type = event.type
+            event_data = event.data
 
-            logger.info(f"Processed Stripe webhook: {event['type']}")
+            if event_type == "checkout.session.completed":
+                await _handle_checkout_completed(event_data, db_session)
+            elif event_type == "customer.subscription.updated":
+                await _handle_subscription_updated(event_data, db_session)
+            elif event_type == "customer.subscription.deleted":
+                await _handle_subscription_deleted(event_data, db_session)
+            else:
+                logger.debug(f"Ignoring webhook event type: {event_type}")
+
+            logger.info(f"Processed Stripe webhook: {event_type}")
         except Exception as e:
             logger.error(
-                f"Error processing webhook {event['type']}: {e}",
+                f"Error processing webhook {event.type}: {e}",
                 exc_info=True,
-                extra={"event_id": event.get("id"), "event_type": event.get("type")},
+                extra={"event_id": event.id, "event_type": event.type},
             )
             # Return 500 to have Stripe retry
             raise
@@ -211,67 +259,76 @@ async def stripe_webhook(request: Request) -> dict:
     return {"status": "success"}
 
 
-async def _handle_checkout_completed(session_obj: dict, db_session: AsyncSession) -> None:
+async def _handle_checkout_completed(event_data: dict, db_session: AsyncSession) -> None:
     """Handle checkout.session.completed event."""
-    customer_id = session_obj.get("customer")
-    user_id = session_obj.get("metadata", {}).get("user_id")
+    from forge_shared.billing.models import SubscriptionStatus
+
+    customer_id = event_data.get("customer_id")
+    user_id = event_data.get("user_id")
 
     if not customer_id or not user_id:
         logger.warning("Missing customer_id or user_id in checkout session")
         return
 
     # Find user
-    result = await db_session.exec(select(User).where(User.id == UUID(user_id)))
+    try:
+        result = await db_session.exec(select(User).where(User.id == UUID(user_id)))
+    except ValueError:
+        logger.warning(f"Invalid user_id format: {user_id}")
+        return
     user = result.first()
     if not user:
         logger.warning(f"User not found: {user_id}")
         return
 
-    # Get subscription details
-    subscription_id = session_obj.get("subscription")
+    # Get subscription details from Stripe
+    subscription_id = event_data.get("subscription_id")
     if subscription_id:
-        subscription = stripe.Subscription.retrieve(subscription_id)
-        sub_item = subscription["items"]["data"][0]
-        tier = _get_tier_from_price(sub_item["price"]["id"])
+        # Use forge-shared client to get subscription
+        client = get_stripe_client()
+        subscription = await client.get_subscription(subscription_id)
+        if subscription:
+            tier = _map_pricing_tier(subscription.tier)
+            status_enum = subscription.status
 
-        user.stripe_subscription_id = subscription_id
-        user.subscription_tier = tier
-        user.subscription_status = subscription["status"]
-        # current_period_end is now on the subscription item in new Stripe API
-        user.subscription_expires_at = datetime.fromtimestamp(
-            sub_item["current_period_end"], tz=UTC
-        )
+            user.stripe_subscription_id = subscription_id
+            user.subscription_tier = tier
+            user.subscription_status = status_enum.value if isinstance(status_enum, SubscriptionStatus) else status_enum
+            user.subscription_expires_at = subscription.current_period_end
 
-        await db_session.commit()
-        logger.info(f"Upgraded user {user_id} to {tier.value}")
+            await db_session.commit()
+            logger.info(f"Upgraded user {user_id} to {tier.value}")
 
-        # Track subscription created event
-        get_analytics().capture(
-            user_id=user_id,
-            event=Events.SUBSCRIPTION_CREATED,
-            properties={
-                "tier": tier.value,
-                "subscription_id": subscription_id,
-                "amount": subscription.get("plan", {}).get("amount"),
-                "currency": subscription.get("plan", {}).get("currency"),
-            },
-        )
-        get_analytics().capture(
-            user_id=user_id,
-            event=Events.UPGRADE_COMPLETED,
-            properties={
-                "tier": tier.value,
-                "subscription_id": subscription_id,
-                "amount": subscription.get("plan", {}).get("amount"),
-                "currency": subscription.get("plan", {}).get("currency"),
-            },
-        )
+            # Track subscription created event
+            get_analytics().capture(
+                user_id=user_id,
+                event=Events.SUBSCRIPTION_CREATED,
+                properties={
+                    "tier": tier.value,
+                    "subscription_id": subscription_id,
+                },
+            )
+            get_analytics().capture(
+                user_id=user_id,
+                event=Events.UPGRADE_COMPLETED,
+                properties={
+                    "tier": tier.value,
+                    "subscription_id": subscription_id,
+                },
+            )
 
 
-async def _handle_subscription_updated(subscription_obj: dict, db_session: AsyncSession) -> None:
-    """Handle customer.subscription.updated event."""
-    customer_id = subscription_obj.get("customer")
-    subscription_id = subscription_obj.get("id")
+async def _handle_subscription_updated(event_data: dict, db_session: AsyncSession) -> None:
+    """Handle customer.subscription.updated event.
+
+    Supports both forge-shared format (customer_id, subscription_id)
+    and legacy format (customer, id) for backward compatibility.
+    """
+    from forge_shared.billing.models import SubscriptionStatus
+
+    # Support both forge-shared format and legacy format
+    customer_id = event_data.get("customer_id") or event_data.get("customer")
+    subscription_id = event_data.get("subscription_id") or event_data.get("id")
 
     if not customer_id:
         return
@@ -282,23 +339,30 @@ async def _handle_subscription_updated(subscription_obj: dict, db_session: Async
     if not user:
         return
 
-    sub_item = subscription_obj["items"]["data"][0]
-    tier = _get_tier_from_price(sub_item["price"]["id"])
+    # Get subscription tier and status from forge-shared parsed data
+    # Note: event_data comes from webhook parsing, subscription status may need refresh
+    client = get_stripe_client()
+    if subscription_id and client:
+        subscription = await client.get_subscription(subscription_id)
+        if subscription:
+            tier = _map_pricing_tier(subscription.tier)
+            user.subscription_tier = tier
+            user.subscription_status = subscription.status.value if isinstance(subscription.status, SubscriptionStatus) else subscription.status
+            user.subscription_expires_at = subscription.current_period_end
+            await db_session.commit()
+            return
 
+    # Fallback: use raw status from webhook if client not available
     user.stripe_subscription_id = subscription_id
-    user.subscription_tier = tier
-    user.subscription_status = subscription_obj.get("status")
-    # current_period_end is now on the subscription item in new Stripe API
-    user.subscription_expires_at = datetime.fromtimestamp(
-        sub_item.get("current_period_end", 0), tz=UTC
-    )
-
+    status_raw = event_data.get("status")
+    if status_raw:
+        user.subscription_status = status_raw
     await db_session.commit()
 
 
-async def _handle_subscription_deleted(subscription_obj: dict, db_session: AsyncSession) -> None:
+async def _handle_subscription_deleted(event_data: dict, db_session: AsyncSession) -> None:
     """Handle customer.subscription.deleted event."""
-    customer_id = subscription_obj.get("customer")
+    customer_id = event_data.get("customer_id")
 
     if not customer_id:
         return
@@ -328,8 +392,42 @@ async def _handle_subscription_deleted(subscription_obj: dict, db_session: Async
     )
 
 
+def _map_pricing_tier(pricing_tier) -> SubscriptionTier:
+    """Map forge_shared.billing.PricingTier to local SubscriptionTier.
+
+    forge_shared uses: FREE, STARTER, PRO, ENTERPRISE
+    Local uses: FREE, PRO, TEAM
+
+    Mapping:
+    - FREE -> FREE
+    - STARTER -> FREE (no equivalent)
+    - PRO -> PRO
+    - ENTERPRISE -> PRO (maps to highest tier)
+    """
+    from forge_shared.billing.models import PricingTier
+
+    if isinstance(pricing_tier, str):
+        tier_str = pricing_tier
+    elif hasattr(pricing_tier, "value"):
+        tier_str = pricing_tier.value
+    else:
+        tier_str = str(pricing_tier)
+
+    tier_map = {
+        PricingTier.FREE.value: SubscriptionTier.FREE,
+        PricingTier.STARTER.value: SubscriptionTier.FREE,  # STARTER -> FREE
+        PricingTier.PRO.value: SubscriptionTier.PRO,
+        PricingTier.ENTERPRISE.value: SubscriptionTier.PRO,  # ENTERPRISE -> PRO (highest local tier)
+    }
+
+    return tier_map.get(tier_str, SubscriptionTier.FREE)
+
+
 def _get_tier_from_price(price_id: str) -> SubscriptionTier:
-    """Map Stripe price ID to subscription tier."""
+    """Map Stripe price ID to subscription tier.
+
+    Used for backward compatibility with tests and legacy code.
+    """
     if (
         price_id == settings.stripe_price_id_pro_monthly
         or price_id == settings.stripe_price_id_pro_annual
@@ -396,46 +494,46 @@ async def _sync_subscription_from_stripe(user: User, session: AsyncSession) -> N
     Fetches the latest subscription data from Stripe and updates the user record.
     This provides a fallback when webhooks aren't configured or fail.
     Prioritizes active subscriptions over canceled ones.
+    Uses forge-shared StripeClient for API calls.
     """
     if not user.stripe_customer_id:
         return
 
+    client = get_stripe_client()
+    if not client:
+        return
+
     # First try to get active subscription
-    subscriptions = stripe.Subscription.list(
-        customer=user.stripe_customer_id,
-        status="active",
-        limit=1,
+    subscriptions = await client.get_customer_subscriptions(
+        customer_id=user.stripe_customer_id,
+        active_only=True,
     )
 
     # If no active, check for any subscription (including canceled)
-    if not subscriptions.data:
-        subscriptions = stripe.Subscription.list(
-            customer=user.stripe_customer_id,
-            status="all",
-            limit=1,
+    if not subscriptions:
+        all_subs = await client.get_customer_subscriptions(
+            customer_id=user.stripe_customer_id,
+            active_only=False,
         )
+        subscriptions = all_subs
 
-    if subscriptions.data:
-        sub = subscriptions.data[0]
-        sub_item = sub["items"]["data"][0]
-        tier = _get_tier_from_price(sub_item["price"]["id"])
+    if subscriptions:
+        sub = subscriptions[0]
+        tier = _map_pricing_tier(sub.tier)
 
         # Determine subscription status - check for scheduled cancellation
-        status = sub["status"]
-        if status == "active" and (sub.get("cancel_at_period_end") or sub.get("cancel_at")):
-            status = "cancel_at_period_end"
+        status_val = sub.status.value if hasattr(sub.status, "value") else sub.status
+        if status_val == "active" and sub.cancel_at_period_end:
+            status_val = "cancel_at_period_end"
 
         # Update user subscription data
-        user.stripe_subscription_id = sub["id"]
+        user.stripe_subscription_id = sub.id
         user.subscription_tier = tier
-        user.subscription_status = status
-        # current_period_end is now on the subscription item in new Stripe API
-        user.subscription_expires_at = datetime.fromtimestamp(
-            sub_item["current_period_end"], tz=UTC
-        )
+        user.subscription_status = status_val
+        user.subscription_expires_at = sub.current_period_end
 
         await session.commit()
-        logger.info(f"Synced subscription for user {user.id}: {tier.value} ({status})")
+        logger.info(f"Synced subscription for user {user.id}: {tier.value} ({status_val})")
     else:
         # No active subscription found - downgrade to free if currently has subscription
         if user.subscription_tier != SubscriptionTier.FREE:
@@ -491,7 +589,8 @@ async def create_portal_session(
     Returns:
         PortalSessionResponse with redirect URL to Stripe portal
     """
-    if not settings.stripe_secret_key:
+    client = get_stripe_client()
+    if not client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Stripe is not configured",
@@ -504,16 +603,18 @@ async def create_portal_session(
         )
 
     try:
+        import stripe
+
         portal_session = stripe.billing_portal.Session.create(
             customer=current_user.stripe_customer_id,
             return_url=f"{settings.frontend_url}/settings",
         )
         return PortalSessionResponse(url=portal_session.url)
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe error creating portal session: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error creating portal session: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create portal session: {str(e)}",
+            detail="Failed to create portal session",
         ) from e
 
 
@@ -537,10 +638,17 @@ async def cancel_subscription(
             detail="No active subscription to cancel",
         )
 
+    client = get_stripe_client()
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe is not configured",
+        )
+
     try:
-        # Cancel subscription in Stripe
-        stripe.Subscription.modify(
-            current_user.stripe_subscription_id,
+        # Cancel subscription using forge-shared client
+        await client.cancel_subscription(
+            subscription_id=current_user.stripe_subscription_id,
             cancel_at_period_end=True,
         )
 
