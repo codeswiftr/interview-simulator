@@ -1,5 +1,15 @@
 # Progress - CareerSwiftr Interview Simulator
 
+## 2026-02-11 - Stripe Pricing Tiers Deployment (Priority #5)
+
+- **Task:** dispatch-cursor-stripe-pricing-2026-02-11.md
+- **Done:** Pricing tiers aligned with task spec (Free: 3 interviews/month, Pro: $29/month, Enterprise: custom)
+- **Frontend:** PricingPage ($29/month, 3 interviews free), UpgradeModal (3 interviews), HomePage, Enterprise card with Contact Sales
+- **Dashboard:** Usage indicator for free users (X/3 interviews used this month)
+- **Backend:** Already had correct tier limits (3) and webhook handlers; no code changes needed
+- **Docs:** `docs/STRIPE_SETUP.md` — Stripe Dashboard setup guide (products, prices, webhooks)
+- **Tests:** Updated PricingPage, UpgradeModal, HomePage assertions for new pricing
+
 ## 2026-02-11 - T1.1 Content Library (50 Pieces) Complete
 
 - **Task:** T1.1 Create 50-piece content library for Interview Simulator (revenue-driving content)

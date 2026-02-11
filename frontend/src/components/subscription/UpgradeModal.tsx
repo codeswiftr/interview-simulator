@@ -155,7 +155,7 @@ export default function UpgradeModal({
             <ul className="space-y-2">
               <li className="flex items-center gap-2 text-text-secondary">
                 <Check className="w-4 h-4" />
-                <span className="body-small">5 interviews/month</span>
+                <span className="body-small">3 interviews/month</span>
               </li>
               <li className="flex items-center gap-2 text-text-secondary">
                 <Check className="w-4 h-4" />

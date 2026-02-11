@@ -11,10 +11,10 @@ interface PricingConfig {
   pro_annual_price_id: string | null;
 }
 
-// Pricing constants
-const MONTHLY_PRICE = 19;
-const ANNUAL_PRICE = 290; // $24/month, save 2 months
-const ANNUAL_MONTHLY_EQUIVALENT = 24;
+// Pricing constants (per task: Pro $29/month)
+const MONTHLY_PRICE = 29;
+const ANNUAL_PRICE = 290; // $29/month × 10, save 2 months
+const ANNUAL_MONTHLY_EQUIVALENT = 24; // ~$24/month when billed annually
 
 export default function PricingPage() {
   const { isAuthenticated, user } = useAuth();
@@ -83,7 +83,7 @@ export default function PricingPage() {
 
   const features = {
     free: [
-      { name: '5 interviews per month', included: true },
+      { name: '3 interviews per month', included: true },
       { name: 'Basic AI feedback', included: true },
       { name: 'Question bank access', included: true },
       { name: 'Progress tracking', included: true },
@@ -94,7 +94,7 @@ export default function PricingPage() {
       { name: 'Priority support', included: false },
     ],
     pro: [
-      { name: '5 interviews per month', included: true, highlight: 'Unlimited interviews' },
+      { name: '3 interviews per month', included: true, highlight: 'Unlimited interviews' },
       { name: 'Basic AI feedback', included: true, highlight: 'Advanced feedback analysis' },
       { name: 'Question bank access', included: true },
       { name: 'Progress tracking', included: true },
@@ -263,8 +263,8 @@ export default function PricingPage() {
                   <span className="text-4xl font-bold text-text-primary">${currentPrice}</span>
                   <span className="text-text-secondary">/month</span>
                 </div>
-                <p className="text-xs text-amber-700 mt-1 font-medium">
-                  $19/mo for life — only 20 spots left
+                <p className="text-xs text-text-tertiary mt-1">
+                  Billed monthly or annually
                 </p>
                 {billingPeriod === 'annual' && (
                   <p className="text-sm text-status-success mt-1">
@@ -317,7 +317,7 @@ export default function PricingPage() {
             </Card>
           </div>
 
-          {/* Team Plan Teaser */}
+          {/* Enterprise Plan - Custom Pricing */}
           <Card className="max-w-4xl mx-auto mt-8 p-6 sm:p-8 border-2 border-dashed border-border-light">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -325,18 +325,18 @@ export default function PricingPage() {
                   <Users className="w-6 h-6 text-indigo-500" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary">Team Plans Coming Soon</h3>
+                  <h3 className="text-lg font-bold text-text-primary">Enterprise</h3>
                   <p className="text-text-secondary text-sm">
-                    Bulk licensing, admin dashboard, and team analytics
+                    Custom pricing for teams. Bulk licensing, admin dashboard, and dedicated support.
                   </p>
                 </div>
               </div>
-              <Link
-                to="/register?notify=team"
+              <a
+                href="mailto:hello@codeswiftr.com?subject=Enterprise%20Plan%20Inquiry"
                 className="btn-secondary whitespace-nowrap"
               >
-                Get Notified
-              </Link>
+                Contact Sales
+              </a>
             </div>
           </Card>
         </div>
@@ -361,7 +361,7 @@ export default function PricingPage() {
               <tbody>
                 <tr className="border-b border-border-light">
                   <td className="py-4 px-4 text-text-primary">Interviews per month</td>
-                  <td className="text-center py-4 px-4 text-text-secondary">5</td>
+                  <td className="text-center py-4 px-4 text-text-secondary">3</td>
                   <td className="text-center py-4 px-4 text-text-primary font-medium">Unlimited</td>
                 </tr>
                 <tr className="border-b border-border-light">

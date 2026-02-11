@@ -133,7 +133,7 @@ describe('PricingPage', () => {
 
     it('defaults to monthly billing', async () => {
       await renderPricingPage();
-      expect(screen.getByText('$19')).toBeInTheDocument();
+      expect(screen.getByText('$29')).toBeInTheDocument();
     });
 
     it('switches to annual pricing when annual is selected', async () => {
@@ -178,7 +178,7 @@ describe('PricingPage', () => {
 
     it('displays Free plan features', async () => {
       await renderPricingPage();
-      expect(screen.getByText('5 interviews per month')).toBeInTheDocument();
+      expect(screen.getByText('3 interviews per month')).toBeInTheDocument();
       expect(screen.getByText('Basic AI feedback')).toBeInTheDocument();
     });
 
@@ -197,7 +197,7 @@ describe('PricingPage', () => {
   describe('Pro Plan Card', () => {
     it('displays Pro plan with correct price', async () => {
       await renderPricingPage();
-      expect(screen.getByText('$19')).toBeInTheDocument();
+      expect(screen.getByText('$29')).toBeInTheDocument();
     });
 
     it('displays MOST POPULAR badge', async () => {
@@ -232,15 +232,15 @@ describe('PricingPage', () => {
     });
   });
 
-  describe('Team Plan Teaser', () => {
-    it('displays Team Plans Coming Soon message', async () => {
+  describe('Enterprise Plan Teaser', () => {
+    it('displays Enterprise plan message', async () => {
       await renderPricingPage();
-      expect(screen.getByText('Team Plans Coming Soon')).toBeInTheDocument();
+      expect(screen.getByText('Enterprise')).toBeInTheDocument();
     });
 
-    it('displays Get Notified link', async () => {
+    it('displays Contact Sales link', async () => {
       await renderPricingPage();
-      expect(screen.getByRole('link', { name: /Get Notified/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Contact Sales/i })).toBeInTheDocument();
     });
   });
 

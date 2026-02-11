@@ -145,7 +145,7 @@ export default function HomePage() {
               Simple, Transparent Pricing
             </h2>
             <p className="text-sm sm:text-base text-text-secondary">
-              Start free with 5 interviews per month. Upgrade for unlimited access.
+              Start free with 3 interviews per month. Upgrade for unlimited access.
             </p>
           </div>
 
@@ -159,7 +159,7 @@ export default function HomePage() {
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center gap-2 text-text-secondary text-sm">
                   <Check className="w-4 h-4 text-status-success" />
-                  5 interviews per month
+                  3 interviews per month
                 </li>
                 <li className="flex items-center gap-2 text-text-secondary text-sm">
                   <Check className="w-4 h-4 text-status-success" />

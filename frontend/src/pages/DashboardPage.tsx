@@ -315,6 +315,23 @@ export default function DashboardPage() {
             <p className="text-text-secondary">Track your progress and continue practicing your interview skills.</p>
           </div>
 
+          {/* Usage indicator for free tier */}
+          {user?.subscription_tier === 'free' && typeof user.interviews_this_month === 'number' && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-secondary border border-border-light">
+              <span className="body-small text-text-secondary">
+                {user.interviews_this_month} / 3 interviews used this month
+              </span>
+              {user.interviews_this_month >= 2 && (
+                <button
+                  onClick={openUpgrade}
+                  className="text-sm font-medium text-[#FF6B9D] hover:underline"
+                >
+                  Upgrade for unlimited
+                </button>
+              )}
+            </div>
+          )}
+
           {!isLoading && sessions.length > 0 && (
             <button
               onClick={openNewInterview}

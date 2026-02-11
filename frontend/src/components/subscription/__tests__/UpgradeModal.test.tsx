@@ -155,7 +155,7 @@ describe('UpgradeModal', () => {
 
       expect(screen.getByText('Free')).toBeInTheDocument();
       expect(screen.getByText('$0')).toBeInTheDocument();
-      expect(screen.getByText('5 interviews/month')).toBeInTheDocument();
+      expect(screen.getByText('3 interviews/month')).toBeInTheDocument();
       expect(screen.getByText('Basic feedback')).toBeInTheDocument();
     });
 
