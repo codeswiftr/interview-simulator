@@ -216,7 +216,7 @@ async def refresh_token(
 
     # Generate new tokens (token rotation)
     new_access_token = create_access_token({"sub": str(user.id)})
-    new_refresh_token, new_expires = create_refresh_token()
+    new_refresh_token, new_expires = create_refresh_token(str(user.id))
 
     # Store new refresh token (invalidates old one)
     user.refresh_token = new_refresh_token

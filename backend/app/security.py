@@ -4,7 +4,6 @@ Migrated to forge-shared auth for JWT (2026-02).
 Password hashing remains local for backward compatibility.
 """
 
-import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -180,13 +179,17 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return None
 
 
-def create_refresh_token() -> tuple[str, datetime]:
-    """Create a secure refresh token with expiration.
+def create_refresh_token(user_id: str) -> tuple[str, datetime]:
+    """Create a JWT refresh token using forge-shared auth.
+
+    Args:
+        user_id: User ID to encode in the token
 
     Returns:
         Tuple of (token_string, expiration_datetime)
     """
-    token = secrets.token_urlsafe(64)
+    auth = get_jwt_auth_instance()
+    token = auth.create_refresh_token(user_id=user_id)
     expires_at = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return token, expires_at
 
@@ -208,4 +211,12 @@ def verify_refresh_token(
         return False
     if stored_token != provided_token:
         return False
-    return not datetime.now(UTC) > expires_at
+    if datetime.now(UTC) > expires_at:
+        return False
+    # Verify JWT structure and signature
+    try:
+        auth = get_jwt_auth_instance()
+        payload = auth.decode_token(provided_token)
+        return payload.type == "refresh"
+    except Exception:
+        return False

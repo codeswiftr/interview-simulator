@@ -149,7 +149,7 @@ async def login(
     access_token = create_access_token({"sub": str(user.id)})
 
     # Generate and store refresh token
-    refresh_token, refresh_expires = create_refresh_token()
+    refresh_token, refresh_expires = create_refresh_token(str(user.id))
     user.refresh_token = refresh_token
     user.refresh_token_expires_at = refresh_expires
 

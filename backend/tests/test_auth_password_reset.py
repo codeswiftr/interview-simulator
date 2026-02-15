@@ -327,7 +327,7 @@ class TestTokenRefresh:
         """Create user with valid refresh token."""
         from app.security import create_refresh_token
 
-        refresh_token, expires_at = create_refresh_token()
+        refresh_token, expires_at = create_refresh_token(str(test_user.id))
         test_user.refresh_token = refresh_token
         test_user.refresh_token_expires_at = expires_at
         await test_session.commit()
@@ -390,7 +390,7 @@ class TestTokenRefresh:
         from app.security import create_refresh_token
 
         # Create expired token
-        refresh_token, _ = create_refresh_token()
+        refresh_token, _ = create_refresh_token(str(test_user.id))
         test_user.refresh_token = refresh_token
         test_user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
         await test_session.commit()

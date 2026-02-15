@@ -405,11 +405,12 @@ class TestRefreshTokenSecurity:
 
     def test_create_refresh_token_format(self):
         """Test refresh token has secure format."""
-        token, expires_at = create_refresh_token()
+        user_id = "test-user-123"
+        token, expires_at = create_refresh_token(user_id)
 
         # Token should be URL-safe string
         assert isinstance(token, str)
-        # token_urlsafe(64) produces ~86 character base64-encoded string
+        # JWT tokens are longer than opaque tokens
         assert len(token) >= 64
 
         # Should be URL-safe (no spaces, proper base64url encoding)
@@ -421,21 +422,23 @@ class TestRefreshTokenSecurity:
 
     def test_refresh_token_uniqueness(self):
         """Test refresh tokens are unique."""
-        token1, _ = create_refresh_token()
-        token2, _ = create_refresh_token()
+        token1, _ = create_refresh_token("user-1")
+        token2, _ = create_refresh_token("user-2")
 
         assert token1 != token2
 
     def test_verify_refresh_token_valid(self):
         """Test refresh token verification works."""
-        token, expires_at = create_refresh_token()
+        user_id = "test-user-456"
+        token, expires_at = create_refresh_token(user_id)
 
         # Should verify successfully
         assert verify_refresh_token(token, token, expires_at) is True
 
     def test_verify_refresh_token_invalid(self):
         """Test refresh token verification rejects invalid tokens."""
-        _, expires_at = create_refresh_token()
+        user_id = "test-user-789"
+        _, expires_at = create_refresh_token(user_id)
 
         # Wrong token should fail
         assert verify_refresh_token("wrong-token", "stored-token", expires_at) is False
@@ -444,7 +447,8 @@ class TestRefreshTokenSecurity:
 
     def test_verify_refresh_token_expired(self):
         """Test expired refresh tokens are rejected."""
-        token, expires_at = create_refresh_token()
+        user_id = "test-user-abc"
+        token, expires_at = create_refresh_token(user_id)
 
         # Simulate expiration
         expired_at = datetime.now(UTC) - timedelta(days=1)
