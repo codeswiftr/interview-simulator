@@ -4,7 +4,6 @@ Migrated to forge-shared auth for JWT (2026-02).
 Password hashing remains local for backward compatibility.
 """
 
-import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -180,13 +179,17 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return None
 
 
-def create_refresh_token() -> tuple[str, datetime]:
-    """Create a secure refresh token with expiration.
+def create_refresh_token(user_id: str) -> tuple[str, datetime]:
+    """Create a JWT refresh token using forge-shared auth.
+
+    Args:
+        user_id: The user's ID to embed in the token.
 
     Returns:
-        Tuple of (token_string, expiration_datetime)
+        Tuple of (jwt_token_string, expiration_datetime)
     """
-    token = secrets.token_urlsafe(64)
+    auth = get_jwt_auth_instance()
+    token = auth.create_refresh_token(user_id=user_id)
     expires_at = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return token, expires_at
 
@@ -194,7 +197,7 @@ def create_refresh_token() -> tuple[str, datetime]:
 def verify_refresh_token(
     stored_token: str | None, provided_token: str, expires_at: datetime | None
 ) -> bool:
-    """Verify a refresh token is valid and not expired.
+    """Verify a refresh token is valid, not expired, and has valid JWT signature.
 
     Args:
         stored_token: Token stored in database
@@ -202,10 +205,18 @@ def verify_refresh_token(
         expires_at: Expiration timestamp from database
 
     Returns:
-        True if token is valid and not expired
+        True if token is valid, matches stored token, not expired, and JWT signature valid
     """
     if not stored_token or not expires_at:
         return False
     if stored_token != provided_token:
         return False
-    return not datetime.now(UTC) > expires_at
+    if datetime.now(UTC) > expires_at:
+        return False
+    # Verify JWT structure and signature
+    try:
+        auth = get_jwt_auth_instance()
+        payload = auth.decode_token(provided_token)
+        return payload.type == "refresh"
+    except Exception:
+        return False
