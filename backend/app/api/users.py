@@ -9,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
 from app.db import get_session
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, rate_limit_login, rate_limit_register
 from app.models.email_verification import EmailVerificationToken
 from app.models.feedback import SkillsGapResponse
 from app.models.user import (
@@ -38,7 +38,11 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_session)) -> User:
+async def register_user(
+    payload: UserCreate,
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(rate_limit_register),
+) -> User:
     """Register a new user."""
     existing = await session.exec(select(User).where(User.email == payload.email))
     if existing.first():
@@ -79,7 +83,11 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
 
 
 @router.post("/login", response_model=Token)
-async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)) -> Token:
+async def login(
+    payload: UserLogin,
+    session: AsyncSession = Depends(get_session),
+    _: None = Depends(rate_limit_login),
+) -> Token:
     """Authenticate user and return access and refresh tokens.
 
     Implements lazy migration from pbkdf2_sha256 to bcrypt for improved security.

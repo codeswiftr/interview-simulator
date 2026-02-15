@@ -443,3 +443,188 @@ async def test_rate_limit_middleware_adds_headers_to_success_response():
     assert "X-RateLimit-Limit" in response.headers
     assert "X-RateLimit-Remaining" in response.headers
 
+
+# Per-Endpoint Rate Limiting Tests
+
+@pytest.mark.asyncio
+async def test_login_endpoint_rate_limit(client, db_session):
+    """Test that login endpoint is rate limited to 10 requests per minute."""
+    # Make 10 login attempts (should all be allowed, even if they fail auth)
+    for i in range(10):
+        resp = await client.post(
+            "/api/v1/users/login",
+            json={"email": f"test{i}@example.com", "password": "wrongpassword"},
+        )
+        # Either 401 (invalid creds) or 422 (validation error) is fine
+        # What matters is we're not getting 429
+        assert resp.status_code in [401, 422]
+
+    # 11th request should be rate limited
+    resp = await client.post(
+        "/api/v1/users/login",
+        json={"email": "test11@example.com", "password": "wrongpassword"},
+    )
+    assert resp.status_code == 429
+    assert "Too many requests" in resp.json()["detail"]
+    assert "Retry-After" in resp.headers
+
+
+@pytest.mark.asyncio
+async def test_register_endpoint_rate_limit(client, db_session):
+    """Test that register endpoint is rate limited to 5 requests per minute."""
+    # Make 5 registration attempts (should all be allowed)
+    for i in range(5):
+        resp = await client.post(
+            "/api/v1/users/register",
+            json={
+                "email": f"ratelimit{i}@example.com",
+                "password": "ValidPass123!",
+                "full_name": f"User {i}",
+            },
+        )
+        # Should succeed (201) or fail with validation error (422)
+        assert resp.status_code in [201, 422]
+
+    # 6th request should be rate limited
+    resp = await client.post(
+        "/api/v1/users/register",
+        json={
+            "email": "ratelimit6@example.com",
+            "password": "ValidPass123!",
+            "full_name": "User 6",
+        },
+    )
+    assert resp.status_code == 429
+    assert "Too many requests" in resp.json()["detail"]
+    assert "Retry-After" in resp.headers
+
+
+@pytest.mark.asyncio
+async def test_password_reset_endpoint_rate_limit(client, db_session):
+    """Test that password reset endpoints are rate limited to 5 requests per minute."""
+    # Test forgot-password endpoint
+    for i in range(5):
+        resp = await client.post(
+            "/api/v1/auth/forgot-password",
+            json={"email": f"test{i}@example.com"},
+        )
+        # Should always return 200 (security - don't reveal if email exists)
+        assert resp.status_code == 200
+
+    # 6th request should be rate limited
+    resp = await client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "test6@example.com"},
+    )
+    assert resp.status_code == 429
+    assert "Too many requests" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_endpoint_rate_limit_per_ip(client, db_session):
+    """Test that endpoint rate limiting is per-IP, not global."""
+    # This test verifies the rate limiter keys by IP
+    # In real scenarios, different IPs would have separate limits
+    # Here we simulate by checking the limiter's internal state
+
+    from app.dependencies import _login_limiter
+
+    # Clear any existing state
+    _login_limiter._requests.clear()
+
+    # Make requests from same "IP" (test client)
+    for i in range(10):
+        await client.post(
+            "/api/v1/users/login",
+            json={"email": f"test{i}@example.com", "password": "wrong"},
+        )
+
+    # Should have stored requests for this IP
+    assert len(_login_limiter._requests) > 0
+
+
+@pytest.mark.asyncio
+async def test_endpoint_rate_limit_uses_cloudflare_ip(client, db_session):
+    """Test that rate limiter prefers CF-Connecting-IP when CF-RAY is present."""
+    from unittest.mock import MagicMock
+
+    from app.dependencies import EndpointRateLimiter
+
+    limiter = EndpointRateLimiter(max_requests=10, window_seconds=60)
+
+    # Create mock request with Cloudflare headers
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: {
+        "CF-RAY": "abc123",
+        "CF-Connecting-IP": "1.2.3.4",
+        "X-Forwarded-For": "5.6.7.8, 1.2.3.4",
+    }.get(key)
+    request.client = MagicMock()
+    request.client.host = "127.0.0.1"
+    request.url = MagicMock()
+    request.url.path = "/api/v1/test"
+
+    ip = limiter._get_client_ip(request)
+    assert ip == "1.2.3.4"
+
+
+@pytest.mark.asyncio
+async def test_endpoint_rate_limit_uses_x_forwarded_for(client, db_session):
+    """Test that rate limiter uses X-Forwarded-For when Cloudflare headers absent."""
+    from unittest.mock import MagicMock
+
+    from app.dependencies import EndpointRateLimiter
+
+    limiter = EndpointRateLimiter(max_requests=10, window_seconds=60)
+
+    # Create mock request with only X-Forwarded-For
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: {
+        "X-Forwarded-For": "1.1.1.1, 2.2.2.2, 3.3.3.3",
+    }.get(key)
+    request.client = MagicMock()
+    request.client.host = "127.0.0.1"
+    request.url = MagicMock()
+    request.url.path = "/api/v1/test"
+
+    ip = limiter._get_client_ip(request)
+    # Should use rightmost IP (closest proxy)
+    assert ip == "3.3.3.3"
+
+
+@pytest.mark.asyncio
+async def test_endpoint_rate_limit_cleans_old_requests():
+    """Test that endpoint rate limiter cleans up old requests."""
+    import time
+    from unittest.mock import MagicMock
+
+    from app.dependencies import EndpointRateLimiter
+
+    limiter = EndpointRateLimiter(max_requests=2, window_seconds=1)
+
+    # Create mock request
+    request = MagicMock()
+    request.headers = MagicMock()
+    request.headers.get = lambda key: None
+    request.client = MagicMock()
+    request.client.host = "1.2.3.4"
+    request.url = MagicMock()
+    request.url.path = "/api/v1/test"
+
+    # Make 2 requests (at limit)
+    limiter.check(request)
+    limiter.check(request)
+
+    # Third should be blocked
+    with pytest.raises(Exception) as exc:
+        limiter.check(request)
+    assert exc.value.status_code == 429
+
+    # Wait for window to expire
+    time.sleep(1.1)
+
+    # Should be allowed again (old requests cleaned)
+    limiter.check(request)  # Should not raise
+

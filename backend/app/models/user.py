@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
+from pydantic import ConfigDict, EmailStr
 from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
@@ -84,9 +85,11 @@ class User(SQLModel, table=True):
 class UserCreate(SQLModel):
     """Schema for user creation."""
 
-    email: str
+    model_config = ConfigDict(strict=True)
+
+    email: EmailStr
     password: str
-    full_name: str | None = None
+    full_name: str | None = Field(default=None, max_length=200)
     experience_level: ExperienceLevel | None = None  # Optional during registration
 
     def model_post_init(self, __context: Any) -> None:
@@ -106,7 +109,9 @@ class UserCreate(SQLModel):
 class UserLogin(SQLModel):
     """Schema for user login."""
 
-    email: str
+    model_config = ConfigDict(strict=True)
+
+    email: EmailStr
     password: str
 
 
@@ -134,19 +139,25 @@ class Token(SQLModel):
 class RefreshTokenRequest(SQLModel):
     """Request schema for token refresh."""
 
+    model_config = ConfigDict(strict=True)
+
     refresh_token: str
 
 
 class UserUpdate(SQLModel):
     """Schema for updating user profile."""
 
-    full_name: str | None = None
-    email: str | None = None
+    model_config = ConfigDict(strict=True)
+
+    full_name: str | None = Field(default=None, max_length=200)
+    email: EmailStr | None = None
     experience_level: ExperienceLevel | None = None
 
 
 class PasswordChange(SQLModel):
     """Schema for changing password."""
+
+    model_config = ConfigDict(strict=True)
 
     current_password: str
     new_password: str

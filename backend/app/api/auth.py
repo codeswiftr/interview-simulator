@@ -5,12 +5,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
 from app.db import get_session
+from app.dependencies import rate_limit_password_reset
 from app.models.password_reset import PasswordResetToken
 from app.models.user import RefreshTokenRequest, Token, User
 from app.security import (
@@ -27,14 +28,18 @@ router = APIRouter()
 class ForgotPasswordRequest(BaseModel):
     """Request schema for forgot password."""
 
-    email: str
+    model_config = ConfigDict(strict=True)
+
+    email: EmailStr
 
 
 class ResetPasswordRequest(BaseModel):
     """Request schema for password reset."""
 
-    token: str
-    new_password: str
+    model_config = ConfigDict(strict=True)
+
+    token: str = Field(max_length=200)
+    new_password: str = Field(max_length=200)
 
     def model_post_init(self, __context: Any) -> None:
         """Validate new password after model initialization."""
@@ -49,6 +54,7 @@ class ResetPasswordRequest(BaseModel):
 async def forgot_password(
     payload: ForgotPasswordRequest,
     session: AsyncSession = Depends(get_session),
+    _: None = Depends(rate_limit_password_reset),
 ) -> dict:
     """Request a password reset email.
 
@@ -109,6 +115,7 @@ async def forgot_password(
 async def reset_password(
     payload: ResetPasswordRequest,
     session: AsyncSession = Depends(get_session),
+    _: None = Depends(rate_limit_password_reset),
 ) -> dict:
     """Reset password using a valid token.
 
