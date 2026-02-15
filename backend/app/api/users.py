@@ -3,7 +3,7 @@
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -85,17 +85,57 @@ async def register_user(
 @router.post("/login", response_model=Token)
 async def login(
     payload: UserLogin,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _: None = Depends(rate_limit_login),
 ) -> Token:
     """Authenticate user and return access and refresh tokens.
 
-    Implements lazy migration from pbkdf2_sha256 to bcrypt for improved security.
+    Implements:
+    - Account lockout after 5 failed attempts in 15 minutes
+    - Lazy migration from pbkdf2_sha256 to bcrypt for improved security
+    - Failed login attempt tracking for security monitoring
     """
+    from app.services.account_lockout import AccountLockoutService
+
+    lockout_service = AccountLockoutService()
+
+    # Get client IP for logging
+    ip_address = request.client.host if request.client else "unknown"
+
+    # Check if account is locked
+    is_locked, lockout_expires = await lockout_service.is_account_locked(
+        session, payload.email
+    )
+    if is_locked:
+        # Return generic error to avoid revealing account status
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "message": "Too many failed login attempts. Account temporarily locked.",
+                "lockout_expires_at": lockout_expires.isoformat() if lockout_expires else None,
+            },
+        )
+
+    # Attempt authentication
     result = await session.exec(select(User).where(User.email == payload.email.lower()))
     user = result.first()
+
+    # Check credentials
     if not user or not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        # Record failed attempt
+        await lockout_service.record_login_attempt(
+            session, payload.email, ip_address, success=False
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+
+    # Successful login - clear failed attempts
+    await lockout_service.record_login_attempt(
+        session, payload.email, ip_address, success=True
+    )
 
     # Check if password needs migration (lazy migration)
     # This will be True for pbkdf2_sha256 hashes, False for bcrypt
@@ -113,7 +153,8 @@ async def login(
     user.refresh_token = refresh_token
     user.refresh_token_expires_at = refresh_expires
 
-    # Update user's last login time and commit all changes (including migrated password if applicable)
+    # Update user's last login time and commit all changes
+    # (including migrated password if applicable)
     user.last_login_at = datetime.now(UTC)
     await session.commit()
 
@@ -433,7 +474,10 @@ async def get_my_improvements(
     Returns:
         Dictionary with improvements/areas for each category:
         {
-            "delivery": { "current_score", "previous_score", "trend", "improvements", "areas_to_work_on" },
+            "delivery": {
+                "current_score", "previous_score", "trend",
+                "improvements", "areas_to_work_on"
+            },
             "behavioral": { ... },
             "technical": { ... },
             "sessions_analyzed": int,
