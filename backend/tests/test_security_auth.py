@@ -44,7 +44,7 @@ class TestPasswordSecurity:
         assert len(hashed) == 60  # Bcrypt hashes are exactly 60 chars
 
         # Verify it's a valid bcrypt hash
-        assert bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        assert bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
     def test_hash_password_uniqueness(self):
         """Test hashing same password produces different hashes."""
@@ -177,21 +177,29 @@ class TestPasswordSecurity:
 class TestPasswordComplexityValidation:
     """Test password complexity requirements.
 
-    Note: The validator uses relaxed rules (min 6 chars, block common passwords).
+    Note: The validator requires:
+    - Minimum 8 characters
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - Blocks common passwords
     """
 
-    @pytest.mark.parametrize("password,expected", [
-        ("12345", False),  # Too short (5 chars)
-        ("short", False),  # Too short (5 chars)
-        ("password", False),  # Common password
-        ("123456", False),  # Common password
-        ("qwerty", False),  # Common password
-        ("Simple123", True),  # Valid (6+ chars, not common)
-        ("special!", True),  # Valid (6+ chars)
-        ("ValidPassword123!", True),  # Valid
-        ("Complex-P@ssw0rd", True),  # Valid with hyphen
-        ("Very_Long_Password_With_Underscores123!", True),  # Long valid
-    ])
+    @pytest.mark.parametrize(
+        "password,expected",
+        [
+            ("12345", False),  # Too short (5 chars)
+            ("short", False),  # Too short (5 chars)
+            ("password", False),  # Common password
+            ("123456", False),  # Common password
+            ("qwerty", False),  # Common password
+            ("Simple123", True),  # Valid (meets complexity)
+            ("Special1!", True),  # Valid (meets complexity with special char)
+            ("ValidPassword123!", True),  # Valid
+            ("Complex-P@ssw0rd", True),  # Valid with hyphen
+            ("Very_Long_Password_With_Underscores123!", True),  # Long valid
+        ],
+    )
     def test_password_complexity(self, password, expected):
         """Test password complexity validation."""
         from app.utils.password_validation import validate_password_complexity
@@ -253,10 +261,14 @@ class TestJWTSecurity:
 
         # Should decode without error
         from app.config import settings
+
         payload = jwt.decode(
-            token, settings.secret_key, algorithms=["HS256"],
+            token,
+            settings.secret_key,
+            algorithms=["HS256"],
             options={"verify_aud": True, "verify_iss": True},
-            audience="codeswiftr.com", issuer="interview-simulator"
+            audience="codeswiftr.com",
+            issuer="interview-simulator",
         )
 
         # Should have required claims
@@ -277,10 +289,14 @@ class TestJWTSecurity:
         token = create_access_token({"sub": user_id, "email": email})
 
         from app.config import settings
+
         payload = jwt.decode(
-            token, settings.secret_key, algorithms=["HS256"],
+            token,
+            settings.secret_key,
+            algorithms=["HS256"],
             options={"verify_aud": True, "verify_iss": True},
-            audience="codeswiftr.com", issuer="interview-simulator"
+            audience="codeswiftr.com",
+            issuer="interview-simulator",
         )
 
         # Check expiration time
@@ -351,7 +367,10 @@ class TestJWTSecurity:
 
         # Create token with HS512 instead of HS256
         token = jwt.encode(
-            {"sub": "test-user", "exp": int((datetime.now(UTC) + timedelta(minutes=15)).timestamp())},
+            {
+                "sub": "test-user",
+                "exp": int((datetime.now(UTC) + timedelta(minutes=15)).timestamp()),
+            },
             settings.secret_key,
             algorithm="HS512",
         )
@@ -465,11 +484,13 @@ class TestSessionSecurity:
         """Test session invalidation concept with password change timestamp."""
         # Create token with password change timestamp (passed as extra_claim)
         old_iat = int((datetime.now(UTC) - timedelta(hours=2)).timestamp())
-        token = create_access_token({
-            "sub": "user-123",
-            "email": "user@example.com",
-            "pwd_changed": old_iat + 3600  # Password changed after token
-        })
+        token = create_access_token(
+            {
+                "sub": "user-123",
+                "email": "user@example.com",
+                "pwd_changed": old_iat + 3600,  # Password changed after token
+            }
+        )
 
         # Token itself should still decode successfully
         payload = decode_token(token)
@@ -509,7 +530,7 @@ class TestSecurityHeaders:
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": "Authorization, Content-Type",
-            }
+            },
         )
 
         # Should have appropriate CORS headers
@@ -524,8 +545,7 @@ class TestSecurityHeaders:
     async def test_cors_rejects_unauthorized_origin(self, client):
         """Test CORS rejects unauthorized origins."""
         response = await client.get(
-            "/api/v1/health",
-            headers={"Origin": "https://malicious-site.com"}
+            "/api/v1/health", headers={"Origin": "https://malicious-site.com"}
         )
 
         # Should not include unauthorized origin (or return 400)
