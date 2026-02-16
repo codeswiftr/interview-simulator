@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.config import settings
 from app.db import get_session
 from app.dependencies import get_current_user
+from app.middleware.auth_rate_limit import login_rate_limit, register_rate_limit
 from app.models.email_verification import EmailVerificationToken
 from app.models.feedback import SkillsGapResponse
 from app.models.user import (
@@ -37,7 +38,7 @@ from app.services.feedback_service import FeedbackService
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(register_rate_limit)])
 async def register_user(payload: UserCreate, session: AsyncSession = Depends(get_session)) -> User:
     """Register a new user."""
     existing = await session.exec(select(User).where(User.email == payload.email))
@@ -78,7 +79,7 @@ async def register_user(payload: UserCreate, session: AsyncSession = Depends(get
     return user
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, dependencies=[Depends(login_rate_limit)])
 async def login(payload: UserLogin, session: AsyncSession = Depends(get_session)) -> Token:
     """Authenticate user and return access and refresh tokens.
 

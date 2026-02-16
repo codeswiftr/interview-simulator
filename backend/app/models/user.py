@@ -2,11 +2,18 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
+from pydantic import EmailStr, StringConstraints
 from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
+
+# Constrained string types for input validation
+StrictName = Annotated[str, StringConstraints(min_length=1, max_length=200, strip_whitespace=True)]
+StrictEmail = EmailStr
+StrictPassword = Annotated[str, StringConstraints(min_length=8, max_length=128)]
+StrictToken = Annotated[str, StringConstraints(min_length=1, max_length=512)]
 
 
 class SubscriptionTier(str, Enum):
@@ -82,11 +89,11 @@ class User(SQLModel, table=True):
 
 
 class UserCreate(SQLModel):
-    """Schema for user creation."""
+    """Schema for user creation with strict input validation."""
 
-    email: str
-    password: str
-    full_name: str | None = None
+    email: StrictEmail
+    password: StrictPassword
+    full_name: StrictName | None = None
     experience_level: ExperienceLevel | None = None  # Optional during registration
 
     def model_post_init(self, __context: Any) -> None:
@@ -104,10 +111,10 @@ class UserCreate(SQLModel):
 
 
 class UserLogin(SQLModel):
-    """Schema for user login."""
+    """Schema for user login with strict input validation."""
 
-    email: str
-    password: str
+    email: StrictEmail
+    password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
 
 
 class UserRead(SQLModel):
@@ -134,22 +141,22 @@ class Token(SQLModel):
 class RefreshTokenRequest(SQLModel):
     """Request schema for token refresh."""
 
-    refresh_token: str
+    refresh_token: StrictToken
 
 
 class UserUpdate(SQLModel):
-    """Schema for updating user profile."""
+    """Schema for updating user profile with strict validation."""
 
-    full_name: str | None = None
-    email: str | None = None
+    full_name: StrictName | None = None
+    email: StrictEmail | None = None
     experience_level: ExperienceLevel | None = None
 
 
 class PasswordChange(SQLModel):
-    """Schema for changing password."""
+    """Schema for changing password with strict validation."""
 
-    current_password: str
-    new_password: str
+    current_password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
+    new_password: StrictPassword
 
     def model_post_init(self, __context: Any) -> None:
         """Validate new password after model initialization."""

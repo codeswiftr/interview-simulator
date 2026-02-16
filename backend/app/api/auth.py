@@ -2,15 +2,16 @@
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, StringConstraints
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
 from app.db import get_session
+from app.middleware.auth_rate_limit import forgot_password_rate_limit
 from app.models.password_reset import PasswordResetToken
 from app.models.user import RefreshTokenRequest, Token, User
 from app.security import (
@@ -27,14 +28,14 @@ router = APIRouter()
 class ForgotPasswordRequest(BaseModel):
     """Request schema for forgot password."""
 
-    email: str
+    email: EmailStr
 
 
 class ResetPasswordRequest(BaseModel):
     """Request schema for password reset."""
 
-    token: str
-    new_password: str
+    token: Annotated[str, StringConstraints(min_length=1, max_length=512)]
+    new_password: Annotated[str, StringConstraints(min_length=8, max_length=128)]
 
     def model_post_init(self, __context: Any) -> None:
         """Validate new password after model initialization."""
@@ -45,7 +46,7 @@ class ResetPasswordRequest(BaseModel):
             raise ValueError(f"Password validation failed: {'; '.join(errors)}")
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(forgot_password_rate_limit)])
 async def forgot_password(
     payload: ForgotPasswordRequest,
     session: AsyncSession = Depends(get_session),
