@@ -79,14 +79,20 @@ def check_coaching_rate_limit(user_id: str) -> tuple[bool, int]:
 
 
 class CoachingHintRequest(BaseModel):
-    """Request model for coaching hint generation."""
+    """Request model for coaching hint generation with input validation."""
 
-    question: str = Field(..., description="The interview question")
+    question: str = Field(
+        ..., description="The interview question", min_length=1, max_length=2000
+    )
     question_type: str = Field(
-        ..., description="Type of question: behavioral, technical, or system_design"
+        ...,
+        description="Type of question: behavioral, technical, or system_design",
+        pattern=r"^(behavioral|technical|system_design)$",
     )
     transcript: str = Field(
-        default="", description="Current transcript of the candidate's answer"
+        default="",
+        description="Current transcript of the candidate's answer",
+        max_length=50000,
     )
 
 

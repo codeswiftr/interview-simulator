@@ -296,7 +296,16 @@ app.add_middleware(UTMMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 # SecurityMiddleware replaces custom SecurityHeadersMiddleware
-app.add_middleware(SecurityMiddleware, x_frame_options="DENY")
+# Explicitly configure all security headers for hardening
+app.add_middleware(
+    SecurityMiddleware,
+    x_frame_options="DENY",
+    hsts_enabled=True,
+    hsts_max_age=31536000,  # 1 year
+    hsts_include_subdomains=True,
+    x_content_type_options="nosniff",
+    referrer_policy="strict-origin-when-cross-origin",
+)
 
 # Analytics middleware for PostHog tracking
 posthog_api_key = getattr(settings, "posthog_api_key", None)

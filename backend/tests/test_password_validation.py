@@ -164,10 +164,15 @@ class TestPasswordValidationIntegration:
         user = UserCreate(email="test@example.com", password="Secret25", full_name="Test User")
         assert user.email == "test@example.com"
 
-        # Invalid password (too short)
+        # Invalid password (too short) - caught by Pydantic StringConstraints or custom validator
         with pytest.raises(Exception) as exc_info:
-            UserCreate(email="test@example.com", password="weak", full_name="Test User")
-        assert "Password must be at least 8 characters long" in str(exc_info.value)
+            UserCreate(
+                email="test@example.com",
+                password="weak",
+                full_name="Test User"
+            )
+        error_msg = str(exc_info.value)
+        assert "8 characters" in error_msg or "string_too_short" in error_msg
 
     def test_password_change_validation(self):
         """Test password validation in PasswordChange model."""
@@ -177,10 +182,14 @@ class TestPasswordValidationIntegration:
         change = PasswordChange(current_password="oldpass", new_password="Newpass123")
         assert change.new_password == "Newpass123"
 
-        # Invalid new password (too short)
-        with pytest.raises(ValueError) as exc_info:
-            PasswordChange(current_password="oldpass", new_password="weak")
-        assert "Password validation failed" in str(exc_info.value)
+        # Invalid new password (too short) - caught by Pydantic StringConstraints or custom validator
+        with pytest.raises(Exception) as exc_info:
+            PasswordChange(
+                current_password="oldpass",
+                new_password="weak"
+            )
+        error_msg = str(exc_info.value)
+        assert "8 characters" in error_msg or "string_too_short" in error_msg
 
     def test_reset_password_validation(self):
         """Test password validation in ResetPasswordRequest."""
@@ -190,10 +199,14 @@ class TestPasswordValidationIntegration:
         reset = ResetPasswordRequest(token="valid_token", new_password="Secret25")
         assert reset.new_password == "Secret25"
 
-        # Invalid password (too short)
-        with pytest.raises(ValueError) as exc_info:
-            ResetPasswordRequest(token="valid_token", new_password="weak")
-        assert "Password validation failed" in str(exc_info.value)
+        # Invalid password (too short) - caught by Pydantic StringConstraints or custom validator
+        with pytest.raises(Exception) as exc_info:
+            ResetPasswordRequest(
+                token="valid_token",
+                new_password="weak"
+            )
+        error_msg = str(exc_info.value)
+        assert "8 characters" in error_msg or "string_too_short" in error_msg
 
 
 @pytest.mark.parametrize(

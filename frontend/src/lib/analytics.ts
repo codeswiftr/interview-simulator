@@ -4,58 +4,58 @@ const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
 // Use reverse proxy to bypass ad blockers - proxy at api.codeswiftr.com/ph forwards to PostHog EU
 const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://api.codeswiftr.com/ph';
 
-// Event names following {noun}_{action} convention
+// Event names following {prefix}_{entity}_{action} convention (PostHog standard)
 export const Events = {
   // Auth events
-  USER_REGISTERED: 'user_registered',
-  USER_LOGGED_IN: 'user_logged_in',
-  USER_LOGGED_OUT: 'user_logged_out',
+  USER_REGISTERED: 'is_user_registered',
+  USER_LOGGED_IN: 'is_user_logged_in',
+  USER_LOGGED_OUT: 'is_user_logged_out',
 
   // Page events
-  PAGE_VIEWED: 'page_viewed',
+  PAGE_VIEWED: 'is_page_viewed',
 
   // Upgrade / billing funnel events
-  UPGRADE_MODAL_OPENED: 'upgrade_modal_opened',
-  UPGRADE_MODAL_CLOSED: 'upgrade_modal_closed',
-  UPGRADE_CTA_CLICKED: 'upgrade_cta_clicked',
-  CHECKOUT_STARTED: 'checkout_started',
-  UPGRADE_REASON_SUBMITTED: 'upgrade_reason_submitted',
-  LIMIT_REACHED: 'limit_reached',
+  UPGRADE_MODAL_OPENED: 'is_upgrade_modal_opened',
+  UPGRADE_MODAL_CLOSED: 'is_upgrade_modal_closed',
+  UPGRADE_CTA_CLICKED: 'is_upgrade_cta_clicked',
+  CHECKOUT_STARTED: 'is_checkout_started',
+  UPGRADE_REASON_SUBMITTED: 'is_upgrade_reason_submitted',
+  LIMIT_REACHED: 'is_limit_reached',
 
   // Interview lifecycle events
-  INTERVIEW_CREATED: 'interview_created',
-  INTERVIEW_STARTED: 'interview_started',
-  INTERVIEW_COMPLETED: 'interview_completed',
-  INTERVIEW_ABANDONED: 'interview_abandoned',
+  INTERVIEW_CREATED: 'is_interview_created',
+  INTERVIEW_STARTED: 'is_interview_started',
+  INTERVIEW_COMPLETED: 'is_interview_completed',
+  INTERVIEW_ABANDONED: 'is_interview_abandoned',
 
   // Question/recording events
-  QUESTION_VIEWED: 'question_viewed',
-  QUESTION_SKIPPED: 'question_skipped',
-  RECORDING_STARTED: 'recording_started',
-  RECORDING_COMPLETED: 'recording_completed',
+  QUESTION_VIEWED: 'is_question_viewed',
+  QUESTION_SKIPPED: 'is_question_skipped',
+  RECORDING_STARTED: 'is_recording_started',
+  RECORDING_COMPLETED: 'is_recording_completed',
 
   // Feedback events
-  FEEDBACK_GENERATED: 'feedback_generated',
-  FEEDBACK_VIEWED: 'feedback_viewed',
+  FEEDBACK_GENERATED: 'is_feedback_generated',
+  FEEDBACK_VIEWED: 'is_feedback_viewed',
 
   // Feature usage events
-  SAMPLE_ANSWER_VIEWED: 'sample_answer_viewed',
-  COACHING_HINT_USED: 'coaching_hint_used',
+  SAMPLE_ANSWER_VIEWED: 'is_sample_answer_viewed',
+  COACHING_HINT_USED: 'is_coaching_hint_used',
 
   // Payment events
-  SUBSCRIPTION_CREATED: 'subscription_created',
+  SUBSCRIPTION_CREATED: 'is_subscription_created',
 
   // Settings events
-  THEME_CHANGED: 'theme_changed',
-  VOICE_SETTINGS_CHANGED: 'voice_settings_changed',
+  THEME_CHANGED: 'is_theme_changed',
+  VOICE_SETTINGS_CHANGED: 'is_voice_settings_changed',
 
   // Question bank events
-  QUESTION_FILTER_APPLIED: 'question_filter_applied',
-  QUESTION_PRACTICE_STARTED: 'question_practice_started',
+  QUESTION_FILTER_APPLIED: 'is_question_filter_applied',
+  QUESTION_PRACTICE_STARTED: 'is_question_practice_started',
 
   // Error events
-  UPLOAD_FAILED: 'upload_failed',
-  API_ERROR: 'api_error',
+  UPLOAD_FAILED: 'is_upload_failed',
+  API_ERROR: 'is_api_error',
 } as const;
 
 export type EventName = (typeof Events)[keyof typeof Events];

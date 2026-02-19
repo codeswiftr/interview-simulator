@@ -404,51 +404,43 @@ class TestRefreshTokenSecurity:
     """Test refresh token security."""
 
     def test_create_refresh_token_format(self):
-        """Test refresh token has secure format."""
-        user_id = "test-user-123"
-        token, expires_at = create_refresh_token(user_id)
+        """Test refresh token is a valid JWT string."""
+        token, expires_at = create_refresh_token("test-user-id")
 
-        # Token should be URL-safe string
+        # Token should be a JWT string (three dot-separated parts)
         assert isinstance(token, str)
-        # JWT tokens are longer than opaque tokens
-        assert len(token) >= 64
-
-        # Should be URL-safe (no spaces, proper base64url encoding)
-        assert " " not in token
+        assert len(token.split(".")) == 3
 
         # Should have expiration in future
         assert expires_at > datetime.now(UTC)
         assert expires_at < datetime.now(UTC) + timedelta(days=8)  # Should be 7 days
 
-    def test_refresh_token_uniqueness(self):
-        """Test refresh tokens are unique."""
-        token1, _ = create_refresh_token("user-1")
-        token2, _ = create_refresh_token("user-2")
+    def test_refresh_token_differs_by_user(self):
+        """Test refresh tokens differ for different users."""
+        token1, _ = create_refresh_token("test-user-1")
+        token2, _ = create_refresh_token("test-user-2")
 
         assert token1 != token2
 
     def test_verify_refresh_token_valid(self):
         """Test refresh token verification works."""
-        user_id = "test-user-456"
-        token, expires_at = create_refresh_token(user_id)
+        token, expires_at = create_refresh_token("test-user-id")
 
         # Should verify successfully
         assert verify_refresh_token(token, token, expires_at) is True
 
     def test_verify_refresh_token_invalid(self):
         """Test refresh token verification rejects invalid tokens."""
-        user_id = "test-user-789"
-        _, expires_at = create_refresh_token(user_id)
+        token, expires_at = create_refresh_token("test-user-id")
 
         # Wrong token should fail
-        assert verify_refresh_token("wrong-token", "stored-token", expires_at) is False
-        assert verify_refresh_token("stored-token", "wrong-token", expires_at) is False
-        assert verify_refresh_token("", "stored-token", expires_at) is False
+        assert verify_refresh_token("wrong-token", token, expires_at) is False
+        assert verify_refresh_token(token, "wrong-token", expires_at) is False
+        assert verify_refresh_token("", token, expires_at) is False
 
     def test_verify_refresh_token_expired(self):
         """Test expired refresh tokens are rejected."""
-        user_id = "test-user-abc"
-        token, expires_at = create_refresh_token(user_id)
+        token, _ = create_refresh_token("test-user-id")
 
         # Simulate expiration
         expired_at = datetime.now(UTC) - timedelta(days=1)

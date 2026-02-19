@@ -183,10 +183,10 @@ def create_refresh_token(user_id: str) -> tuple[str, datetime]:
     """Create a JWT refresh token using forge-shared auth.
 
     Args:
-        user_id: User ID to encode in the token
+        user_id: The user's ID to embed in the token.
 
     Returns:
-        Tuple of (token_string, expiration_datetime)
+        Tuple of (jwt_token_string, expiration_datetime)
     """
     auth = get_jwt_auth_instance()
     token = auth.create_refresh_token(user_id=user_id)
@@ -197,7 +197,7 @@ def create_refresh_token(user_id: str) -> tuple[str, datetime]:
 def verify_refresh_token(
     stored_token: str | None, provided_token: str, expires_at: datetime | None
 ) -> bool:
-    """Verify a refresh token is valid and not expired.
+    """Verify a refresh token is valid, not expired, and has valid JWT signature.
 
     Args:
         stored_token: Token stored in database
@@ -205,7 +205,7 @@ def verify_refresh_token(
         expires_at: Expiration timestamp from database
 
     Returns:
-        True if token is valid and not expired
+        True if token is valid, matches stored token, not expired, and JWT signature valid
     """
     if not stored_token or not expires_at:
         return False
