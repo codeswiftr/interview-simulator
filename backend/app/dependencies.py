@@ -3,15 +3,16 @@
 Migrated to forge-shared auth (2026-02).
 """
 
+import time
+from collections import defaultdict
 from datetime import UTC
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from forge_shared.auth.dependencies import get_jwt_auth
 from forge_shared.auth.jwt import JWTAuth
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_session
 from app.models.user import SubscriptionTier, User
@@ -119,3 +120,76 @@ async def check_interview_quota(
         )
 
     return current_user
+
+
+# ===== Per-Endpoint Rate Limiting =====
+
+
+class EndpointRateLimiter:
+    """Simple in-memory per-endpoint rate limiter using sliding window."""
+
+    def __init__(self, max_requests: int, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._requests: dict[str, list[float]] = defaultdict(list)
+
+    def _get_client_ip(self, request: Request) -> str:
+        """Get client IP for rate limiting."""
+        # Trust Cloudflare CF-Connecting-IP if CF-RAY present
+        cf_ray = request.headers.get("CF-RAY")
+        cf_ip = request.headers.get("CF-Connecting-IP")
+        if cf_ray and cf_ip:
+            return cf_ip
+
+        # X-Forwarded-For (rightmost = closest proxy)
+        xff = request.headers.get("X-Forwarded-For")
+        if xff:
+            ips = [ip.strip() for ip in xff.split(",")]
+            if len(ips) <= 5:
+                return ips[-1]
+
+        # Direct connection
+        if request.client:
+            return request.client.host
+        return "unknown"
+
+    def _clean_old(self, key: str) -> None:
+        cutoff = time.time() - self.window_seconds
+        self._requests[key] = [t for t in self._requests[key] if t > cutoff]
+
+    def check(self, request: Request) -> None:
+        """Check rate limit. Raises HTTPException if exceeded."""
+        ip = self._get_client_ip(request)
+        key = f"{request.url.path}:{ip}"
+
+        self._clean_old(key)
+
+        if len(self._requests[key]) >= self.max_requests:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many requests. Try again in {self.window_seconds} seconds.",
+                headers={"Retry-After": str(self.window_seconds)},
+            )
+
+        self._requests[key].append(time.time())
+
+
+# Pre-configured rate limiters for auth endpoints
+_login_limiter = EndpointRateLimiter(max_requests=10, window_seconds=60)
+_register_limiter = EndpointRateLimiter(max_requests=5, window_seconds=60)
+_password_reset_limiter = EndpointRateLimiter(max_requests=5, window_seconds=60)
+
+
+def rate_limit_login(request: Request) -> None:
+    """Rate limit login: 10 requests per minute per IP."""
+    _login_limiter.check(request)
+
+
+def rate_limit_register(request: Request) -> None:
+    """Rate limit registration: 5 requests per minute per IP."""
+    _register_limiter.check(request)
+
+
+def rate_limit_password_reset(request: Request) -> None:
+    """Rate limit password reset: 5 requests per minute per IP."""
+    _password_reset_limiter.check(request)

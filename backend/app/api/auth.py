@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, StringConstraints
+from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -28,11 +28,15 @@ router = APIRouter()
 class ForgotPasswordRequest(BaseModel):
     """Request schema for forgot password."""
 
+    model_config = ConfigDict(strict=True)
+
     email: EmailStr
 
 
 class ResetPasswordRequest(BaseModel):
     """Request schema for password reset."""
+
+    model_config = ConfigDict(strict=True)
 
     token: Annotated[str, StringConstraints(min_length=1, max_length=512)]
     new_password: Annotated[str, StringConstraints(min_length=8, max_length=128)]

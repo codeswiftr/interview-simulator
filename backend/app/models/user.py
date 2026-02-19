@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-from pydantic import EmailStr, StringConstraints
+from pydantic import ConfigDict, EmailStr, StringConstraints
 from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
@@ -91,6 +91,8 @@ class User(SQLModel, table=True):
 class UserCreate(SQLModel):
     """Schema for user creation with strict input validation."""
 
+    model_config = ConfigDict(strict=True)
+
     email: StrictEmail
     password: StrictPassword
     full_name: StrictName | None = None
@@ -112,6 +114,8 @@ class UserCreate(SQLModel):
 
 class UserLogin(SQLModel):
     """Schema for user login with strict input validation."""
+
+    model_config = ConfigDict(strict=True)
 
     email: StrictEmail
     password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
@@ -141,11 +145,15 @@ class Token(SQLModel):
 class RefreshTokenRequest(SQLModel):
     """Request schema for token refresh."""
 
+    model_config = ConfigDict(strict=True)
+
     refresh_token: StrictToken
 
 
 class UserUpdate(SQLModel):
     """Schema for updating user profile with strict validation."""
+
+    model_config = ConfigDict(strict=True)
 
     full_name: StrictName | None = None
     email: StrictEmail | None = None
@@ -154,6 +162,8 @@ class UserUpdate(SQLModel):
 
 class PasswordChange(SQLModel):
     """Schema for changing password with strict validation."""
+
+    model_config = ConfigDict(strict=True)
 
     current_password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
     new_password: StrictPassword

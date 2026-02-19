@@ -36,11 +36,18 @@ class TestInputValidation:
             with pytest.raises((ValidationError, ValueError)):
                 UserCreate(email=email, password="ValidPass123!")
 
+    def test_user_create_rejects_email_without_domain(self):
+        """Test UserCreate rejects emails without domain."""
+        from app.models.user import UserCreate
+
+        with pytest.raises((ValidationError, ValueError)):
+            UserCreate(email="user@", password="ValidPass123!")
+
     def test_user_create_accepts_valid_email(self):
         """UserCreate accepts properly formatted email addresses."""
         from app.models.user import UserCreate
 
-        user = UserCreate(email="valid@example.com", password="secret25")
+        user = UserCreate(email="valid@example.com", password="Secret25")
         assert user.email == "valid@example.com"
 
     def test_user_create_rejects_short_password(self):
@@ -64,9 +71,34 @@ class TestInputValidation:
         with pytest.raises((ValidationError, ValueError)):
             UserCreate(
                 email="test@example.com",
-                password="secret25",
+                password="Secret25",
                 full_name="A" * 201,
             )
+
+    def test_user_create_full_name_at_limit(self):
+        """Test UserCreate accepts full_name at exactly 200 chars."""
+        from app.models.user import UserCreate
+
+        user = UserCreate(
+            email="valid@example.com",
+            password="ValidPass123!",
+            full_name="A" * 200,
+        )
+        assert len(user.full_name) == 200
+
+    def test_user_create_rejects_int_email(self):
+        """Test strict mode rejects non-string email."""
+        from app.models.user import UserCreate
+
+        with pytest.raises((ValidationError, ValueError)):
+            UserCreate(email=12345, password="ValidPass123!")
+
+    def test_user_create_rejects_int_password(self):
+        """Test strict mode rejects non-string password."""
+        from app.models.user import UserCreate
+
+        with pytest.raises((ValidationError, ValueError)):
+            UserCreate(email="valid@example.com", password=12345)
 
     def test_user_login_rejects_invalid_email(self):
         """UserLogin rejects malformed email addresses."""
@@ -74,6 +106,13 @@ class TestInputValidation:
 
         with pytest.raises((ValidationError, ValueError)):
             UserLogin(email="not-an-email", password="anything")
+
+    def test_user_login_strict_mode(self):
+        """Test UserLogin strict mode rejects non-string types."""
+        from app.models.user import UserLogin
+
+        with pytest.raises((ValidationError, ValueError)):
+            UserLogin(email=123, password="password")
 
     def test_user_login_rejects_empty_password(self):
         """UserLogin rejects empty password."""
@@ -96,6 +135,13 @@ class TestInputValidation:
         with pytest.raises((ValidationError, ValueError)):
             UserUpdate(email="not-valid-email")
 
+    def test_user_update_accepts_none_email(self):
+        """Test UserUpdate accepts None email (optional field)."""
+        from app.models.user import UserUpdate
+
+        update = UserUpdate(full_name="Test Name")
+        assert update.email is None
+
     def test_user_update_name_max_length(self):
         """UserUpdate rejects full_name longer than 200 characters."""
         from app.models.user import UserUpdate
@@ -103,12 +149,26 @@ class TestInputValidation:
         with pytest.raises((ValidationError, ValueError)):
             UserUpdate(full_name="X" * 201)
 
+    def test_user_update_full_name_max_length(self):
+        """Test UserUpdate enforces full_name max_length=200."""
+        from app.models.user import UserUpdate
+
+        with pytest.raises((ValidationError, ValueError)):
+            UserUpdate(full_name="A" * 201)
+
     def test_password_change_rejects_short_new_password(self):
         """PasswordChange rejects new_password shorter than 8 characters."""
         from app.models.user import PasswordChange
 
         with pytest.raises((ValidationError, ValueError)):
             PasswordChange(current_password="oldpass1", new_password="short")
+
+    def test_password_change_strict_mode(self):
+        """Test PasswordChange strict mode rejects non-string types."""
+        from app.models.user import PasswordChange
+
+        with pytest.raises((ValidationError, ValueError)):
+            PasswordChange(current_password=123, new_password="ValidPass123!")
 
     def test_refresh_token_request_rejects_empty_token(self):
         """RefreshTokenRequest rejects empty token."""
@@ -124,6 +184,13 @@ class TestInputValidation:
         with pytest.raises((ValidationError, ValueError)):
             RefreshTokenRequest(refresh_token="x" * 513)
 
+    def test_refresh_token_strict_mode(self):
+        """Test RefreshTokenRequest strict mode rejects non-string types."""
+        from app.models.user import RefreshTokenRequest
+
+        with pytest.raises((ValidationError, ValueError)):
+            RefreshTokenRequest(refresh_token=12345)
+
     def test_forgot_password_rejects_invalid_email(self):
         """ForgotPasswordRequest rejects malformed email."""
         from app.api.auth import ForgotPasswordRequest
@@ -131,19 +198,46 @@ class TestInputValidation:
         with pytest.raises((ValidationError, ValueError)):
             ForgotPasswordRequest(email="not-an-email")
 
+    def test_forgot_password_strict_mode(self):
+        """Test ForgotPasswordRequest strict mode rejects non-string types."""
+        from app.api.auth import ForgotPasswordRequest
+
+        with pytest.raises((ValidationError, ValueError)):
+            ForgotPasswordRequest(email=12345)
+
     def test_reset_password_rejects_empty_token(self):
         """ResetPasswordRequest rejects empty token."""
         from app.api.auth import ResetPasswordRequest
 
         with pytest.raises((ValidationError, ValueError)):
-            ResetPasswordRequest(token="", new_password="secret25")
+            ResetPasswordRequest(token="", new_password="Secret25")
 
     def test_reset_password_rejects_oversized_token(self):
         """ResetPasswordRequest rejects token over 512 characters."""
         from app.api.auth import ResetPasswordRequest
 
         with pytest.raises((ValidationError, ValueError)):
-            ResetPasswordRequest(token="x" * 513, new_password="secret25")
+            ResetPasswordRequest(token="x" * 513, new_password="Secret25")
+
+    def test_reset_password_token_max_length(self):
+        """Test ResetPasswordRequest token max_length=512."""
+        from app.api.auth import ResetPasswordRequest
+
+        with pytest.raises((ValidationError, ValueError)):
+            ResetPasswordRequest(
+                token="A" * 513,
+                new_password="ValidPass123!",
+            )
+
+    def test_reset_password_password_max_length(self):
+        """Test ResetPasswordRequest new_password max_length=128."""
+        from app.api.auth import ResetPasswordRequest
+
+        with pytest.raises((ValidationError, ValueError)):
+            ResetPasswordRequest(
+                token="valid-token",
+                new_password="A" * 129,
+            )
 
     def test_coaching_hint_request_rejects_invalid_question_type(self):
         """CoachingHintRequest only accepts valid question types."""
@@ -192,7 +286,7 @@ class TestSQLInjectionPrevention:
         with pytest.raises((ValidationError, ValueError)):
             UserCreate(
                 email="' OR '1'='1'; DROP TABLE users; --",
-                password="secret25",
+                password="Secret25",
             )
 
     def test_user_login_sql_injection_in_email(self):
@@ -282,6 +376,34 @@ class TestCORSConfiguration:
         # Should not include Access-Control-Allow-Origin for malicious origin
         allow_origin = response.headers.get("Access-Control-Allow-Origin")
         assert allow_origin != "https://evil.com"
+
+
+class TestCORSHardening:
+    """Test CORS configuration is secure."""
+
+    @pytest.mark.asyncio
+    async def test_cors_rejects_malicious_origin(self, client, db_session):
+        """Test CORS rejects unauthorized origins."""
+        resp = await client.options(
+            "/api/v1/users/login",
+            headers={
+                "Origin": "https://evil.com",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert resp.headers.get("access-control-allow-origin") != "https://evil.com"
+
+    @pytest.mark.asyncio
+    async def test_cors_no_wildcard_origin(self, client, db_session):
+        """Test CORS never returns wildcard origin."""
+        resp = await client.options(
+            "/api/v1/users/login",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert resp.headers.get("access-control-allow-origin") != "*"
 
 
 # ============================================================
@@ -418,7 +540,64 @@ class TestAuthRateLimiting:
 
 
 # ============================================================
-# 5. Security Headers Tests
+# 5. API-level Input Validation Tests
+# ============================================================
+
+class TestInputValidationAPI:
+    """Test input validation at the API level."""
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_invalid_email(self, client, db_session):
+        """Test /register rejects invalid email format via API."""
+        resp = await client.post(
+            "/api/v1/users/register",
+            json={"email": "not-an-email", "password": "ValidPass123!"},
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_int_email(self, client, db_session):
+        """Test /register rejects non-string email via API."""
+        resp = await client.post(
+            "/api/v1/users/register",
+            json={"email": 12345, "password": "ValidPass123!"},
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_login_rejects_invalid_email(self, client, db_session):
+        """Test /login rejects invalid email format via API."""
+        resp = await client.post(
+            "/api/v1/users/login",
+            json={"email": "not-an-email", "password": "password123"},
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_rejects_long_name(self, client, db_session):
+        """Test /register rejects names over 200 chars."""
+        resp = await client.post(
+            "/api/v1/users/register",
+            json={
+                "email": "valid@example.com",
+                "password": "ValidPass123!",
+                "full_name": "A" * 201,
+            },
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_forgot_password_rejects_invalid_email(self, client, db_session):
+        """Test /forgot-password rejects invalid email."""
+        resp = await client.post(
+            "/api/v1/auth/forgot-password",
+            json={"email": "not-an-email"},
+        )
+        assert resp.status_code == 422
+
+
+# ============================================================
+# 6. Security Headers Tests
 # ============================================================
 
 class TestSecurityHeaders:
@@ -431,10 +610,22 @@ class TestSecurityHeaders:
         assert response.headers.get("X-Frame-Options") == "DENY"
 
     @pytest.mark.asyncio
+    async def test_x_frame_options(self, client, db_session):
+        """Test X-Frame-Options header is DENY."""
+        resp = await client.get("/health")
+        assert resp.headers.get("x-frame-options") == "DENY"
+
+    @pytest.mark.asyncio
     async def test_x_content_type_options_nosniff(self, client):
         """Responses include X-Content-Type-Options: nosniff."""
         response = await client.get("/")
         assert response.headers.get("X-Content-Type-Options") == "nosniff"
+
+    @pytest.mark.asyncio
+    async def test_x_content_type_options(self, client, db_session):
+        """Test X-Content-Type-Options header is nosniff."""
+        resp = await client.get("/health")
+        assert resp.headers.get("x-content-type-options") == "nosniff"
 
     @pytest.mark.asyncio
     async def test_strict_transport_security(self, client):
@@ -445,16 +636,35 @@ class TestSecurityHeaders:
         assert "includeSubDomains" in hsts
 
     @pytest.mark.asyncio
+    async def test_hsts_header(self, client, db_session):
+        """Test Strict-Transport-Security header is set."""
+        resp = await client.get("/health")
+        hsts = resp.headers.get("strict-transport-security", "")
+        assert "max-age=" in hsts
+
+    @pytest.mark.asyncio
     async def test_referrer_policy(self, client):
         """Responses include Referrer-Policy header."""
         response = await client.get("/")
         assert response.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
 
     @pytest.mark.asyncio
+    async def test_referrer_policy_db(self, client, db_session):
+        """Test Referrer-Policy header is set."""
+        resp = await client.get("/health")
+        assert resp.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+
+    @pytest.mark.asyncio
     async def test_x_xss_protection(self, client):
         """Responses include X-XSS-Protection header."""
         response = await client.get("/")
         assert response.headers.get("X-XSS-Protection") == "1; mode=block"
+
+    @pytest.mark.asyncio
+    async def test_xss_protection(self, client, db_session):
+        """Test X-XSS-Protection header is set."""
+        resp = await client.get("/health")
+        assert resp.headers.get("x-xss-protection") == "1; mode=block"
 
     @pytest.mark.asyncio
     async def test_permissions_policy(self, client):
