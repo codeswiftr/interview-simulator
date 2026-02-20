@@ -1,6 +1,7 @@
 """SQLModel data models for Interview Simulator."""
 
 from app.models.analytics import InterviewAnalytics
+from app.models.api_key import APIKey, APIKeyScope
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, VideoFeedback
 from app.models.interview import (
     InterviewQuestion,
@@ -25,6 +26,8 @@ from app.models.user import ExperienceLevel, User
 __all__ = [
     "User",
     "ExperienceLevel",
+    "APIKey",
+    "APIKeyScope",
     "Question",
     "QuestionCategory",
     "Difficulty",

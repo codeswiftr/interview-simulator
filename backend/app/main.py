@@ -24,6 +24,7 @@ from forge_shared.utm import UTMMiddleware
 
 from app.api import (
     analytics,
+    api_keys,
     auth,
     coaching,
     feedback,
@@ -364,6 +365,7 @@ if not settings.debug:
 app.include_router(health.router, tags=["Health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(api_keys.router, prefix="/api/v1", tags=["API Keys"])
 app.include_router(questions.router, prefix="/api/v1/questions", tags=["Questions"])
 app.include_router(interviews.router, prefix="/api/v1/interviews", tags=["Interviews"])
 app.include_router(feedback.router, prefix="/api/v1/feedback", tags=["Feedback"])
