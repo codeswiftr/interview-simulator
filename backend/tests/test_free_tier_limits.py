@@ -10,12 +10,10 @@ Tests cover:
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
-from uuid import uuid4
 
 import pytest
 from sqlmodel import select
 
-from app.models.interview import InterviewSession
 from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import SubscriptionTier, User
 from tests.conftest import register_and_login

@@ -1,13 +1,13 @@
 """Tests for behavioral analytics service."""
 
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from app.models.analytics import InterviewAnalytics
-from app.models.interview import InterviewResponse, InterviewSession, InterviewType, InterviewStatus
+from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType
 from app.models.user import User
 from app.services.behavioral_analytics_service import BehavioralAnalyticsService
-
 from tests.conftest import requires_db
 
 

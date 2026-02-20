@@ -277,7 +277,7 @@ async def test_sequential_question_order_maintained_across_retrievals(
     await db_session.refresh(interview)
 
     # Assign questions
-    assigned = await interview_service.assign_questions(db_session, interview)
+    await interview_service.assign_questions(db_session, interview)
 
     # Get questions multiple times
     retrieval1 = await interview_service.get_interview_questions(db_session, interview.id)

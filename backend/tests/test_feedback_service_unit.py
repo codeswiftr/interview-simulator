@@ -5,14 +5,14 @@ allowing test execution without a running PostgreSQL instance.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
 from app.models.feedback import AudioFeedback, ContentFeedback
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus
-from app.models.question import Question, QuestionCategory
+from app.models.interview import InterviewResponse, InterviewSession
+from app.models.question import Question
 from app.services.feedback_service import FeedbackService
 
 

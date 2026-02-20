@@ -245,11 +245,11 @@ def main():
     print(f"\n✓ Generated question bank with {sum(len(qs) for qs in question_bank.values())} total questions")
 
     # Example 2: Export weekly metrics
-    metrics = export_weekly_metrics()
+    export_weekly_metrics()
 
     # Example 3: Generate weekly report
     report_dir = Path("/tmp/interview_reports")
-    report_file = generate_weekly_report(report_dir)
+    generate_weekly_report(report_dir)
 
     print("\n" + "=" * 60)
     print("All automation workflows completed successfully!")

@@ -1,7 +1,6 @@
 """Unit tests for audio service (no database required)."""
 
 import logging
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -459,7 +458,7 @@ class TestSaveAudioFeedback:
 
         with patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0), \
              patch.object(service.analyzer, "calculate_filler_score", return_value=90.0):
-            feedback = await service.save_audio_feedback(mock_session, response_id, metrics)
+            await service.save_audio_feedback(mock_session, response_id, metrics)
 
         # Expected: 100*0.3 + 90*0.3 + 80*0.2 + 60*0.2 = 30 + 27 + 16 + 12 = 85
         # Check that the feedback was created with calculated score

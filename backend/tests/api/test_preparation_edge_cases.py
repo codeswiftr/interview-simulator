@@ -6,12 +6,10 @@ Tests the AI Ghostwriter answer preparation workflow:
 - Practice delivery (audio transcription and rating)
 """
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from httpx import AsyncClient
 
 from app.models.preparation import (
     AnswerPreparation,
@@ -213,6 +211,7 @@ class TestStartPreparation:
 
         # First request - should get existing
         from sqlmodel import select
+
         from tests.conftest import get_test_engine
 
         _, TestSessionLocal = get_test_engine()

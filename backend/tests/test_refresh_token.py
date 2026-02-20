@@ -6,11 +6,8 @@ Validates that refresh tokens are now issued as forge-shared JWTs
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 from app.security import (
     create_refresh_token,
-    decode_token,
     get_jwt_auth_instance,
     verify_refresh_token,
 )

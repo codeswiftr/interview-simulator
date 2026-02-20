@@ -1,11 +1,12 @@
 """Quick validation of security headers middleware without full test setup."""
 
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
+from httpx import ASGITransport, AsyncClient
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
-from httpx import AsyncClient, ASGITransport
 
 from app.middleware.security_headers import SecurityHeadersMiddleware
 

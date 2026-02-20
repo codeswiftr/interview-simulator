@@ -3,7 +3,6 @@
 Tests video analysis service with mocked database and analyzer.
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 

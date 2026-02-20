@@ -18,8 +18,6 @@ import pytest
 from app.models.feedback import (
     AudioFeedback,
     ContentFeedback,
-    SessionFeedback,
-    SkillDimension,
 )
 from app.models.interview import (
     InterviewResponse,

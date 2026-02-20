@@ -8,8 +8,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.interview import InterviewQuestion, InterviewSession, InterviewType
-from app.models.question import Difficulty, Question, QuestionCategory
+from app.models.interview import InterviewSession, InterviewType
+from app.models.question import Question, QuestionCategory
 from app.services.interview_service import InterviewService
 
 

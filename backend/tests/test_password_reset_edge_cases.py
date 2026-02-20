@@ -12,7 +12,6 @@ Tests critical password reset scenarios:
 import secrets
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 from sqlmodel import select

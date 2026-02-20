@@ -20,7 +20,6 @@ from collections.abc import Sequence
 
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = 'f0ba3e56c2e0'
 down_revision: str | None = '0012_add_interview_shares'

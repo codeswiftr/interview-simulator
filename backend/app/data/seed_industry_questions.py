@@ -10,6 +10,10 @@ This module contains 100 curated interview questions across 5 industries:
 Each industry has a mix of behavioral and technical questions at various difficulty levels.
 """
 
+from __future__ import annotations
+
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.question import Difficulty, Industry, Question, QuestionCategory, Role
 
 # ========== SAAS INDUSTRY (20 questions) ==========

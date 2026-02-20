@@ -1,10 +1,10 @@
 """Unit tests for FeedbackPersistenceService."""
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, VideoFeedback
 from app.services.feedback_persistence_service import FeedbackPersistenceService

@@ -10,7 +10,7 @@ Tests cover the full password reset flow:
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi import status

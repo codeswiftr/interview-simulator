@@ -3,9 +3,9 @@
 Critical: These tests cover revenue-related functionality.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ class TestCheckoutSession:
             json={"price_id": "price_123", "tier": "pro"},
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "checkout_url" in data
@@ -49,20 +49,20 @@ class TestCheckoutSession:
             "/api/v1/subscriptions/checkout",
             json={"price_id": "price_123", "tier": "pro"}
         )
-        
+
         assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_create_checkout_invalid_price(self, client, auth_headers, mock_stripe):
         """Should handle Stripe errors gracefully."""
         mock_stripe.checkout.Session.create.side_effect = Exception("Invalid price")
-        
+
         response = await client.post(
             "/api/v1/subscriptions/checkout",
             json={"price_id": "invalid", "tier": "pro"},
             headers=auth_headers
         )
-        
+
         assert response.status_code == 400
 
 
@@ -76,7 +76,7 @@ class TestSubscriptionStatus:
             "/api/v1/subscriptions/status",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "tier" in data
@@ -90,7 +90,7 @@ class TestSubscriptionStatus:
             "/api/v1/subscriptions/status",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["tier"] == "free"
@@ -106,7 +106,7 @@ class TestBillingPortal:
             "/api/v1/subscriptions/portal",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "portal_url" in data
@@ -120,12 +120,12 @@ class TestPricingConfig:
     async def test_get_pricing(self, client):
         """Should return pricing configuration."""
         response = await client.get("/api/v1/subscriptions/pricing")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert "plans" in data
         assert len(data["plans"]) > 0
-        
+
         # Check plan structure
         plan = data["plans"][0]
         assert "id" in plan
@@ -144,7 +144,7 @@ class TestCancelSubscription:
             "/api/v1/subscriptions/cancel",
             headers=auth_headers
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "cancellation_scheduled"
@@ -156,5 +156,5 @@ class TestCancelSubscription:
             "/api/v1/subscriptions/cancel",
             headers=auth_headers
         )
-        
+
         assert response.status_code in [200, 400]

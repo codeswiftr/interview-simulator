@@ -7,12 +7,9 @@ This test file focuses on improving coverage for critical payment paths:
 - Edge cases and error scenarios
 """
 
-from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
 
 import pytest
-import stripe
 from sqlmodel import select
 
 from app.models.user import SubscriptionTier, User

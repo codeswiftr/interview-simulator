@@ -8,11 +8,11 @@ Tests critical error paths in interview service:
 - Transaction rollback scenarios
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import OperationalError
 from sqlmodel import select
 
 from app.models.interview import InterviewSession, InterviewStatus, InterviewType

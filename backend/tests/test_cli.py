@@ -194,7 +194,7 @@ class TestExportMetrics:
         """Test exporting metrics to file."""
         output_file = tmp_path / "metrics.json"
 
-        response = run_cli(
+        run_cli(
             [
                 "interview-sim",
                 "export-metrics",

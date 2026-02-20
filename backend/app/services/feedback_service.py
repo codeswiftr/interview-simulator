@@ -9,7 +9,12 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.ai.content_analyzer import ContentAnalyzer
-from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, SkillsGapResponse, VideoFeedback
+from app.models.feedback import (
+    ContentFeedback,
+    SessionFeedback,
+    SkillsGapResponse,
+    VideoFeedback,
+)
 from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus
 from app.models.question import Question
 from app.models.user import User
