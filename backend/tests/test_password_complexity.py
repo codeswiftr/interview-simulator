@@ -11,7 +11,7 @@ Tests the updated password validation that enforces:
 import pytest
 from pydantic import ValidationError
 
-from app.models.user import UserCreate, PasswordChange
+from app.models.user import PasswordChange, UserCreate
 from app.utils.password_validation import PasswordValidator, validate_password
 
 

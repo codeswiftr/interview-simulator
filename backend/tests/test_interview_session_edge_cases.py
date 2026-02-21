@@ -9,21 +9,16 @@ Tests critical interview flow scenarios:
 - Resource cleanup on session end
 """
 
-from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
 from sqlmodel import select
 
 from app.models.interview import (
-    InterviewQuestion,
     InterviewResponse,
-    InterviewSession,
     InterviewStatus,
-    InterviewType,
 )
 from app.models.question import Difficulty, Question, QuestionCategory
-from app.models.user import SubscriptionTier, User
 from tests.conftest import register_and_login
 
 

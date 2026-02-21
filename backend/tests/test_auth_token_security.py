@@ -9,14 +9,13 @@ This module tests critical authentication edge cases including:
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
 
 import jwt
 import pytest
 from httpx import AsyncClient
 
 from app.config import settings
-from app.security import create_access_token, create_refresh_token
+from app.security import create_access_token
 
 
 @pytest.mark.asyncio

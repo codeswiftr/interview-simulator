@@ -8,10 +8,11 @@ Tests cover:
 - Edge cases and error handling
 """
 
+from pathlib import Path
+from unittest.mock import patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 from app.ai.audio_analyzer import AudioAnalyzer, AudioMetrics
 

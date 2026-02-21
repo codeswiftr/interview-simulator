@@ -149,19 +149,6 @@ class TestRecommendNextQuestions:
         )
 
         assert len(recommendations) > 0
-
-        # At least one recommendation should be harder
-        has_harder = False
-        for rec_id in recommendations:
-            result = await db_session.exec(
-                select(Question).where(Question.id == rec_id)
-            )
-            rec_q = result.first()
-            if rec_q and rec_q.difficulty == Difficulty.HARD:
-                has_harder = True
-                break
-
-        # Note: might not have harder if none available
         assert len(recommendations) <= 5
 
     @pytest.mark.asyncio

@@ -51,7 +51,7 @@ class TestGetClient:
 
             with patch("app.services.delivery_rating_service.AsyncOpenAI") as MockClient:
                 service = DeliveryRatingService()
-                client = service._get_client()
+                service._get_client()
 
                 MockClient.assert_called_once_with(
                     api_key="test_key",

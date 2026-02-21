@@ -9,9 +9,8 @@ import json
 import logging
 from dataclasses import dataclass
 
+from forge_shared.ai import RetryConfig, create_client
 from openai import AsyncOpenAI
-
-from forge_shared.ai import create_client, extract_json, RetryConfig
 
 from app.config import settings
 

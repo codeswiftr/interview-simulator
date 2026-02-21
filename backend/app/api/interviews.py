@@ -171,7 +171,7 @@ async def start_interview(
     # Check both if questions exist AND if the count matches (prevents partial/duplicate assignments)
     existing_questions = await interview_service.get_interview_questions(session, interview_id)
     expected_count = interview.question_count
-    
+
     if len(existing_questions) != expected_count:
         # Clear any existing questions if count doesn't match (handles partial assignments or duplicates)
         if existing_questions:
@@ -545,8 +545,6 @@ async def create_quick_practice(
 from fastapi.responses import Response
 
 from app.models.interview_share import (
-    InterviewShare,
-    InterviewShareCreate,
     InterviewShareRead,
     SharedInterviewRead,
 )

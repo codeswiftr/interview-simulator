@@ -1,11 +1,14 @@
 """Unit tests for InterviewService."""
 
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from app.services.interview_service import InterviewService
-from app.models.interview import InterviewSession, InterviewType, InterviewQuestion
+
+from app.models.interview import InterviewQuestion, InterviewSession, InterviewType
 from app.models.question import Question, QuestionCategory
+from app.services.interview_service import InterviewService
+
 
 @pytest.fixture
 def service():
@@ -39,7 +42,7 @@ async def test_assign_questions_insufficient_questions(service):
 
     with pytest.raises(ValueError) as exc_info:
         await service.assign_questions(mock_session, mock_interview)
-    
+
     assert "Not enough questions available" in str(exc_info.value)
     assert "difficulty 'easy'" in str(exc_info.value)
 
@@ -164,10 +167,10 @@ async def test_assign_questions_with_target_company(service):
     # Second call (general pool) returns 1 question
     mock_result_company = MagicMock()
     mock_result_company.all.return_value = [q1]
-    
+
     mock_result_general = MagicMock()
     mock_result_general.all.return_value = [q2]
-    
+
     mock_session.exec.side_effect = [mock_result_company, mock_result_general]
 
     result = await service.assign_questions(mock_session, mock_interview)
@@ -182,14 +185,14 @@ async def test_get_interview_questions(service):
     """Test retrieving assigned questions."""
     mock_session = AsyncMock()
     interview_id = uuid4()
-    
+
     q1 = Question(id=uuid4())
     mock_result = MagicMock()
     mock_result.all.return_value = [q1]
     mock_session.exec.return_value = mock_result
 
     result = await service.get_interview_questions(mock_session, interview_id)
-    
+
     assert len(result) == 1
     assert result[0].id == q1.id
 
@@ -198,7 +201,7 @@ async def test_has_assigned_questions(service):
     """Test checking if questions are assigned."""
     mock_session = AsyncMock()
     interview_id = uuid4()
-    
+
     mock_result = MagicMock()
     mock_result.one.return_value = 1
     mock_session.exec.return_value = mock_result
@@ -225,14 +228,14 @@ async def test_assign_specific_question_success(service):
     mock_interview = MagicMock()
     mock_interview.id = uuid4()
     question_id = uuid4()
-    
+
     q1 = Question(id=question_id, expected_duration_seconds=120)
     mock_result = MagicMock()
     mock_result.first.return_value = q1
     mock_session.exec.return_value = mock_result
 
     result = await service.assign_specific_question(mock_session, mock_interview, question_id)
-    
+
     assert result.question_id == question_id
     assert result.session_id == mock_interview.id
     assert mock_session.add.called
@@ -261,8 +264,8 @@ async def test_assign_specific_question_not_found(service):
 @pytest.mark.asyncio
 async def test_assign_questions_integration_behavioral(db_session, test_user, service):
     """Integration test: Assign behavioral questions to an interview session."""
-    from app.models.interview import InterviewSession, InterviewType, DifficultyLevel
-    from app.models.question import Question, QuestionCategory, Difficulty
+    from app.models.interview import DifficultyLevel, InterviewType
+    from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create test questions
     for i in range(5):
@@ -300,8 +303,8 @@ async def test_assign_questions_integration_behavioral(db_session, test_user, se
 @pytest.mark.asyncio
 async def test_assign_questions_integration_mixed_interview(db_session, test_user, service):
     """Integration test: Assign questions for mixed interview type."""
-    from app.models.interview import InterviewSession, InterviewType
-    from app.models.question import Question, QuestionCategory, Difficulty
+    from app.models.interview import InterviewType
+    from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create mixed questions
     categories = [QuestionCategory.BEHAVIORAL, QuestionCategory.TECHNICAL, QuestionCategory.SYSTEM_DESIGN]
@@ -338,8 +341,8 @@ async def test_assign_questions_integration_mixed_interview(db_session, test_use
 @pytest.mark.asyncio
 async def test_assign_questions_integration_company_specific(db_session, test_user, service):
     """Integration test: Assign company-specific questions."""
-    from app.models.interview import InterviewSession, InterviewType, DifficultyLevel
-    from app.models.question import Question, QuestionCategory, Difficulty
+    from app.models.interview import DifficultyLevel, InterviewType
+    from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create Google-specific questions
     for i in range(3):
@@ -390,8 +393,8 @@ async def test_assign_questions_integration_company_specific(db_session, test_us
 @pytest.mark.asyncio
 async def test_assign_questions_integration_insufficient_questions(db_session, test_user, service):
     """Integration test: Handle insufficient questions gracefully."""
-    from app.models.interview import InterviewSession, InterviewType
-    from app.models.question import Question, QuestionCategory, Difficulty
+    from app.models.interview import InterviewType
+    from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create only 2 technical questions
     for i in range(2):
@@ -426,8 +429,8 @@ async def test_assign_questions_integration_insufficient_questions(db_session, t
 @pytest.mark.asyncio
 async def test_get_interview_questions_integration(db_session, test_user, service):
     """Integration test: Retrieve questions in correct order."""
-    from app.models.interview import InterviewSession, InterviewType, InterviewQuestion
-    from app.models.question import Question, QuestionCategory, Difficulty
+    from app.models.interview import InterviewType
+    from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create questions
     q1 = Question(content="Q1", category=QuestionCategory.BEHAVIORAL.value, difficulty=Difficulty.EASY.value, is_active=True)
@@ -468,7 +471,7 @@ async def test_get_interview_questions_integration(db_session, test_user, servic
 @pytest.mark.asyncio
 async def test_has_assigned_questions_integration(db_session, test_user, service):
     """Integration test: Check if interview has assigned questions."""
-    from app.models.interview import InterviewSession, InterviewType, InterviewQuestion
+    from app.models.interview import InterviewType
     from app.models.question import Question, QuestionCategory
 
     # Create interview without questions
@@ -508,8 +511,8 @@ async def test_has_assigned_questions_integration(db_session, test_user, service
 @pytest.mark.asyncio
 async def test_assign_specific_question_integration(db_session, test_user, service):
     """Integration test: Assign a specific question for quick practice."""
-    from app.models.interview import InterviewSession, InterviewType
-    from app.models.question import Question, QuestionCategory, Difficulty
+    from app.models.interview import InterviewType
+    from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create questions
     q1 = Question(
@@ -550,7 +553,7 @@ async def test_assign_specific_question_integration(db_session, test_user, servi
 @pytest.mark.asyncio
 async def test_assign_specific_question_integration_inactive(db_session, test_user, service):
     """Integration test: Cannot assign inactive question."""
-    from app.models.interview import InterviewSession, InterviewType
+    from app.models.interview import InterviewType
     from app.models.question import Question, QuestionCategory
 
     # Create inactive question

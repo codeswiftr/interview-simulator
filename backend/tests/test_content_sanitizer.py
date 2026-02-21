@@ -1,6 +1,5 @@
 """Tests for content sanitization service - XSS prevention and HTML cleaning."""
 
-import pytest
 
 from app.services.content_sanitizer import (
     HTMLContentSanitizer,

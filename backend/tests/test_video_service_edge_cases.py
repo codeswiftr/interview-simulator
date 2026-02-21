@@ -4,15 +4,12 @@ Focuses on edge cases, error paths, and metric variations not covered
 by existing tests.
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from sqlmodel import select
 
 from app.ai.video_analyzer import VideoMetrics
-from app.models.feedback import VideoFeedback
 from app.models.interview import (
     InterviewResponse,
     InterviewSession,

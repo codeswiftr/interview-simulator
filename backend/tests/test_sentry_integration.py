@@ -1,6 +1,5 @@
 """Tests for Sentry error monitoring integration."""
 
-import pytest
 
 
 class TestSentryConfiguration:

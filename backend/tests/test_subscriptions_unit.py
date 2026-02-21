@@ -9,13 +9,14 @@ Focuses on:
 - Tier mapping from price IDs
 """
 
-from datetime import UTC, datetime, timezone as tz
+from datetime import UTC, datetime
+from datetime import timezone as tz
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-import stripe
 from fastapi import HTTPException
+from forge_shared.billing.models import PricingTier
 
 from app.api.subscriptions import (
     _get_tier_from_price,
@@ -24,7 +25,7 @@ from app.api.subscriptions import (
     _handle_subscription_updated,
     _sync_subscription_from_stripe,
 )
-from app.models.user import SubscriptionTier, User
+from app.models.user import SubscriptionTier
 
 
 @pytest.fixture
@@ -483,7 +484,7 @@ async def test_checkout_creates_customer_if_missing(
     mock_settings,
 ):
     """Test checkout creates Stripe customer if user does not have one."""
-    from app.api.subscriptions import create_checkout_session, CheckoutRequest
+    from app.api.subscriptions import CheckoutRequest, create_checkout_session
 
     # Ensure user has no customer ID
     assert test_user.stripe_customer_id is None
@@ -502,7 +503,7 @@ async def test_checkout_creates_customer_if_missing(
                 mock_analytics_instance = MagicMock()
                 mock_analytics.return_value = mock_analytics_instance
 
-                response = await create_checkout_session(
+                await create_checkout_session(
                     payload=request,
                     current_user=test_user,
                     session=db_session,
@@ -528,14 +529,13 @@ async def test_checkout_rejects_duplicate_subscription(
     mock_stripe_client,
 ):
     """Test checkout fails if user already has active subscription."""
-    from app.api.subscriptions import create_checkout_session, CheckoutRequest
+    from app.api.subscriptions import CheckoutRequest, create_checkout_session
 
     # Set existing customer and subscription
     test_user.stripe_customer_id = "cus_123"
     await db_session.commit()
 
     # Mock existing active subscription
-    from forge_shared.billing.models import SubscriptionStatus
     mock_subscription = MagicMock()
     mock_subscription.id = "sub_existing"
     mock_stripe_client.get_customer_subscriptions.return_value = [mock_subscription]

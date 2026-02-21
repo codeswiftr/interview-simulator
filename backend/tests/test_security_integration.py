@@ -9,7 +9,6 @@ Tests end-to-end security scenarios:
 """
 
 import asyncio
-import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 

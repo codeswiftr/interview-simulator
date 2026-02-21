@@ -113,8 +113,7 @@ class TestPasswordResetEmail:
         with patch.dict("sys.modules", {"aiosmtplib": mock_aiosmtplib}):
             with patch("app.services.email_service.aiosmtplib", mock_aiosmtplib, create=True):
                 # Reimport to use patched module
-                from importlib import reload
-                import app.services.email_service as email_module
+
 
                 result = await email_service.send_password_reset(
                     email="smtp@example.com",
@@ -317,7 +316,7 @@ class TestResendIntegration:
         # Return response without 'id' key - covers line 129
         mock_response = {}
 
-        with patch("resend.Emails.send", return_value=mock_response) as mock_send:
+        with patch("resend.Emails.send", return_value=mock_response):
             with caplog.at_level(logging.INFO):
                 result = await email_service_resend.send_password_reset(
                     email="test@example.com",
@@ -368,7 +367,7 @@ class TestResendIntegration:
         # Return response without 'id' key - covers line 255
         mock_response = {}
 
-        with patch("resend.Emails.send", return_value=mock_response) as mock_send:
+        with patch("resend.Emails.send", return_value=mock_response):
             with caplog.at_level(logging.INFO):
                 result = await email_service_resend.send_email_verification(
                     email="verify@example.com",

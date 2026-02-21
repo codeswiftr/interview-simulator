@@ -1,17 +1,15 @@
 """Tests for analytics API endpoints."""
 
-import pytest
-from uuid import uuid4
 from unittest.mock import patch
+from uuid import uuid4
 
+import pytest
 from httpx import AsyncClient
 
 from app.models.analytics import InterviewAnalytics
-from app.models.interview import InterviewResponse, InterviewSession, InterviewType, InterviewStatus
+from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType
 from app.models.user import User
-
 from tests.conftest import requires_db
-
 
 TEST_SECRET = "test-secret-key-minimum-32-characters-long"
 TEST_ALGORITHM = "HS256"
@@ -27,8 +25,9 @@ def mock_jwt_config():
 
 def create_test_token(user_id: str) -> str:
     """Create a test JWT token."""
+    from datetime import UTC, datetime, timedelta
+
     import jwt
-    from datetime import datetime, timedelta, UTC
 
     payload = {
         "sub": str(user_id),

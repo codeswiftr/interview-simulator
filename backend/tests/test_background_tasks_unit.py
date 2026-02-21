@@ -1,6 +1,5 @@
 """Unit tests for background task service (no database required)."""
 
-import asyncio
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -188,7 +187,7 @@ class TestProcessResponseAudioAsync:
         mock_session.commit = AsyncMock()
 
         with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(service, "_process_audio_with_retry", return_value=("transcript", {})) as mock_process, \
+             patch.object(service, "_process_audio_with_retry", return_value=("transcript", {})), \
              patch.object(service.audio_service, "save_audio_feedback", new_callable=AsyncMock), \
              patch.object(service, "generate_content_feedback_async", new_callable=AsyncMock):
 
@@ -1007,7 +1006,6 @@ class TestGenerateSessionFeedbackAsyncExceptions:
         session_id = uuid4()
 
         # Create a context manager that works but throws on exec
-        mock_session_ctx = AsyncMock()
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(side_effect=Exception("Unexpected database error"))
 

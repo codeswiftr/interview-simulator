@@ -5,10 +5,13 @@ Checkout still uses local price IDs for interview-simulator-specific tiers.
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
+import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from forge_shared.billing import handle_webhook
+from forge_shared.billing.models import BillingError
 from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,8 +21,6 @@ from app.db import get_session
 from app.dependencies import get_current_user
 from app.models.user import SubscriptionTier, User
 from app.services.analytics import Events, get_analytics
-from forge_shared.billing import handle_webhook, verify_signature
-from forge_shared.billing.models import BillingError
 
 logger = logging.getLogger(__name__)
 

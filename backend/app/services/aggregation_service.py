@@ -9,8 +9,19 @@ from uuid import UUID
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.feedback import AudioFeedback, ContentFeedback, SessionFeedback, SkillDimension, SkillsGapResponse
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, ProcessingStatus
+from app.models.feedback import (
+    AudioFeedback,
+    ContentFeedback,
+    SessionFeedback,
+    SkillDimension,
+    SkillsGapResponse,
+)
+from app.models.interview import (
+    InterviewResponse,
+    InterviewSession,
+    InterviewStatus,
+    ProcessingStatus,
+)
 from app.models.question import Question
 from app.services.scoring_service import ScoringService
 

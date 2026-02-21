@@ -11,7 +11,6 @@ from sqlmodel import select
 
 from app.models.interview import (
     DifficultyLevel,
-    InterviewQuestion,
     InterviewSession,
     InterviewStatus,
     InterviewType,

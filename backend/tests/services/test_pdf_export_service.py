@@ -6,9 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.feedback import ContentFeedback, SessionFeedback
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType
-from app.models.question import Difficulty, Question, QuestionCategory
+from app.models.feedback import SessionFeedback
+from app.models.interview import InterviewSession, InterviewStatus, InterviewType
+from app.models.question import Difficulty, QuestionCategory
 from app.models.user import User
 from app.services.pdf_export_service import PDFExportService
 

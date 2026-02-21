@@ -5,8 +5,6 @@ Tests the Analytics class methods without making actual API calls.
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from app.services.analytics import Analytics, Events, get_analytics
 
 

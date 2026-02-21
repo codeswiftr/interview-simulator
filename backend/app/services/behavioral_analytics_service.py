@@ -14,7 +14,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.analytics import AnalyticsSummary, InterviewAnalytics, ProgressDataPoint
-from app.models.interview import InterviewResponse, InterviewSession
+from app.models.interview import InterviewResponse
 
 
 class BehavioralAnalyticsService:

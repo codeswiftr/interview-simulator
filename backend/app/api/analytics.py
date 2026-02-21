@@ -11,7 +11,6 @@ from app.dependencies import get_current_user
 from app.models.analytics import (
     AnalyticsSummary,
     InterviewAnalyticsRead,
-    ProgressDataPoint,
     ProgressResponse,
 )
 from app.models.interview import InterviewSession

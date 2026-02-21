@@ -6,15 +6,16 @@ Tests the account lockout service which prevents brute force attacks by:
 - Clearing failed attempts after successful login
 """
 
-import pytest
 from datetime import UTC, datetime, timedelta
-from httpx import AsyncClient, ASGITransport
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.main import app
 from app.models.user import User
 from app.security import hash_password
 from app.services.account_lockout import AccountLockoutService
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.fixture

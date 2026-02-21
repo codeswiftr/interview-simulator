@@ -1,14 +1,14 @@
 """Integration tests for analytics generation during feedback flow."""
 
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from app.models.analytics import InterviewAnalytics
-from app.models.interview import InterviewResponse, InterviewSession, InterviewType, InterviewStatus
-from app.models.question import Question, QuestionCategory, Difficulty
+from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType
+from app.models.question import Difficulty, Question, QuestionCategory
 from app.models.user import User
 from app.services.feedback_service import FeedbackService
-
 from tests.conftest import requires_db
 
 

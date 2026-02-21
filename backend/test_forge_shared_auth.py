@@ -12,6 +12,10 @@ def test_imports():
     """Test that all imports work."""
     print("Testing imports...")
     try:
+        from forge_shared.auth.jwt import JWTAuth, JWTConfig
+        from forge_shared.auth.models import ForgeTokenPayload, Permission, PlanTier, UserRole
+
+        from app.dependencies import get_current_user
         from app.security import (
             create_access_token,
             decode_token,
@@ -19,9 +23,6 @@ def test_imports():
             hash_password,
             verify_password,
         )
-        from app.dependencies import get_current_user
-        from forge_shared.auth.jwt import JWTAuth, JWTConfig
-        from forge_shared.auth.models import ForgeTokenPayload, Permission, PlanTier, UserRole
 
         print("✓ All imports successful")
         return True

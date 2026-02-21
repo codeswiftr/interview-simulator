@@ -6,8 +6,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.interview import InterviewResponse, InterviewSession, InterviewStatus, InterviewType
-from app.models.interview_share import InterviewShare, SharedInterviewRead
+from app.models.interview import InterviewSession, InterviewStatus, InterviewType
+from app.models.interview_share import InterviewShare
 from app.models.user import User
 from app.services.share_service import ShareService
 
