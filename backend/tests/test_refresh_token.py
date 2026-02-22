@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from app.security import (
     create_refresh_token,
     get_jwt_auth_instance,
+    hash_refresh_token,
     verify_refresh_token,
 )
 
@@ -110,23 +111,31 @@ class TestJWTRefreshTokenVerification:
     """Test verify_refresh_token with JWT-based tokens."""
 
     def test_valid_token_passes(self):
-        """A freshly created token should verify successfully."""
+        """A freshly created token should verify successfully.
+
+        The database stores the SHA-256 hash of the token, so we pass
+        hash_refresh_token(token) as the first argument to simulate the DB lookup.
+        """
         token, expires_at = create_refresh_token("user-123")
-        assert verify_refresh_token(token, token, expires_at) is True
+        assert verify_refresh_token(hash_refresh_token(token), token, expires_at) is True
 
     def test_verify_refresh_token_valid_token_passes(self):
         """Test that a valid refresh token passes verification."""
         user_id = "test-user-valid"
         token, expires_at = create_refresh_token(user_id)
 
-        result = verify_refresh_token(token, token, expires_at)
+        result = verify_refresh_token(hash_refresh_token(token), token, expires_at)
         assert result is True, "Valid refresh token should pass verification"
 
     def test_mismatched_stored_token_fails(self):
-        """Providing a different token than stored should fail."""
+        """Providing a different token than stored should fail.
+
+        stored_token_hash is the hash of token; provided is other_token.
+        Hash(token) != Hash(other_token) so verification must fail.
+        """
         token, expires_at = create_refresh_token("user-123")
         other_token, _ = create_refresh_token("user-456")
-        assert verify_refresh_token(token, other_token, expires_at) is False
+        assert verify_refresh_token(hash_refresh_token(token), other_token, expires_at) is False
 
     def test_verify_refresh_token_mismatched_tokens_fail(self):
         """Test that mismatched stored/provided tokens fail verification."""
@@ -135,14 +144,14 @@ class TestJWTRefreshTokenVerification:
         token1, expires_at1 = create_refresh_token(user_id1)
         token2, _ = create_refresh_token(user_id2)
 
-        result = verify_refresh_token(token1, token2, expires_at1)
+        result = verify_refresh_token(hash_refresh_token(token1), token2, expires_at1)
         assert result is False, "Mismatched tokens should fail verification"
 
     def test_expired_db_timestamp_fails(self):
         """Token with expired DB timestamp should be rejected."""
         token, _ = create_refresh_token("user-123")
         expired = datetime.now(UTC) - timedelta(days=1)
-        assert verify_refresh_token(token, token, expired) is False
+        assert verify_refresh_token(hash_refresh_token(token), token, expired) is False
 
     def test_verify_refresh_token_expired_token_fails(self):
         """Test that expired tokens fail verification."""
@@ -152,7 +161,7 @@ class TestJWTRefreshTokenVerification:
         # Set expiry to past
         expired_at = datetime.now(UTC) - timedelta(days=1)
 
-        result = verify_refresh_token(token, token, expired_at)
+        result = verify_refresh_token(hash_refresh_token(token), token, expired_at)
         assert result is False, "Expired token should fail verification"
 
     def test_none_stored_token_fails(self):
@@ -170,28 +179,32 @@ class TestJWTRefreshTokenVerification:
     def test_none_expires_at_fails(self):
         """None expiry should be rejected."""
         token, _ = create_refresh_token("user-123")
-        assert verify_refresh_token(token, token, None) is False
+        assert verify_refresh_token(hash_refresh_token(token), token, None) is False
 
     def test_verify_refresh_token_none_expiry_fails(self):
         """Test that None expiry fails verification."""
         user_id = "test-user-noexpiry"
         token, _ = create_refresh_token(user_id)
 
-        result = verify_refresh_token(token, token, None)
+        result = verify_refresh_token(hash_refresh_token(token), token, None)
         assert result is False, "None expiry should fail verification"
 
     def test_non_jwt_token_fails_verification(self):
-        """An opaque string should fail JWT signature check."""
+        """An opaque string should fail JWT signature check.
+
+        hash_refresh_token(opaque) is passed as stored_token_hash since that
+        simulates how it would be stored; the JWT decode step must still reject it.
+        """
         opaque = "not-a-jwt-token-just-random-string"
         future = datetime.now(UTC) + timedelta(days=7)
-        assert verify_refresh_token(opaque, opaque, future) is False
+        assert verify_refresh_token(hash_refresh_token(opaque), opaque, future) is False
 
     def test_verify_refresh_token_non_jwt_fails(self):
         """Test that non-JWT tokens fail verification."""
         expires_at = datetime.now(UTC) + timedelta(days=7)
         fake_token = "not-a-jwt-token"
 
-        result = verify_refresh_token(fake_token, fake_token, expires_at)
+        result = verify_refresh_token(hash_refresh_token(fake_token), fake_token, expires_at)
         assert result is False, "Non-JWT token should fail verification"
 
     def test_access_token_fails_as_refresh(self):
@@ -201,7 +214,7 @@ class TestJWTRefreshTokenVerification:
         access = create_access_token({"sub": "user-123"})
         future = datetime.now(UTC) + timedelta(days=7)
         # access token has type="access", not "refresh"
-        assert verify_refresh_token(access, access, future) is False
+        assert verify_refresh_token(hash_refresh_token(access), access, future) is False
 
     def test_verify_refresh_token_access_token_fails(self):
         """Test that access tokens fail refresh token verification."""
@@ -211,7 +224,7 @@ class TestJWTRefreshTokenVerification:
         access_token = create_access_token({"sub": "test-user"})
         expires_at = datetime.now(UTC) + timedelta(days=7)
 
-        result = verify_refresh_token(access_token, access_token, expires_at)
+        result = verify_refresh_token(hash_refresh_token(access_token), access_token, expires_at)
         assert result is False, "Access token should fail refresh token verification"
 
 
@@ -222,14 +235,14 @@ class TestTokenRotation:
         """Both old and new rotation tokens should be valid JWTs."""
         old_token, old_exp = create_refresh_token("user-123")
         new_token, new_exp = create_refresh_token("user-123")
-        # Both should verify independently
-        assert verify_refresh_token(old_token, old_token, old_exp) is True
-        assert verify_refresh_token(new_token, new_token, new_exp) is True
+        # Both should verify independently (pass hash as stored_token_hash)
+        assert verify_refresh_token(hash_refresh_token(old_token), old_token, old_exp) is True
+        assert verify_refresh_token(hash_refresh_token(new_token), new_token, new_exp) is True
 
     def test_rotated_token_is_valid_jwt(self):
         """New refresh token should also be a valid JWT."""
         token, expires_at = create_refresh_token("user-123")
-        assert verify_refresh_token(token, token, expires_at) is True
+        assert verify_refresh_token(hash_refresh_token(token), token, expires_at) is True
         auth = get_jwt_auth_instance()
         payload = auth.decode_token(token)
         assert payload.type == "refresh"
@@ -243,17 +256,17 @@ class TestTokenRotation:
 
         # Create first token
         token1, expires1 = create_refresh_token(user_id)
-        assert verify_refresh_token(token1, token1, expires1) is True
+        assert verify_refresh_token(hash_refresh_token(token1), token1, expires1) is True
 
         # Wait 1 second to ensure different iat (issued at) timestamp
         time.sleep(1)
 
         # Simulate rotation: create second token
         token2, expires2 = create_refresh_token(user_id)
-        assert verify_refresh_token(token2, token2, expires2) is True
+        assert verify_refresh_token(hash_refresh_token(token2), token2, expires2) is True
 
         # Both tokens should be different (different iat means different signature)
         assert token1 != token2
 
         # First token should still be technically valid (until DB is updated)
-        assert verify_refresh_token(token1, token1, expires1) is True
+        assert verify_refresh_token(hash_refresh_token(token1), token1, expires1) is True

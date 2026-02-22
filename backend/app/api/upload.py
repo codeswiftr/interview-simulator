@@ -138,6 +138,15 @@ async def upload_audio(
     filename = f"{resource_id}_{secondary_id}_{unique_id}{file_ext}"
     file_path = UPLOAD_DIR / filename
 
+    # Path traversal protection: ensure the resolved path stays within UPLOAD_DIR
+    resolved_upload_dir = UPLOAD_DIR.resolve()
+    resolved_file_path = file_path.resolve()
+    if not str(resolved_file_path).startswith(str(resolved_upload_dir) + "/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path",
+        )
+
     # Save file
     with open(file_path, "wb") as f:
         f.write(content)
@@ -204,16 +213,22 @@ async def upload_video(
     if file_size > MAX_VIDEO_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=(
-                "File too large. Maximum size is "
-                f"{MAX_VIDEO_FILE_SIZE // (1024 * 1024)}MB"
-            ),
+            detail=(f"File too large. Maximum size is {MAX_VIDEO_FILE_SIZE // (1024 * 1024)}MB"),
         )
 
     # Generate unique filename
     unique_id = uuid.uuid4().hex[:12]
     filename = f"{response_id}_{unique_id}{file_ext}"
     file_path = VIDEO_UPLOAD_DIR / filename
+
+    # Path traversal protection: ensure the resolved path stays within VIDEO_UPLOAD_DIR
+    resolved_video_upload_dir = VIDEO_UPLOAD_DIR.resolve()
+    resolved_file_path = file_path.resolve()
+    if not str(resolved_file_path).startswith(str(resolved_video_upload_dir) + "/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path",
+        )
 
     with open(file_path, "wb") as f:
         f.write(content)

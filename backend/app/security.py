@@ -4,6 +4,7 @@ Migrated to forge-shared auth for JWT (2026-02).
 Password hashing remains local for backward compatibility.
 """
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -134,6 +135,22 @@ def migrate_password_hash(plain_password: str) -> str:
     return hash_password(plain_password)
 
 
+def hash_refresh_token(token: str) -> str:
+    """Hash a refresh token using SHA-256 for secure database storage.
+
+    Refresh tokens should never be stored in plaintext. This function
+    produces a hex-encoded SHA-256 digest that is safe to store and
+    compare without revealing the original token value.
+
+    Args:
+        token: The raw JWT refresh token string.
+
+    Returns:
+        Hex-encoded SHA-256 hash of the token.
+    """
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def create_access_token(data: dict[str, Any], expires_minutes: int | None = None) -> str:
     """Create a signed JWT access token using forge-shared.
 
@@ -195,21 +212,25 @@ def create_refresh_token(user_id: str) -> tuple[str, datetime]:
 
 
 def verify_refresh_token(
-    stored_token: str | None, provided_token: str, expires_at: datetime | None
+    stored_token_hash: str | None, provided_token: str, expires_at: datetime | None
 ) -> bool:
     """Verify a refresh token is valid, not expired, and has valid JWT signature.
 
+    The database stores a SHA-256 hash of the refresh token (not the raw token).
+    This function hashes the provided token and compares it against the stored hash.
+
     Args:
-        stored_token: Token stored in database
-        provided_token: Token provided by client
+        stored_token_hash: SHA-256 hash of the token stored in database
+        provided_token: Raw token string provided by the client
         expires_at: Expiration timestamp from database
 
     Returns:
-        True if token is valid, matches stored token, not expired, and JWT signature valid
+        True if token hash matches, is not expired, and JWT signature is valid
     """
-    if not stored_token or not expires_at:
+    if not stored_token_hash or not expires_at:
         return False
-    if stored_token != provided_token:
+    # Compare the hash of the provided token against the stored hash
+    if stored_token_hash != hash_refresh_token(provided_token):
         return False
     if datetime.now(UTC) > expires_at:
         return False

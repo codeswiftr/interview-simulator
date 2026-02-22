@@ -105,6 +105,7 @@ async def forgot_password(
     except Exception as e:
         # Log error but don't expose to user (security best practice)
         import logging
+
         logging.getLogger(__name__).error(f"Failed to send password reset email: {e}")
 
     return response
@@ -191,8 +192,11 @@ async def refresh_token(
     Raises:
         HTTPException: If refresh token is invalid or expired
     """
-    # Find user with this refresh token
-    result = await session.exec(select(User).where(User.refresh_token == payload.refresh_token))
+    from app.security import hash_refresh_token  # noqa: PLC0415
+
+    # Find user by hashed refresh token (tokens are stored as SHA-256 hashes)
+    token_hash = hash_refresh_token(payload.refresh_token)
+    result = await session.exec(select(User).where(User.refresh_token == token_hash))
     user = result.first()
 
     if not user:
@@ -200,7 +204,7 @@ async def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
-    # Verify token is not expired
+    # Verify token is not expired (stored_token_hash compared against provided token hash)
     if not verify_refresh_token(
         user.refresh_token, payload.refresh_token, user.refresh_token_expires_at
     ):
@@ -216,8 +220,8 @@ async def refresh_token(
     new_access_token = create_access_token({"sub": str(user.id)})
     new_refresh_token, new_expires = create_refresh_token(str(user.id))
 
-    # Store new refresh token (invalidates old one)
-    user.refresh_token = new_refresh_token
+    # Store new refresh token hash (invalidates old one)
+    user.refresh_token = hash_refresh_token(new_refresh_token)
     user.refresh_token_expires_at = new_expires
     await session.commit()
 

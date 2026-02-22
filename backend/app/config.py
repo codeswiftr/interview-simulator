@@ -2,7 +2,10 @@
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_SECRET_KEY = "change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -26,7 +29,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # Security
-    secret_key: str = "change-me-in-production"
+    secret_key: str = _DEFAULT_SECRET_KEY
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
@@ -94,6 +97,40 @@ class Settings(BaseSettings):
             origins.extend(self._dev_cors_origins)
         return origins
 
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        """Validate security-critical settings when running in production mode.
+
+        Raises:
+            ValueError: If localhost origins are present in production CORS config,
+                        or if the secret key is still the default placeholder value.
+        """
+        is_production = not self.debug and self.environment not in (
+            "development",
+            "test",
+            "testing",
+        )
+        if not is_production:
+            return self
+
+        # Reject localhost / loopback addresses in CORS origins for production
+        forbidden_origins = [o for o in self.cors_origins if "localhost" in o or "127.0.0.1" in o]
+        if forbidden_origins:
+            raise ValueError(
+                f"Production CORS origins must not contain localhost or 127.0.0.1. "
+                f"Found: {forbidden_origins}. "
+                "Remove these from CORS_ORIGINS environment variable."
+            )
+
+        # Reject the default/placeholder secret key in production
+        if self.secret_key == _DEFAULT_SECRET_KEY or not self.secret_key:
+            raise ValueError(
+                "SECRET_KEY must be set to a strong random value in production. "
+                f"The default value '{_DEFAULT_SECRET_KEY}' is not allowed."
+            )
+
+        return self
+
     # Storage
     storage_bucket: str = "interview-simulator-media"
     storage_url: str = ""
@@ -156,7 +193,7 @@ class Settings(BaseSettings):
             missing_vars.append("OPENAI_API_KEY")
 
         # Critical security
-        if not self.secret_key or self.secret_key == "change-me-in-production":
+        if not self.secret_key or self.secret_key == _DEFAULT_SECRET_KEY:
             missing_vars.append("SECRET_KEY")
 
         # CORS security validation

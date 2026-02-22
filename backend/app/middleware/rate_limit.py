@@ -56,65 +56,51 @@ class SecureRateLimiter:
         return hashlib.sha256(key_data.encode()).hexdigest()[:32]
 
     def _get_trusted_client_ip(self, request: Request) -> str:
-        """Get the trusted client IP, preventing header spoofing.
+        """Get the trusted client IP using a strict proxy-aware priority order.
 
         Security priority order:
-        1. Cloudflare CF-Connecting-IP (only if CF-RAY present)
-        2. Railway X-Real-IP (only in Railway environment)
-        3. X-Forwarded-For with strict validation (limited hops)
-        4. Direct connection IP
+        1. CF-Connecting-IP (Cloudflare) — only when CF-RAY is also present
+        2. X-Real-IP (Railway / nginx reverse proxy)
+        3. X-Forwarded-For last (rightmost) entry — closest proxy, not spoofable by client
+        4. Direct connection (request.client.host)
+        5. Fallback: "unknown"
         """
-        from app.config import settings
-
-        # 1. Cloudflare header - most trusted, but verify it's from Cloudflare
+        # 1. Cloudflare: trust CF-Connecting-IP only when CF-RAY confirms Cloudflare routing
         cf_ray = request.headers.get("CF-RAY")
         cf_connecting_ip = request.headers.get("CF-Connecting-IP")
 
         if cf_ray and cf_connecting_ip:
-            # Only trust CF-Connecting-IP if CF-RAY header is present
-            # This proves the request came through Cloudflare
             if self._is_valid_ip_format(cf_connecting_ip) and self._is_public_ip(cf_connecting_ip):
                 return cf_connecting_ip
-            else:
-                # Log suspicious CF header
-                self._log_suspicious_request(request, f"Invalid CF-Connecting-IP: {cf_connecting_ip}")
+            self._log_suspicious_request(request, f"Invalid CF-Connecting-IP: {cf_connecting_ip}")
 
-        # 2. Railway proxy header - only trust in Railway environment
-        if "railway" in (request.url.hostname or "").lower():
-            x_real_ip = request.headers.get("X-Real-IP")
-            if x_real_ip and self._is_valid_ip_format(x_real_ip) and self._is_public_ip(x_real_ip):
-                return x_real_ip
+        # 2. X-Real-IP (set by Railway ingress / nginx) — single trusted proxy header
+        x_real_ip = request.headers.get("X-Real-IP")
+        if x_real_ip and self._is_valid_ip_format(x_real_ip) and self._is_public_ip(x_real_ip):
+            return x_real_ip
 
-        # 3. X-Forwarded-For - handle with extreme caution
+        # 3. X-Forwarded-For — take the rightmost entry (added by the nearest trusted proxy)
+        #    The client cannot spoof the rightmost value because it is appended by our proxy.
         x_forwarded_for = request.headers.get("X-Forwarded-For")
         if x_forwarded_for:
-            # Parse the chain, strip whitespace
             ips = [ip.strip() for ip in x_forwarded_for.split(",")]
 
-            # Security: Prevent header injection attacks
-            if len(ips) > 5:  # Too many proxies indicates abuse
+            if len(ips) > 5:
+                # Excessively long chain is suspicious — fall through to direct IP
                 self._log_suspicious_request(request, f"Excessive proxy chain: {len(ips)} hops")
-                # Fall back to direct IP
-                return self._get_direct_ip(request)
-
-            # Take the LEFTMOST IP (original client) if we trust our proxy
-            # ONLY if we're behind a known trusted proxy
-            trusted_proxies = getattr(settings, 'trusted_proxies', [])
-
-            if trusted_proxies:
-                # Check if the rightmost IP is from our trusted proxy
-                rightmost_ip = ips[-1]
-                if rightmost_ip in trusted_proxies and self._is_valid_ip_format(ips[0]) and self._is_public_ip(ips[0]):
-                    return ips[0]
             else:
-                # No trusted proxies configured, take the rightmost (closest to us)
-                # This is safer than taking leftmost
-                closest_ip = ips[-1]
-                if self._is_valid_ip_format(closest_ip) and self._is_public_ip(closest_ip):
-                    return closest_ip
+                rightmost_ip = ips[-1]
+                if self._is_valid_ip_format(rightmost_ip) and self._is_public_ip(rightmost_ip):
+                    return rightmost_ip
 
-        # 4. Direct connection IP (no proxy)
-        return self._get_direct_ip(request)
+        # 4. Direct connection IP
+        if request.client and request.client.host:
+            direct_ip = request.client.host
+            if self._is_valid_ip_format(direct_ip):
+                return direct_ip
+
+        # 5. Fallback — should not happen in production
+        return "unknown"
 
     def _get_direct_ip(self, request: Request) -> str:
         """Get the direct connection IP."""

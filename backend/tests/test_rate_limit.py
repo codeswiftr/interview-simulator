@@ -361,8 +361,8 @@ async def test_rate_limit_middleware_handles_no_client():
     request.url.hostname = "example.com"
 
     ip = limiter._get_trusted_client_ip(request)
-    # Falls back to 0.0.0.0 when no client info
-    assert ip == "0.0.0.0"
+    # Falls back to "unknown" when no client info (Task 2.2 remediation)
+    assert ip == "unknown"
 
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_returns_429_with_headers():

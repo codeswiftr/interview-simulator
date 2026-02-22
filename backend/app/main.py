@@ -43,10 +43,35 @@ from app.db import SessionLocal, check_db_connection, close_db_connections
 from app.exceptions import AppError
 
 
+class _EmailMaskingFilter(logging.Filter):
+    """Log filter that masks email addresses in all log records.
+
+    Prevents PII leakage through log output by replacing any email
+    address found in the log message with a masked equivalent.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        from app.utils.log_utils import mask_emails_in_text
+
+        record.msg = mask_emails_in_text(str(record.msg))
+        if record.args:
+            if isinstance(record.args, dict):
+                record.args = {
+                    k: mask_emails_in_text(str(v)) if isinstance(v, str) else v
+                    for k, v in record.args.items()
+                }
+            else:
+                record.args = tuple(
+                    mask_emails_in_text(str(a)) if isinstance(a, str) else a for a in record.args
+                )
+        return True
+
+
 def configure_logging() -> None:
     """Configure structured logging for the application.
 
     Sets up JSON-formatted logging in production, simple format in development.
+    Attaches the EmailMaskingFilter to prevent PII leakage.
     """
     log_level = logging.DEBUG if settings.debug else logging.INFO
 
@@ -90,6 +115,11 @@ def configure_logging() -> None:
         level=log_level,
         handlers=[handler],
     )
+
+    # Attach email masking filter to the root logger so all log records
+    # produced by the application have PII stripped before output.
+    email_filter = _EmailMaskingFilter()
+    logging.getLogger().addFilter(email_filter)
 
     # Set specific loggers
     logging.getLogger("uvicorn").setLevel(log_level)
@@ -296,8 +326,9 @@ app.add_middleware(UTMMiddleware)
 # RequestIDMiddleware replaces custom CorrelationIDMiddleware
 app.add_middleware(RequestIDMiddleware)
 
-# SecurityMiddleware replaces custom SecurityHeadersMiddleware
-# Explicitly configure all security headers for hardening
+# SecurityMiddleware: explicit hardened security header configuration
+# All required headers are set explicitly so future forge-shared default changes
+# do not silently weaken production security posture.
 app.add_middleware(
     SecurityMiddleware,
     x_frame_options="DENY",
@@ -305,6 +336,7 @@ app.add_middleware(
     hsts_max_age=31536000,  # 1 year
     hsts_include_subdomains=True,
     x_content_type_options="nosniff",
+    x_xss_protection="1; mode=block",
     referrer_policy="strict-origin-when-cross-origin",
 )
 
@@ -339,14 +371,7 @@ app.add_middleware(
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "X-Correlation-ID",
-        "X-Requested-With",
-        "Accept",
-        "Origin",
-    ],
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID", "X-Request-ID"],
     expose_headers=["X-Correlation-ID"],
     max_age=3600,  # Cache preflight requests for 1 hour
 )

@@ -106,9 +106,7 @@ async def login(
     ip_address = request.client.host if request.client else "unknown"
 
     # Check if account is locked
-    is_locked, lockout_expires = await lockout_service.is_account_locked(
-        session, payload.email
-    )
+    is_locked, lockout_expires = await lockout_service.is_account_locked(session, payload.email)
     if is_locked:
         # Return generic error to avoid revealing account status
         raise HTTPException(
@@ -129,15 +127,10 @@ async def login(
         await lockout_service.record_login_attempt(
             session, payload.email, ip_address, success=False
         )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     # Successful login - clear failed attempts
-    await lockout_service.record_login_attempt(
-        session, payload.email, ip_address, success=True
-    )
+    await lockout_service.record_login_attempt(session, payload.email, ip_address, success=True)
 
     # Check if password needs migration (lazy migration)
     # This will be True for pbkdf2_sha256 hashes, False for bcrypt
@@ -150,9 +143,11 @@ async def login(
     # Generate access token
     access_token = create_access_token({"sub": str(user.id)})
 
-    # Generate and store refresh token
+    # Generate and store refresh token (store SHA-256 hash, not raw token)
+    from app.security import hash_refresh_token  # noqa: PLC0415
+
     refresh_token, refresh_expires = create_refresh_token(str(user.id))
-    user.refresh_token = refresh_token
+    user.refresh_token = hash_refresh_token(refresh_token)
     user.refresh_token_expires_at = refresh_expires
 
     # Update user's last login time and commit all changes
@@ -219,7 +214,7 @@ async def update_profile(
         # Don't update email yet - return success message
         raise HTTPException(
             status_code=status.HTTP_202_ACCEPTED,
-            detail="Verification email sent to new address. Please verify before email is changed."
+            detail="Verification email sent to new address. Please verify before email is changed.",
         )
 
     await session.commit()
@@ -255,23 +250,21 @@ async def verify_email(
 
     if not verification_token:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification token"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token"
         )
 
     # Check if token is already used
     if verification_token.used:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has already been used"
+            detail="Verification token has already been used",
         )
 
     # Check if token is expired
     now = datetime.now(UTC)
     if verification_token.expires_at < now:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Verification token has expired"
         )
 
     # Get the user
@@ -280,16 +273,14 @@ async def verify_email(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification token"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification token"
         )
 
     # Check if new email is already taken
     existing = await session.exec(select(User).where(User.email == verification_token.new_email))
     if existing.first():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email address is already registered"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email address is already registered"
         )
 
     # Update user's email

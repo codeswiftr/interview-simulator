@@ -23,6 +23,7 @@ from app.security import (
     create_refresh_token,
     decode_token,
     hash_password,
+    hash_refresh_token,
     is_legacy_hash,
     migrate_password_hash,
     needs_rehash,
@@ -423,19 +424,24 @@ class TestRefreshTokenSecurity:
         assert token1 != token2
 
     def test_verify_refresh_token_valid(self):
-        """Test refresh token verification works."""
+        """Test refresh token verification works.
+
+        The DB stores a SHA-256 hash; we pass hash_refresh_token(token) to simulate that.
+        """
         token, expires_at = create_refresh_token("test-user-id")
 
         # Should verify successfully
-        assert verify_refresh_token(token, token, expires_at) is True
+        assert verify_refresh_token(hash_refresh_token(token), token, expires_at) is True
 
     def test_verify_refresh_token_invalid(self):
         """Test refresh token verification rejects invalid tokens."""
         token, expires_at = create_refresh_token("test-user-id")
 
-        # Wrong token should fail
-        assert verify_refresh_token("wrong-token", token, expires_at) is False
-        assert verify_refresh_token(token, "wrong-token", expires_at) is False
+        # Wrong stored hash should fail (hash of "wrong-token" != hash of token)
+        assert verify_refresh_token(hash_refresh_token("wrong-token"), token, expires_at) is False
+        # Wrong provided token should fail (hash(token) != hash("wrong-token"))
+        assert verify_refresh_token(hash_refresh_token(token), "wrong-token", expires_at) is False
+        # Empty stored hash should fail
         assert verify_refresh_token("", token, expires_at) is False
 
     def test_verify_refresh_token_expired(self):
@@ -445,7 +451,7 @@ class TestRefreshTokenSecurity:
         # Simulate expiration
         expired_at = datetime.now(UTC) - timedelta(days=1)
 
-        assert verify_refresh_token(token, token, expired_at) is False
+        assert verify_refresh_token(hash_refresh_token(token), token, expired_at) is False
 
     def test_verify_refresh_token_none_values(self):
         """Test None values are handled securely."""

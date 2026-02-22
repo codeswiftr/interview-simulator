@@ -318,10 +318,12 @@ class TestCORSConfiguration:
         """Production CORS origins only include expected domains."""
         from app.config import Settings
 
-        # Create a production-like settings instance with explicit origins
+        # Create a production-like settings instance with explicit origins.
+        # A non-default secret_key is required by the production model_validator.
         settings = Settings(
             debug=False,
             environment="production",
+            secret_key="a-very-strong-test-secret-key-for-unit-test-only-32chars",
             cors_origins=[
                 "https://app.codeswiftr.com",
                 "https://interview-simulator-4bo.pages.dev",
@@ -353,11 +355,15 @@ class TestCORSConfiguration:
         from app.config import Settings
 
         for env in ["development", "production"]:
-            settings = Settings(
-                debug=(env == "development"),
-                environment=env,
-                _env_file=None,
-            )
+            kwargs: dict = {
+                "debug": env == "development",
+                "environment": env,
+                "_env_file": None,
+            }
+            # Production model_validator requires a real SECRET_KEY
+            if env == "production":
+                kwargs["secret_key"] = "a-very-strong-test-secret-key-for-unit-test-only-32chars"
+            settings = Settings(**kwargs)
             origins = settings.effective_cors_origins
             assert "*" not in origins
             assert "http://*" not in origins
