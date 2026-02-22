@@ -68,6 +68,9 @@ class User(SQLModel, table=True):
 
     # Usage tracking
     interviews_this_month: int = Field(default=0)
+    interviews_reset_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     total_interviews: int = Field(default=0)
 
     # Status
