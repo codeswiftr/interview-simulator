@@ -80,14 +80,16 @@ async def check_interview_quota(
 
     now = datetime.now(UTC)
 
-    # Reset monthly counter if we're in a new month
-    # Compare year and month to handle month boundaries correctly
-    created_year_month = (current_user.created_at.year, current_user.created_at.month)
-    current_year_month = (now.year, now.month)
+    # Reset monthly counter if we've crossed into a new calendar month
+    # Uses interviews_reset_at to track when the counter was last reset,
+    # falling back to created_at for users who predate this field
+    last_reset = current_user.interviews_reset_at or current_user.created_at
+    last_reset_month = (last_reset.year, last_reset.month)
+    current_month = (now.year, now.month)
 
-    # More robust reset logic: reset if we've crossed into a new calendar month
-    if created_year_month != current_year_month and current_user.interviews_this_month > 0:
+    if last_reset_month != current_month:
         current_user.interviews_this_month = 0
+        current_user.interviews_reset_at = now
         await session.commit()
 
     # Free tier limit: 3 interviews per month
