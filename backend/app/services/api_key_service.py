@@ -18,14 +18,14 @@ def generate_api_key() -> str:
 
     Format: is_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX (43 chars total)
     - Prefix 'is_' identifies it as an Interview Simulator key
-    - 40 random URL-safe characters
+    - 40 random URL-safe characters (no underscores for clean copy-paste)
 
     Returns:
         A secure API key string
     """
     # Use URL-safe base64 encoding (no padding) for clean keys
-    # 30 bytes = 40 base64 characters
-    random_part = secrets.token_urlsafe(30)
+    # 30 bytes = 40 base64 characters, replace underscores with dashes
+    random_part = secrets.token_urlsafe(30).replace("_", "-")
     return f"is_{random_part}"
 
 
@@ -128,9 +128,7 @@ async def get_user_api_keys(session: AsyncSession, user_id: UUID) -> list[APIKey
         List of API keys (sorted by creation date, newest first)
     """
     result = await session.exec(
-        select(APIKey)
-        .where(APIKey.user_id == user_id)
-        .order_by(APIKey.created_at.desc())  # type: ignore
+        select(APIKey).where(APIKey.user_id == user_id).order_by(APIKey.created_at.desc())  # type: ignore
     )
     return list(result.all())
 
