@@ -8,7 +8,6 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.dependencies_api_key import (
-    api_key_scheme,
     get_user_from_api_key,
     require_api_key,
 )
