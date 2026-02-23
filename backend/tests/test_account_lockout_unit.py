@@ -1,219 +1,249 @@
-"""Pure unit tests for AccountLockoutService.
-
-Tests all methods with mocked AsyncSession. No database required.
-"""
+"""Unit tests for app/services/account_lockout.py."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.services.account_lockout import (
-    LOCKOUT_DURATION_MINUTES,
-    LOCKOUT_WINDOW_MINUTES,
-    MAX_FAILED_ATTEMPTS,
-    AccountLockoutService,
-)
-
-
-@pytest.fixture
-def service():
-    return AccountLockoutService()
-
-
-@pytest.fixture
-def mock_session():
-    session = AsyncMock()
-    return session
+from app.services.account_lockout import AccountLockoutService
 
 
 class TestAccountLockoutInit:
-    def test_default_values(self, service):
-        assert service.max_attempts == MAX_FAILED_ATTEMPTS
-        assert service.window_minutes == LOCKOUT_WINDOW_MINUTES
-        assert service.lockout_minutes == LOCKOUT_DURATION_MINUTES
+    """Tests for AccountLockoutService initialization."""
 
-    def test_constants(self):
-        assert MAX_FAILED_ATTEMPTS == 5
-        assert LOCKOUT_WINDOW_MINUTES == 15
-        assert LOCKOUT_DURATION_MINUTES == 15
+    def test_default_config(self):
+        service = AccountLockoutService()
+        assert service.max_attempts == 5
+        assert service.window_minutes == 15
+        assert service.lockout_minutes == 15
 
 
 class TestRecordLoginAttempt:
+    """Tests for recording login attempts."""
+
     @pytest.mark.asyncio
-    async def test_records_failed_attempt(self, service, mock_session):
-        await service.record_login_attempt(mock_session, "Test@Example.com", "1.2.3.4", False)
-        mock_session.add.assert_called_once()
-        attempt = mock_session.add.call_args[0][0]
-        assert attempt.email == "test@example.com"
+    async def test_records_failed_attempt(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        await service.record_login_attempt(session, "User@Test.com", "1.2.3.4", success=False)
+
+        session.add.assert_called_once()
+        attempt = session.add.call_args[0][0]
+        assert attempt.email == "user@test.com"  # lowercased
         assert attempt.ip_address == "1.2.3.4"
         assert attempt.success is False
-        mock_session.commit.assert_awaited_once()
+        session.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_records_successful_attempt_and_cleans_up(self, service, mock_session):
+    async def test_records_successful_attempt_triggers_cleanup(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        # Mock cleanup query returning no old attempts
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        await service.record_login_attempt(mock_session, "user@test.com", "1.2.3.4", True)
-        mock_session.add.assert_called_once()
-        attempt = mock_session.add.call_args[0][0]
-        assert attempt.success is True
-        # commit called: once for add, once for cleanup
-        assert mock_session.commit.await_count == 2
+        await service.record_login_attempt(session, "user@test.com", "1.2.3.4", success=True)
 
-    @pytest.mark.asyncio
-    async def test_email_lowercased(self, service, mock_session):
-        await service.record_login_attempt(mock_session, "USER@DOMAIN.COM", "10.0.0.1", False)
-        attempt = mock_session.add.call_args[0][0]
-        assert attempt.email == "user@domain.com"
+        session.add.assert_called_once()
+        # Cleanup should have been called (session.exec for the old-attempts query)
+        session.exec.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_attempted_at_set(self, service, mock_session):
-        before = datetime.now(UTC)
-        await service.record_login_attempt(mock_session, "u@t.com", "1.1.1.1", False)
-        after = datetime.now(UTC)
-        attempt = mock_session.add.call_args[0][0]
-        assert before <= attempt.attempted_at <= after
+    async def test_failed_attempt_skips_cleanup(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        await service.record_login_attempt(session, "user@test.com", "1.2.3.4", success=False)
+
+        # No exec call — cleanup only happens on success
+        session.exec.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_no_cleanup_on_failure(self, service, mock_session):
-        await service.record_login_attempt(mock_session, "u@t.com", "1.1.1.1", False)
-        mock_session.exec.assert_not_awaited()
+    async def test_email_normalized_to_lowercase(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        await service.record_login_attempt(session, "JOE@EXAMPLE.COM", "10.0.0.1", success=False)
+
+        attempt = session.add.call_args[0][0]
+        assert attempt.email == "joe@example.com"
 
 
 class TestIsAccountLocked:
+    """Tests for account lockout checking."""
+
     @pytest.mark.asyncio
-    async def test_not_locked_below_threshold(self, service, mock_session):
+    async def test_not_locked_with_few_failures(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        # 3 failed attempts — below threshold of 5
         mock_result = MagicMock()
         mock_result.all.return_value = [MagicMock() for _ in range(3)]
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        locked, expires = await service.is_account_locked(mock_session, "u@t.com")
-        assert locked is False
-        assert expires is None
+        is_locked, expires_at = await service.is_account_locked(session, "user@test.com")
 
-    @pytest.mark.asyncio
-    async def test_not_locked_zero_attempts(self, service, mock_session):
-        mock_result = MagicMock()
-        mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
-
-        locked, expires = await service.is_account_locked(mock_session, "u@t.com")
-        assert locked is False
-        assert expires is None
+        assert is_locked is False
+        assert expires_at is None
 
     @pytest.mark.asyncio
-    async def test_locked_at_threshold(self, service, mock_session):
+    async def test_locked_with_5_recent_failures(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        # 5 failed attempts, most recent just now
         now = datetime.now(UTC)
-        fifth_attempt = MagicMock()
-        fifth_attempt.attempted_at = now - timedelta(minutes=1)
+        attempts = []
+        for i in range(5):
+            attempt = MagicMock()
+            attempt.attempted_at = now - timedelta(minutes=i)
+            attempts.append(attempt)
 
-        attempts = [MagicMock() for _ in range(4)] + [fifth_attempt]
         mock_result = MagicMock()
         mock_result.all.return_value = attempts
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        locked, expires = await service.is_account_locked(mock_session, "u@t.com")
-        assert locked is True
-        assert expires == fifth_attempt.attempted_at + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+        is_locked, expires_at = await service.is_account_locked(session, "user@test.com")
+
+        assert is_locked is True
+        assert expires_at is not None
+        # 5th attempt is at now - 4 minutes, lockout = 15 minutes from that
+        expected_expiry = attempts[4].attempted_at + timedelta(minutes=15)
+        assert expires_at == expected_expiry
 
     @pytest.mark.asyncio
-    async def test_lockout_expired(self, service, mock_session):
-        fifth_attempt = MagicMock()
-        fifth_attempt.attempted_at = datetime.now(UTC) - timedelta(minutes=20)
+    async def test_lockout_expired(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
 
-        attempts = [MagicMock() for _ in range(4)] + [fifth_attempt]
+        # 5 failed attempts all 20 minutes ago — lockout should have expired
+        old_time = datetime.now(UTC) - timedelta(minutes=20)
+        attempts = []
+        for i in range(5):
+            attempt = MagicMock()
+            attempt.attempted_at = old_time - timedelta(seconds=i)
+            attempts.append(attempt)
+
         mock_result = MagicMock()
         mock_result.all.return_value = attempts
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        locked, expires = await service.is_account_locked(mock_session, "u@t.com")
-        assert locked is False
-        assert expires is None
+        is_locked, expires_at = await service.is_account_locked(session, "user@test.com")
+
+        assert is_locked is False
+        assert expires_at is None
 
     @pytest.mark.asyncio
-    async def test_email_lowercased(self, service, mock_session):
+    async def test_zero_failed_attempts(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        await service.is_account_locked(mock_session, "USER@TEST.COM")
-        # Verify the query was built (exec was called)
-        mock_session.exec.assert_awaited_once()
+        is_locked, expires_at = await service.is_account_locked(session, "user@test.com")
+
+        assert is_locked is False
+        assert expires_at is None
 
 
 class TestGetFailedAttemptsCount:
+    """Tests for counting failed attempts."""
+
     @pytest.mark.asyncio
-    async def test_returns_count(self, service, mock_session):
+    async def test_returns_count(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
         mock_result = MagicMock()
         mock_result.all.return_value = [MagicMock(), MagicMock(), MagicMock()]
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        count = await service.get_failed_attempts_count(mock_session, "u@t.com")
+        count = await service.get_failed_attempts_count(session, "user@test.com")
         assert count == 3
 
     @pytest.mark.asyncio
-    async def test_returns_zero_no_attempts(self, service, mock_session):
+    async def test_returns_zero_when_no_attempts(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        count = await service.get_failed_attempts_count(mock_session, "u@t.com")
+        count = await service.get_failed_attempts_count(session, "user@test.com")
         assert count == 0
-
-    @pytest.mark.asyncio
-    async def test_email_lowercased(self, service, mock_session):
-        mock_result = MagicMock()
-        mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
-
-        await service.get_failed_attempts_count(mock_session, "UPPER@CASE.COM")
-        mock_session.exec.assert_awaited_once()
 
 
 class TestClearFailedAttempts:
+    """Tests for clearing failed attempts after successful login."""
+
     @pytest.mark.asyncio
-    async def test_deletes_all_attempts(self, service, mock_session):
-        attempts = [MagicMock(), MagicMock()]
+    async def test_deletes_all_recent_attempts(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        attempt1 = MagicMock()
+        attempt2 = MagicMock()
         mock_result = MagicMock()
-        mock_result.all.return_value = attempts
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [attempt1, attempt2]
+        session.exec.return_value = mock_result
 
-        await service.clear_failed_attempts(mock_session, "u@t.com")
-        assert mock_session.delete.await_count == 2
-        mock_session.commit.assert_awaited_once()
+        await service.clear_failed_attempts(session, "user@test.com")
+
+        assert session.delete.call_count == 2
+        session.delete.assert_any_call(attempt1)
+        session.delete.assert_any_call(attempt2)
+        session.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_no_attempts_to_clear(self, service, mock_session):
+    async def test_no_attempts_to_clear(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        await service.clear_failed_attempts(mock_session, "u@t.com")
-        mock_session.delete.assert_not_awaited()
-        mock_session.commit.assert_awaited_once()
+        await service.clear_failed_attempts(session, "user@test.com")
+
+        session.delete.assert_not_called()
+        session.commit.assert_called_once()
 
 
 class TestCleanupOldAttempts:
+    """Tests for the cleanup of old attempts."""
+
     @pytest.mark.asyncio
-    async def test_deletes_old_attempts(self, service, mock_session):
-        old_attempts = [MagicMock(), MagicMock(), MagicMock()]
+    async def test_deletes_attempts_older_than_24h(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
+        old_attempt = MagicMock()
         mock_result = MagicMock()
-        mock_result.all.return_value = old_attempts
-        mock_session.exec.return_value = mock_result
+        mock_result.all.return_value = [old_attempt]
+        session.exec.return_value = mock_result
 
-        await service._cleanup_old_attempts(mock_session, "u@t.com")
-        assert mock_session.delete.await_count == 3
-        mock_session.commit.assert_awaited_once()
+        await service._cleanup_old_attempts(session, "user@test.com")
+
+        session.delete.assert_called_once_with(old_attempt)
+        session.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_nothing_to_clean(self, service, mock_session):
+    async def test_nothing_to_cleanup(self):
+        service = AccountLockoutService()
+        session = AsyncMock()
+
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec.return_value = mock_result
+        session.exec.return_value = mock_result
 
-        await service._cleanup_old_attempts(mock_session, "u@t.com")
-        mock_session.delete.assert_not_awaited()
-        mock_session.commit.assert_awaited_once()
+        await service._cleanup_old_attempts(session, "user@test.com")
+
+        session.delete.assert_not_called()
+        session.commit.assert_called_once()

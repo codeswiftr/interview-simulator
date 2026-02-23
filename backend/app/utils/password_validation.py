@@ -5,11 +5,12 @@ Use get_password_strength() for frontend warnings about weak passwords.
 """
 
 import re
-from enum import Enum
+from enum import StrEnum
 
 
-class PasswordValidationError(str, Enum):
+class PasswordValidationError(StrEnum):
     """Password validation error codes."""
+
     TOO_SHORT = "Password must be at least 8 characters long"
     COMMON_PASSWORD = "Password is too common and easily guessed"
     NO_UPPERCASE = "Password must contain at least one uppercase letter"
@@ -33,9 +34,24 @@ class PasswordValidator:
 
     # Only block the most common/trivial passwords
     BLOCKED_PASSWORDS = [
-        'password', '123456', '12345678', '123456789', 'qwerty', 'abc123',
-        'password1', 'password123', '111111', '123123', 'admin', 'letmein',
-        'welcome', 'monkey', 'dragon', 'master', 'qwerty123', 'iloveyou',
+        "password",
+        "123456",
+        "12345678",
+        "123456789",
+        "qwerty",
+        "abc123",
+        "password1",
+        "password123",
+        "111111",
+        "123123",
+        "admin",
+        "letmein",
+        "welcome",
+        "monkey",
+        "dragon",
+        "master",
+        "qwerty123",
+        "iloveyou",
     ]
 
     # Special characters (for strength scoring only)
@@ -85,16 +101,16 @@ class PasswordValidator:
             errors.append(PasswordValidationError.TOO_SHORT.value)
 
         # 2. Complexity requirements
-        if self.require_uppercase and not re.search(r'[A-Z]', password):
+        if self.require_uppercase and not re.search(r"[A-Z]", password):
             errors.append(PasswordValidationError.NO_UPPERCASE.value)
 
-        if self.require_lowercase and not re.search(r'[a-z]', password):
+        if self.require_lowercase and not re.search(r"[a-z]", password):
             errors.append(PasswordValidationError.NO_LOWERCASE.value)
 
-        if self.require_digit and not re.search(r'\d', password):
+        if self.require_digit and not re.search(r"\d", password):
             errors.append(PasswordValidationError.NO_DIGIT.value)
 
-        if self.require_special and not re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]', password):
+        if self.require_special and not re.search(r"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]", password):
             errors.append(PasswordValidationError.NO_SPECIAL.value)
 
         # 3. Block only the most common passwords
@@ -106,7 +122,7 @@ class PasswordValidator:
             errors.append("Password cannot be the same as your username")
 
         if email:
-            email_local = email.split('@')[0].lower()
+            email_local = email.split("@")[0].lower()
             if email_local and password_lower == email_local:
                 errors.append("Password cannot be the same as your email")
 
@@ -149,22 +165,22 @@ class PasswordValidator:
             feedback.append("Add more characters to increase strength")
 
         # Character variety (up to 40 points)
-        if re.search(r'[A-Z]', password):
+        if re.search(r"[A-Z]", password):
             score += 10
         else:
             feedback.append("Add uppercase letters")
 
-        if re.search(r'[a-z]', password):
+        if re.search(r"[a-z]", password):
             score += 10
         else:
             feedback.append("Add lowercase letters")
 
-        if re.search(r'\d', password):
+        if re.search(r"\d", password):
             score += 10
         else:
             feedback.append("Add numbers")
 
-        if re.search(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]', password):
+        if re.search(r"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]", password):
             score += 10
         else:
             feedback.append("Add special characters")
@@ -198,11 +214,7 @@ class PasswordValidator:
         else:
             strength = "Very Weak"
 
-        return {
-            "score": min(score, 100),
-            "strength": strength,
-            "feedback": feedback
-        }
+        return {"score": min(score, 100), "strength": strength, "feedback": feedback}
 
 
 # Global validator instance
@@ -225,9 +237,7 @@ def validate_password(
     return password_validator.validate(password, username, email)
 
 
-def is_password_valid(
-    password: str, username: str | None = None, email: str | None = None
-) -> bool:
+def is_password_valid(password: str, username: str | None = None, email: str | None = None) -> bool:
     """Check if password is valid using the global validator.
 
     Args:

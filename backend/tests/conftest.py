@@ -7,6 +7,7 @@ Note: Tests use PostgreSQL (same as production) due to ARRAY column types.
 Set TEST_DATABASE_URL environment variable or have PostgreSQL running locally.
 """
 
+import contextlib
 import os
 from collections.abc import AsyncGenerator
 from uuid import uuid4
@@ -131,10 +132,8 @@ async def clean_database(test_engine, prepare_database):
                     )
                 except Exception:
                     # Fallback to DELETE for compatibility
-                    try:
+                    with contextlib.suppress(Exception):
                         await conn.execute(text(f'DELETE FROM "{table.name}"'))
-                    except Exception:
-                        pass  # Ignore cleanup errors
     except Exception:
         pass  # Database unavailable, skip cleanup
 

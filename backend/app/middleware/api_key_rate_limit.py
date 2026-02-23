@@ -5,12 +5,10 @@ Implements per-key rate limiting based on the key's configured rate limit.
 
 import time
 from collections import defaultdict
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
-
-from app.services import api_key_service
 
 
 class APIKeyRateLimitMiddleware(BaseHTTPMiddleware):
@@ -32,9 +30,7 @@ class APIKeyRateLimitMiddleware(BaseHTTPMiddleware):
             window_seconds: Window size in seconds (60 for per-minute limiting)
         """
         cutoff = time.time() - window_seconds
-        self._requests[key_prefix] = [
-            ts for ts in self._requests[key_prefix] if ts > cutoff
-        ]
+        self._requests[key_prefix] = [ts for ts in self._requests[key_prefix] if ts > cutoff]
 
     def _is_rate_limited(self, key_prefix: str, rate_limit: int) -> bool:
         """Check if the API key has exceeded its rate limit.
@@ -93,15 +89,16 @@ class APIKeyRateLimitMiddleware(BaseHTTPMiddleware):
 
         # Get the API key from database to check rate limit
         # This is a simple implementation - for production, consider caching
+        from sqlmodel import select
+
         from app.db import SessionLocal
         from app.models.api_key import APIKey
-        from sqlmodel import select
 
         async with SessionLocal() as session:
             result = await session.exec(
                 select(APIKey).where(
                     APIKey.key_prefix == key_prefix,
-                    APIKey.is_active == True,
+                    APIKey.is_active.is_(True),
                 )
             )
             api_key = result.first()

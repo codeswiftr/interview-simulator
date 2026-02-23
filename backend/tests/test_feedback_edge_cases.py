@@ -50,7 +50,9 @@ async def create_test_interview_with_response(db_session, user: User) -> tuple:
 
     return interview, response
 
+
 # Session Feedback Tests
+
 
 @pytest.mark.asyncio
 async def test_get_session_feedback_nonexistent_session_fails(client):
@@ -64,14 +66,13 @@ async def test_get_session_feedback_nonexistent_session_fails(client):
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_get_session_feedback_unauthorized_access_fails(client, db_session):
     """Test that users cannot access other users' session feedback."""
     # User 1 creates interview
     await register_and_login(client, "user1@example.com")
-    result = await db_session.exec(
-        select(User).where(User.email == "user1@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "user1@example.com"))
     user1 = result.first()
 
     interview, _ = await create_test_interview_with_response(db_session, user1)
@@ -86,13 +87,12 @@ async def test_get_session_feedback_unauthorized_access_fails(client, db_session
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"].lower()
 
+
 @pytest.mark.asyncio
 async def test_get_session_feedback_no_feedback_generated(client, db_session):
     """Test GET /feedback/session/{id} when feedback not yet generated returns 404."""
     token = await register_and_login(client, "no_feedback@example.com")
-    result = await db_session.exec(
-        select(User).where(User.email == "no_feedback@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "no_feedback@example.com"))
     user = result.first()
 
     interview, _ = await create_test_interview_with_response(db_session, user)
@@ -104,13 +104,12 @@ async def test_get_session_feedback_no_feedback_generated(client, db_session):
     assert resp.status_code == 404
     assert "not yet generated" in resp.json()["detail"].lower()
 
+
 @pytest.mark.asyncio
 async def test_get_all_session_feedbacks_empty_list(client, db_session):
     """Test GET /feedback/session/{id}/all returns empty list when no responses."""
     token = await register_and_login(client, "empty_session@example.com")
-    result = await db_session.exec(
-        select(User).where(User.email == "empty_session@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "empty_session@example.com"))
     user = result.first()
 
     # Create interview without responses
@@ -130,14 +129,13 @@ async def test_get_all_session_feedbacks_empty_list(client, db_session):
     assert resp.status_code == 200
     assert resp.json() == []
 
+
 @pytest.mark.asyncio
 async def test_get_all_session_feedbacks_unauthorized_fails(client, db_session):
     """Test GET /feedback/session/{id}/all with unauthorized user returns 404."""
     # User 1 creates interview
     await register_and_login(client, "owner@example.com")
-    user1 = (
-        await db_session.exec(select(User).where(User.email == "owner@example.com"))
-    ).first()
+    user1 = (await db_session.exec(select(User).where(User.email == "owner@example.com"))).first()
 
     interview, _ = await create_test_interview_with_response(db_session, user1)
 
@@ -150,7 +148,9 @@ async def test_get_all_session_feedbacks_unauthorized_fails(client, db_session):
     )
     assert resp.status_code == 404
 
+
 # Response Feedback Tests
+
 
 @pytest.mark.asyncio
 async def test_get_response_feedback_nonexistent_response_fails(client):
@@ -164,15 +164,14 @@ async def test_get_response_feedback_nonexistent_response_fails(client):
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_get_response_feedback_unauthorized_access_fails(client, db_session):
     """Test that users cannot access other users' response feedback."""
     # User 1 creates response
     await register_and_login(client, "resp_owner@example.com")
     user1 = (
-        await db_session.exec(
-            select(User).where(User.email == "resp_owner@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "resp_owner@example.com"))
     ).first()
 
     _, response = await create_test_interview_with_response(db_session, user1)
@@ -186,14 +185,13 @@ async def test_get_response_feedback_unauthorized_access_fails(client, db_sessio
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_get_response_feedback_not_generated_fails(client, db_session):
     """Test GET /feedback/response/{id} when feedback not generated returns 404."""
     token = await register_and_login(client, "no_resp_feedback@example.com")
     user = (
-        await db_session.exec(
-            select(User).where(User.email == "no_resp_feedback@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "no_resp_feedback@example.com"))
     ).first()
 
     _, response = await create_test_interview_with_response(db_session, user)
@@ -205,7 +203,9 @@ async def test_get_response_feedback_not_generated_fails(client, db_session):
     assert resp.status_code == 404
     assert "not yet generated" in resp.json()["detail"].lower()
 
+
 # Generate Feedback Tests
+
 
 @pytest.mark.asyncio
 async def test_generate_response_feedback_unauthorized_fails(client, db_session):
@@ -213,9 +213,7 @@ async def test_generate_response_feedback_unauthorized_fails(client, db_session)
     # User 1 creates response
     await register_and_login(client, "gen_owner@example.com")
     user1 = (
-        await db_session.exec(
-            select(User).where(User.email == "gen_owner@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "gen_owner@example.com"))
     ).first()
 
     _, response = await create_test_interview_with_response(db_session, user1)
@@ -229,6 +227,7 @@ async def test_generate_response_feedback_unauthorized_fails(client, db_session)
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_generate_response_feedback_nonexistent_fails(client):
     """Test POST /feedback/generate/response/{id} with non-existent UUID fails."""
@@ -241,15 +240,14 @@ async def test_generate_response_feedback_nonexistent_fails(client):
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_generate_session_feedback_unauthorized_fails(client, db_session):
     """Test POST /feedback/generate/session/{id} unauthorized access fails."""
     # User 1 creates interview
     await register_and_login(client, "session_gen_owner@example.com")
     user1 = (
-        await db_session.exec(
-            select(User).where(User.email == "session_gen_owner@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "session_gen_owner@example.com"))
     ).first()
 
     interview, _ = await create_test_interview_with_response(db_session, user1)
@@ -263,6 +261,7 @@ async def test_generate_session_feedback_unauthorized_fails(client, db_session):
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_generate_session_feedback_nonexistent_fails(client):
     """Test POST /feedback/generate/session/{id} with non-existent UUID fails."""
@@ -275,7 +274,9 @@ async def test_generate_session_feedback_nonexistent_fails(client):
     )
     assert resp.status_code == 404
 
+
 # Session Processing Status Tests
+
 
 @pytest.mark.asyncio
 async def test_get_session_processing_status_unauthorized_fails(client, db_session):
@@ -283,9 +284,7 @@ async def test_get_session_processing_status_unauthorized_fails(client, db_sessi
     # User 1 creates interview
     await register_and_login(client, "status_owner@example.com")
     user1 = (
-        await db_session.exec(
-            select(User).where(User.email == "status_owner@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "status_owner@example.com"))
     ).first()
 
     interview, _ = await create_test_interview_with_response(db_session, user1)
@@ -299,6 +298,7 @@ async def test_get_session_processing_status_unauthorized_fails(client, db_sessi
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_get_session_processing_status_nonexistent_fails(client):
     """Test GET /feedback/session/{id}/status with non-existent UUID fails."""
@@ -311,7 +311,9 @@ async def test_get_session_processing_status_nonexistent_fails(client):
     )
     assert resp.status_code == 404
 
+
 # Session Comparison Tests
+
 
 @pytest.mark.asyncio
 async def test_get_session_comparison_unauthorized_fails(client, db_session):
@@ -319,9 +321,7 @@ async def test_get_session_comparison_unauthorized_fails(client, db_session):
     # User 1 creates interview
     await register_and_login(client, "comp_owner@example.com")
     user1 = (
-        await db_session.exec(
-            select(User).where(User.email == "comp_owner@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "comp_owner@example.com"))
     ).first()
 
     interview, _ = await create_test_interview_with_response(db_session, user1)
@@ -335,14 +335,13 @@ async def test_get_session_comparison_unauthorized_fails(client, db_session):
     )
     assert resp.status_code == 404
 
+
 @pytest.mark.asyncio
 async def test_get_session_comparison_no_feedback_fails(client, db_session):
     """Test GET /feedback/session/{id}/comparison without feedback returns 404."""
     token = await register_and_login(client, "comp_no_feedback@example.com")
     user = (
-        await db_session.exec(
-            select(User).where(User.email == "comp_no_feedback@example.com")
-        )
+        await db_session.exec(select(User).where(User.email == "comp_no_feedback@example.com"))
     ).first()
 
     interview, _ = await create_test_interview_with_response(db_session, user)
@@ -353,6 +352,7 @@ async def test_get_session_comparison_no_feedback_fails(client, db_session):
     )
     assert resp.status_code == 404
     assert "not yet generated" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_get_session_comparison_nonexistent_session_fails(client):

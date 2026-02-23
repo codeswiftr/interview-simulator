@@ -5,6 +5,7 @@ Revises: 0002_timezone
 Create Date: 2025-01-27 12:00:00.000000
 
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -38,4 +39,3 @@ def downgrade() -> None:
 
     # Remove processing_status column
     op.drop_column("interview_responses", "processing_status")
-

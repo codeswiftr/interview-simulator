@@ -103,15 +103,17 @@ class TestRateDelivery:
 
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
-            mock_response.choices[0].message.content = json.dumps({
-                "content_coverage": 85.0,
-                "key_points": 90.0,
-                "flow_structure": 80.0,
-                "delivery_score": 85.0,
-                "strengths": ["Good examples", "Clear structure"],
-                "improvements": ["Add metrics"],
-                "comparison_feedback": "Good delivery.",
-            })
+            mock_response.choices[0].message.content = json.dumps(
+                {
+                    "content_coverage": 85.0,
+                    "key_points": 90.0,
+                    "flow_structure": 80.0,
+                    "delivery_score": 85.0,
+                    "strengths": ["Good examples", "Clear structure"],
+                    "improvements": ["Add metrics"],
+                    "comparison_feedback": "Good delivery.",
+                }
+            )
 
             with patch("app.services.delivery_rating_service.AsyncOpenAI") as MockClient:
                 mock_client = MagicMock()
@@ -135,19 +137,23 @@ class TestRateDelivery:
         with patch("app.services.delivery_rating_service.settings") as mock_settings:
             mock_settings.openrouter_api_key = "test_key"
 
-            json_content = json.dumps({
-                "content_coverage": 80.0,
-                "key_points": 85.0,
-                "flow_structure": 75.0,
-                "delivery_score": 80.0,
-                "strengths": ["Clear"],
-                "improvements": ["More detail"],
-                "comparison_feedback": "Good.",
-            })
+            json_content = json.dumps(
+                {
+                    "content_coverage": 80.0,
+                    "key_points": 85.0,
+                    "flow_structure": 75.0,
+                    "delivery_score": 80.0,
+                    "strengths": ["Clear"],
+                    "improvements": ["More detail"],
+                    "comparison_feedback": "Good.",
+                }
+            )
 
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
-            mock_response.choices[0].message.content = f"Here's my analysis:\n```json\n{json_content}\n```"
+            mock_response.choices[
+                0
+            ].message.content = f"Here's my analysis:\n```json\n{json_content}\n```"
 
             with patch("app.services.delivery_rating_service.AsyncOpenAI") as MockClient:
                 mock_client = MagicMock()
@@ -168,15 +174,17 @@ class TestRateDelivery:
         with patch("app.services.delivery_rating_service.settings") as mock_settings:
             mock_settings.openrouter_api_key = "test_key"
 
-            json_content = json.dumps({
-                "content_coverage": 70.0,
-                "key_points": 75.0,
-                "flow_structure": 80.0,
-                "delivery_score": 75.0,
-                "strengths": ["Good pace"],
-                "improvements": ["Add examples"],
-                "comparison_feedback": "Solid.",
-            })
+            json_content = json.dumps(
+                {
+                    "content_coverage": 70.0,
+                    "key_points": 75.0,
+                    "flow_structure": 80.0,
+                    "delivery_score": 75.0,
+                    "strengths": ["Good pace"],
+                    "improvements": ["Add examples"],
+                    "comparison_feedback": "Solid.",
+                }
+            )
 
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
@@ -203,15 +211,17 @@ class TestRateDelivery:
 
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
-            mock_response.choices[0].message.content = json.dumps({
-                "content_coverage": 80.0,
-                "key_points": 70.0,
-                "flow_structure": 90.0,
-                # delivery_score not provided
-                "strengths": ["A"],
-                "improvements": ["B"],
-                "comparison_feedback": "C",
-            })
+            mock_response.choices[0].message.content = json.dumps(
+                {
+                    "content_coverage": 80.0,
+                    "key_points": 70.0,
+                    "flow_structure": 90.0,
+                    # delivery_score not provided
+                    "strengths": ["A"],
+                    "improvements": ["B"],
+                    "comparison_feedback": "C",
+                }
+            )
 
             with patch("app.services.delivery_rating_service.AsyncOpenAI") as MockClient:
                 mock_client = MagicMock()
@@ -279,9 +289,7 @@ class TestRateDelivery:
 
             with patch("app.services.delivery_rating_service.AsyncOpenAI") as MockClient:
                 mock_client = MagicMock()
-                mock_client.chat.completions.create = AsyncMock(
-                    side_effect=Exception("API Error")
-                )
+                mock_client.chat.completions.create = AsyncMock(side_effect=Exception("API Error"))
                 MockClient.return_value = mock_client
 
                 service = DeliveryRatingService()

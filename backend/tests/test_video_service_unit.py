@@ -93,7 +93,9 @@ class TestAnalyzeVideo:
         assert "not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_calls_analyzer_with_video_path(self, video_service, sample_video_metrics, tmp_path):
+    async def test_calls_analyzer_with_video_path(
+        self, video_service, sample_video_metrics, tmp_path
+    ):
         """Test calls analyzer with correct video path."""
         mock_session = AsyncMock()
         response_id = uuid4()
@@ -149,7 +151,9 @@ class TestSaveVideoFeedback:
         mock_result.first.return_value = None
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await video_service.save_video_feedback(mock_session, response_id, sample_video_metrics)
+        result = await video_service.save_video_feedback(
+            mock_session, response_id, sample_video_metrics
+        )
 
         assert result is not None
         assert result.confidence_score == sample_video_metrics.confidence_score
@@ -164,7 +168,9 @@ class TestProcessResponseVideo:
     """Tests for process_response_video method."""
 
     @pytest.mark.asyncio
-    async def test_orchestrates_analyze_and_save(self, video_service, sample_video_metrics, tmp_path):
+    async def test_orchestrates_analyze_and_save(
+        self, video_service, sample_video_metrics, tmp_path
+    ):
         """Test orchestrates analyze_video and save_video_feedback."""
         mock_session = AsyncMock()
         response_id = uuid4()

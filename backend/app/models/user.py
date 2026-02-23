@@ -1,7 +1,7 @@
 """User model for Interview Simulator."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
@@ -16,7 +16,7 @@ StrictPassword = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 StrictToken = Annotated[str, StringConstraints(min_length=1, max_length=512)]
 
 
-class SubscriptionTier(str, Enum):
+class SubscriptionTier(StrEnum):
     """User subscription tiers."""
 
     FREE = "free"
@@ -24,7 +24,7 @@ class SubscriptionTier(str, Enum):
     TEAM = "team"
 
 
-class ExperienceLevel(str, Enum):
+class ExperienceLevel(StrEnum):
     """User experience level for personalized feedback."""
 
     JUNIOR = "junior"  # 0-2 years experience
@@ -68,6 +68,9 @@ class User(SQLModel, table=True):
 
     # Usage tracking
     interviews_this_month: int = Field(default=0)
+    interviews_reset_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     total_interviews: int = Field(default=0)
 
     # Status
@@ -103,9 +106,7 @@ class UserCreate(SQLModel):
         from app.utils.password_validation import validate_password
 
         errors = validate_password(
-            self.password,
-            username=self.full_name if self.full_name else None,
-            email=self.email
+            self.password, username=self.full_name if self.full_name else None, email=self.email
         )
         if errors:
             # Raise ValueError which FastAPI converts to 422 Unprocessable Entity

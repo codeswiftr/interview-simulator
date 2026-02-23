@@ -315,10 +315,7 @@ async def test_security_headers_on_post_request(client):
         # Try to register a new user (POST request)
         resp = await client.post(
             "/api/v1/users/register",
-            json={
-                "email": "post_test@example.com",
-                "password": "SecurePassword123!"
-            }
+            json={"email": "post_test@example.com", "password": "SecurePassword123!"},
         )
 
         # Should succeed

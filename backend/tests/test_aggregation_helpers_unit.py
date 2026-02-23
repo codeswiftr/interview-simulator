@@ -6,13 +6,10 @@ No database required.
 """
 
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
 
-from app.models.feedback import AudioFeedback, ContentFeedback
-from app.models.interview import InterviewResponse, InterviewSession
-from app.models.question import Question
+from app.models.feedback import ContentFeedback
 from app.services.aggregation_service import AggregationService, _split_sessions
 from app.services.scoring_service import ScoringService
 
@@ -28,6 +25,7 @@ def agg_service(scoring_service):
 
 
 # --- _split_sessions ---
+
 
 class TestSplitSessions:
     def test_split_with_more_than_recent_count(self):
@@ -64,6 +62,7 @@ class TestSplitSessions:
 
 # --- aggregate_strengths_and_improvements ---
 
+
 class TestAggregateStrengths:
     def _make_feedback(self, strengths, improvements):
         fb = MagicMock(spec=ContentFeedback)
@@ -91,7 +90,9 @@ class TestAggregateStrengths:
         feedbacks = [
             self._make_feedback(["A", "B", "C", "D"], ["X"]),
         ]
-        strengths, improvements = agg_service.aggregate_strengths_and_improvements(feedbacks, top_n=2)
+        strengths, improvements = agg_service.aggregate_strengths_and_improvements(
+            feedbacks, top_n=2
+        )
         assert len(strengths) == 2
 
     def test_single_feedback(self, agg_service):
@@ -102,6 +103,7 @@ class TestAggregateStrengths:
 
 
 # --- determine_practice_areas ---
+
 
 class TestDeterminePracticeAreas:
     def _make_feedback(self, technical=80, structure=80, completeness=80, star=80):

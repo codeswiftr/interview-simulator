@@ -72,7 +72,10 @@ class SecureRateLimiter:
         if cf_ray and cf_connecting_ip:
             if self._is_valid_ip_format(cf_connecting_ip) and self._is_public_ip(cf_connecting_ip):
                 return cf_connecting_ip
-            self._log_suspicious_request(request, f"Invalid CF-Connecting-IP: {cf_connecting_ip}")
+            else:
+                self._log_suspicious_request(
+                    request, f"Invalid CF-Connecting-IP: {cf_connecting_ip}"
+                )
 
         # 2. X-Real-IP (set by Railway ingress / nginx) — single trusted proxy header
         x_real_ip = request.headers.get("X-Real-IP")
@@ -88,6 +91,8 @@ class SecureRateLimiter:
             if len(ips) > 5:
                 # Excessively long chain is suspicious — fall through to direct IP
                 self._log_suspicious_request(request, f"Excessive proxy chain: {len(ips)} hops")
+                return self._get_direct_ip(request)
+
             else:
                 rightmost_ip = ips[-1]
                 if self._is_valid_ip_format(rightmost_ip) and self._is_public_ip(rightmost_ip):
@@ -119,11 +124,11 @@ class SecureRateLimiter:
             return False
 
         # Check for null bytes and line breaks
-        if '\0' in ip or '\n' in ip or '\r' in ip:
+        if "\0" in ip or "\n" in ip or "\r" in ip:
             return False
 
         # Remove port if present (security risk)
-        if ':' in ip and '.' in ip:
+        if ":" in ip and "." in ip:
             # IPv4 with port - reject for security
             return False
 
@@ -171,13 +176,15 @@ class SecureRateLimiter:
                 "user_agent": user_agent,
                 "reason": reason,
                 "headers": dict(request.headers),
-            }
+            },
         )
 
         # Track suspicious IP for potential blocking
         self._suspicious_ips[client_ip] += 1
 
-    def is_allowed(self, request: Request, user_id: str | None = None) -> tuple[bool, dict[str, int]]:
+    def is_allowed(
+        self, request: Request, user_id: str | None = None
+    ) -> tuple[bool, dict[str, int]]:
         """Check if request is allowed and return remaining limits."""
         now = time.time()
 
@@ -244,35 +251,40 @@ class SecureRateLimiter:
         suspicious_patterns = [
             # Too many proxies (header injection)
             x_forwarded_for.count(",") > 5,
-
             # Oversized headers (potential injection)
             len(user_agent) > 500,
             len(x_forwarded_for) > 200,
-
             # Headers with line breaks (injection attempt)
-            '\n' in x_forwarded_for or '\r' in x_forwarded_for,
-            '\n' in x_real_ip or '\r' in x_real_ip,
-            '\n' in cf_connecting_ip or '\r' in cf_connecting_ip,
-
+            "\n" in x_forwarded_for or "\r" in x_forwarded_for,
+            "\n" in x_real_ip or "\r" in x_real_ip,
+            "\n" in cf_connecting_ip or "\r" in cf_connecting_ip,
             # Private IPs in forwarded headers (spoofing)
-            any(ip.startswith(("10.", "192.168.", "172.")) for ip in [ip.strip() for ip in x_forwarded_for.split(",")]),
-
+            any(
+                ip.startswith(("10.", "192.168.", "172."))
+                for ip in [ip.strip() for ip in x_forwarded_for.split(",")]
+            ),
             # Mismatched headers without Cloudflare
-            not request.headers.get("CF-RAY") and x_real_ip and x_forwarded_for and x_real_ip != x_forwarded_for.split(",")[-1].strip(),
-
+            not request.headers.get("CF-RAY")
+            and x_real_ip
+            and x_forwarded_for
+            and x_real_ip != x_forwarded_for.split(",")[-1].strip(),
             # Suspicious User-Agent patterns
-            user_agent.lower() in ["", "null", "undefined", "bot", "crawler"] or "curl" in user_agent.lower() and "/api/" in request.url.path,
+            user_agent.lower() in ["", "null", "undefined", "bot", "crawler"]
+            or "curl" in user_agent.lower()
+            and "/api/" in request.url.path,
         ]
 
         if any(suspicious_patterns):
-            reason = "Suspicious pattern detected: " + ", ".join([
-            "Too many proxies" if suspicious_patterns[0] else "",
-            "Oversized headers" if suspicious_patterns[1] else "",
-            "Headers with line breaks" if suspicious_patterns[2] else "",
-            "Private IPs in headers" if suspicious_patterns[3] else "",
-            "Mismatched headers" if suspicious_patterns[4] else "",
-            "Suspicious User-Agent" if suspicious_patterns[5] else "",
-        ])
+            reason = "Suspicious pattern detected: " + ", ".join(
+                [
+                    "Too many proxies" if suspicious_patterns[0] else "",
+                    "Oversized headers" if suspicious_patterns[1] else "",
+                    "Headers with line breaks" if suspicious_patterns[2] else "",
+                    "Private IPs in headers" if suspicious_patterns[3] else "",
+                    "Mismatched headers" if suspicious_patterns[4] else "",
+                    "Suspicious User-Agent" if suspicious_patterns[5] else "",
+                ]
+            )
             self._log_suspicious_request(request, reason)
             self._suspicious_ips[client_ip] += 1
 
@@ -324,7 +336,9 @@ class SecureRateLimitMiddleware(BaseHTTPMiddleware):
             # Check for suspicious activity
             if self.limiter.is_suspicious(request):
                 # Log suspicious activity
-                print(f"Suspicious activity detected from {self.limiter._get_trusted_client_ip(request)}")
+                print(
+                    f"Suspicious activity detected from {self.limiter._get_trusted_client_ip(request)}"
+                )
 
             if not is_allowed:
                 return JSONResponse(

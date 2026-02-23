@@ -4,7 +4,6 @@ Tests key generation, hashing, verification, and CRUD operations.
 No database required.
 """
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 

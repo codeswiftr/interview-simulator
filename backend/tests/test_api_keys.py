@@ -1,8 +1,9 @@
 """Tests for API key management."""
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+import pytest
 
 from app.models.api_key import APIKeyScope
 from app.services import api_key_service
@@ -17,7 +18,8 @@ class TestAPIKeyGeneration:
 
         assert key.startswith("is_")
         assert len(key) == 43  # is_ (3) + 40 random chars
-        assert "_" not in key[3:]  # No underscores in random part (URL-safe)
+        # URL-safe base64 uses A-Za-z0-9_- characters
+        assert all(c.isalnum() or c in "_-" for c in key[3:])
 
     def test_generate_api_key_uniqueness(self):
         """Test that generated API keys are unique."""
@@ -67,9 +69,7 @@ class TestAPIKeyService:
             rate_limit=100,
         )
 
-        plain_key, api_key = await api_key_service.create_api_key(
-            session, test_user.id, key_data
-        )
+        plain_key, api_key = await api_key_service.create_api_key(session, test_user.id, key_data)
 
         # Check plain key format
         assert plain_key.startswith("is_")
@@ -203,9 +203,7 @@ class TestAPIKeyService:
 
         # Create key
         key_data = APIKeyCreate(name="Test Key")
-        plain_key, api_key = await api_key_service.create_api_key(
-            session, test_user.id, key_data
-        )
+        plain_key, api_key = await api_key_service.create_api_key(session, test_user.id, key_data)
 
         # Verify key and get user
         user = await api_key_service.verify_api_key_and_get_user(session, plain_key)
@@ -239,9 +237,7 @@ class TestAPIKeyService:
             name="Expired Key",
             expires_at=datetime.now(UTC) - timedelta(days=1),
         )
-        plain_key, _ = await api_key_service.create_api_key(
-            session, test_user.id, key_data
-        )
+        plain_key, _ = await api_key_service.create_api_key(session, test_user.id, key_data)
 
         # Should be rejected
         user = await api_key_service.verify_api_key_and_get_user(session, plain_key)
@@ -253,9 +249,7 @@ class TestAPIKeyService:
 
         # Create key
         key_data = APIKeyCreate(name="Test Key")
-        plain_key, api_key = await api_key_service.create_api_key(
-            session, test_user.id, key_data
-        )
+        plain_key, api_key = await api_key_service.create_api_key(session, test_user.id, key_data)
 
         # Deactivate key
         update_data = APIKeyUpdate(is_active=False)
@@ -401,8 +395,8 @@ class TestAPIKeyEndpoints:
         self, client, auth_headers, session, test_user
     ):
         """Test that users can't access other users' API keys."""
-        from app.models.user import User
         from app.models.api_key import APIKeyCreate
+        from app.models.user import User
 
         # Create another user
         other_user = User(email="other@example.com", hashed_password="hashed")
@@ -412,9 +406,7 @@ class TestAPIKeyEndpoints:
 
         # Create key for other user
         key_data = APIKeyCreate(name="Other's Key")
-        _, other_key = await api_key_service.create_api_key(
-            session, other_user.id, key_data
-        )
+        _, other_key = await api_key_service.create_api_key(session, other_user.id, key_data)
 
         # Try to access with test_user's auth
         response = await client.get(

@@ -42,7 +42,7 @@ async def create_api_key(
             session, current_user.id, key_data
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # Convert to read schema
     api_key_read = APIKeyRead(
@@ -158,9 +158,7 @@ async def update_api_key(
     Raises:
         HTTPException 404: If key not found or not owned by user
     """
-    api_key = await api_key_service.update_api_key(
-        session, key_id, current_user.id, update_data
-    )
+    api_key = await api_key_service.update_api_key(session, key_id, current_user.id, update_data)
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

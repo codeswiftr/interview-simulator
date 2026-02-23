@@ -5,22 +5,14 @@ and related schemas. No database required.
 """
 
 from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid4
-
-import pytest
+from uuid import uuid4
 
 from app.models.analytics import (
-    AnalyticsSummary,
     InterviewAnalytics,
-    InterviewAnalyticsRead,
-    ProgressDataPoint,
-    ProgressResponse,
 )
-from app.models.email_verification import EmailVerificationToken
 from app.models.interview_share import (
     InterviewShare,
     InterviewShareCreate,
-    InterviewShareRead,
     SharedInterviewRead,
     default_expiry,
     generate_share_token,
@@ -51,7 +43,7 @@ class TestDefaultExpiry:
     def test_approximately_7_days(self):
         before = datetime.now(UTC)
         expiry = default_expiry()
-        after = datetime.now(UTC)
+        _ = datetime.now(UTC)  # upper bound (unused but documents intent)
         delta = expiry - before
         assert timedelta(days=6, hours=23) < delta < timedelta(days=7, hours=1)
 

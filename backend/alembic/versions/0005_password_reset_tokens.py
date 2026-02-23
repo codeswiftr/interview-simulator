@@ -5,6 +5,7 @@ Revises: 0004_add_difficulty
 Create Date: 2025-12-02
 
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -32,7 +33,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index(op.f("ix_password_reset_tokens_user_id"), "password_reset_tokens", ["user_id"])
-    op.create_index(op.f("ix_password_reset_tokens_token"), "password_reset_tokens", ["token"], unique=True)
+    op.create_index(
+        op.f("ix_password_reset_tokens_token"), "password_reset_tokens", ["token"], unique=True
+    )
 
 
 def downgrade() -> None:

@@ -78,9 +78,7 @@ class VideoService:
         await session.refresh(feedback)
         return feedback
 
-    async def _get_response(
-        self, session: AsyncSession, response_id: UUID
-    ) -> InterviewResponse:
+    async def _get_response(self, session: AsyncSession, response_id: UUID) -> InterviewResponse:
         result = await session.exec(
             select(InterviewResponse).where(InterviewResponse.id == response_id)
         )

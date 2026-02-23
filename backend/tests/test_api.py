@@ -62,7 +62,7 @@ async def test_interview_lifecycle(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Behavioral question {i+1}",
+                "content": f"Behavioral question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -136,7 +136,7 @@ async def test_response_submission_and_retrieval(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Tell me about a time {i+1}",
+                "content": f"Tell me about a time {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -330,7 +330,7 @@ async def test_audio_upload(client: AsyncClient, db_session):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Upload test question {i+1}",
+                "content": f"Upload test question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.EASY.value,
             },
@@ -408,7 +408,7 @@ async def test_audio_upload_invalid_format(client: AsyncClient, db_session):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Format test question {i+1}",
+                "content": f"Format test question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.EASY.value,
             },
@@ -453,8 +453,8 @@ async def test_register_with_experience_level(client: AsyncClient):
         json={
             "email": "senior@example.com",
             "password": "SecureTest123!",
-            "experience_level": "senior"
-        }
+            "experience_level": "senior",
+        },
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -466,10 +466,7 @@ async def test_register_without_experience_level_defaults_to_mid(client: AsyncCl
     """Test that users without explicit experience level get 'mid' by default."""
     resp = await client.post(
         "/api/v1/users/register",
-        json={
-            "email": "default@example.com",
-            "password": "SecureTest123!"
-        }
+        json={"email": "default@example.com", "password": "SecureTest123!"},
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -487,18 +484,14 @@ async def test_update_experience_level(client: AsyncClient):
 
     # Update to senior
     update_resp = await client.patch(
-        "/api/v1/users/me",
-        json={"experience_level": "senior"},
-        headers={"Authorization": token}
+        "/api/v1/users/me", json={"experience_level": "senior"}, headers={"Authorization": token}
     )
     assert update_resp.status_code == 200
     assert update_resp.json()["experience_level"] == "senior"
 
     # Update to junior
     update_resp = await client.patch(
-        "/api/v1/users/me",
-        json={"experience_level": "junior"},
-        headers={"Authorization": token}
+        "/api/v1/users/me", json={"experience_level": "junior"}, headers={"Authorization": token}
     )
     assert update_resp.status_code == 200
     assert update_resp.json()["experience_level"] == "junior"
@@ -512,14 +505,13 @@ async def test_experience_level_returned_in_me(client: AsyncClient):
         json={
             "email": "me_test@example.com",
             "password": "SecureTest123!",
-            "experience_level": "junior"
-        }
+            "experience_level": "junior",
+        },
     )
     assert resp.status_code == 201
 
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": "me_test@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": "me_test@example.com", "password": "SecureTest123!"}
     )
     token = f"Bearer {login_resp.json()['access_token']}"
 
@@ -533,11 +525,10 @@ async def test_login_returns_refresh_token(client: AsyncClient):
     """Test that login returns both access and refresh tokens."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "refresh@example.com", "password": "SecureTest123!"}
+        json={"email": "refresh@example.com", "password": "SecureTest123!"},
     )
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": "refresh@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": "refresh@example.com", "password": "SecureTest123!"}
     )
     assert login_resp.status_code == 200
     data = login_resp.json()
@@ -552,18 +543,14 @@ async def test_refresh_token_returns_new_tokens(client: AsyncClient):
     """Test that refreshing tokens returns a new access and refresh token."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "refresh2@example.com", "password": "SecureTest123!"}
+        json={"email": "refresh2@example.com", "password": "SecureTest123!"},
     )
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": "refresh2@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": "refresh2@example.com", "password": "SecureTest123!"}
     )
     old_refresh = login_resp.json()["refresh_token"]
 
-    refresh_resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": old_refresh}
-    )
+    refresh_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert refresh_resp.status_code == 200
     data = refresh_resp.json()
     assert "access_token" in data
@@ -577,26 +564,19 @@ async def test_refresh_token_rotation_invalidates_old(client: AsyncClient):
     """Test that using a refresh token invalidates it (token rotation)."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "rotation@example.com", "password": "SecureTest123!"}
+        json={"email": "rotation@example.com", "password": "SecureTest123!"},
     )
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": "rotation@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": "rotation@example.com", "password": "SecureTest123!"}
     )
     old_refresh = login_resp.json()["refresh_token"]
 
     # First refresh succeeds
-    refresh_resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": old_refresh}
-    )
+    refresh_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert refresh_resp.status_code == 200
 
     # Second use of old token fails
-    refresh_resp2 = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": old_refresh}
-    )
+    refresh_resp2 = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert refresh_resp2.status_code == 401
 
 
@@ -604,8 +584,7 @@ async def test_refresh_token_rotation_invalidates_old(client: AsyncClient):
 async def test_refresh_with_invalid_token_fails(client: AsyncClient):
     """Test that an invalid refresh token is rejected."""
     refresh_resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": "invalid-token-that-does-not-exist"}
+        "/api/v1/auth/refresh", json={"refresh_token": "invalid-token-that-does-not-exist"}
     )
     assert refresh_resp.status_code == 401
 
@@ -622,28 +601,23 @@ async def test_refresh_with_expired_token_fails(client: AsyncClient, db_session)
     # Create user and login
     await client.post(
         "/api/v1/users/register",
-        json={"email": "expired_refresh@example.com", "password": "SecureTest123!"}
+        json={"email": "expired_refresh@example.com", "password": "SecureTest123!"},
     )
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "expired_refresh@example.com", "password": "SecureTest123!"}
+        json={"email": "expired_refresh@example.com", "password": "SecureTest123!"},
     )
     refresh_token = login_resp.json()["refresh_token"]
 
     # Manually expire the token in database
-    result = await db_session.exec(
-        select(User).where(User.email == "expired_refresh@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "expired_refresh@example.com"))
     user = result.first()
     assert user is not None
     user.refresh_token_expires_at = datetime.now(UTC) - timedelta(days=1)
     await db_session.commit()
 
     # Try to refresh with expired token
-    refresh_resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": refresh_token}
-    )
+    refresh_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert refresh_resp.status_code == 401
     detail = refresh_resp.json()["detail"].lower()
     assert "expired" in detail or "invalid" in detail
@@ -653,25 +627,19 @@ async def test_refresh_with_expired_token_fails(client: AsyncClient, db_session)
 async def test_new_access_token_works(client: AsyncClient):
     """Test that the new access token from refresh can access protected endpoints."""
     await client.post(
-        "/api/v1/users/register",
-        json={"email": "access@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/register", json={"email": "access@example.com", "password": "SecureTest123!"}
     )
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": "access@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": "access@example.com", "password": "SecureTest123!"}
     )
     refresh_token = login_resp.json()["refresh_token"]
 
-    refresh_resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": refresh_token}
-    )
+    refresh_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     new_access = refresh_resp.json()["access_token"]
 
     # Use new access token
     me_resp = await client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {new_access}"}
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {new_access}"}
     )
     assert me_resp.status_code == 200
 
@@ -695,7 +663,7 @@ async def test_change_password_success(client: AsyncClient):
     resp = await client.post(
         "/api/v1/users/me/change-password",
         json={"current_password": "TestPassword123!", "new_password": "NewSecure456!"},
-        headers={"Authorization": token}
+        headers={"Authorization": token},
     )
     assert resp.status_code == 200
     assert "successfully" in resp.json()["message"].lower()
@@ -703,7 +671,7 @@ async def test_change_password_success(client: AsyncClient):
     # Verify new password works
     login_resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "password_change@example.com", "password": "NewSecure456!"}
+        json={"email": "password_change@example.com", "password": "NewSecure456!"},
     )
     assert login_resp.status_code == 200
 
@@ -716,7 +684,7 @@ async def test_change_password_wrong_current(client: AsyncClient):
     resp = await client.post(
         "/api/v1/users/me/change-password",
         json={"current_password": "wrongpassword", "new_password": "newpassword456"},
-        headers={"Authorization": token}
+        headers={"Authorization": token},
     )
     assert resp.status_code == 400
     assert "incorrect" in resp.json()["detail"].lower()
@@ -737,8 +705,7 @@ async def test_delete_account(client: AsyncClient):
 
     # Try to login - should fail because account is soft deleted
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": "delete_me@example.com", "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": "delete_me@example.com", "password": "SecureTest123!"}
     )
     # Either 401 (invalid) or login works but is_active=False blocks access
     # Based on implementation, just check old email no longer works
@@ -781,7 +748,7 @@ async def test_update_profile_email(client: AsyncClient):
     resp = await client.patch(
         "/api/v1/users/me",
         json={"email": "new_email@example.com"},
-        headers={"Authorization": token}
+        headers={"Authorization": token},
     )
     assert resp.status_code == 202  # Accepted - email verification initiated
     assert "verification" in resp.json()["detail"].lower()
@@ -794,9 +761,7 @@ async def test_update_profile_email_already_taken(client: AsyncClient):
     token = await register_and_login(client, email="want_existing@example.com")
 
     resp = await client.patch(
-        "/api/v1/users/me",
-        json={"email": "existing@example.com"},
-        headers={"Authorization": token}
+        "/api/v1/users/me", json={"email": "existing@example.com"}, headers={"Authorization": token}
     )
     assert resp.status_code == 400
     assert "already registered" in resp.json()["detail"].lower()
@@ -808,9 +773,7 @@ async def test_update_profile_name(client: AsyncClient):
     token = await register_and_login(client, email="update_name@example.com")
 
     resp = await client.patch(
-        "/api/v1/users/me",
-        json={"full_name": "New Name"},
-        headers={"Authorization": token}
+        "/api/v1/users/me", json={"full_name": "New Name"}, headers={"Authorization": token}
     )
     assert resp.status_code == 200
     assert resp.json()["full_name"] == "New Name"
@@ -875,7 +838,7 @@ async def test_delete_account_cascade_cleanup(client: AsyncClient, db_session):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Question {i+1}",
+                "content": f"Question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -934,11 +897,11 @@ async def test_duplicate_registration_fails(client: AsyncClient):
     """Test registering with existing email fails."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "duplicate@example.com", "password": "SecureTest123!"}
+        json={"email": "duplicate@example.com", "password": "SecureTest123!"},
     )
     resp = await client.post(
         "/api/v1/users/register",
-        json={"email": "duplicate@example.com", "password": "SecureTest123!"}
+        json={"email": "duplicate@example.com", "password": "SecureTest123!"},
     )
     assert resp.status_code == 400
     assert "already registered" in resp.json()["detail"].lower()
@@ -949,11 +912,11 @@ async def test_login_with_wrong_password(client: AsyncClient):
     """Test login with incorrect password."""
     await client.post(
         "/api/v1/users/register",
-        json={"email": "wrong_login@example.com", "password": "SecureTest123!"}
+        json={"email": "wrong_login@example.com", "password": "SecureTest123!"},
     )
     resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "wrong_login@example.com", "password": "wrongpassword"}
+        json={"email": "wrong_login@example.com", "password": "wrongpassword"},
     )
     assert resp.status_code == 401
     assert "invalid" in resp.json()["detail"].lower()
@@ -964,7 +927,7 @@ async def test_login_nonexistent_user(client: AsyncClient):
     """Test login for user that doesn't exist."""
     resp = await client.post(
         "/api/v1/users/login",
-        json={"email": "nonexistent@example.com", "password": "SecureTest123!"}
+        json={"email": "nonexistent@example.com", "password": "SecureTest123!"},
     )
     assert resp.status_code == 401
 
@@ -1080,8 +1043,7 @@ async def test_get_random_question_filtered(client: AsyncClient):
 
     # Get random with filters
     resp = await client.get(
-        "/api/v1/questions/random",
-        params={"category": "behavioral", "difficulty": "medium"}
+        "/api/v1/questions/random", params={"category": "behavioral", "difficulty": "medium"}
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -1115,10 +1077,7 @@ async def test_interview_get_by_id(client: AsyncClient):
     interview_id = create_resp.json()["id"]
 
     # Get by ID
-    resp = await client.get(
-        f"/api/v1/interviews/{interview_id}",
-        headers={"Authorization": token}
-    )
+    resp = await client.get(f"/api/v1/interviews/{interview_id}", headers={"Authorization": token})
     assert resp.status_code == 200
     assert resp.json()["id"] == interview_id
 
@@ -1150,8 +1109,7 @@ async def test_interview_cancel_before_start(client: AsyncClient):
 
     # Cancel (should work before start)
     cancel_resp = await client.delete(
-        f"/api/v1/interviews/{interview_id}",
-        headers={"Authorization": token}
+        f"/api/v1/interviews/{interview_id}", headers={"Authorization": token}
     )
     assert cancel_resp.status_code == 204
 
@@ -1183,16 +1141,14 @@ async def test_interview_already_started_returns_same_state(client: AsyncClient)
 
     # First start succeeds
     start1 = await client.post(
-        f"/api/v1/interviews/{interview_id}/start",
-        headers={"Authorization": token}
+        f"/api/v1/interviews/{interview_id}/start", headers={"Authorization": token}
     )
     assert start1.status_code == 200
     assert start1.json()["status"] == InterviewStatus.IN_PROGRESS
 
     # Second start - endpoint allows idempotent calls
     start2 = await client.post(
-        f"/api/v1/interviews/{interview_id}/start",
-        headers={"Authorization": token}
+        f"/api/v1/interviews/{interview_id}/start", headers={"Authorization": token}
     )
     # Returns 200 (idempotent) or 400 (strict) - check it's still in progress
     if start2.status_code == 200:
@@ -1205,18 +1161,16 @@ async def test_forgot_password_returns_success_always(client: AsyncClient):
     # Existing user
     await client.post(
         "/api/v1/users/register",
-        json={"email": "forgotpw@example.com", "password": "SecureTest123!"}
+        json={"email": "forgotpw@example.com", "password": "SecureTest123!"},
     )
     resp1 = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": "forgotpw@example.com"}
+        "/api/v1/auth/forgot-password", json={"email": "forgotpw@example.com"}
     )
     assert resp1.status_code == 200
 
     # Non-existent user - still returns 200 (security)
     resp2 = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": "nonexistent_forgot@example.com"}
+        "/api/v1/auth/forgot-password", json={"email": "nonexistent_forgot@example.com"}
     )
     assert resp2.status_code == 200
 
@@ -1226,7 +1180,7 @@ async def test_reset_password_invalid_token(client: AsyncClient):
     """Test reset password with invalid token fails."""
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": "invalid-token-abc123", "new_password": "newpassword456"}
+        json={"token": "invalid-token-abc123", "new_password": "newpassword456"},
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
@@ -1245,7 +1199,7 @@ async def test_create_interview_with_all_optional_fields(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Question {i+1}",
+                "content": f"Question {i + 1}",
                 "category": QuestionCategory.TECHNICAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -1288,7 +1242,7 @@ async def test_start_interview_already_completed(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Question {i+1}",
+                "content": f"Question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -1379,7 +1333,7 @@ async def test_get_questions_ordering(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Question {i+1}",
+                "content": f"Question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -1432,7 +1386,7 @@ async def test_submit_response_invalid_question_id(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Behavioral {i+1}",
+                "content": f"Behavioral {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -1475,7 +1429,7 @@ async def test_submit_response_to_completed_interview(client: AsyncClient):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Question {i+1}",
+                "content": f"Question {i + 1}",
                 "category": QuestionCategory.BEHAVIORAL.value,
                 "difficulty": Difficulty.MEDIUM.value,
             },
@@ -1664,12 +1618,10 @@ async def test_delete_interview_in_progress(client: AsyncClient):
 async def test_get_interview_not_found(client: AsyncClient):
     """Test getting non-existent interview returns 404."""
     import uuid
+
     token = await register_and_login(client, email="notfound@example.com")
 
-    resp = await client.get(
-        f"/api/v1/interviews/{uuid.uuid4()}",
-        headers={"Authorization": token}
-    )
+    resp = await client.get(f"/api/v1/interviews/{uuid.uuid4()}", headers={"Authorization": token})
     assert resp.status_code == 404
 
 
@@ -1714,7 +1666,7 @@ async def test_create_interview_with_company_style(client: AsyncClient):
         json={
             "interview_type": InterviewType.BEHAVIORAL.value,
             "company_style": "google",
-            "question_count": 3
+            "question_count": 3,
         },
         headers={"Authorization": token},
     )
@@ -1744,7 +1696,7 @@ async def test_create_interview_with_difficulty(client: AsyncClient):
         json={
             "interview_type": InterviewType.BEHAVIORAL.value,
             "difficulty": "hard",
-            "question_count": 3
+            "question_count": 3,
         },
         headers={"Authorization": token},
     )
@@ -1777,15 +1729,11 @@ async def test_end_interview_returns_completed_status(client: AsyncClient):
     interview_id = create_resp.json()["id"]
 
     # Start the interview
-    await client.post(
-        f"/api/v1/interviews/{interview_id}/start",
-        headers={"Authorization": token}
-    )
+    await client.post(f"/api/v1/interviews/{interview_id}/start", headers={"Authorization": token})
 
     # End the interview
     end_resp = await client.post(
-        f"/api/v1/interviews/{interview_id}/end",
-        headers={"Authorization": token}
+        f"/api/v1/interviews/{interview_id}/end", headers={"Authorization": token}
     )
     assert end_resp.status_code == 200
     assert end_resp.json()["status"] == InterviewStatus.COMPLETED

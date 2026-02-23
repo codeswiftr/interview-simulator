@@ -621,9 +621,7 @@ async def test_generate_response_feedback_ai_failure(client, db_session):
     # Patch FeedbackService.generate_feedback to simulate analysis failure
     with patch("app.api.feedback.FeedbackService") as MockService:
         instance = MockService.return_value
-        instance.generate_feedback = AsyncMock(
-            side_effect=ValueError("AI analysis failed")
-        )
+        instance.generate_feedback = AsyncMock(side_effect=ValueError("AI analysis failed"))
 
         gen_resp = await client.post(
             f"/api/v1/feedback/generate/response/{response_id}",
@@ -631,9 +629,9 @@ async def test_generate_response_feedback_ai_failure(client, db_session):
         )
 
     assert gen_resp.status_code == 400
-    assert "failed" in gen_resp.json()["detail"].lower() or "ai" in gen_resp.json()[
-        "detail"
-    ].lower()
+    assert (
+        "failed" in gen_resp.json()["detail"].lower() or "ai" in gen_resp.json()["detail"].lower()
+    )
 
 
 @pytest.mark.asyncio
@@ -1089,6 +1087,7 @@ async def test_get_session_comparison_endpoint(client, db_session):
 
     # Manually set the interview status and overall_score for baseline
     from sqlmodel import select
+
     result = await db_session.exec(
         select(InterviewSession).where(InterviewSession.id == interview_id1)
     )
@@ -1520,7 +1519,9 @@ async def test_generate_session_feedback_session_not_found(db_session):
 
 
 @pytest.mark.asyncio
-async def test_feedback_service_generate_session_feedback_already_exists(db_session, mock_content_metrics):
+async def test_feedback_service_generate_session_feedback_already_exists(
+    db_session, mock_content_metrics
+):
     """Test FeedbackService.generate_session_feedback raises ValueError when feedback exists."""
     from app.models.user import User
     from app.security import hash_password
@@ -1866,9 +1867,7 @@ async def test_interview_service_assign_specific_question_success(db_session):
     await db_session.refresh(interview)
 
     service = InterviewService()
-    interview_question = await service.assign_specific_question(
-        db_session, interview, question.id
-    )
+    interview_question = await service.assign_specific_question(db_session, interview, question.id)
 
     assert interview_question is not None
     assert interview_question.session_id == interview.id

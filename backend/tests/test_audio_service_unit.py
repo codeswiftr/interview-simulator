@@ -41,9 +41,7 @@ class TestProcessResponseAudio:
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         with pytest.raises(ValueError, match="not found"):
-            await service.process_response_audio(
-                mock_session, response_id, "/path/to/audio.webm"
-            )
+            await service.process_response_audio(mock_session, response_id, "/path/to/audio.webm")
 
     @pytest.mark.asyncio
     async def test_raises_if_audio_file_not_found(self):
@@ -99,8 +97,14 @@ class TestProcessResponseAudio:
             confidence_score=75.0,
         )
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics):
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
             transcript, metrics = await service.process_response_audio(
                 mock_session, response_id, str(audio_file)
             )
@@ -143,11 +147,15 @@ class TestProcessResponseAudio:
             confidence_score=70.0,
         )
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics):
-            await service.process_response_audio(
-                mock_session, response_id, str(audio_file)
-            )
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
+            await service.process_response_audio(mock_session, response_id, str(audio_file))
 
         assert mock_response.duration_seconds == 180  # Truncated to int
 
@@ -167,15 +175,17 @@ class TestProcessResponseAudio:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        with patch.object(
-            service, "transcribe_audio",
-            new_callable=AsyncMock,
-            side_effect=ValueError("Transcription failed")
-        ), caplog.at_level(logging.ERROR):
-            with pytest.raises(ValueError, match="Failed to process audio"):
-                await service.process_response_audio(
-                    mock_session, response_id, str(audio_file)
-                )
+        with (
+            patch.object(
+                service,
+                "transcribe_audio",
+                new_callable=AsyncMock,
+                side_effect=ValueError("Transcription failed"),
+            ),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(ValueError, match="Failed to process audio"),
+        ):
+            await service.process_response_audio(mock_session, response_id, str(audio_file))
 
         assert "failed" in caplog.text.lower()
 
@@ -198,13 +208,20 @@ class TestProcessResponseAudio:
 
         mock_transcript = TranscriptionResult(text="Test", duration_seconds=60.0)
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, side_effect=ValueError("Analysis failed")), \
-             caplog.at_level(logging.ERROR):
-            with pytest.raises(ValueError, match="Failed to process audio"):
-                await service.process_response_audio(
-                    mock_session, response_id, str(audio_file)
-                )
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service,
+                "analyze_audio",
+                new_callable=AsyncMock,
+                side_effect=ValueError("Analysis failed"),
+            ),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(ValueError, match="Failed to process audio"),
+        ):
+            await service.process_response_audio(mock_session, response_id, str(audio_file))
 
 
 class TestTranscribeAudio:
@@ -221,7 +238,9 @@ class TestTranscribeAudio:
             language="en",
         )
 
-        with patch.object(service.transcriber, "transcribe", new_callable=AsyncMock, return_value=mock_result):
+        with patch.object(
+            service.transcriber, "transcribe", new_callable=AsyncMock, return_value=mock_result
+        ):
             result = await service.transcribe_audio("/path/to/audio.webm")
 
         assert result.text == "Hello world"
@@ -232,13 +251,17 @@ class TestTranscribeAudio:
         """Test that transcription failures raise ValueError."""
         service = AudioService()
 
-        with patch.object(
-            service.transcriber, "transcribe",
-            new_callable=AsyncMock,
-            side_effect=Exception("API error")
-        ), caplog.at_level(logging.ERROR):
-            with pytest.raises(ValueError, match="Transcription failed"):
-                await service.transcribe_audio("/path/to/audio.webm")
+        with (
+            patch.object(
+                service.transcriber,
+                "transcribe",
+                new_callable=AsyncMock,
+                side_effect=Exception("API error"),
+            ),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(ValueError, match="Transcription failed"),
+        ):
+            await service.transcribe_audio("/path/to/audio.webm")
 
         assert "Transcription failed" in caplog.text
 
@@ -247,7 +270,9 @@ class TestTranscribeAudio:
         """Test that transcribe is called with correct parameters."""
         service = AudioService()
 
-        with patch.object(service.transcriber, "transcribe", new_callable=AsyncMock) as mock_transcribe:
+        with patch.object(
+            service.transcriber, "transcribe", new_callable=AsyncMock
+        ) as mock_transcribe:
             mock_transcribe.return_value = TranscriptionResult(text="Test")
 
             await service.transcribe_audio("/path/to/audio.webm")
@@ -273,7 +298,9 @@ class TestAnalyzeAudio:
             confidence_score=85.0,
         )
 
-        with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics):
+        with patch.object(
+            service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+        ):
             result = await service.analyze_audio("/path/to/audio.webm", "Some transcript")
 
         assert result.speech_rate_wpm == 140.0
@@ -284,13 +311,17 @@ class TestAnalyzeAudio:
         """Test that analysis failures raise ValueError."""
         service = AudioService()
 
-        with patch.object(
-            service.analyzer, "analyze",
-            new_callable=AsyncMock,
-            side_effect=Exception("Analysis error")
-        ), caplog.at_level(logging.ERROR):
-            with pytest.raises(ValueError, match="Audio analysis failed"):
-                await service.analyze_audio("/path/to/audio.webm", "transcript")
+        with (
+            patch.object(
+                service.analyzer,
+                "analyze",
+                new_callable=AsyncMock,
+                side_effect=Exception("Analysis error"),
+            ),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(ValueError, match="Audio analysis failed"),
+        ):
+            await service.analyze_audio("/path/to/audio.webm", "transcript")
 
         assert "Audio analysis failed" in caplog.text
 
@@ -306,7 +337,9 @@ class TestAnalyzeAudio:
             confidence_score=70.0,
         )
 
-        with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics):
+        with patch.object(
+            service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+        ):
             result = await service.analyze_audio("/path/to/audio.webm", None)
 
         assert result is not None
@@ -374,8 +407,10 @@ class TestSaveAudioFeedback:
         )
 
         # Mock the score calculation methods
-        with patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0), \
-             patch.object(service.analyzer, "calculate_filler_score", return_value=90.0):
+        with (
+            patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0),
+            patch.object(service.analyzer, "calculate_filler_score", return_value=90.0),
+        ):
             feedback = await service.save_audio_feedback(mock_session, response_id, metrics)
 
         mock_session.add.assert_called_once()
@@ -416,8 +451,12 @@ class TestSaveAudioFeedback:
         )
 
         # The default word count of 100 should be used
-        with patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0), \
-             patch.object(service.analyzer, "calculate_filler_score", return_value=85.0) as mock_filler:
+        with (
+            patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0),
+            patch.object(
+                service.analyzer, "calculate_filler_score", return_value=85.0
+            ) as mock_filler,
+        ):
             await service.save_audio_feedback(mock_session, response_id, metrics)
 
             # Should be called with filler count 5 and word count 100
@@ -453,11 +492,13 @@ class TestSaveAudioFeedback:
             speech_rate_wpm=130.0,
             filler_words={},
             volume_consistency=80.0,  # 0.2 weight
-            confidence_score=60.0,    # 0.2 weight
+            confidence_score=60.0,  # 0.2 weight
         )
 
-        with patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0), \
-             patch.object(service.analyzer, "calculate_filler_score", return_value=90.0):
+        with (
+            patch.object(service.analyzer, "calculate_speech_rate_score", return_value=100.0),
+            patch.object(service.analyzer, "calculate_filler_score", return_value=90.0),
+        ):
             await service.save_audio_feedback(mock_session, response_id, metrics)
 
         # Expected: 100*0.3 + 90*0.3 + 80*0.2 + 60*0.2 = 30 + 27 + 16 + 12 = 85
@@ -495,8 +536,14 @@ class TestAudioMetricsHandling:
             confidence_score=75.0,
         )
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics):
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
             transcript, metrics = await service.process_response_audio(
                 mock_session, response_id, str(audio_file)
             )
@@ -528,11 +575,15 @@ class TestAudioMetricsHandling:
             confidence_score=75.0,
         )
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics):
-            await service.process_response_audio(
-                mock_session, response_id, str(audio_file)
-            )
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
+            await service.process_response_audio(mock_session, response_id, str(audio_file))
 
         assert mock_response.filler_word_count == 20  # 5+3+10+2
 
@@ -566,8 +617,14 @@ class TestEdgeCases:
             confidence_score=50.0,
         )
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics):
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
             transcript, metrics = await service.process_response_audio(
                 mock_session, response_id, str(audio_file)
             )
@@ -601,11 +658,15 @@ class TestEdgeCases:
             confidence_score=70.0,
         )
 
-        with patch.object(service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript), \
-             patch.object(service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics):
-            await service.process_response_audio(
-                mock_session, response_id, str(audio_file)
-            )
+        with (
+            patch.object(
+                service, "transcribe_audio", new_callable=AsyncMock, return_value=mock_transcript
+            ),
+            patch.object(
+                service, "analyze_audio", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
+            await service.process_response_audio(mock_session, response_id, str(audio_file))
 
         # Duration should remain unchanged when transcription has no duration
         assert mock_response.duration_seconds == 60

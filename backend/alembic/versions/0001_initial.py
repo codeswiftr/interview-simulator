@@ -28,10 +28,18 @@ def upgrade() -> None:
         sa.Column("stripe_subscription_id", sa.String(), nullable=True),
         sa.Column("interviews_this_month", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("total_interviews", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()),
-        sa.Column("is_verified", sa.Boolean(), nullable=False, server_default=sa.sql.expression.false()),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()
+        ),
+        sa.Column(
+            "is_verified", sa.Boolean(), nullable=False, server_default=sa.sql.expression.false()
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_users_email", "users", ["email"], unique=True)
@@ -43,12 +51,21 @@ def upgrade() -> None:
         sa.Column("content", sa.String(), nullable=False),
         sa.Column("category", sa.String(), nullable=False),
         sa.Column("difficulty", sa.String(), nullable=False),
-        sa.Column("company_tags", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
+        sa.Column(
+            "company_tags", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"
+        ),
         sa.Column("topic_tags", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
         sa.Column("expected_duration_seconds", sa.Integer(), nullable=False, server_default="180"),
         sa.Column("sample_answer", sa.String(), nullable=True),
-        sa.Column("evaluation_criteria", postgresql.JSON(), nullable=False, server_default=sa.text("'{}'::json")),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()),
+        sa.Column(
+            "evaluation_criteria",
+            postgresql.JSON(),
+            nullable=False,
+            server_default=sa.text("'{}'::json"),
+        ),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.sql.expression.true()
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )
@@ -58,7 +75,9 @@ def upgrade() -> None:
     op.create_table(
         "interview_sessions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("interview_type", sa.String(), nullable=False),
         sa.Column("company_style", sa.String(), nullable=True),
         sa.Column("question_count", sa.Integer(), nullable=False, server_default="5"),
@@ -78,8 +97,18 @@ def upgrade() -> None:
     op.create_table(
         "interview_questions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("session_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("interview_sessions.id"), nullable=False),
-        sa.Column("question_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("questions.id"), nullable=False),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("interview_sessions.id"),
+            nullable=False,
+        ),
+        sa.Column(
+            "question_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("questions.id"),
+            nullable=False,
+        ),
         sa.Column("order", sa.Integer(), nullable=False),
         sa.Column("asked_at", sa.DateTime(), nullable=True),
         sa.Column("time_limit_seconds", sa.Integer(), nullable=False, server_default="180"),
@@ -90,8 +119,18 @@ def upgrade() -> None:
     op.create_table(
         "interview_responses",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("session_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("interview_sessions.id"), nullable=False),
-        sa.Column("question_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("questions.id"), nullable=False),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("interview_sessions.id"),
+            nullable=False,
+        ),
+        sa.Column(
+            "question_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("questions.id"),
+            nullable=False,
+        ),
         sa.Column("audio_url", sa.String(), nullable=True),
         sa.Column("video_url", sa.String(), nullable=True),
         sa.Column("transcript", sa.Text(), nullable=True),
@@ -107,10 +146,18 @@ def upgrade() -> None:
     op.create_table(
         "audio_feedback",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("response_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("interview_responses.id"), nullable=False, unique=True),
+        sa.Column(
+            "response_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("interview_responses.id"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("speech_rate_wpm", sa.Float(), nullable=False),
         sa.Column("speech_rate_score", sa.Float(), nullable=False),
-        sa.Column("filler_words", postgresql.JSON(), nullable=False, server_default=sa.text("'{}'::json")),
+        sa.Column(
+            "filler_words", postgresql.JSON(), nullable=False, server_default=sa.text("'{}'::json")
+        ),
         sa.Column("filler_word_score", sa.Float(), nullable=False),
         sa.Column("volume_consistency", sa.Float(), nullable=False),
         sa.Column("confidence_score", sa.Float(), nullable=False),
@@ -121,7 +168,13 @@ def upgrade() -> None:
     op.create_table(
         "content_feedback",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("response_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("interview_responses.id"), nullable=False, unique=True),
+        sa.Column(
+            "response_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("interview_responses.id"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("technical_accuracy", sa.Float(), nullable=False),
         sa.Column("star_adherence", sa.Float(), nullable=False),
         sa.Column("answer_structure", sa.Float(), nullable=False),
@@ -129,7 +182,9 @@ def upgrade() -> None:
         sa.Column("relevance", sa.Float(), nullable=False),
         sa.Column("overall_content_score", sa.Float(), nullable=False),
         sa.Column("strengths", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
-        sa.Column("improvements", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
+        sa.Column(
+            "improvements", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"
+        ),
         sa.Column("detailed_feedback", sa.Text(), nullable=False, server_default=""),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )
@@ -137,14 +192,31 @@ def upgrade() -> None:
     op.create_table(
         "session_feedback",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("session_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("interview_sessions.id"), nullable=False, unique=True),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("interview_sessions.id"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("overall_score", sa.Float(), nullable=False),
         sa.Column("audio_score", sa.Float(), nullable=False),
         sa.Column("content_score", sa.Float(), nullable=False),
-        sa.Column("top_strengths", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
-        sa.Column("top_improvements", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
-        sa.Column("recommended_practice_areas", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
-        sa.Column("next_question_ids", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"),
+        sa.Column(
+            "top_strengths", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"
+        ),
+        sa.Column(
+            "top_improvements", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"
+        ),
+        sa.Column(
+            "recommended_practice_areas",
+            postgresql.ARRAY(sa.String()),
+            nullable=False,
+            server_default="{}",
+        ),
+        sa.Column(
+            "next_question_ids", postgresql.ARRAY(sa.String()), nullable=False, server_default="{}"
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )
 

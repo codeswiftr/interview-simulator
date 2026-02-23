@@ -47,9 +47,7 @@ class PasswordValidatorType:
         if errors:
             # Join all errors with newlines for better readability
             raise PydanticCustomError(
-                "password_validation_error",
-                "\n".join(errors),
-                {"errors": errors}
+                "password_validation_error", "\n".join(errors), {"errors": errors}
             )
         return value
 

@@ -39,8 +39,8 @@ SAAS_QUESTIONS = [
             "demonstrates_balance": "Shows understanding of both customer needs and technical sustainability",
             "quantitative_reasoning": "Uses data and metrics to justify decisions",
             "stakeholder_communication": "Explains technical concepts to non-technical audiences",
-            "long_term_thinking": "Considers long-term implications, not just short-term wins"
-        }
+            "long_term_thinking": "Considers long-term implications, not just short-term wins",
+        },
     ),
     Question(
         content="Describe how you've handled a production incident that affected multiple SaaS customers.",
@@ -62,8 +62,8 @@ SAAS_QUESTIONS = [
             "incident_response": "Quick action to restore service",
             "communication": "Proactive customer communication",
             "root_cause_analysis": "Goes beyond symptoms to identify underlying issues",
-            "continuous_improvement": "Implements preventive measures"
-        }
+            "continuous_improvement": "Implements preventive measures",
+        },
     ),
     Question(
         content="How have you optimized multi-tenant architecture for performance and isolation in a SaaS platform?",
@@ -145,7 +145,6 @@ SAAS_QUESTIONS = [
         topic_tags=["metrics", "business", "analytics"],
         expected_duration_seconds=180,
     ),
-
     # Technical Questions (10)
     Question(
         content="Design a rate limiting system for a multi-tenant SaaS API with different tier limits.",
@@ -185,8 +184,8 @@ This design handles millions of requests/second while maintaining per-tenant iso
             "scalability": "Design handles high throughput",
             "fairness": "Different tiers are properly isolated",
             "reliability": "System degrades gracefully",
-            "observability": "Includes monitoring and alerting"
-        }
+            "observability": "Includes monitoring and alerting",
+        },
     ),
     Question(
         content="How would you implement a background job system for processing customer webhooks with retry logic and dead letter queue?",
@@ -303,8 +302,8 @@ FINTECH_QUESTIONS = [
             "attention_to_detail": "Understands the critical nature of financial accuracy",
             "systematic_debugging": "Uses proper tools and methodology to find root cause",
             "defensive_programming": "Implements multiple layers of protection",
-            "monitoring": "Adds observability and reconciliation"
-        }
+            "monitoring": "Adds observability and reconciliation",
+        },
     ),
     Question(
         content="Describe how you've implemented or worked with fraud detection systems in a fintech application.",
@@ -336,8 +335,8 @@ FINTECH_QUESTIONS = [
             "compliance_knowledge": "Understands major fintech compliance frameworks",
             "practical_implementation": "Describes concrete technical measures",
             "business_impact": "Connects compliance to business outcomes",
-            "cultural_mindset": "Views compliance as enabler, not blocker"
-        }
+            "cultural_mindset": "Views compliance as enabler, not blocker",
+        },
     ),
     Question(
         content="Tell me about your experience with double-entry bookkeeping or ledger systems in software.",
@@ -409,7 +408,6 @@ FINTECH_QUESTIONS = [
         topic_tags=["performance", "optimization", "scalability"],
         expected_duration_seconds=200,
     ),
-
     # Technical Questions (10)
     Question(
         content="Design a payment processing system that handles credit card transactions with proper security and PCI compliance.",
@@ -460,8 +458,8 @@ This design achieves PCI compliance, handles 10,000 TPS, and maintains 99.99% ac
             "security_awareness": "Prioritizes PCI compliance and security",
             "architecture_knowledge": "Understands tokenization and payment flows",
             "completeness": "Addresses reconciliation, monitoring, error handling",
-            "practical_experience": "References real tools (Stripe, payment processors)"
-        }
+            "practical_experience": "References real tools (Stripe, payment processors)",
+        },
     ),
     Question(
         content="How would you implement a distributed ledger system for tracking financial transactions across microservices?",
@@ -578,8 +576,8 @@ HEALTHCARE_QUESTIONS = [
             "compliance_depth": "Demonstrates detailed understanding of HIPAA requirements",
             "technical_implementation": "Describes specific security measures",
             "holistic_approach": "Considers people, process, and technology",
-            "risk_management": "Balances security with usability"
-        }
+            "risk_management": "Balances security with usability",
+        },
     ),
     Question(
         content="Describe how you've handled patient data privacy and consent management in a healthcare application.",
@@ -671,7 +669,6 @@ HEALTHCARE_QUESTIONS = [
         topic_tags=["medication_orders", "safety", "accuracy"],
         expected_duration_seconds=180,
     ),
-
     # Technical Questions (10)
     Question(
         content="Design a HIPAA-compliant system for storing and retrieving patient medical records with proper encryption and access controls.",
@@ -736,8 +733,8 @@ This design meets all HIPAA technical safeguards and scales to millions of recor
             "hipaa_knowledge": "Demonstrates understanding of HIPAA technical safeguards",
             "defense_in_depth": "Multiple layers of security",
             "auditability": "Comprehensive logging and monitoring",
-            "practical_implementation": "References real technologies and patterns"
-        }
+            "practical_implementation": "References real technologies and patterns",
+        },
     ),
     Question(
         content="How would you implement a patient matching algorithm to prevent duplicate medical records?",
@@ -934,7 +931,6 @@ GAMING_QUESTIONS = [
         topic_tags=["progression", "engagement", "game_design"],
         expected_duration_seconds=180,
     ),
-
     # Technical Questions (10)
     Question(
         content="Design a matchmaking system for a competitive multiplayer game that balances skill, latency, and queue times.",
@@ -1141,7 +1137,6 @@ ECOMMERCE_QUESTIONS = [
         topic_tags=["ab_testing", "experimentation", "metrics"],
         expected_duration_seconds=180,
     ),
-
     # Technical Questions (10)
     Question(
         content="Design a scalable product catalog system that handles millions of SKUs with real-time inventory updates.",
@@ -1247,15 +1242,15 @@ ECOMMERCE_QUESTIONS = [
 
 # Combine all questions
 ALL_INDUSTRY_QUESTIONS = (
-    SAAS_QUESTIONS +
-    FINTECH_QUESTIONS +
-    HEALTHCARE_QUESTIONS +
-    GAMING_QUESTIONS +
-    ECOMMERCE_QUESTIONS
+    SAAS_QUESTIONS
+    + FINTECH_QUESTIONS
+    + HEALTHCARE_QUESTIONS
+    + GAMING_QUESTIONS
+    + ECOMMERCE_QUESTIONS
 )
 
 
-async def seed_industry_questions(session: "AsyncSession | None" = None, auto_commit: bool = True):
+async def seed_industry_questions(session: AsyncSession | None = None, auto_commit: bool = True):
     """Seed industry-specific questions. Idempotent - skips existing questions with same content.
 
     Args:
@@ -1268,6 +1263,7 @@ async def seed_industry_questions(session: "AsyncSession | None" = None, auto_co
     # If no session provided, create one from app engine (for CLI usage)
     if session is None:
         from app.db import engine
+
         async with AsyncSession(engine) as session:
             return await seed_industry_questions(session, auto_commit=True)
 
@@ -1302,10 +1298,13 @@ async def seed_industry_questions(session: "AsyncSession | None" = None, auto_co
     if auto_commit:
         await session.commit()
 
-    print(f"✅ Industry questions seeded: {added_count} added, {skipped_count} skipped (already exist)")
+    print(
+        f"✅ Industry questions seeded: {added_count} added, {skipped_count} skipped (already exist)"
+    )
     print(f"📊 Total industry questions in database: {len(existing_contents) + added_count}")
 
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(seed_industry_questions())

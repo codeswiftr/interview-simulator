@@ -1,7 +1,7 @@
 """Interview question models."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
@@ -10,7 +10,7 @@ from sqlalchemy.types import String
 from sqlmodel import Field, SQLModel
 
 
-class QuestionCategory(str, Enum):
+class QuestionCategory(StrEnum):
     """Question category types."""
 
     BEHAVIORAL = "behavioral"
@@ -18,7 +18,7 @@ class QuestionCategory(str, Enum):
     SYSTEM_DESIGN = "system_design"
 
 
-class Difficulty(str, Enum):
+class Difficulty(StrEnum):
     """Question difficulty levels."""
 
     EASY = "easy"
@@ -26,7 +26,7 @@ class Difficulty(str, Enum):
     HARD = "hard"
 
 
-class Industry(str, Enum):
+class Industry(StrEnum):
     """Industry categories for questions."""
 
     SAAS = "saas"
@@ -37,7 +37,7 @@ class Industry(str, Enum):
     GENERAL = "general"
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     """Role categories for questions."""
 
     SOFTWARE_ENGINEER = "software_engineer"

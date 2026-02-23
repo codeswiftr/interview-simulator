@@ -79,9 +79,7 @@ class TestAccountLockoutService:
                 db_session, "test@example.com", "127.0.0.1", success=False
             )
 
-        is_locked, lockout_expires = await service.is_account_locked(
-            db_session, "test@example.com"
-        )
+        is_locked, lockout_expires = await service.is_account_locked(db_session, "test@example.com")
         assert is_locked
         assert lockout_expires is not None
         assert lockout_expires > datetime.now(UTC)
@@ -168,9 +166,7 @@ class TestLoginEndpointWithLockout:
 
     async def test_login_success_no_lockout(self, db_session: AsyncSession, test_user: User):
         """Test successful login doesn't trigger lockout."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/api/v1/users/login",
                 json={
@@ -187,9 +183,7 @@ class TestLoginEndpointWithLockout:
         self, db_session: AsyncSession, test_user: User
     ):
         """Test failed login increments attempt counter."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # First failed attempt
             response = await client.post(
                 "/api/v1/users/login",
@@ -209,9 +203,7 @@ class TestLoginEndpointWithLockout:
         self, db_session: AsyncSession, test_user: User
     ):
         """Test account is locked after 5 failed login attempts."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Make 5 failed login attempts
             for i in range(5):
                 response = await client.post(
@@ -238,9 +230,7 @@ class TestLoginEndpointWithLockout:
 
     async def test_login_fails_for_nonexistent_user(self, db_session: AsyncSession):
         """Test login attempt for non-existent user records failed attempt."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/api/v1/users/login",
                 json={
@@ -252,18 +242,12 @@ class TestLoginEndpointWithLockout:
 
             # Check failed attempt was recorded
             service = AccountLockoutService()
-            count = await service.get_failed_attempts_count(
-                db_session, "nonexistent@example.com"
-            )
+            count = await service.get_failed_attempts_count(db_session, "nonexistent@example.com")
             assert count == 1
 
-    async def test_lockout_case_insensitive(
-        self, db_session: AsyncSession, test_user: User
-    ):
+    async def test_lockout_case_insensitive(self, db_session: AsyncSession, test_user: User):
         """Test lockout works with case-insensitive emails."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Make failed attempts with different email cases
             emails = [
                 test_user.email.upper(),
@@ -286,9 +270,7 @@ class TestLoginEndpointWithLockout:
         self, db_session: AsyncSession, test_user: User
     ):
         """Test successful login works after some failures (below threshold)."""
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             # Make 3 failed attempts
             for _ in range(3):
                 await client.post(

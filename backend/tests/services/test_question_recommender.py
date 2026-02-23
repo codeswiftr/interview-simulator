@@ -125,9 +125,7 @@ class TestRecommendNextQuestions:
 
         # Check that some recommendations are from same category
         for rec_id in recommendations[:2]:
-            result = await db_session.exec(
-                select(Question).where(Question.id == rec_id)
-            )
+            result = await db_session.exec(select(Question).where(Question.id == rec_id))
             rec_q = result.first()
             assert rec_q is not None
             assert rec_q.category == QuestionCategory.BEHAVIORAL
@@ -217,9 +215,7 @@ class TestRecommendNextQuestions:
         assert len(recommendations) <= 5
 
     @pytest.mark.asyncio
-    async def test_recommend_empty_for_invalid_question(
-        self, db_session, test_user
-    ):
+    async def test_recommend_empty_for_invalid_question(self, db_session, test_user):
         """Returns empty list for nonexistent question."""
         recommendations = await recommend_next_questions(
             session=db_session,
@@ -231,9 +227,7 @@ class TestRecommendNextQuestions:
         assert recommendations == []
 
     @pytest.mark.asyncio
-    async def test_recommend_weak_area_questions(
-        self, db_session, test_user, behavioral_questions
-    ):
+    async def test_recommend_weak_area_questions(self, db_session, test_user, behavioral_questions):
         """Includes questions from user's weak topic areas."""
         # Create an interview session with low-scoring response
         session_obj = InterviewSession(
@@ -328,9 +322,7 @@ class TestSameTopicQuestions:
     """Tests for _get_same_topic_questions function."""
 
     @pytest.mark.asyncio
-    async def test_finds_questions_with_matching_topics(
-        self, db_session, behavioral_questions
-    ):
+    async def test_finds_questions_with_matching_topics(self, db_session, behavioral_questions):
         """Finds questions with overlapping topic tags."""
         current_q = behavioral_questions[0]  # leadership, teamwork
 
@@ -344,9 +336,7 @@ class TestSameTopicQuestions:
             assert q.category == QuestionCategory.BEHAVIORAL
 
     @pytest.mark.asyncio
-    async def test_falls_back_to_category_match(
-        self, db_session
-    ):
+    async def test_falls_back_to_category_match(self, db_session):
         """Falls back to category match if no topic tags."""
         # Create question with no topic tags
         q_no_tags = Question(

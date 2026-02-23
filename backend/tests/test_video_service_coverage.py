@@ -40,6 +40,7 @@ async def test_user(db_session):
     await db_session.refresh(user)
     return user
 
+
 @pytest.fixture
 async def test_interview_response(db_session, test_user):
     """Create a test interview response."""
@@ -71,10 +72,12 @@ async def test_interview_response(db_session, test_user):
     await db_session.refresh(response)
     return response
 
+
 @pytest.fixture
 def video_service():
     """Provide an instance of VideoService."""
     return VideoService()
+
 
 @pytest.fixture
 def sample_video_metrics():
@@ -91,7 +94,9 @@ def sample_video_metrics():
         frame_count=30,
     )
 
+
 # Test: analyze_video() missing file error (line 46)
+
 
 @pytest.mark.asyncio
 async def test_analyze_video_raises_error_when_file_not_found(
@@ -103,15 +108,12 @@ async def test_analyze_video_raises_error_when_file_not_found(
 
     # Should raise ValueError
     with pytest.raises(ValueError) as exc_info:
-        await video_service.analyze_video(
-            db_session,
-            test_interview_response.id,
-            nonexistent_path
-        )
+        await video_service.analyze_video(db_session, test_interview_response.id, nonexistent_path)
 
     error_message = str(exc_info.value)
     assert "Video file not found" in error_message
     assert nonexistent_path in error_message
+
 
 @pytest.mark.asyncio
 async def test_analyze_video_succeeds_when_file_exists(
@@ -124,22 +126,17 @@ async def test_analyze_video_succeeds_when_file_exists(
 
     # Mock the analyzer to return sample metrics
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_video_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_video_metrics)
     ):
         result = await video_service.analyze_video(
-            db_session,
-            test_interview_response.id,
-            str(video_file)
+            db_session, test_interview_response.id, str(video_file)
         )
 
     assert result == sample_video_metrics
 
+
 @pytest.mark.asyncio
-async def test_analyze_video_calls_get_response_to_validate(
-    db_session, video_service, tmp_path
-):
+async def test_analyze_video_calls_get_response_to_validate(db_session, video_service, tmp_path):
     """Test that analyze_video calls _get_response to validate response exists."""
     # Create a temporary video file
     video_file = tmp_path / "validate_test.mp4"
@@ -150,17 +147,15 @@ async def test_analyze_video_calls_get_response_to_validate(
 
     # Should raise ValueError from _get_response
     with pytest.raises(ValueError) as exc_info:
-        await video_service.analyze_video(
-            db_session,
-            fake_response_id,
-            str(video_file)
-        )
+        await video_service.analyze_video(db_session, fake_response_id, str(video_file))
 
     error_message = str(exc_info.value)
     assert "not found" in error_message
     assert str(fake_response_id) in error_message
 
+
 # Test: save_video_feedback() duplicate check (line 61)
+
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_raises_error_when_feedback_already_exists(
@@ -186,14 +181,13 @@ async def test_save_video_feedback_raises_error_when_feedback_already_exists(
     # Try to save new feedback for the same response
     with pytest.raises(ValueError) as exc_info:
         await video_service.save_video_feedback(
-            db_session,
-            test_interview_response.id,
-            sample_video_metrics
+            db_session, test_interview_response.id, sample_video_metrics
         )
 
     error_message = str(exc_info.value)
     assert "already exists" in error_message
     assert str(test_interview_response.id) in error_message
+
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_succeeds_when_no_existing_feedback(
@@ -208,9 +202,7 @@ async def test_save_video_feedback_succeeds_when_no_existing_feedback(
 
     # Save feedback
     feedback = await video_service.save_video_feedback(
-        db_session,
-        test_interview_response.id,
-        sample_video_metrics
+        db_session, test_interview_response.id, sample_video_metrics
     )
 
     # Verify feedback was created with correct values
@@ -233,15 +225,14 @@ async def test_save_video_feedback_succeeds_when_no_existing_feedback(
     assert saved_feedback is not None
     assert saved_feedback.id == feedback.id
 
+
 @pytest.mark.asyncio
 async def test_save_video_feedback_commits_and_refreshes(
     db_session, test_interview_response, video_service, sample_video_metrics
 ):
     """Test that save_video_feedback commits the transaction and refreshes the object."""
     feedback = await video_service.save_video_feedback(
-        db_session,
-        test_interview_response.id,
-        sample_video_metrics
+        db_session, test_interview_response.id, sample_video_metrics
     )
 
     # Verify the feedback has an ID (committed)
@@ -249,6 +240,7 @@ async def test_save_video_feedback_commits_and_refreshes(
 
     # Verify we can query it in a new session (use conftest's get_test_engine)
     from tests.conftest import get_test_engine
+
     _, TestSessionLocal = get_test_engine()
     async with TestSessionLocal() as new_session:
         result = await new_session.exec(
@@ -258,12 +250,12 @@ async def test_save_video_feedback_commits_and_refreshes(
         assert queried_feedback is not None
         assert queried_feedback.response_id == test_interview_response.id
 
+
 # Test: _get_response() validation (line 89)
 
+
 @pytest.mark.asyncio
-async def test_get_response_raises_error_when_response_not_found(
-    db_session, video_service
-):
+async def test_get_response_raises_error_when_response_not_found(db_session, video_service):
     """Test that _get_response raises ValueError when response doesn't exist."""
     # Use non-existent response ID
     fake_id = uuid4()
@@ -276,21 +268,21 @@ async def test_get_response_raises_error_when_response_not_found(
     assert "not found" in error_message
     assert str(fake_id) in error_message
 
+
 @pytest.mark.asyncio
 async def test_get_response_returns_response_when_exists(
     db_session, test_interview_response, video_service
 ):
     """Test that _get_response returns the response when it exists."""
-    result = await video_service._get_response(
-        db_session,
-        test_interview_response.id
-    )
+    result = await video_service._get_response(db_session, test_interview_response.id)
 
     assert result.id == test_interview_response.id
     assert result.session_id == test_interview_response.session_id
     assert result.question_id == test_interview_response.question_id
 
+
 # Test: process_response_video() integration
+
 
 @pytest.mark.asyncio
 async def test_process_response_video_analyzes_and_saves_feedback(
@@ -303,14 +295,10 @@ async def test_process_response_video_analyzes_and_saves_feedback(
 
     # Mock the analyzer
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_video_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_video_metrics)
     ):
         feedback = await video_service.process_response_video(
-            db_session,
-            test_interview_response.id,
-            str(video_file)
+            db_session, test_interview_response.id, str(video_file)
         )
 
     # Verify feedback was created and saved
@@ -324,6 +312,7 @@ async def test_process_response_video_analyzes_and_saves_feedback(
     saved_feedback = result.first()
     assert saved_feedback is not None
 
+
 @pytest.mark.asyncio
 async def test_process_response_video_fails_when_file_missing(
     db_session, test_interview_response, video_service
@@ -333,12 +322,11 @@ async def test_process_response_video_fails_when_file_missing(
 
     with pytest.raises(ValueError) as exc_info:
         await video_service.process_response_video(
-            db_session,
-            test_interview_response.id,
-            nonexistent_path
+            db_session, test_interview_response.id, nonexistent_path
         )
 
     assert "Video file not found" in str(exc_info.value)
+
 
 @pytest.mark.asyncio
 async def test_process_response_video_fails_when_response_not_found(
@@ -352,14 +340,11 @@ async def test_process_response_video_fails_when_response_not_found(
     fake_id = uuid4()
 
     with pytest.raises(ValueError) as exc_info:
-        await video_service.process_response_video(
-            db_session,
-            fake_id,
-            str(video_file)
-        )
+        await video_service.process_response_video(db_session, fake_id, str(video_file))
 
     error_message = str(exc_info.value)
     assert "not found" in error_message
+
 
 @pytest.mark.asyncio
 async def test_process_response_video_fails_when_feedback_already_exists(
@@ -387,20 +372,21 @@ async def test_process_response_video_fails_when_feedback_already_exists(
     video_file.write_bytes(b"content")
 
     # Mock analyzer (even though it will fail before calling it)
-    with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_video_metrics)
-    ), pytest.raises(ValueError) as exc_info:
+    with (
+        patch.object(
+            video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_video_metrics)
+        ),
+        pytest.raises(ValueError) as exc_info,
+    ):
         await video_service.process_response_video(
-            db_session,
-            test_interview_response.id,
-            str(video_file)
+            db_session, test_interview_response.id, str(video_file)
         )
 
     assert "already exists" in str(exc_info.value)
 
+
 # Test: Edge cases and additional coverage
+
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_handles_all_metric_fields(
@@ -421,9 +407,7 @@ async def test_save_video_feedback_handles_all_metric_fields(
     )
 
     feedback = await video_service.save_video_feedback(
-        db_session,
-        test_interview_response.id,
-        metrics
+        db_session, test_interview_response.id, metrics
     )
 
     # Verify every field
@@ -437,6 +421,7 @@ async def test_save_video_feedback_handles_all_metric_fields(
     assert feedback.processing_duration_ms == 2500
     assert feedback.frame_count == 120
 
+
 @pytest.mark.asyncio
 async def test_analyze_video_passes_correct_path_to_analyzer(
     db_session, test_interview_response, video_service, sample_video_metrics, tmp_path
@@ -448,23 +433,21 @@ async def test_analyze_video_passes_correct_path_to_analyzer(
     # Mock analyzer and capture the call
     mock_analyze = AsyncMock(return_value=sample_video_metrics)
 
-    with patch.object(video_service.analyzer, 'analyze', new=mock_analyze):
-        await video_service.analyze_video(
-            db_session,
-            test_interview_response.id,
-            str(video_file)
-        )
+    with patch.object(video_service.analyzer, "analyze", new=mock_analyze):
+        await video_service.analyze_video(db_session, test_interview_response.id, str(video_file))
 
     # Verify analyzer was called with the correct path
     mock_analyze.assert_called_once_with(str(video_file))
+
 
 @pytest.mark.asyncio
 async def test_video_service_initializes_analyzer(video_service):
     """Test that VideoService initializes with a VideoAnalyzer instance."""
     from app.ai.video_analyzer import VideoAnalyzer
 
-    assert hasattr(video_service, 'analyzer')
+    assert hasattr(video_service, "analyzer")
     assert isinstance(video_service.analyzer, VideoAnalyzer)
+
 
 @pytest.mark.asyncio
 async def test_save_video_feedback_for_multiple_different_responses(
@@ -506,19 +489,16 @@ async def test_save_video_feedback_for_multiple_different_responses(
 
     # Save feedback for both responses (should succeed)
     feedback1 = await video_service.save_video_feedback(
-        db_session,
-        response1.id,
-        sample_video_metrics
+        db_session, response1.id, sample_video_metrics
     )
     feedback2 = await video_service.save_video_feedback(
-        db_session,
-        response2.id,
-        sample_video_metrics
+        db_session, response2.id, sample_video_metrics
     )
 
     assert feedback1.response_id == response1.id
     assert feedback2.response_id == response2.id
     assert feedback1.id != feedback2.id
+
 
 @pytest.mark.asyncio
 async def test_analyze_video_with_pathlib_path(
@@ -530,22 +510,19 @@ async def test_analyze_video_with_pathlib_path(
 
     # Pass Path object (not string)
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_video_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_video_metrics)
     ):
         result = await video_service.analyze_video(
             db_session,
             test_interview_response.id,
-            str(video_file)  # Convert to string as expected
+            str(video_file),  # Convert to string as expected
         )
 
     assert result == sample_video_metrics
 
+
 @pytest.mark.asyncio
-async def test_get_response_with_different_response_states(
-    db_session, test_user, video_service
-):
+async def test_get_response_with_different_response_states(db_session, test_user, video_service):
     """Test _get_response works regardless of response state."""
     # Create responses with different states (some with video, some without)
     question = Question(

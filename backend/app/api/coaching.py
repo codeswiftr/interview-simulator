@@ -61,9 +61,7 @@ def check_coaching_rate_limit(user_id: str) -> tuple[bool, int]:
     cutoff = now - COACHING_RATE_WINDOW
 
     # Clean old requests
-    _coaching_rate_limits[user_id] = [
-        ts for ts in _coaching_rate_limits[user_id] if ts > cutoff
-    ]
+    _coaching_rate_limits[user_id] = [ts for ts in _coaching_rate_limits[user_id] if ts > cutoff]
 
     # Count requests in window
     request_count = len(_coaching_rate_limits[user_id])
@@ -81,9 +79,7 @@ def check_coaching_rate_limit(user_id: str) -> tuple[bool, int]:
 class CoachingHintRequest(BaseModel):
     """Request model for coaching hint generation with input validation."""
 
-    question: str = Field(
-        ..., description="The interview question", min_length=1, max_length=2000
-    )
+    question: str = Field(..., description="The interview question", min_length=1, max_length=2000)
     question_type: str = Field(
         ...,
         description="Type of question: behavioral, technical, or system_design",
@@ -102,9 +98,7 @@ class CoachingHintResponse(BaseModel):
     hint: str = Field(..., description="Contextual coaching hint")
 
 
-async def generate_coaching_hint(
-    question: str, question_type: str, transcript: str
-) -> str:
+async def generate_coaching_hint(question: str, question_type: str, transcript: str) -> str:
     """Generate a coaching hint using Gemini 2.0 Flash via OpenRouter.
 
     Args:
@@ -165,9 +159,7 @@ Hint (max 100 words):"""
         return STATIC_HINTS.get(question_type, "Speak clearly and provide specific examples")
 
 
-async def generate_coaching_hint_stream(
-    question: str, question_type: str, transcript: str
-):
+async def generate_coaching_hint_stream(question: str, question_type: str, transcript: str):
     """Generate a coaching hint with streaming support.
 
     Args:

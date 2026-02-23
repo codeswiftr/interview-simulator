@@ -249,8 +249,8 @@ def analyze_transcript(
                 if session_id:
                     try:
                         session_uuid = UUID(session_id)
-                    except ValueError:
-                        raise ValueError(f"Invalid session ID format: {session_id}")
+                    except ValueError as e:
+                        raise ValueError(f"Invalid session ID format: {session_id}") from e
 
                     # Get responses for this session
                     stmt = (
@@ -397,8 +397,8 @@ def export_metrics(
                 if user_id:
                     try:
                         user_uuid = UUID(user_id)
-                    except ValueError:
-                        raise ValueError(f"Invalid user ID format: {user_id}")
+                    except ValueError as e:
+                        raise ValueError(f"Invalid user ID format: {user_id}") from e
                     stmt = stmt.where(InterviewSession.user_id == user_uuid)
 
                 result = await session.exec(stmt)

@@ -20,9 +20,7 @@ class TestLoginMigration:
     """Test suite for login endpoint with password migration."""
 
     @pytest.mark.asyncio
-    async def test_login_migrates_legacy_password(
-        self, client: AsyncClient, db_session: Any
-    ):
+    async def test_login_migrates_legacy_password(self, client: AsyncClient, db_session: Any):
         """Test that login migrates legacy pbkdf2 passwords to bcrypt."""
         # Create user with legacy pbkdf2 password hash
         email = "migrate@example.com"
@@ -64,12 +62,11 @@ class TestLoginMigration:
 
             # Verify new password hash works
             from app.security import verify_password
+
             assert verify_password(password, updated_user.hashed_password) is True
 
     @pytest.mark.asyncio
-    async def test_login_bcrypt_password_no_migration(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_login_bcrypt_password_no_migration(self, client: AsyncClient, db_session):
         """Test that login with bcrypt password doesn't trigger migration."""
         from app.security import hash_password
 
@@ -108,9 +105,7 @@ class TestLoginMigration:
         assert updated_user.hashed_password == bcrypt_hash
 
     @pytest.mark.asyncio
-    async def test_login_legacy_wrong_password(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_login_legacy_wrong_password(self, client: AsyncClient, db_session):
         """Test that login fails with wrong password for legacy hashes."""
         # Create user with legacy pbkdf2 password
         email = "wrong@example.com"
@@ -140,9 +135,7 @@ class TestLoginMigration:
         assert unchanged_user.hashed_password == legacy_hash
 
     @pytest.mark.asyncio
-    async def test_change_password_migrates_to_bcrypt(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_change_password_migrates_to_bcrypt(self, client: AsyncClient, db_session):
         """Test that password change creates bcrypt hash even for legacy users."""
 
         # Create user with legacy pbkdf2 password
@@ -203,9 +196,7 @@ class TestLoginMigration:
         assert login_response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_new_user_uses_bcrypt(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_new_user_uses_bcrypt(self, client: AsyncClient, db_session):
         """Test that new users are created with bcrypt passwords."""
         email = "newuser@example.com"
         password = "newuser123"
@@ -238,9 +229,7 @@ class TestLoginMigration:
         assert login_response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_last_login_updated_with_migration(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_last_login_updated_with_migration(self, client: AsyncClient, db_session):
         """Test that last_login_at is updated when password is migrated."""
         import datetime
         from zoneinfo import ZoneInfo

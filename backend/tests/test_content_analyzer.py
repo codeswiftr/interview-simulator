@@ -60,7 +60,9 @@ async def test_analyze_behavioral_question(mock_settings, mock_anthropic_respons
 
     mock_response = mock_anthropic_response(star_adherence=85.0)
 
-    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
+    with patch.object(
+        analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)
+    ):
         metrics = await analyzer.analyze(
             question="Tell me about a time you faced a challenging project deadline.",
             transcript="In my previous role, we had a critical feature release scheduled. "
@@ -89,7 +91,9 @@ async def test_analyze_technical_question(mock_settings, mock_anthropic_response
         star_adherence=0.0,  # Not applicable for technical questions
     )
 
-    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
+    with patch.object(
+        analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)
+    ):
         metrics = await analyzer.analyze(
             question="Explain the difference between SQL and NoSQL databases.",
             transcript="SQL databases are relational with structured schemas, while NoSQL "
@@ -116,7 +120,9 @@ async def test_analyze_system_design_question(mock_settings, mock_anthropic_resp
         star_adherence=0.0,
     )
 
-    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
+    with patch.object(
+        analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)
+    ):
         metrics = await analyzer.analyze(
             question="Design a URL shortening service like bit.ly.",
             transcript="I would use a hash function to generate short codes, store mappings in "
@@ -150,7 +156,9 @@ async def test_analyze_handles_json_in_markdown(mock_settings):
     # Simulate response wrapped in markdown
     mock_response = f"```json\n{json.dumps(response_data)}\n```"
 
-    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
+    with patch.object(
+        analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)
+    ):
         metrics = await analyzer.analyze(
             question="Test question",
             transcript="Test answer",
@@ -195,7 +203,9 @@ async def test_analyze_handles_malformed_json(mock_settings):
 
     mock_response = "This is not valid JSON at all"
 
-    with patch.object(analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)):
+    with patch.object(
+        analyzer.anthropic_client, "generate", new=AsyncMock(return_value=mock_response)
+    ):
         metrics = await analyzer.analyze(
             question="Test question",
             transcript="Test answer",
@@ -485,10 +495,10 @@ async def test_prompt_uses_mid_for_unknown_experience_level(mock_settings):
     assert "MID-LEVEL engineer" in prompt_content
 
 
-
 # =============================================================================
 # OpenRouter Provider Tests (Coverage Gap Fix)
 # =============================================================================
+
 
 @pytest.fixture
 def mock_openrouter_settings():
@@ -502,7 +512,7 @@ def mock_openrouter_settings():
 @pytest.mark.asyncio
 async def test_analyze_with_openrouter_provider(mock_openrouter_settings, mock_anthropic_response):
     """Test analyzing with OpenRouter provider (Gemini 2.0 Flash).
-    
+
     Covers lines 186-192 in content_analyzer.py
     """
     analyzer = ContentAnalyzer()
@@ -516,7 +526,7 @@ async def test_analyze_with_openrouter_provider(mock_openrouter_settings, mock_a
     with patch.object(
         analyzer.openrouter_client.chat.completions,
         "create",
-        new=AsyncMock(return_value=mock_response)
+        new=AsyncMock(return_value=mock_response),
     ):
         metrics = await analyzer.analyze(
             question="Explain the CAP theorem.",
@@ -551,7 +561,7 @@ async def test_openrouter_provider_json_in_markdown(mock_openrouter_settings):
     with patch.object(
         analyzer.openrouter_client.chat.completions,
         "create",
-        new=AsyncMock(return_value=mock_response)
+        new=AsyncMock(return_value=mock_response),
     ):
         metrics = await analyzer.analyze(
             question="What is a distributed system?",
@@ -571,7 +581,7 @@ async def test_openrouter_provider_handles_api_errors(mock_openrouter_settings):
     with patch.object(
         analyzer.openrouter_client.chat.completions,
         "create",
-        side_effect=Exception("OpenRouter API Error")
+        side_effect=Exception("OpenRouter API Error"),
     ):
         metrics = await analyzer.analyze(
             question="Test question",

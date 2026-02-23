@@ -113,9 +113,7 @@ async def test_feedback_service_initializes_dependencies(feedback_service):
 
 
 @pytest.mark.asyncio
-async def test_generate_feedback_raises_error_when_response_not_found(
-    db_session, feedback_service
-):
+async def test_generate_feedback_raises_error_when_response_not_found(db_session, feedback_service):
     """Test that generate_feedback raises ValueError for non-existent response."""
     fake_id = uuid4()
 
@@ -217,9 +215,7 @@ async def test_get_response_feedback_returns_none_when_not_exists(
 
 
 @pytest.mark.asyncio
-async def test_get_response_feedback_for_nonexistent_response(
-    db_session, feedback_service
-):
+async def test_get_response_feedback_for_nonexistent_response(db_session, feedback_service):
     """Test get_response_feedback with non-existent response ID."""
     fake_id = uuid4()
     result = await feedback_service.get_response_feedback(db_session, fake_id)
@@ -607,9 +603,7 @@ async def test_get_processing_summary_shows_failed_state(
 
 
 @pytest.mark.asyncio
-async def test_get_processing_summary_empty_session(
-    db_session, test_interview, feedback_service
-):
+async def test_get_processing_summary_empty_session(db_session, test_interview, feedback_service):
     """Test get_processing_summary with no responses."""
     result = await feedback_service.get_processing_summary(db_session, test_interview.id)
 
@@ -634,9 +628,7 @@ async def test_get_user_progress_returns_empty_for_new_user(
 
 
 @pytest.mark.asyncio
-async def test_get_user_progress_calculates_averages(
-    db_session, test_user, feedback_service
-):
+async def test_get_user_progress_calculates_averages(db_session, test_user, feedback_service):
     """Test that get_user_progress calculates correct averages."""
     # Create completed sessions
     session1 = InterviewSession(
@@ -713,9 +705,7 @@ async def test_get_user_progress_returns_empty_for_sessions_without_feedback(
 
 
 @pytest.mark.asyncio
-async def test_get_user_progress_with_mixed_audio_scores(
-    db_session, test_user, feedback_service
-):
+async def test_get_user_progress_with_mixed_audio_scores(db_session, test_user, feedback_service):
     """Test get_user_progress calculates averages with real audio scores."""
     session1 = InterviewSession(
         user_id=test_user.id,

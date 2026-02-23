@@ -221,9 +221,7 @@ class BehavioralAnalyticsService:
             if not response.transcript or not response.duration_seconds:
                 continue
 
-            metrics = self.analyze_transcript(
-                response.transcript, response.duration_seconds
-            )
+            metrics = self.analyze_transcript(response.transcript, response.duration_seconds)
 
             total_filler_words += metrics["filler_word_count"]
             total_duration += response.duration_seconds
@@ -247,9 +245,7 @@ class BehavioralAnalyticsService:
 
         # Calculate filler words per minute
         duration_minutes = total_duration / 60.0
-        filler_per_minute = (
-            total_filler_words / duration_minutes if duration_minutes > 0 else 0.0
-        )
+        filler_per_minute = total_filler_words / duration_minutes if duration_minutes > 0 else 0.0
 
         # Calculate overall confidence score (composite metric)
         # Lower filler words = higher confidence
@@ -257,7 +253,7 @@ class BehavioralAnalyticsService:
         # Higher STAR compliance = higher confidence
         filler_score = max(0, 100 - (filler_per_minute * 20))  # Penalize high filler rate
         wpm_score = self._calculate_wpm_score(avg_wpm)
-        confidence_score = (filler_score * 0.4 + wpm_score * 0.3 + avg_star_score * 0.3)
+        confidence_score = filler_score * 0.4 + wpm_score * 0.3 + avg_star_score * 0.3
 
         # Create analytics record
         analytics = InterviewAnalytics(
@@ -349,9 +345,7 @@ class BehavioralAnalyticsService:
             for analytics in analytics_list
         ]
 
-    async def get_analytics_summary(
-        self, session: AsyncSession, user_id: UUID
-    ) -> AnalyticsSummary:
+    async def get_analytics_summary(self, session: AsyncSession, user_id: UUID) -> AnalyticsSummary:
         """Get aggregated summary with averages and trends.
 
         Args:
@@ -394,23 +388,17 @@ class BehavioralAnalyticsService:
             first_half = analytics_list[:midpoint]
             second_half = analytics_list[midpoint:]
 
-            avg_filler_first = (
-                sum(a.filler_words_per_minute for a in first_half) / len(first_half)
+            avg_filler_first = sum(a.filler_words_per_minute for a in first_half) / len(first_half)
+            avg_filler_second = sum(a.filler_words_per_minute for a in second_half) / len(
+                second_half
             )
-            avg_filler_second = (
-                sum(a.filler_words_per_minute for a in second_half) / len(second_half)
+            avg_star_first = sum(a.star_compliance_score for a in first_half) / len(first_half)
+            avg_star_second = sum(a.star_compliance_score for a in second_half) / len(second_half)
+            avg_confidence_first = sum(a.overall_confidence_score for a in first_half) / len(
+                first_half
             )
-            avg_star_first = (
-                sum(a.star_compliance_score for a in first_half) / len(first_half)
-            )
-            avg_star_second = (
-                sum(a.star_compliance_score for a in second_half) / len(second_half)
-            )
-            avg_confidence_first = (
-                sum(a.overall_confidence_score for a in first_half) / len(first_half)
-            )
-            avg_confidence_second = (
-                sum(a.overall_confidence_score for a in second_half) / len(second_half)
+            avg_confidence_second = sum(a.overall_confidence_score for a in second_half) / len(
+                second_half
             )
 
             # Improvement percentages (negative filler improvement is good)

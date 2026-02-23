@@ -1,6 +1,5 @@
 """Tests for content sanitization service - XSS prevention and HTML cleaning."""
 
-
 from app.services.content_sanitizer import (
     HTMLContentSanitizer,
     sanitize_html,
@@ -47,7 +46,7 @@ class TestScriptTagRemoval:
 
     def test_script_tag_with_event_handler_removed(self):
         """Inline script in event handlers is stripped."""
-        content = '<p onclick="alert(\'xss\')">Click me</p>'
+        content = "<p onclick=\"alert('xss')\">Click me</p>"
         result = sanitize_html(content)
         assert "onclick" not in result
         assert "alert" not in result
@@ -62,7 +61,7 @@ class TestScriptTagRemoval:
 
     def test_script_in_svg_onload_removed(self):
         """Script in SVG onload is stripped."""
-        content = '<svg onload="alert(\'xss\')"></svg>'
+        content = "<svg onload=\"alert('xss')\"></svg>"
         result = sanitize_html(content)
         assert "onload" not in result
         assert "alert" not in result
@@ -101,20 +100,20 @@ class TestJavascriptURIRemoval:
 
     def test_javascript_uri_in_href_removed(self):
         """javascript: URI in href is stripped or modified."""
-        content = '<a href="javascript:alert(\'xss\')">Click</a>'
+        content = "<a href=\"javascript:alert('xss')\">Click</a>"
         result = sanitize_html(content)
         assert "javascript:" not in result.lower()
 
     def test_javascript_uri_with_encoding_removed(self):
         """Encoded javascript: URI is stripped."""
-        content = '<a href="java&#115;cript:alert(\'xss\')">Click</a>'
+        content = "<a href=\"java&#115;cript:alert('xss')\">Click</a>"
         result = sanitize_html(content)
         # Should not execute - either removed or escaped
         assert "alert" not in result or "&#" in result
 
     def test_data_uri_javascript_removed(self):
         """data: URI with JavaScript is stripped."""
-        content = '<a href="data:text/html,<script>alert(\'xss\')</script>">Click</a>'
+        content = "<a href=\"data:text/html,<script>alert('xss')</script>\">Click</a>"
         result = sanitize_html(content)
         assert "<script>" not in result
 

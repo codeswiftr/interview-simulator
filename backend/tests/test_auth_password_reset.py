@@ -105,9 +105,7 @@ class TestForgotPassword:
         mock_email.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_forgot_password_email_error_silent(
-        self, client: AsyncClient, test_user: User
-    ):
+    async def test_forgot_password_email_error_silent(self, client: AsyncClient, test_user: User):
         """Test forgot password when email sending fails.
 
         Should:
@@ -199,6 +197,7 @@ class TestResetPassword:
         # Verify new password works (would need login endpoint test)
         await test_session.refresh(test_user)
         from app.security import verify_password
+
         assert verify_password(new_password, test_user.hashed_password)
 
     @pytest.mark.asyncio
@@ -269,9 +268,7 @@ class TestResetPassword:
         assert "already been used" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_reset_password_weak_password(
-        self, client: AsyncClient, valid_reset_token: str
-    ):
+    async def test_reset_password_weak_password(self, client: AsyncClient, valid_reset_token: str):
         """Test reset with weak password.
 
         Should reject passwords that don't meet requirements.
@@ -378,9 +375,7 @@ class TestTokenRefresh:
         assert "invalid" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_refresh_token_expired(
-        self, client: AsyncClient, test_user: User, test_session
-    ):
+    async def test_refresh_token_expired(self, client: AsyncClient, test_user: User, test_session):
         """Test refresh with expired token.
 
         Should:

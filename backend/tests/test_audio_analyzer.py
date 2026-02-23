@@ -83,13 +83,12 @@ class TestAudioAnalyzer:
             # Should be close to 120 WPM (10 words / 5 seconds * 60)
 
     @pytest.mark.asyncio
-    async def test_analyze_calculates_volume_consistency(
-        self, audio_analyzer, mock_audio_file
-    ):
+    async def test_analyze_calculates_volume_consistency(self, audio_analyzer, mock_audio_file):
         """Test that volume consistency is calculated."""
-        with patch("app.ai.audio_analyzer.librosa.load") as mock_load, patch(
-            "app.ai.audio_analyzer.librosa.feature.rms"
-        ) as mock_rms:
+        with (
+            patch("app.ai.audio_analyzer.librosa.load") as mock_load,
+            patch("app.ai.audio_analyzer.librosa.feature.rms") as mock_rms,
+        ):
             mock_y = np.array([0.1] * 22050)
             mock_sr = 22050
             mock_load.return_value = (mock_y, mock_sr)
@@ -102,9 +101,7 @@ class TestAudioAnalyzer:
             assert 0 <= metrics.volume_consistency <= 100
 
     @pytest.mark.asyncio
-    async def test_analyze_detects_filler_words(
-        self, audio_analyzer, mock_audio_file
-    ):
+    async def test_analyze_detects_filler_words(self, audio_analyzer, mock_audio_file):
         """Test that filler words are detected in transcript."""
         transcript = "Um, I think that, uh, the solution is correct."
 
@@ -121,9 +118,7 @@ class TestAudioAnalyzer:
             assert metrics.filler_words["uh"] == 1
 
     @pytest.mark.asyncio
-    async def test_analyze_handles_missing_transcript(
-        self, audio_analyzer, mock_audio_file
-    ):
+    async def test_analyze_handles_missing_transcript(self, audio_analyzer, mock_audio_file):
         """Test that analysis works without transcript."""
         with patch("app.ai.audio_analyzer.librosa.load") as mock_load:
             mock_y = np.array([0.1] * 22050)
@@ -141,4 +136,3 @@ class TestAudioAnalyzer:
         """Test that invalid audio files raise ValueError."""
         with pytest.raises(ValueError, match="Audio file not found"):
             await audio_analyzer.analyze("/nonexistent/file.wav", "Test")
-

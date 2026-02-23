@@ -72,6 +72,7 @@ class TestShareServiceCreateLink:
         mock_session = AsyncMock()
 
         call_count = 0
+
         async def mock_exec(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -108,6 +109,7 @@ class TestShareServiceCreateLink:
         mock_session = AsyncMock()
 
         call_count = 0
+
         async def mock_exec(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -200,6 +202,7 @@ class TestShareServiceGetSharedInterview:
         mock_session = AsyncMock()
 
         call_count = 0
+
         async def mock_exec(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -349,6 +352,7 @@ class TestShareServiceGetSharesForInterview:
         mock_session = AsyncMock()
 
         call_count = 0
+
         async def mock_exec(*args, **kwargs):
             nonlocal call_count
             call_count += 1

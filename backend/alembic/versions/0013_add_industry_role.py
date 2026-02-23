@@ -5,6 +5,7 @@ Revises: b9bf4a130d5b
 Create Date: 2026-02-06
 
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -21,15 +22,13 @@ depends_on = None
 def upgrade() -> None:
     # Add industry column with default value and index
     op.add_column(
-        "questions",
-        sa.Column("industry", sa.String(), nullable=False, server_default="general")
+        "questions", sa.Column("industry", sa.String(), nullable=False, server_default="general")
     )
     op.create_index(op.f("ix_questions_industry"), "questions", ["industry"], unique=False)
 
     # Add role column with default value and index
     op.add_column(
-        "questions",
-        sa.Column("role", sa.String(), nullable=False, server_default="general")
+        "questions", sa.Column("role", sa.String(), nullable=False, server_default="general")
     )
     op.create_index(op.f("ix_questions_role"), "questions", ["role"], unique=False)
 

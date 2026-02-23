@@ -193,7 +193,7 @@ class TestCalculateSessionAnalytics:
 
         session.exec.side_effect = [existing_result, responses_result]
 
-        analytics = await service.calculate_session_analytics(session, uuid4(), uuid4())
+        await service.calculate_session_analytics(session, uuid4(), uuid4())
         session.add.assert_called_once()
         session.commit.assert_awaited_once()
         session.refresh.assert_awaited_once()

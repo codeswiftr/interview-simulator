@@ -5,8 +5,7 @@ No database or WeasyPrint required.
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from unittest.mock import MagicMock
 
 import pytest
 

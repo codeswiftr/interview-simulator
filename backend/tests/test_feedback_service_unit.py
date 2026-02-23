@@ -114,10 +114,18 @@ class TestAggregateDelivery:
         # Create audio feedbacks
         audio_feedbacks = {
             resp1.id: self._create_mock_audio_feedback(
-                resp1.id, speech_rate_score=85, filler_word_score=90, confidence_score=88, volume_consistency=85
+                resp1.id,
+                speech_rate_score=85,
+                filler_word_score=90,
+                confidence_score=88,
+                volume_consistency=85,
             ),
             resp2.id: self._create_mock_audio_feedback(
-                resp2.id, speech_rate_score=70, filler_word_score=65, confidence_score=72, volume_consistency=70
+                resp2.id,
+                speech_rate_score=70,
+                filler_word_score=65,
+                confidence_score=72,
+                volume_consistency=70,
             ),
         }
 
@@ -143,7 +151,8 @@ class TestAggregateDelivery:
 
         audio_feedbacks = {
             resp.id: self._create_mock_audio_feedback(
-                resp.id, filler_word_score=85  # High score = low fillers
+                resp.id,
+                filler_word_score=85,  # High score = low fillers
             ),
         }
 
@@ -346,7 +355,8 @@ class TestAggregateBehavioral:
 
         content_feedbacks = {
             resp.id: self._create_mock_content_feedback(
-                resp.id, star_adherence=50  # Low STAR score
+                resp.id,
+                star_adherence=50,  # Low STAR score
             ),
         }
 

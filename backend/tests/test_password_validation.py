@@ -166,11 +166,7 @@ class TestPasswordValidationIntegration:
 
         # Invalid password (too short) - caught by Pydantic StringConstraints or custom validator
         with pytest.raises(Exception) as exc_info:
-            UserCreate(
-                email="test@example.com",
-                password="weak",
-                full_name="Test User"
-            )
+            UserCreate(email="test@example.com", password="weak", full_name="Test User")
         error_msg = str(exc_info.value)
         assert "8 characters" in error_msg or "string_too_short" in error_msg
 
@@ -184,10 +180,7 @@ class TestPasswordValidationIntegration:
 
         # Invalid new password (too short) - caught by Pydantic StringConstraints or custom validator
         with pytest.raises(Exception) as exc_info:
-            PasswordChange(
-                current_password="oldpass",
-                new_password="weak"
-            )
+            PasswordChange(current_password="oldpass", new_password="weak")
         error_msg = str(exc_info.value)
         assert "8 characters" in error_msg or "string_too_short" in error_msg
 
@@ -201,10 +194,7 @@ class TestPasswordValidationIntegration:
 
         # Invalid password (too short) - caught by Pydantic StringConstraints or custom validator
         with pytest.raises(Exception) as exc_info:
-            ResetPasswordRequest(
-                token="valid_token",
-                new_password="weak"
-            )
+            ResetPasswordRequest(token="valid_token", new_password="weak")
         error_msg = str(exc_info.value)
         assert "8 characters" in error_msg or "string_too_short" in error_msg
 

@@ -107,10 +107,15 @@ async def test_free_user_at_limit_gets_402_with_upgrade_details(client, db_sessi
 
         # Check upgrade details in response
         detail = data["detail"]
-        assert detail["message"] == "Free tier limit reached (3 interviews per month). Upgrade to Pro for unlimited interviews."
+        assert (
+            detail["message"]
+            == "Free tier limit reached (3 interviews per month). Upgrade to Pro for unlimited interviews."
+        )
         assert detail["interviews_used"] == 3
         assert detail["interviews_limit"] == 3
-        assert detail["upgrade_url"] == "http://localhost:5173/upgrade?price_id=price_pro_monthly_123"
+        assert (
+            detail["upgrade_url"] == "http://localhost:5173/upgrade?price_id=price_pro_monthly_123"
+        )
         assert detail["price_id"] == "price_pro_monthly_123"
 
 
@@ -253,7 +258,7 @@ async def test_subscription_status_after_using_interviews(client, db_session):
     token = await register_and_login(client, email="used@example.com")
 
     # Create 2 interviews
-    for i in range(2):
+    for _ in range(2):
         await client.post(
             "/api/v1/interviews",
             headers={"Authorization": token},
@@ -359,7 +364,9 @@ async def test_concurrent_requests_dont_bypass_limit(client, db_session):
 
     # Count successes and failures
     success_count = sum(1 for r in results if not isinstance(r, Exception) and r.status_code == 201)
-    payment_required_count = sum(1 for r in results if not isinstance(r, Exception) and r.status_code == 402)
+    payment_required_count = sum(
+        1 for r in results if not isinstance(r, Exception) and r.status_code == 402
+    )
 
     # At most 1 should succeed, rest should fail
     assert success_count <= 1

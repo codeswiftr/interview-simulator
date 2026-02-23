@@ -43,9 +43,7 @@ async def interview_service():
 
 # Test: Full interview lifecycle
 @pytest.mark.asyncio
-async def test_interview_lifecycle_scheduled_to_completed(
-    db_session, test_user, interview_service
-):
+async def test_interview_lifecycle_scheduled_to_completed(db_session, test_user, interview_service):
     """Test full interview lifecycle from scheduled to question assignment."""
     # Create questions
     questions = [
@@ -89,15 +87,13 @@ async def test_interview_lifecycle_scheduled_to_completed(
     assert len(retrieved) == 5
 
     # Verify order is maintained
-    for i, q in enumerate(retrieved, start=1):
+    for _, q in enumerate(retrieved, start=1):
         assert q.id in [iq.question_id for iq in assigned]
 
 
 # Test: Question assignment prevents duplicate calls
 @pytest.mark.asyncio
-async def test_multiple_assign_calls_dont_duplicate(
-    db_session, test_user, interview_service
-):
+async def test_multiple_assign_calls_dont_duplicate(db_session, test_user, interview_service):
     """Test that calling assign_questions multiple times creates separate assignments."""
     # Create enough questions
     questions = [
@@ -141,9 +137,7 @@ async def test_multiple_assign_calls_dont_duplicate(
 
 # Test: Company-specific with partial availability
 @pytest.mark.asyncio
-async def test_progressive_company_question_availability(
-    db_session, test_user, interview_service
-):
+async def test_progressive_company_question_availability(db_session, test_user, interview_service):
     """Test behavior when company-specific questions become available progressively."""
     # Initially create 2 Amazon questions
     amazon_q1 = Question(
@@ -191,9 +185,7 @@ async def test_progressive_company_question_availability(
 
     # Verify mix of company and general
     result = await db_session.exec(
-        select(Question).where(
-            Question.id.in_([iq.question_id for iq in assigned])
-        )
+        select(Question).where(Question.id.in_([iq.question_id for iq in assigned]))
     )
     assigned_questions = list(result.all())
 
@@ -204,9 +196,7 @@ async def test_progressive_company_question_availability(
 
 # Test: Difficulty distribution in mixed mode
 @pytest.mark.asyncio
-async def test_mixed_difficulty_question_distribution(
-    db_session, test_user, interview_service
-):
+async def test_mixed_difficulty_question_distribution(db_session, test_user, interview_service):
     """Test that mixed difficulty can select from all difficulty levels."""
     # Create questions with all difficulties
     easy_q = Question(
@@ -297,9 +287,18 @@ async def test_sequential_question_order_maintained_across_retrievals(
 async def test_get_category_for_type_all_types(interview_service):
     """Test _get_category_for_type for all interview types."""
     # Test all valid mappings
-    assert interview_service._get_category_for_type(InterviewType.BEHAVIORAL) == QuestionCategory.BEHAVIORAL
-    assert interview_service._get_category_for_type(InterviewType.TECHNICAL) == QuestionCategory.TECHNICAL
-    assert interview_service._get_category_for_type(InterviewType.SYSTEM_DESIGN) == QuestionCategory.SYSTEM_DESIGN
+    assert (
+        interview_service._get_category_for_type(InterviewType.BEHAVIORAL)
+        == QuestionCategory.BEHAVIORAL
+    )
+    assert (
+        interview_service._get_category_for_type(InterviewType.TECHNICAL)
+        == QuestionCategory.TECHNICAL
+    )
+    assert (
+        interview_service._get_category_for_type(InterviewType.SYSTEM_DESIGN)
+        == QuestionCategory.SYSTEM_DESIGN
+    )
     assert interview_service._get_category_for_type(InterviewType.MIXED) is None
 
 
@@ -447,9 +446,7 @@ async def test_time_limits_inherited_from_questions_with_variations(
 
     # Verify each InterviewQuestion has correct time limit
     for iq in assigned:
-        result = await db_session.exec(
-            select(Question).where(Question.id == iq.question_id)
-        )
+        result = await db_session.exec(select(Question).where(Question.id == iq.question_id))
         question = result.first()
         assert iq.time_limit_seconds == question.expected_duration_seconds
 
@@ -486,23 +483,17 @@ async def test_assign_specific_question_always_sets_order_one(
     await db_session.refresh(interview)
 
     # Assign first specific question
-    iq1 = await interview_service.assign_specific_question(
-        db_session, interview, question1.id
-    )
+    iq1 = await interview_service.assign_specific_question(db_session, interview, question1.id)
     assert iq1.order == 1
 
     # Assign second specific question (still order 1)
-    iq2 = await interview_service.assign_specific_question(
-        db_session, interview, question2.id
-    )
+    iq2 = await interview_service.assign_specific_question(db_session, interview, question2.id)
     assert iq2.order == 1
 
 
 # Test: Randomization varies across calls
 @pytest.mark.asyncio
-async def test_question_assignment_randomization(
-    db_session, test_user, interview_service
-):
+async def test_question_assignment_randomization(db_session, test_user, interview_service):
     """Test that question assignment includes randomization."""
     # Create many questions to test randomization
     questions = [
@@ -536,10 +527,7 @@ async def test_question_assignment_randomization(
     # At least some assignments should differ (randomization working)
     # Compare first assignment to others
     first_assignment = tuple(assignments[0])
-    has_variation = any(
-        tuple(assignment) != first_assignment
-        for assignment in assignments[1:]
-    )
+    has_variation = any(tuple(assignment) != first_assignment for assignment in assignments[1:])
 
     # Note: This test has a small chance of failing if random selects
     # the same questions, but with 20 choose 5, it's very unlikely

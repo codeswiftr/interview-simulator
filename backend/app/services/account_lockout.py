@@ -90,9 +90,7 @@ class AccountLockoutService:
         # Account is locked - calculate when it expires
         # Lock expires LOCKOUT_DURATION_MINUTES after the 5th failed attempt
         fifth_attempt = failed_attempts[self.max_attempts - 1]
-        lockout_expires_at = fifth_attempt.attempted_at + timedelta(
-            minutes=self.lockout_minutes
-        )
+        lockout_expires_at = fifth_attempt.attempted_at + timedelta(minutes=self.lockout_minutes)
 
         # Check if lockout has expired
         if now >= lockout_expires_at:
@@ -118,8 +116,7 @@ class AccountLockoutService:
         window_start = now - timedelta(minutes=self.window_minutes)
 
         result = await session.exec(
-            select(LoginAttempt)
-            .where(
+            select(LoginAttempt).where(
                 LoginAttempt.email == email.lower(),
                 LoginAttempt.success == False,  # noqa: E712
                 LoginAttempt.attempted_at >= window_start,
@@ -144,8 +141,7 @@ class AccountLockoutService:
         window_start = now - timedelta(minutes=self.window_minutes)
 
         result = await session.exec(
-            select(LoginAttempt)
-            .where(
+            select(LoginAttempt).where(
                 LoginAttempt.email == email.lower(),
                 LoginAttempt.attempted_at >= window_start,
             )
@@ -168,8 +164,7 @@ class AccountLockoutService:
         """
         cutoff = datetime.now(UTC) - timedelta(hours=24)
         result = await session.exec(
-            select(LoginAttempt)
-            .where(
+            select(LoginAttempt).where(
                 LoginAttempt.email == email.lower(),
                 LoginAttempt.attempted_at < cutoff,
             )

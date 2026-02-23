@@ -36,9 +36,7 @@ class InterviewAnalytics(SQLModel, table=True):
 
     # Pause metrics
     pause_count: int = Field(default=0, description="Number of significant pauses detected")
-    avg_pause_duration: float = Field(
-        default=0.0, description="Average pause duration in seconds"
-    )
+    avg_pause_duration: float = Field(default=0.0, description="Average pause duration in seconds")
 
     # STAR method compliance (0-100)
     star_compliance_score: float = Field(

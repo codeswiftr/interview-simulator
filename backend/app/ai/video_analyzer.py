@@ -189,7 +189,7 @@ class VideoAnalyzer:
         height, width = frame_shape[:2]
         center_x, center_y = width / 2, height / 2
         hits = 0
-        for (x, y, w, h) in faces:
+        for x, y, w, h in faces:
             face_center_x = x + w / 2
             face_center_y = y + h / 2
             centered_x = abs(face_center_x - center_x) < width * 0.2

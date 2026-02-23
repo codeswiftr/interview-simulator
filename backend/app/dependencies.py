@@ -44,7 +44,7 @@ async def get_current_user(
         payload = auth.decode_token(token)
         user_id: str = payload.sub
     except Exception:
-        raise credentials_exception
+        raise credentials_exception from None
 
     # Fetch user from database
     result = await session.exec(select(User).where(User.id == user_id))
@@ -80,23 +80,25 @@ async def check_interview_quota(
 
     now = datetime.now(UTC)
 
-    # Reset monthly counter if we're in a new month
-    # Compare year and month to handle month boundaries correctly
-    created_year_month = (current_user.created_at.year, current_user.created_at.month)
-    current_year_month = (now.year, now.month)
+    # Reset monthly counter if we've crossed into a new calendar month
+    # Uses interviews_reset_at to track when the counter was last reset,
+    # falling back to created_at for users who predate this field
+    last_reset = current_user.interviews_reset_at or current_user.created_at
+    last_reset_month = (last_reset.year, last_reset.month)
+    current_month = (now.year, now.month)
 
-    # More robust reset logic: reset if we've crossed into a new calendar month
-    if created_year_month != current_year_month and current_user.interviews_this_month > 0:
+    if last_reset_month != current_month:
         current_user.interviews_this_month = 0
+        current_user.interviews_reset_at = now
         await session.commit()
 
     # Free tier limit: 3 interviews per month
-    FREE_TIER_LIMIT = 3
+    free_tier_limit = 3
 
     # Check quota based on tier
     if (
         current_user.subscription_tier == SubscriptionTier.FREE
-        and current_user.interviews_this_month >= FREE_TIER_LIMIT
+        and current_user.interviews_this_month >= free_tier_limit
     ):
         # Build upgrade details with Stripe checkout URL
         upgrade_url = None
@@ -107,9 +109,9 @@ async def check_interview_quota(
             upgrade_url = f"{settings.frontend_url}/upgrade?price_id={price_id}"
 
         detail_message = {
-            "message": f"Free tier limit reached ({FREE_TIER_LIMIT} interviews per month). Upgrade to Pro for unlimited interviews.",
+            "message": f"Free tier limit reached ({free_tier_limit} interviews per month). Upgrade to Pro for unlimited interviews.",
             "interviews_used": current_user.interviews_this_month,
-            "interviews_limit": FREE_TIER_LIMIT,
+            "interviews_limit": free_tier_limit,
             "upgrade_url": upgrade_url,
             "price_id": price_id,
         }

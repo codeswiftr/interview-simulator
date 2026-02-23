@@ -21,8 +21,10 @@ async def test_checkout_with_trial_period(client, db_session):
     """Test checkout session creation with trial period configured."""
     token = await register_and_login(client)
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+    ):
         # Mock settings with trial period
         mock_settings.stripe_secret_key = "sk_test_xxx"
         mock_settings.stripe_trial_days = 7  # 7-day trial
@@ -54,9 +56,11 @@ async def test_checkout_with_referral_code(client, db_session):
     """Test checkout session includes referral code for affiliate tracking."""
     token = await register_and_login(client)
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe, \
-         patch("app.api.subscriptions.get_analytics") as mock_analytics:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+        patch("app.api.subscriptions.get_analytics") as mock_analytics,
+    ):
         mock_settings.stripe_secret_key = "sk_test_xxx"
         mock_settings.frontend_url = "http://localhost:3000"
 
@@ -109,11 +113,12 @@ async def test_webhook_checkout_completed_with_full_subscription_details(client,
     async def mock_get_session():
         yield db_session
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe, \
-         patch("app.api.subscriptions.get_session", mock_get_session), \
-         patch("app.api.subscriptions.get_analytics") as mock_analytics:
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+        patch("app.api.subscriptions.get_session", mock_get_session),
+        patch("app.api.subscriptions.get_analytics") as mock_analytics,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
         mock_settings.stripe_price_id_pro_annual = "price_pro_annual"
@@ -126,15 +131,17 @@ async def test_webhook_checkout_completed_with_full_subscription_details(client,
             "id": "sub_test123",
             "status": "active",
             "items": {
-                "data": [{
-                    "price": {"id": "price_pro_monthly"},
-                    "current_period_end": 1735689600,  # Future timestamp
-                }]
+                "data": [
+                    {
+                        "price": {"id": "price_pro_monthly"},
+                        "current_period_end": 1735689600,  # Future timestamp
+                    }
+                ]
             },
             "plan": {
                 "amount": 2999,  # $29.99
                 "currency": "usd",
-            }
+            },
         }
         mock_stripe.Subscription.retrieve.return_value = mock_subscription
 
@@ -185,10 +192,12 @@ async def test_webhook_subscription_updated_changes_tier(client, db_session):
                 "customer": "cus_test123",
                 "status": "active",
                 "items": {
-                    "data": [{
-                        "price": {"id": "price_pro_monthly"},
-                        "current_period_end": 1735689600,
-                    }]
+                    "data": [
+                        {
+                            "price": {"id": "price_pro_monthly"},
+                            "current_period_end": 1735689600,
+                        }
+                    ]
                 },
             }
         },
@@ -199,10 +208,11 @@ async def test_webhook_subscription_updated_changes_tier(client, db_session):
     async def mock_get_session():
         yield db_session
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe, \
-         patch("app.api.subscriptions.get_session", mock_get_session):
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+        patch("app.api.subscriptions.get_session", mock_get_session),
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test"
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
@@ -251,10 +261,11 @@ async def test_webhook_subscription_deleted_with_analytics(client, db_session):
         },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe, \
-         patch("app.api.subscriptions.get_analytics") as mock_analytics:
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+        patch("app.api.subscriptions.get_analytics") as mock_analytics,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test"
 
         # Mock webhook signature verification
@@ -358,9 +369,10 @@ async def test_sync_subscription_downgrades_when_no_active_subscription(client, 
         user.subscription_tier = SubscriptionTier.PRO
         await session.commit()
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+    ):
         mock_settings.stripe_secret_key = "sk_test_xxx"
 
         # Mock empty subscription list (no active subscriptions)
@@ -399,9 +411,10 @@ async def test_sync_subscription_detects_cancel_at_period_end(client, db_session
         user.stripe_customer_id = "cus_test123"
         await session.commit()
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+    ):
         mock_settings.stripe_secret_key = "sk_test_xxx"
         mock_settings.stripe_price_id_pro_monthly = "price_pro_monthly"
 
@@ -411,10 +424,12 @@ async def test_sync_subscription_detects_cancel_at_period_end(client, db_session
             "status": "active",
             "cancel_at_period_end": True,  # Scheduled for cancellation
             "items": {
-                "data": [{
-                    "price": {"id": "price_pro_monthly"},
-                    "current_period_end": 1735689600,
-                }]
+                "data": [
+                    {
+                        "price": {"id": "price_pro_monthly"},
+                        "current_period_end": 1735689600,
+                    }
+                ]
             },
         }
         mock_sub_list = MagicMock()
@@ -455,9 +470,10 @@ async def test_webhook_logs_errors_on_exception(client, db_session):
         },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test"
         mock_stripe.Webhook.construct_event.return_value = webhook_payload
 
@@ -493,9 +509,10 @@ async def test_cancel_subscription_immediate_vs_period_end(client, db_session):
         user.stripe_customer_id = "cus_test123"
         await session.commit()
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe") as mock_stripe:
-
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe") as mock_stripe,
+    ):
         mock_settings.stripe_secret_key = "sk_test_xxx"
 
         mock_subscription = MagicMock()

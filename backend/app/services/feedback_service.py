@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from uuid import UUID
 
@@ -124,7 +125,9 @@ class FeedbackService:
         if not responses:
             raise ValueError(f"No responses found for session {session_id}")
 
-        existing_feedbacks = await self.persistence_service.get_all_by_session_id(session, session_id)
+        existing_feedbacks = await self.persistence_service.get_all_by_session_id(
+            session, session_id
+        )
         existing_map = {cf.response_id: cf for cf in existing_feedbacks}
 
         for response in responses:
@@ -138,7 +141,9 @@ class FeedbackService:
         if not all_feedback:
             raise ValueError(f"No feedback could be generated for session {session_id}")
 
-        audio_feedbacks = await self.persistence_service.get_audio_by_session_id(session, session_id)
+        audio_feedbacks = await self.persistence_service.get_audio_by_session_id(
+            session, session_id
+        )
 
         aggregated = await self.aggregation_service.aggregate_session_feedback(
             session, interview, all_feedback, audio_feedbacks
@@ -176,13 +181,10 @@ class FeedbackService:
 
         # Generate behavioral analytics for the session
         analytics_service = BehavioralAnalyticsService()
-        try:
+        with contextlib.suppress(ValueError):
             await analytics_service.calculate_session_analytics(
                 session, session_id, interview.user_id
             )
-        except ValueError:
-            # Analytics already exist or failed to generate - log but don't fail feedback
-            pass
 
         await session.commit()
         await session.refresh(session_feedback)
@@ -253,7 +255,9 @@ class FeedbackService:
         return self.scoring_service.calculate_trend(current, previous)
 
     def _aggregate_delivery(self, responses, audio_feedbacks, recent, previous):
-        return self.aggregation_service._aggregate_delivery(responses, audio_feedbacks, recent, previous)
+        return self.aggregation_service._aggregate_delivery(
+            responses, audio_feedbacks, recent, previous
+        )
 
     def _aggregate_behavioral(self, responses, content_feedbacks, recent, previous):
         return self.aggregation_service._aggregate_behavioral(

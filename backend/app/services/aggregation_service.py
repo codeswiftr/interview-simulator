@@ -49,7 +49,9 @@ class AggregationService:
             avg_content_score, avg_audio_score, content_weight=0.8, audio_weight=0.2
         )
 
-        top_strengths, top_improvements = self.aggregate_strengths_and_improvements(content_feedbacks)
+        top_strengths, top_improvements = self.aggregate_strengths_and_improvements(
+            content_feedbacks
+        )
         practice_areas = self.determine_practice_areas(content_feedbacks)
 
         feedback = SessionFeedback(

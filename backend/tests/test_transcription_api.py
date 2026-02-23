@@ -10,9 +10,12 @@ from httpx import AsyncClient
 async def create_test_user_and_login(client: AsyncClient, email: str = "test@example.com") -> str:
     """Create a test user, login, and return bearer token."""
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
+    resp = await client.post(
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
+    )
     token = resp.json()["access_token"]
     return f"Bearer {token}"
+
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_success(client: AsyncClient):
@@ -48,6 +51,7 @@ async def test_transcribe_audio_success(client: AsyncClient):
         assert data["language"] == "en"
         assert data["estimated_cost"] == 0.003
 
+
 @pytest.mark.asyncio
 async def test_transcribe_audio_no_filename(client: AsyncClient):
     """Test transcription with no filename returns 422 (FastAPI validation error)."""
@@ -64,6 +68,7 @@ async def test_transcribe_audio_no_filename(client: AsyncClient):
 
     # FastAPI returns 422 for validation errors on file uploads without filenames
     assert response.status_code == 422
+
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_file_too_large(client: AsyncClient):
@@ -82,6 +87,7 @@ async def test_transcribe_audio_file_too_large(client: AsyncClient):
 
     assert response.status_code == 413
     assert "too large" in response.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_unsupported_format_error(client: AsyncClient):
@@ -105,6 +111,7 @@ async def test_transcribe_audio_unsupported_format_error(client: AsyncClient):
 
         assert response.status_code == 422
         assert "unsupported" in response.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_with_timestamps(client: AsyncClient):
@@ -136,6 +143,7 @@ async def test_transcribe_audio_with_timestamps(client: AsyncClient):
         data = response.json()
         assert data["segments"] is not None
         assert len(data["segments"]) == 1
+
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_with_language_hint(client: AsyncClient):
@@ -169,6 +177,7 @@ async def test_transcribe_audio_with_language_hint(client: AsyncClient):
         call_args = mock_transcriber_instance.transcribe.call_args
         assert call_args.kwargs.get("language") == "fr"
 
+
 @pytest.mark.asyncio
 async def test_transcribe_audio_general_exception(client: AsyncClient):
     """Test transcription handles general exceptions and returns 500."""
@@ -190,6 +199,7 @@ async def test_transcribe_audio_general_exception(client: AsyncClient):
         assert response.status_code == 500
         assert "transcription failed" in response.json()["detail"].lower()
 
+
 @pytest.mark.asyncio
 async def test_transcribe_audio_requires_authentication(client: AsyncClient):
     """Test transcription endpoint requires authentication."""
@@ -202,6 +212,7 @@ async def test_transcribe_audio_requires_authentication(client: AsyncClient):
     )
 
     assert response.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_get_supported_formats(client: AsyncClient):
@@ -216,6 +227,7 @@ async def test_get_supported_formats(client: AsyncClient):
     assert data["max_file_size_mb"] == 25
     assert data["cost_per_minute_usd"] == 0.006
 
+
 @pytest.mark.asyncio
 async def test_transcribe_audio_file_not_found_error(client: AsyncClient):
     """Test transcription handles FileNotFoundError and returns 400."""
@@ -224,12 +236,16 @@ async def test_transcribe_audio_file_not_found_error(client: AsyncClient):
     audio_content = b"fake audio content"
     files = {"file": ("audio.webm", BytesIO(audio_content), "audio/webm")}
 
-    with patch("app.api.transcription.Transcriber") as MockTranscriber, \
-         patch("tempfile.NamedTemporaryFile") as mock_temp:
+    with (
+        patch("app.api.transcription.Transcriber") as MockTranscriber,
+        patch("tempfile.NamedTemporaryFile") as mock_temp,
+    ):
         # Simulate file write failure
         mock_temp.return_value.__enter__.return_value.name = "/nonexistent/path/file.webm"
         mock_transcriber_instance = MockTranscriber.return_value
-        mock_transcriber_instance.transcribe = AsyncMock(side_effect=FileNotFoundError("File not found"))
+        mock_transcriber_instance.transcribe = AsyncMock(
+            side_effect=FileNotFoundError("File not found")
+        )
 
         response = await client.post(
             "/api/v1/transcription/transcribe",
@@ -238,6 +254,7 @@ async def test_transcribe_audio_file_not_found_error(client: AsyncClient):
         )
 
         assert response.status_code == 400
+
 
 @pytest.mark.asyncio
 async def test_transcribe_audio_content_type_handling(client: AsyncClient):

@@ -20,6 +20,7 @@ async def test_coaching_hint_endpoint_requires_auth(client: AsyncClient):
     )
     assert response.status_code == 401
 
+
 @pytest.mark.asyncio
 async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
     """Test that coaching hint endpoint returns a contextual hint."""
@@ -41,6 +42,7 @@ async def test_coaching_hint_endpoint_returns_hint(client: AsyncClient):
     assert isinstance(data["hint"], str)
     assert len(data["hint"]) > 0
 
+
 @pytest.mark.asyncio
 async def test_coaching_hint_validates_question_type(client: AsyncClient):
     """Test that coaching hint endpoint validates question_type."""
@@ -57,6 +59,7 @@ async def test_coaching_hint_validates_question_type(client: AsyncClient):
     )
     assert response.status_code == 422  # Validation error
 
+
 @pytest.mark.asyncio
 async def test_coaching_hint_requires_question(client: AsyncClient):
     """Test that coaching hint endpoint requires question field."""
@@ -71,6 +74,7 @@ async def test_coaching_hint_requires_question(client: AsyncClient):
         },
     )
     assert response.status_code == 422  # Validation error
+
 
 @pytest.mark.asyncio
 async def test_coaching_hint_handles_empty_transcript(client: AsyncClient):
@@ -91,6 +95,7 @@ async def test_coaching_hint_handles_empty_transcript(client: AsyncClient):
     data = response.json()
     assert "hint" in data
 
+
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_endpoint_requires_auth(client: AsyncClient):
     """Test that streaming coaching hint endpoint requires authentication."""
@@ -103,6 +108,7 @@ async def test_coaching_hint_stream_endpoint_requires_auth(client: AsyncClient):
         },
     )
     assert response.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_endpoint_returns_stream(client: AsyncClient):
@@ -135,6 +141,7 @@ async def test_coaching_hint_stream_endpoint_returns_stream(client: AsyncClient)
     last_chunk = chunks[-1]
     assert "done" in last_chunk or "data:" in last_chunk
 
+
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_validates_question_type(client: AsyncClient):
     """Test that streaming endpoint validates question_type."""
@@ -150,6 +157,7 @@ async def test_coaching_hint_stream_validates_question_type(client: AsyncClient)
         },
     )
     assert response.status_code == 422  # Validation error
+
 
 @pytest.mark.asyncio
 async def test_coaching_hint_rate_limiting(client: AsyncClient):
@@ -181,6 +189,7 @@ async def test_coaching_hint_rate_limiting(client: AsyncClient):
     )
     assert response.status_code == 429  # Too Many Requests
     assert "rate limit" in response.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_coaching_hint_stream_rate_limiting(client: AsyncClient):

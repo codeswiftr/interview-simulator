@@ -106,8 +106,9 @@ class TestSendPasswordReset:
         svc = EmailService()
         svc.resend_api_key = "re_test_key"
 
-        with patch.dict("sys.modules", {"resend": MagicMock()}) as modules:
+        with patch.dict("sys.modules", {"resend": MagicMock()}):
             import sys
+
             mock_resend = sys.modules["resend"]
             mock_resend.Emails.send.return_value = {"id": "email_123"}
 

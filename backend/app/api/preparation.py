@@ -36,6 +36,7 @@ def get_stage_value(stage: PreparationStage | str) -> str:
     # If it's an enum, get .value; if it's already a string, return as-is
     return stage.value if hasattr(stage, "value") else str(stage)
 
+
 # Initialize OpenRouter client for Gemini 2.0 Flash (detective) and Claude Haiku 4.5 (ghostwriter)
 _preparation_client: AsyncOpenAI | None = None
 
@@ -759,7 +760,9 @@ async def generate_draft(
         )
 
     # Build Q&A context (optimized format)
-    qna_context = "\n".join([f"Q{i+1}: {qna.question}\nA{i+1}: {qna.answer}" for i, qna in enumerate(qna_list)])
+    qna_context = "\n".join(
+        [f"Q{i + 1}: {qna.question}\nA{i + 1}: {qna.answer}" for i, qna in enumerate(qna_list)]
+    )
 
     # Generate draft using Claude Haiku 4.5
     if not settings.openrouter_api_key:
@@ -773,7 +776,9 @@ async def generate_draft(
             client = get_preparation_client()
 
             q_type = question.category if question else "behavioral"
-            exp_level = str(current_user.experience_level) if current_user.experience_level else "mid"
+            exp_level = (
+                str(current_user.experience_level) if current_user.experience_level else "mid"
+            )
 
             # Optimized prompt for token efficiency
             prompt = f"""Draft STAR answer.

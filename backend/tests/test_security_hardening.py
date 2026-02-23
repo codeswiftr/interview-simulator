@@ -18,6 +18,7 @@ from pydantic import ValidationError
 # 1. Input Validation Tests
 # ============================================================
 
+
 class TestInputValidation:
     """Test Pydantic strict input validation on request schemas."""
 
@@ -255,9 +256,7 @@ class TestInputValidation:
         from app.api.coaching import CoachingHintRequest
 
         for qt in ["behavioral", "technical", "system_design"]:
-            req = CoachingHintRequest(
-                question="Test question", question_type=qt, transcript=""
-            )
+            req = CoachingHintRequest(question="Test question", question_type=qt, transcript="")
             assert req.question_type == qt
 
     def test_coaching_hint_request_rejects_oversized_transcript(self):
@@ -275,6 +274,7 @@ class TestInputValidation:
 # ============================================================
 # 2. SQL Injection Prevention Tests
 # ============================================================
+
 
 class TestSQLInjectionPrevention:
     """Verify that SQL injection payloads are safely handled."""
@@ -310,6 +310,7 @@ class TestSQLInjectionPrevention:
 # ============================================================
 # 3. CORS Configuration Tests
 # ============================================================
+
 
 class TestCORSConfiguration:
     """Test CORS origin restrictions."""
@@ -416,6 +417,7 @@ class TestCORSHardening:
 # 4. Auth Rate Limiting Tests
 # ============================================================
 
+
 class TestAuthRateLimiting:
     """Test per-endpoint rate limiting on auth endpoints."""
 
@@ -514,6 +516,7 @@ class TestAuthRateLimiting:
 
         # Same CF IP should be rate limited
         from fastapi import HTTPException
+
         with pytest.raises(HTTPException):
             limiter.check(cf_request)
 
@@ -548,6 +551,7 @@ class TestAuthRateLimiting:
 # ============================================================
 # 5. API-level Input Validation Tests
 # ============================================================
+
 
 class TestInputValidationAPI:
     """Test input validation at the API level."""
@@ -605,6 +609,7 @@ class TestInputValidationAPI:
 # ============================================================
 # 6. Security Headers Tests
 # ============================================================
+
 
 class TestSecurityHeaders:
     """Test security headers are properly set on responses."""

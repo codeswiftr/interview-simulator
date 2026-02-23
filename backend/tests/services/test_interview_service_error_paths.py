@@ -32,7 +32,7 @@ async def test_assign_questions_insufficient_questions_raises_error(db_session):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=10,
-        difficulty=Difficulty.MEDIUM
+        difficulty=Difficulty.MEDIUM,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -44,7 +44,7 @@ async def test_assign_questions_insufficient_questions_raises_error(db_session):
             content=f"Question {i}",
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
-            expected_duration_seconds=180
+            expected_duration_seconds=180,
         )
         db_session.add(question)
     await db_session.commit()
@@ -64,7 +64,7 @@ async def test_assign_questions_no_questions_available_raises_error(db_session):
         user_id=str(uuid4()),
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
-        question_count=5
+        question_count=5,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -85,7 +85,7 @@ async def test_assign_questions_handles_inactive_questions(db_session):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=3,
-        difficulty=Difficulty.MEDIUM
+        difficulty=Difficulty.MEDIUM,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -98,7 +98,7 @@ async def test_assign_questions_handles_inactive_questions(db_session):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
             expected_duration_seconds=180,
-            is_active=True
+            is_active=True,
         )
         db_session.add(question)
 
@@ -110,7 +110,7 @@ async def test_assign_questions_handles_inactive_questions(db_session):
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
             expected_duration_seconds=180,
-            is_active=False
+            is_active=False,
         )
         db_session.add(question)
 
@@ -122,9 +122,7 @@ async def test_assign_questions_handles_inactive_questions(db_session):
 
     # Verify all assigned questions are active
     question_ids = [aq.question_id for aq in assigned]
-    result = await db_session.exec(
-        select(Question).where(Question.id.in_(question_ids))
-    )
+    result = await db_session.exec(select(Question).where(Question.id.in_(question_ids)))
     questions = list(result.all())
     assert all(q.is_active for q in questions)
 
@@ -141,7 +139,7 @@ async def test_assign_questions_with_company_filter_falls_back_to_general(db_ses
         status=InterviewStatus.IN_PROGRESS,
         question_count=5,
         difficulty=Difficulty.MEDIUM,
-        target_company="Google"
+        target_company="Google",
     )
     db_session.add(interview)
     await db_session.commit()
@@ -154,7 +152,7 @@ async def test_assign_questions_with_company_filter_falls_back_to_general(db_ses
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
             expected_duration_seconds=180,
-            company_tags=["google"]
+            company_tags=["google"],
         )
         db_session.add(question)
 
@@ -166,7 +164,7 @@ async def test_assign_questions_with_company_filter_falls_back_to_general(db_ses
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
             expected_duration_seconds=180,
-            company_tags=[]
+            company_tags=[],
         )
         db_session.add(question)
 
@@ -188,7 +186,7 @@ async def test_assign_questions_handles_mixed_difficulty(db_session):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=3,
-        difficulty="mixed"  # Special value
+        difficulty="mixed",  # Special value
     )
     db_session.add(interview)
     await db_session.commit()
@@ -200,7 +198,7 @@ async def test_assign_questions_handles_mixed_difficulty(db_session):
             content=f"{difficulty} question",
             category=QuestionCategory.BEHAVIORAL,
             difficulty=difficulty,
-            expected_duration_seconds=180
+            expected_duration_seconds=180,
         )
         db_session.add(question)
 
@@ -221,15 +219,17 @@ async def test_assign_questions_handles_database_transaction_error(db_session):
         user_id=str(uuid4()),
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
-        question_count=3
+        question_count=3,
     )
     db_session.add(interview)
     await db_session.commit()
 
     # Mock database to raise error
-    with patch.object(db_session, 'exec', side_effect=OperationalError("", "", "")):
-        with pytest.raises(OperationalError):
-            await service.assign_questions(db_session, interview)
+    with (
+        patch.object(db_session, "exec", side_effect=OperationalError("", "", "")),
+        pytest.raises(OperationalError),
+    ):
+        await service.assign_questions(db_session, interview)
 
 
 @pytest.mark.asyncio
@@ -239,7 +239,10 @@ async def test_get_category_for_type_returns_correct_mapping():
 
     assert service._get_category_for_type(InterviewType.BEHAVIORAL) == QuestionCategory.BEHAVIORAL
     assert service._get_category_for_type(InterviewType.TECHNICAL) == QuestionCategory.TECHNICAL
-    assert service._get_category_for_type(InterviewType.SYSTEM_DESIGN) == QuestionCategory.SYSTEM_DESIGN
+    assert (
+        service._get_category_for_type(InterviewType.SYSTEM_DESIGN)
+        == QuestionCategory.SYSTEM_DESIGN
+    )
     assert service._get_category_for_type(InterviewType.MIXED) is None
 
 
@@ -254,7 +257,7 @@ async def test_assign_questions_handles_null_difficulty_gracefully(db_session):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=3,
-        difficulty=None  # No difficulty filter
+        difficulty=None,  # No difficulty filter
     )
     db_session.add(interview)
     await db_session.commit()
@@ -266,7 +269,7 @@ async def test_assign_questions_handles_null_difficulty_gracefully(db_session):
             content=f"Question {i}",
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
-            expected_duration_seconds=180
+            expected_duration_seconds=180,
         )
         db_session.add(question)
 
@@ -288,7 +291,7 @@ async def test_assign_questions_creates_correct_interview_question_records(db_se
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=2,
-        difficulty=Difficulty.MEDIUM
+        difficulty=Difficulty.MEDIUM,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -301,7 +304,7 @@ async def test_assign_questions_creates_correct_interview_question_records(db_se
             content=f"Question {i}",
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
-            expected_duration_seconds=180 + (i * 30)
+            expected_duration_seconds=180 + (i * 30),
         )
         db_session.add(question)
         questions.append(question)
@@ -330,7 +333,7 @@ async def test_assign_questions_avoids_duplicate_questions_in_session(db_session
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=5,
-        difficulty=Difficulty.MEDIUM
+        difficulty=Difficulty.MEDIUM,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -342,7 +345,7 @@ async def test_assign_questions_avoids_duplicate_questions_in_session(db_session
             content=f"Question {i}",
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
-            expected_duration_seconds=180
+            expected_duration_seconds=180,
         )
         db_session.add(question)
 
@@ -367,7 +370,7 @@ async def test_assign_questions_respects_question_count_limit(db_session):
         interview_type=InterviewType.BEHAVIORAL,
         status=InterviewStatus.IN_PROGRESS,
         question_count=3,
-        difficulty=Difficulty.MEDIUM
+        difficulty=Difficulty.MEDIUM,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -379,7 +382,7 @@ async def test_assign_questions_respects_question_count_limit(db_session):
             content=f"Question {i}",
             category=QuestionCategory.BEHAVIORAL,
             difficulty=Difficulty.MEDIUM,
-            expected_duration_seconds=180
+            expected_duration_seconds=180,
         )
         db_session.add(question)
 
@@ -401,7 +404,7 @@ async def test_assign_questions_for_mixed_interview_type(db_session):
         interview_type=InterviewType.MIXED,
         status=InterviewStatus.IN_PROGRESS,
         question_count=6,
-        difficulty=Difficulty.MEDIUM
+        difficulty=Difficulty.MEDIUM,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -410,7 +413,7 @@ async def test_assign_questions_for_mixed_interview_type(db_session):
     categories = [
         QuestionCategory.BEHAVIORAL,
         QuestionCategory.TECHNICAL,
-        QuestionCategory.SYSTEM_DESIGN
+        QuestionCategory.SYSTEM_DESIGN,
     ]
     for i, category in enumerate(categories * 2):  # 6 questions total
         question = Question(
@@ -418,7 +421,7 @@ async def test_assign_questions_for_mixed_interview_type(db_session):
             content=f"{category} question {i}",
             category=category,
             difficulty=Difficulty.MEDIUM,
-            expected_duration_seconds=180
+            expected_duration_seconds=180,
         )
         db_session.add(question)
 

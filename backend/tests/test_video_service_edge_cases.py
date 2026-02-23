@@ -95,9 +95,7 @@ async def test_save_video_feedback_with_zero_values(
 ):
     """Test saving feedback with zero/extreme values."""
     feedback = await video_service.save_video_feedback(
-        db_session,
-        test_response.id,
-        extreme_metrics
+        db_session, test_response.id, extreme_metrics
     )
 
     assert feedback.confidence_score == 0.0
@@ -113,9 +111,7 @@ async def test_save_video_feedback_with_zero_values(
 
 # Test: Maximum value metrics
 @pytest.mark.asyncio
-async def test_save_video_feedback_with_maximum_values(
-    db_session, test_response, video_service
-):
+async def test_save_video_feedback_with_maximum_values(db_session, test_response, video_service):
     """Test saving feedback with maximum values."""
     max_metrics = VideoMetrics(
         confidence_score=1.0,
@@ -129,11 +125,7 @@ async def test_save_video_feedback_with_maximum_values(
         frame_count=99999,
     )
 
-    feedback = await video_service.save_video_feedback(
-        db_session,
-        test_response.id,
-        max_metrics
-    )
+    feedback = await video_service.save_video_feedback(db_session, test_response.id, max_metrics)
 
     assert feedback.confidence_score == 1.0
     assert feedback.looking_away_count == 999
@@ -142,9 +134,7 @@ async def test_save_video_feedback_with_maximum_values(
 
 # Test: analyze_video with different file extensions
 @pytest.mark.asyncio
-async def test_analyze_video_with_webm_file(
-    db_session, test_response, video_service, tmp_path
-):
+async def test_analyze_video_with_webm_file(db_session, test_response, video_service, tmp_path):
     """Test analyze_video works with .webm files."""
     video_file = tmp_path / "test.webm"
     video_file.write_bytes(b"webm content")
@@ -162,24 +152,16 @@ async def test_analyze_video_with_webm_file(
     )
 
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_metrics)
     ):
-        result = await video_service.analyze_video(
-            db_session,
-            test_response.id,
-            str(video_file)
-        )
+        result = await video_service.analyze_video(db_session, test_response.id, str(video_file))
 
     assert result == sample_metrics
 
 
 # Test: analyze_video with different file extensions
 @pytest.mark.asyncio
-async def test_analyze_video_with_mp4_file(
-    db_session, test_response, video_service, tmp_path
-):
+async def test_analyze_video_with_mp4_file(db_session, test_response, video_service, tmp_path):
     """Test analyze_video works with .mp4 files."""
     video_file = tmp_path / "test.mp4"
     video_file.write_bytes(b"mp4 content")
@@ -197,15 +179,9 @@ async def test_analyze_video_with_mp4_file(
     )
 
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_metrics)
     ):
-        result = await video_service.analyze_video(
-            db_session,
-            test_response.id,
-            str(video_file)
-        )
+        result = await video_service.analyze_video(db_session, test_response.id, str(video_file))
 
     assert result == sample_metrics
 
@@ -234,15 +210,9 @@ async def test_analyze_video_with_path_containing_spaces(
     )
 
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_metrics)
     ):
-        result = await video_service.analyze_video(
-            db_session,
-            test_response.id,
-            str(video_file)
-        )
+        result = await video_service.analyze_video(db_session, test_response.id, str(video_file))
 
     assert result == sample_metrics
 
@@ -257,14 +227,10 @@ async def test_process_response_video_with_minimal_metrics(
     video_file.write_bytes(b"min")
 
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=extreme_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=extreme_metrics)
     ):
         feedback = await video_service.process_response_video(
-            db_session,
-            test_response.id,
-            str(video_file)
+            db_session, test_response.id, str(video_file)
         )
 
     assert feedback.confidence_score == 0.0
@@ -323,16 +289,8 @@ async def test_save_video_feedback_for_multiple_responses_same_session(
     )
 
     # Save feedback for both
-    feedback1 = await video_service.save_video_feedback(
-        db_session,
-        response1.id,
-        metrics
-    )
-    feedback2 = await video_service.save_video_feedback(
-        db_session,
-        response2.id,
-        metrics
-    )
+    feedback1 = await video_service.save_video_feedback(db_session, response1.id, metrics)
+    feedback2 = await video_service.save_video_feedback(db_session, response2.id, metrics)
 
     assert feedback1.response_id == response1.id
     assert feedback2.response_id == response2.id
@@ -341,9 +299,7 @@ async def test_save_video_feedback_for_multiple_responses_same_session(
 
 # Test: Response with different processing statuses
 @pytest.mark.asyncio
-async def test_get_response_with_pending_status(
-    db_session, test_user, video_service
-):
+async def test_get_response_with_pending_status(db_session, test_user, video_service):
     """Test _get_response works with PENDING processing status."""
     question = Question(
         content="Question",
@@ -378,9 +334,7 @@ async def test_get_response_with_pending_status(
 
 # Test: Response with FAILED status
 @pytest.mark.asyncio
-async def test_get_response_with_failed_status(
-    db_session, test_user, video_service
-):
+async def test_get_response_with_failed_status(db_session, test_user, video_service):
     """Test _get_response works with FAILED processing status."""
     question = Question(
         content="Question",
@@ -434,9 +388,7 @@ async def test_save_video_feedback_preserves_decimal_precision(
     )
 
     feedback = await video_service.save_video_feedback(
-        db_session,
-        test_response.id,
-        precise_metrics
+        db_session, test_response.id, precise_metrics
     )
 
     # Check precision is preserved
@@ -449,9 +401,7 @@ async def test_save_video_feedback_preserves_decimal_precision(
 
 # Test: Empty video file
 @pytest.mark.asyncio
-async def test_analyze_video_with_empty_file(
-    db_session, test_response, video_service, tmp_path
-):
+async def test_analyze_video_with_empty_file(db_session, test_response, video_service, tmp_path):
     """Test analyze_video with empty file (exists but has no content)."""
     video_file = tmp_path / "empty.mp4"
     video_file.touch()  # Create empty file
@@ -469,15 +419,9 @@ async def test_analyze_video_with_empty_file(
     )
 
     with patch.object(
-        video_service.analyzer,
-        'analyze',
-        new=AsyncMock(return_value=sample_metrics)
+        video_service.analyzer, "analyze", new=AsyncMock(return_value=sample_metrics)
     ):
-        result = await video_service.analyze_video(
-            db_session,
-            test_response.id,
-            str(video_file)
-        )
+        result = await video_service.analyze_video(db_session, test_response.id, str(video_file))
 
     assert result == sample_metrics
 
@@ -489,20 +433,14 @@ async def test_analyze_video_with_relative_path_nonexistent(
 ):
     """Test analyze_video with relative path that doesn't exist."""
     with pytest.raises(ValueError) as exc_info:
-        await video_service.analyze_video(
-            db_session,
-            test_response.id,
-            "./nonexistent/video.mp4"
-        )
+        await video_service.analyze_video(db_session, test_response.id, "./nonexistent/video.mp4")
 
     assert "Video file not found" in str(exc_info.value)
 
 
 # Test: Response without video_url
 @pytest.mark.asyncio
-async def test_get_response_without_video_url(
-    db_session, test_user, video_service
-):
+async def test_get_response_without_video_url(db_session, test_user, video_service):
     """Test _get_response works for response without video URL."""
     question = Question(
         content="Question",
@@ -537,9 +475,7 @@ async def test_get_response_without_video_url(
 
 # Test: Large frame count
 @pytest.mark.asyncio
-async def test_save_video_feedback_with_large_frame_count(
-    db_session, test_response, video_service
-):
+async def test_save_video_feedback_with_large_frame_count(db_session, test_response, video_service):
     """Test saving feedback with very large frame count."""
     large_metrics = VideoMetrics(
         confidence_score=0.75,
@@ -553,11 +489,7 @@ async def test_save_video_feedback_with_large_frame_count(
         frame_count=18000,  # 10 min at 30fps
     )
 
-    feedback = await video_service.save_video_feedback(
-        db_session,
-        test_response.id,
-        large_metrics
-    )
+    feedback = await video_service.save_video_feedback(db_session, test_response.id, large_metrics)
 
     assert feedback.frame_count == 18000
     assert feedback.processing_duration_ms == 60000
@@ -565,9 +497,7 @@ async def test_save_video_feedback_with_large_frame_count(
 
 # Test: Feedback ID generation
 @pytest.mark.asyncio
-async def test_save_video_feedback_generates_unique_ids(
-    db_session, test_user, video_service
-):
+async def test_save_video_feedback_generates_unique_ids(db_session, test_user, video_service):
     """Test that each feedback gets a unique ID."""
     question = Question(
         content="Question",
@@ -612,11 +542,7 @@ async def test_save_video_feedback_generates_unique_ids(
 
     feedbacks = []
     for response in responses:
-        feedback = await video_service.save_video_feedback(
-            db_session,
-            response.id,
-            metrics
-        )
+        feedback = await video_service.save_video_feedback(db_session, response.id, metrics)
         feedbacks.append(feedback)
 
     # All IDs should be unique
@@ -626,9 +552,7 @@ async def test_save_video_feedback_generates_unique_ids(
 
 # Test: Path conversion from Path to string
 @pytest.mark.asyncio
-async def test_analyze_video_path_conversion(
-    db_session, test_response, video_service, tmp_path
-):
+async def test_analyze_video_path_conversion(db_session, test_response, video_service, tmp_path):
     """Test that analyze_video correctly converts Path to string."""
     video_file = tmp_path / "conversion_test.mp4"
     video_file.write_bytes(b"test")
@@ -648,12 +572,8 @@ async def test_analyze_video_path_conversion(
     # Mock analyzer to capture the argument
     mock_analyze = AsyncMock(return_value=sample_metrics)
 
-    with patch.object(video_service.analyzer, 'analyze', new=mock_analyze):
-        await video_service.analyze_video(
-            db_session,
-            test_response.id,
-            str(video_file)
-        )
+    with patch.object(video_service.analyzer, "analyze", new=mock_analyze):
+        await video_service.analyze_video(db_session, test_response.id, str(video_file))
 
     # Verify analyzer was called with string path
     mock_analyze.assert_called_once()

@@ -109,9 +109,7 @@ class TestPreparationTierAccess:
     async def test_free_tier_blocked_from_preparation(self, client, free_user):
         """Free tier users cannot access preparation feature."""
         # Login as free user
-        token = await register_and_login(
-            client, email=free_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=free_user.email, password="TestPassword123!")
 
         # Try to list preparations
         response = await client.get(
@@ -125,9 +123,7 @@ class TestPreparationTierAccess:
     @pytest.mark.asyncio
     async def test_pro_tier_allowed_preparation(self, client, pro_user):
         """Pro tier users can access preparation feature."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             "/api/v1/preparation",
@@ -151,9 +147,7 @@ class TestPreparationTierAccess:
         db_session.add(team_user)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=team_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=team_user.email, password="TestPassword123!")
 
         response = await client.get(
             "/api/v1/preparation",
@@ -169,9 +163,7 @@ class TestStartPreparation:
     @pytest.mark.asyncio
     async def test_start_preparation_success(self, client, pro_user, test_question_for_prep):
         """Start preparation creates session and returns ID."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             "/api/v1/preparation/start",
@@ -187,9 +179,7 @@ class TestStartPreparation:
     @pytest.mark.asyncio
     async def test_start_preparation_question_not_found(self, client, pro_user):
         """Starting preparation with invalid question returns 404."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             "/api/v1/preparation/start",
@@ -201,13 +191,9 @@ class TestStartPreparation:
         assert "not found" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_start_preparation_resumes_existing(
-        self, client, pro_user, preparation_session
-    ):
+    async def test_start_preparation_resumes_existing(self, client, pro_user, preparation_session):
         """Starting preparation for existing question resumes session."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         # First request - should get existing
         from sqlmodel import select
@@ -217,9 +203,7 @@ class TestStartPreparation:
         _, TestSessionLocal = get_test_engine()
         async with TestSessionLocal() as session:
             result = await session.exec(
-                select(AnswerPreparation).where(
-                    AnswerPreparation.id == preparation_session.id
-                )
+                select(AnswerPreparation).where(AnswerPreparation.id == preparation_session.id)
             )
             existing = result.first()
             question_id = str(existing.question_id) if existing else None
@@ -244,9 +228,7 @@ class TestDetectiveStage:
         self, client, pro_user, preparation_session
     ):
         """Without API key, returns generic fallback question."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         with patch("app.api.preparation.settings") as mock_settings:
             mock_settings.openrouter_api_key = None
@@ -263,13 +245,9 @@ class TestDetectiveStage:
             assert data["order"] >= 1
 
     @pytest.mark.asyncio
-    async def test_detective_question_wrong_stage(
-        self, client, pro_user, preparation_with_draft
-    ):
+    async def test_detective_question_wrong_stage(self, client, pro_user, preparation_with_draft):
         """Cannot get detective question when not in detective stage."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_with_draft.id}/detective/question",
@@ -282,9 +260,7 @@ class TestDetectiveStage:
     @pytest.mark.asyncio
     async def test_detective_question_not_found(self, client, pro_user):
         """Getting question for nonexistent preparation returns 404."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{uuid4()}/detective/question",
@@ -298,9 +274,7 @@ class TestDetectiveStage:
         self, client, pro_user, preparation_session
     ):
         """Cannot submit answer when no unanswered question exists."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         # Try to submit answer without first getting a question
         response = await client.post(
@@ -321,17 +295,15 @@ class TestDetectiveMaxQuestions:
         self, client, pro_user, preparation_session, db_session
     ):
         """Detective stage completes after 4-5 questions."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         # Add 4 answered Q&A entries
         for i in range(4):
             qna = PreparationQnA(
                 id=uuid4(),
                 preparation_id=preparation_session.id,
-                question=f"Question {i+1}?",
-                answer=f"Answer {i+1}",
+                question=f"Question {i + 1}?",
+                answer=f"Answer {i + 1}",
                 order=i + 1,
             )
             db_session.add(qna)
@@ -359,9 +331,7 @@ class TestDraftGeneration:
         self, client, pro_user, preparation_session
     ):
         """Cannot generate draft until detective stage is complete."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_session.id}/generate-draft",
@@ -369,7 +339,10 @@ class TestDraftGeneration:
         )
 
         assert response.status_code == 400
-        assert "not draft" in response.json()["detail"].lower() or "detective" in response.json()["detail"].lower()
+        assert (
+            "not draft" in response.json()["detail"].lower()
+            or "detective" in response.json()["detail"].lower()
+        )
 
     @pytest.mark.asyncio
     async def test_generate_draft_no_qna_fails(
@@ -386,9 +359,7 @@ class TestDraftGeneration:
         db_session.add(prep)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{prep.id}/generate-draft",
@@ -422,9 +393,7 @@ class TestDraftGeneration:
         db_session.add(qna)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         with patch("app.api.preparation.settings") as mock_settings:
             mock_settings.openrouter_api_key = None  # Use fallback
@@ -448,9 +417,7 @@ class TestDraftRetrieval:
     @pytest.mark.asyncio
     async def test_get_draft_success(self, client, pro_user, preparation_with_draft):
         """Getting draft returns the generated answer."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_with_draft.id}/draft",
@@ -463,13 +430,9 @@ class TestDraftRetrieval:
         assert "Situation" in data["draft_answer"]
 
     @pytest.mark.asyncio
-    async def test_get_draft_not_generated_yet(
-        self, client, pro_user, preparation_session
-    ):
+    async def test_get_draft_not_generated_yet(self, client, pro_user, preparation_session):
         """Getting draft before generation returns 404."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_session.id}/draft",
@@ -482,9 +445,7 @@ class TestDraftRetrieval:
     @pytest.mark.asyncio
     async def test_update_draft_success(self, client, pro_user, preparation_with_draft):
         """Updating draft saves changes."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         new_draft = "**Situation**: Updated situation...\n**Task**: New task...\n**Action**: Different action...\n**Result**: Better outcome."
 
@@ -503,9 +464,7 @@ class TestDraftRetrieval:
         self, client, pro_user, preparation_session
     ):
         """Cannot update draft before it's generated."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.patch(
             f"/api/v1/preparation/{preparation_session.id}/draft",
@@ -523,9 +482,7 @@ class TestPracticeDelivery:
     @pytest.mark.asyncio
     async def test_start_practice_success(self, client, pro_user, preparation_with_draft):
         """Starting practice creates a delivery attempt."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_with_draft.id}/practice/start",
@@ -538,13 +495,9 @@ class TestPracticeDelivery:
         assert data["stage"] == "practice"
 
     @pytest.mark.asyncio
-    async def test_start_practice_without_draft_fails(
-        self, client, pro_user, preparation_session
-    ):
+    async def test_start_practice_without_draft_fails(self, client, pro_user, preparation_session):
         """Cannot start practice without a draft."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_session.id}/practice/start",
@@ -555,13 +508,9 @@ class TestPracticeDelivery:
         assert "draft" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_submit_practice_audio_not_found(
-        self, client, pro_user, preparation_with_draft
-    ):
+    async def test_submit_practice_audio_not_found(self, client, pro_user, preparation_with_draft):
         """Submitting practice with missing audio file returns 404."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_with_draft.id}/practice/submit",
@@ -577,13 +526,9 @@ class TestDeliveryRating:
     """Tests for rating delivery attempts."""
 
     @pytest.mark.asyncio
-    async def test_rate_delivery_attempt_not_found(
-        self, client, pro_user, preparation_with_draft
-    ):
+    async def test_rate_delivery_attempt_not_found(self, client, pro_user, preparation_with_draft):
         """Rating nonexistent attempt returns 404."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_with_draft.id}/rate-delivery",
@@ -609,9 +554,7 @@ class TestDeliveryRating:
         db_session.add(attempt)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.post(
             f"/api/v1/preparation/{preparation_with_draft.id}/rate-delivery",
@@ -637,9 +580,7 @@ class TestDeliveryRating:
         db_session.add(attempt)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         with patch("app.api.preparation.DeliveryRatingService") as mock_service:
             mock_rating = MagicMock()
@@ -692,9 +633,7 @@ class TestComparison:
         db_session.add(attempt)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_with_draft.id}/comparison",
@@ -710,13 +649,9 @@ class TestComparison:
         assert "Good structure" in data["strengths"]
 
     @pytest.mark.asyncio
-    async def test_get_comparison_attempt_not_found(
-        self, client, pro_user, preparation_with_draft
-    ):
+    async def test_get_comparison_attempt_not_found(self, client, pro_user, preparation_with_draft):
         """Comparison with invalid attempt ID returns 404."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_with_draft.id}/comparison",
@@ -735,9 +670,7 @@ class TestListPreparations:
         self, client, pro_user, preparation_with_draft
     ):
         """Listing preparations returns only current user's preps."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             "/api/v1/preparation",
@@ -762,9 +695,7 @@ class TestListPreparations:
         db_session.add(new_user)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=new_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=new_user.email, password="TestPassword123!")
 
         response = await client.get(
             "/api/v1/preparation",
@@ -802,9 +733,7 @@ class TestPreparationState:
         db_session.add(attempt)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_with_draft.id}/state",
@@ -862,14 +791,12 @@ class TestGetAttempts:
             attempt = DeliveryAttempt(
                 id=uuid4(),
                 preparation_id=preparation_with_draft.id,
-                transcript=f"Attempt {i+1}",
+                transcript=f"Attempt {i + 1}",
             )
             db_session.add(attempt)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_with_draft.id}/attempts",
@@ -882,13 +809,9 @@ class TestGetAttempts:
         assert len(data["attempts"]) >= 3
 
     @pytest.mark.asyncio
-    async def test_get_attempts_empty_list(
-        self, client, pro_user, preparation_with_draft
-    ):
+    async def test_get_attempts_empty_list(self, client, pro_user, preparation_with_draft):
         """Getting attempts with no attempts returns empty list."""
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         response = await client.get(
             f"/api/v1/preparation/{preparation_with_draft.id}/attempts",
@@ -921,16 +844,14 @@ class TestStageTransitions:
             qna = PreparationQnA(
                 id=uuid4(),
                 preparation_id=prep.id,
-                question=f"Question {i+1}?",
-                answer=f"Answer {i+1}",
+                question=f"Question {i + 1}?",
+                answer=f"Answer {i + 1}",
                 order=i + 1,
             )
             db_session.add(qna)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         with patch("app.api.preparation.settings") as mock_settings:
             mock_settings.openrouter_api_key = None
@@ -958,9 +879,7 @@ class TestStageTransitions:
         db_session.add(attempt)
         await db_session.commit()
 
-        token = await register_and_login(
-            client, email=pro_user.email, password="TestPassword123!"
-        )
+        token = await register_and_login(client, email=pro_user.email, password="TestPassword123!")
 
         with patch("app.api.preparation.DeliveryRatingService") as mock_service:
             mock_rating = MagicMock()
