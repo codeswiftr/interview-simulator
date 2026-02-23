@@ -36,7 +36,7 @@ cd frontend && npm install && npm run dev
 
 ## Testing Commands
 ```bash
-cd backend && uv run pytest                    # All tests (2,068 tests)
+cd backend && uv run pytest                    # All tests (2,457 tests)
 cd backend && uv run pytest --cov=app --cov-report=html  # With coverage
 cd frontend && npm run build                   # Build check
 ```

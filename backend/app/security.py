@@ -89,9 +89,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
             # Legacy pbkdf2_sha256 verification
             return pbkdf2_sha256.verify(plain_password, hashed_password)
     except Exception as e:
-        # Log the error for security monitoring
-        # In production, you might want to use a proper logger
-        print(f"Password verification error: {e}")
+        import logging
+
+        logging.getLogger(__name__).warning("Password verification error: %s", e)
         return False
 
 
