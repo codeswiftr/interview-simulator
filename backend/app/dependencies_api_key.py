@@ -5,7 +5,7 @@ Provides authentication via API keys in addition to JWT tokens.
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -110,8 +110,8 @@ async def get_user_flexible(
         return user
 
     # Otherwise, treat as JWT token
-    from app.dependencies import get_current_user
     from forge_shared.auth.dependencies import get_jwt_auth
+
 
     auth = await get_jwt_auth()
 

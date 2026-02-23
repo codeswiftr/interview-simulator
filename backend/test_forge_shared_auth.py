@@ -12,11 +12,16 @@ def test_imports():
     """Test that all imports work."""
     print("Testing imports...")
     try:
-        from forge_shared.auth.jwt import JWTAuth, JWTConfig
-        from forge_shared.auth.models import ForgeTokenPayload, Permission, PlanTier, UserRole
+        from forge_shared.auth.jwt import JWTAuth, JWTConfig  # noqa: F401
+        from forge_shared.auth.models import (  # noqa: F401
+            ForgeTokenPayload,
+            Permission,
+            PlanTier,
+            UserRole,
+        )
 
-        from app.dependencies import get_current_user
-        from app.security import (
+        from app.dependencies import get_current_user  # noqa: F401
+        from app.security import (  # noqa: F401
             create_access_token,
             decode_token,
             get_jwt_auth_instance,

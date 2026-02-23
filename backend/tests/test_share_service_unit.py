@@ -4,7 +4,7 @@ Tests all methods with mocked AsyncSession. No database required.
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -46,7 +46,7 @@ class TestCreateShareLink:
 
         mock_session.exec.side_effect = [interview_result, existing_result]
 
-        share = await service.create_share_link(mock_session, interview_id, user_id)
+        await service.create_share_link(mock_session, interview_id, user_id)
         mock_session.add.assert_called_once()
         mock_session.commit.assert_awaited_once()
         mock_session.refresh.assert_awaited_once()
@@ -152,7 +152,7 @@ class TestGetSharedInterview:
             feedback_result, responses_result,
         ]
 
-        result = await service.get_shared_interview(mock_session, "valid-token")
+        await service.get_shared_interview(mock_session, "valid-token")
         assert share.view_count == 6
         mock_session.commit.assert_awaited()
 

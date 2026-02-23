@@ -4,7 +4,7 @@ Tests the monthly reset logic and quota enforcement.
 No database required.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -38,7 +38,7 @@ class TestMonthlyReset:
         session = AsyncMock()
 
         with patch("app.config.settings"):
-            result = await check_interview_quota(current_user=user, session=session)
+            await check_interview_quota(current_user=user, session=session)
 
         assert user.interviews_this_month == 0
         assert user.interviews_reset_at is not None
@@ -53,7 +53,7 @@ class TestMonthlyReset:
         session = AsyncMock()
 
         with patch("app.config.settings"):
-            result = await check_interview_quota(current_user=user, session=session)
+            await check_interview_quota(current_user=user, session=session)
 
         assert user.interviews_this_month == 2
 
@@ -65,7 +65,7 @@ class TestMonthlyReset:
         session = AsyncMock()
 
         with patch("app.config.settings"):
-            result = await check_interview_quota(current_user=user, session=session)
+            await check_interview_quota(current_user=user, session=session)
 
         assert user.interviews_this_month == 0
         assert user.interviews_reset_at is not None
@@ -78,7 +78,7 @@ class TestMonthlyReset:
         session = AsyncMock()
 
         with patch("app.config.settings"):
-            result = await check_interview_quota(current_user=user, session=session)
+            await check_interview_quota(current_user=user, session=session)
 
         assert user.interviews_this_month == 1
 

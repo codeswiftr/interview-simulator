@@ -4,7 +4,7 @@ Tests all methods with mocked AsyncSession. No database required.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

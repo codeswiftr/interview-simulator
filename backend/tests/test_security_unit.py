@@ -4,10 +4,7 @@ Tests password hashing, verification, migration, and token functions.
 No database required.
 """
 
-from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 from app.security import (
     BCRYPT_PREFIX,

@@ -32,7 +32,7 @@ class TestAuthEndpointsIntegration:
     @pytest.mark.asyncio
     async def test_register_creates_user_with_free_tier(self, client, db_session):
         """Test that new users are created with FREE tier by default.
-        
+
         Verifies the registration flow creates a user with the correct
         default subscription tier and initial interview counts.
         """
@@ -64,7 +64,7 @@ class TestAuthEndpointsIntegration:
     @pytest.mark.asyncio
     async def test_login_returns_valid_tokens(self, client, db_session):
         """Test that login returns both access and refresh tokens.
-        
+
         Verifies JWT token generation and refresh token storage
         in the database for token rotation support.
         """
@@ -100,7 +100,7 @@ class TestAuthEndpointsIntegration:
     @pytest.mark.asyncio
     async def test_token_refresh_rotates_refresh_token(self, client, db_session):
         """Test that token refresh performs proper token rotation.
-        
+
         Verifies that:
         1. Old refresh token is invalidated
         2. New refresh token is different from old
@@ -143,7 +143,7 @@ class TestAuthEndpointsIntegration:
     @pytest.mark.asyncio
     async def test_login_with_invalid_password_fails(self, client, db_session):
         """Test that login fails with incorrect password.
-        
+
         Verifies password verification prevents unauthorized access
         and doesn't leak information about email existence.
         """
@@ -169,7 +169,7 @@ class TestAuthEndpointsIntegration:
     @pytest.mark.asyncio
     async def test_refresh_with_expired_token_fails(self, client, db_session):
         """Test that refresh token fails when token is expired.
-        
+
         Verifies token expiration is properly enforced and
         the invalid token is cleared from the user record.
         """
@@ -214,7 +214,7 @@ class TestInterviewCreationFlow:
     @pytest.mark.asyncio
     async def test_create_interview_for_free_user(self, client, db_session):
         """Test that free users can create interviews within quota.
-        
+
         Verifies interview creation for free tier users respects
         the monthly interview limit (3 interviews/month).
         """
@@ -241,7 +241,7 @@ class TestInterviewCreationFlow:
     @pytest.mark.asyncio
     async def test_create_interview_increments_counter(self, client, db_session):
         """Test that creating an interview increments user's monthly counter.
-        
+
         Verifies the interviews_this_month counter is properly
         incremented and persisted.
         """
@@ -271,7 +271,7 @@ class TestInterviewCreationFlow:
     @pytest.mark.asyncio
     async def test_create_interview_with_questions(self, client, db_session):
         """Test that creating an interview assigns questions automatically.
-        
+
         Verifies the full interview creation flow including
         automatic question assignment from the question pool.
         """
@@ -315,7 +315,7 @@ class TestInterviewCreationFlow:
     @pytest.mark.asyncio
     async def test_create_interview_requires_authentication(self, client, db_session):
         """Test that creating an interview requires authentication.
-        
+
         Verifies that unauthenticated requests are rejected
         with appropriate 401/403 status.
         """
@@ -329,7 +329,7 @@ class TestInterviewCreationFlow:
     @pytest.mark.asyncio
     async def test_get_interview_requires_ownership(self, client, db_session):
         """Test that users can only access their own interviews.
-        
+
         Verifies interview access is properly scoped to the
         authenticated user's interviews.
         """
@@ -356,7 +356,7 @@ class TestInterviewCreationFlow:
     @pytest.mark.asyncio
     async def test_list_interviews_pagination(self, client, db_session):
         """Test listing interviews with pagination parameters.
-        
+
         Verifies limit and offset parameters work correctly
         for interview listing.
         """
@@ -399,7 +399,7 @@ class TestFeedbackGenerationFlow:
     @pytest.mark.asyncio
     async def test_get_interview_with_questions_and_responses(self, client, db_session):
         """Test retrieving an interview with its questions and responses.
-        
+
         Verifies the full interview state including assigned questions
         can be retrieved after responses are submitted.
         """
@@ -450,7 +450,7 @@ class TestFeedbackGenerationFlow:
     @pytest.mark.asyncio
     async def test_get_subscription_status(self, client, db_session):
         """Test retrieving subscription status for free tier user.
-        
+
         Verifies the subscription status endpoint returns correct
         tier information, limits, and usage counters.
         """
@@ -473,7 +473,7 @@ class TestFeedbackGenerationFlow:
     @pytest.mark.asyncio
     async def test_generate_feedback_requires_completed_interview(self, client, db_session):
         """Test that feedback generation requires a completed interview.
-        
+
         Verifies feedback cannot be generated for interviews
         that are still in progress.
         """
@@ -505,7 +505,7 @@ class TestFeedbackGenerationFlow:
     @pytest.mark.asyncio
     async def test_create_response_requires_in_progress_interview(self, client, db_session):
         """Test that responses can only be created for in-progress interviews.
-        
+
         Verifies the interview status check prevents responses
         on completed or scheduled interviews.
         """
@@ -539,7 +539,7 @@ class TestSubscriptionTierEnforcement:
     @pytest.mark.asyncio
     async def test_free_user_has_limited_interviews(self, client, db_session):
         """Test that free users have monthly interview limits.
-        
+
         Verifies the free tier quota enforcement is active
         and correctly tracks usage.
         """
@@ -572,7 +572,7 @@ class TestSubscriptionTierEnforcement:
     @pytest.mark.asyncio
     async def test_user_without_stripe_customer_can_create_checkout(self, client, db_session):
         """Test checkout session creation for user without Stripe customer ID.
-        
+
         Verifies the Stripe customer creation flow works when
         a user doesn't already have a customer ID.
         """
@@ -610,7 +610,7 @@ class TestSubscriptionTierEnforcement:
     @pytest.mark.asyncio
     async def test_stripe_checkout_fails_without_config(self, client, db_session):
         """Test checkout fails gracefully when Stripe is not configured.
-        
+
         Verifies proper error handling when Stripe API keys are missing.
         """
         token = await register_and_login(client)
@@ -630,7 +630,7 @@ class TestSubscriptionTierEnforcement:
     @pytest.mark.asyncio
     async def test_pro_user_has_unlimited_interviews(self, client, db_session):
         """Test that pro users have unlimited interview creation.
-        
+
         Verifies PRO tier bypasses the monthly interview limit
         and returns None for remaining_interviews.
         """
@@ -675,7 +675,7 @@ class TestInterviewStateTransitions:
     @pytest.mark.asyncio
     async def test_interview_state_transitions_scheduled_to_in_progress(self, client, db_session):
         """Test interview transitions from scheduled to in_progress on start.
-        
+
         Verifies the start endpoint properly updates interview status
         and initializes the interview session.
         """
@@ -713,7 +713,7 @@ class TestInterviewStateTransitions:
     @pytest.mark.asyncio
     async def test_cannot_start_completed_interview(self, client, db_session):
         """Test that completed interviews cannot be restarted.
-        
+
         Verifies the state machine prevents invalid transitions
         from completed back to in_progress.
         """
@@ -747,7 +747,7 @@ class TestAuthenticationEdgeCases:
     @pytest.mark.asyncio
     async def test_access_protected_endpoint_without_token(self, client, db_session):
         """Test that protected endpoints reject requests without token.
-        
+
         Verifies 401/403 is returned when Authorization header is missing.
         """
         response = await client.get("/api/v1/users/me")
@@ -756,7 +756,7 @@ class TestAuthenticationEdgeCases:
     @pytest.mark.asyncio
     async def test_access_protected_endpoint_with_invalid_token(self, client, db_session):
         """Test that protected endpoints reject requests with invalid token.
-        
+
         Verifies token validation rejects malformed or invalid tokens.
         """
         response = await client.get(
@@ -768,7 +768,7 @@ class TestAuthenticationEdgeCases:
     @pytest.mark.asyncio
     async def test_duplicate_email_registration_fails(self, client, db_session):
         """Test that registering with duplicate email fails.
-        
+
         Verifies email uniqueness constraint is enforced
         at the database level.
         """
@@ -796,7 +796,7 @@ class TestPasswordResetFlow:
     @pytest.mark.asyncio
     async def test_forgot_password_returns_success_for_existing_user(self, client, db_session):
         """Test that forgot password returns success even for existing users.
-        
+
         Verifies security best practice of not revealing whether
         the email exists in the system.
         """
@@ -821,7 +821,7 @@ class TestPasswordResetFlow:
     @pytest.mark.asyncio
     async def test_forgot_password_returns_success_for_nonexistent_email(self, client, db_session):
         """Test that forgot password returns success for non-existent email.
-        
+
         Verifies the endpoint doesn't leak information about
         which emails are registered.
         """
@@ -836,7 +836,7 @@ class TestPasswordResetFlow:
     @pytest.mark.asyncio
     async def test_reset_password_with_valid_token(self, client, db_session):
         """Test password reset with a valid token.
-        
+
         Verifies the complete reset flow works correctly
         and updates the user's password.
         """
@@ -900,7 +900,7 @@ class TestPasswordResetFlow:
     @pytest.mark.asyncio
     async def test_reset_password_with_expired_token_fails(self, client, db_session):
         """Test that expired reset tokens are rejected.
-        
+
         Verifies token expiration is properly checked.
         """
         from app.models.password_reset import PasswordResetToken

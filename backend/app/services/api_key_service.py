@@ -2,14 +2,13 @@
 
 import secrets
 from datetime import UTC, datetime
-from typing import cast
 from uuid import UUID
 
 import bcrypt
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.api_key import APIKey, APIKeyCreate, APIKeyScope, APIKeyUpdate
+from app.models.api_key import APIKey, APIKeyCreate, APIKeyUpdate
 from app.models.user import User
 
 

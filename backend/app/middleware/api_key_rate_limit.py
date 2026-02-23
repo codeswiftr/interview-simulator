@@ -10,8 +10,6 @@ from typing import Callable
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.services import api_key_service
-
 
 class APIKeyRateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limit API requests based on API key configuration.
@@ -93,9 +91,10 @@ class APIKeyRateLimitMiddleware(BaseHTTPMiddleware):
 
         # Get the API key from database to check rate limit
         # This is a simple implementation - for production, consider caching
+        from sqlmodel import select
+
         from app.db import SessionLocal
         from app.models.api_key import APIKey
-        from sqlmodel import select
 
         async with SessionLocal() as session:
             result = await session.exec(

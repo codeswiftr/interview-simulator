@@ -3,11 +3,10 @@
 Tests HTMLContentSanitizer and module-level functions. No database required.
 """
 
-import pytest
 
 from app.services.content_sanitizer import (
-    HTMLContentSanitizer,
     _DEFAULT_TAGS,
+    HTMLContentSanitizer,
     sanitize_html,
     sanitize_markdown,
     validate_content_type,

@@ -6,8 +6,6 @@ No database required.
 
 from uuid import uuid4
 
-import pytest
-
 from app.models.preparation import (
     AnswerPreparation,
     DeliveryAttempt,

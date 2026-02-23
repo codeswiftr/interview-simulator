@@ -6,13 +6,10 @@ No database required.
 """
 
 from unittest.mock import MagicMock
-from uuid import uuid4
 
 import pytest
 
-from app.models.feedback import AudioFeedback, ContentFeedback
-from app.models.interview import InterviewResponse, InterviewSession
-from app.models.question import Question
+from app.models.feedback import ContentFeedback
 from app.services.aggregation_service import AggregationService, _split_sessions
 from app.services.scoring_service import ScoringService
 

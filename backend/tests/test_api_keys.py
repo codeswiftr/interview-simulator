@@ -1,8 +1,9 @@
 """Tests for API key management."""
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
+import pytest
 
 from app.models.api_key import APIKeyScope
 from app.services import api_key_service
@@ -401,8 +402,8 @@ class TestAPIKeyEndpoints:
         self, client, auth_headers, session, test_user
     ):
         """Test that users can't access other users' API keys."""
-        from app.models.user import User
         from app.models.api_key import APIKeyCreate
+        from app.models.user import User
 
         # Create another user
         other_user = User(email="other@example.com", hashed_password="hashed")

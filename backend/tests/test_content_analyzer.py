@@ -502,7 +502,7 @@ def mock_openrouter_settings():
 @pytest.mark.asyncio
 async def test_analyze_with_openrouter_provider(mock_openrouter_settings, mock_anthropic_response):
     """Test analyzing with OpenRouter provider (Gemini 2.0 Flash).
-    
+
     Covers lines 186-192 in content_analyzer.py
     """
     analyzer = ContentAnalyzer()

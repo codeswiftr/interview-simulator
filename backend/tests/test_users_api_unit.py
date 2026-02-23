@@ -19,7 +19,7 @@ from app.api.users import (
     update_profile,
     verify_email,
 )
-from app.models.user import ExperienceLevel, PasswordChange, UserCreate, UserLogin, UserUpdate
+from app.models.user import ExperienceLevel, PasswordChange, UserCreate, UserUpdate
 
 
 def _mock_session():
@@ -79,7 +79,7 @@ class TestRegisterUser:
         payload = UserCreate(email="New@Example.com", password="ValidPass123!")
         request = MagicMock()
 
-        user = await register_user(payload, request, session)
+        await register_user(payload, request, session)
         session.add.assert_called_once()
         session.commit.assert_awaited_once()
         analytics.identify.assert_called_once()
@@ -182,7 +182,7 @@ class TestUpdateProfile:
         user = _mock_user()
         updates = UserUpdate(full_name="New Name")
 
-        result = await update_profile(updates, user, session)
+        await update_profile(updates, user, session)
         assert user.full_name == "New Name"
         session.commit.assert_awaited()
 
