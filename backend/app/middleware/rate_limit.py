@@ -335,9 +335,11 @@ class SecureRateLimitMiddleware(BaseHTTPMiddleware):
 
             # Check for suspicious activity
             if self.limiter.is_suspicious(request):
-                # Log suspicious activity
-                print(
-                    f"Suspicious activity detected from {self.limiter._get_trusted_client_ip(request)}"
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Suspicious activity detected from %s",
+                    self.limiter._get_trusted_client_ip(request),
                 )
 
             if not is_allowed:
