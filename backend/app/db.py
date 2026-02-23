@@ -18,6 +18,11 @@ engine = create_async_engine(
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
+def get_async_engine():
+    """Return the module-level async engine instance."""
+    return engine
+
+
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield an async database session."""
     async with SessionLocal() as session:

@@ -66,9 +66,7 @@ class ScoringService:
     ) -> float:
         """Calculate weighted technical score."""
         return round(
-            (technical_accuracy or 0) * 0.4
-            + (completeness or 0) * 0.35
-            + (relevance or 0) * 0.25,
+            (technical_accuracy or 0) * 0.4 + (completeness or 0) * 0.35 + (relevance or 0) * 0.25,
             1,
         )
 
@@ -98,10 +96,7 @@ class ScoringService:
             return None
 
         current = sum(recent_scores) / len(recent_scores)
-        if previous_scores:
-            previous = sum(previous_scores) / len(previous_scores)
-        else:
-            previous = current
+        previous = sum(previous_scores) / len(previous_scores) if previous_scores else current
 
         trend = self.calculate_trend(current, previous)
 

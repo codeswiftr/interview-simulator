@@ -36,6 +36,7 @@ async def test_rate_limit_exceeds_per_minute(client, db_session):
     # All should succeed (we're not hitting the limit)
     assert all(status == 200 for status in responses)
 
+
 @pytest.mark.asyncio
 async def test_rate_limit_headers_in_response(client, db_session):
     """Test that rate limit headers are included in responses."""
@@ -56,6 +57,7 @@ async def test_rate_limit_headers_in_response(client, db_session):
     # This test verifies headers are set when rate limiting is enabled
     assert resp.status_code in [200, 429]
 
+
 @pytest.mark.asyncio
 async def test_rate_limit_excluded_paths(client, db_session):
     """Test that excluded paths (health endpoints) are not rate limited."""
@@ -73,6 +75,7 @@ async def test_rate_limit_excluded_paths(client, db_session):
         for _ in range(10):
             resp = await client.get("/api/v1/health")
             assert resp.status_code == 200  # Should always succeed
+
 
 @pytest.mark.asyncio
 async def test_rate_limit_multiple_clients(client, db_session):
@@ -98,6 +101,7 @@ async def test_rate_limit_multiple_clients(client, db_session):
     # Both should succeed (different rate limit buckets)
     assert resp1.status_code == 200
     assert resp2.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_rate_limit_reset_after_window():
@@ -134,7 +138,9 @@ async def test_rate_limit_reset_after_window():
     allowed4, _ = limiter.is_allowed(request)
     assert allowed4 is True
 
+
 # Direct RateLimiter Unit Tests
+
 
 @pytest.mark.asyncio
 async def test_rate_limiter_allows_requests_within_limit():
@@ -161,6 +167,7 @@ async def test_rate_limiter_allows_requests_within_limit():
         assert allowed is True
         assert "X-RateLimit-Limit" in headers
         assert "X-RateLimit-Remaining" in headers
+
 
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_requests_over_minute_limit():
@@ -192,6 +199,7 @@ async def test_rate_limiter_blocks_requests_over_minute_limit():
     assert headers["X-RateLimit-Remaining"] == "0"
     assert "X-RateLimit-Reset" in headers
 
+
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_requests_over_hour_limit():
     """Test that SecureRateLimiter blocks requests exceeding per-hour limit."""
@@ -220,6 +228,7 @@ async def test_rate_limiter_blocks_requests_over_hour_limit():
     allowed, headers = limiter.is_allowed(request)
     assert allowed is False
     assert headers["X-RateLimit-Remaining"] == "0"
+
 
 @pytest.mark.asyncio
 async def test_rate_limiter_cleans_old_requests():
@@ -255,7 +264,9 @@ async def test_rate_limiter_cleans_old_requests():
     allowed, _ = limiter.is_allowed(request)
     assert allowed is True
 
+
 # SecureRateLimitMiddleware Tests
+
 
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_excludes_health_paths():
@@ -287,6 +298,7 @@ async def test_rate_limit_middleware_excludes_health_paths():
     response = await middleware.dispatch(request, call_next)
     assert call_next.called
     assert response.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_uses_forwarded_header():
@@ -322,6 +334,7 @@ async def test_rate_limit_middleware_uses_forwarded_header():
     ip = limiter._get_trusted_client_ip(request)
     assert ip == "1.1.1.1"  # Rightmost public IP
 
+
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_uses_client_host():
     """Test that limiter falls back to client host when no forwarded header."""
@@ -343,6 +356,7 @@ async def test_rate_limit_middleware_uses_client_host():
     ip = limiter._get_trusted_client_ip(request)
     assert ip == "192.0.2.50"
 
+
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_handles_no_client():
     """Test that limiter handles requests with no client info."""
@@ -363,6 +377,7 @@ async def test_rate_limit_middleware_handles_no_client():
     ip = limiter._get_trusted_client_ip(request)
     # Falls back to "unknown" when no client info (Task 2.2 remediation)
     assert ip == "unknown"
+
 
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_returns_429_with_headers():
@@ -406,6 +421,7 @@ async def test_rate_limit_middleware_returns_429_with_headers():
     assert "X-RateLimit-Limit" in response2.headers
     assert "detail" in response2.body.decode()
 
+
 @pytest.mark.asyncio
 async def test_rate_limit_middleware_adds_headers_to_success_response():
     """Test that middleware adds rate limit headers to successful responses."""
@@ -445,6 +461,7 @@ async def test_rate_limit_middleware_adds_headers_to_success_response():
 
 
 # Per-Endpoint Rate Limiting Tests
+
 
 @pytest.mark.asyncio
 async def test_login_endpoint_rate_limit(client, db_session):
@@ -627,4 +644,3 @@ async def test_endpoint_rate_limit_cleans_old_requests():
 
     # Should be allowed again (old requests cleaned)
     limiter.check(request)  # Should not raise
-

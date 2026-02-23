@@ -17,6 +17,7 @@ def test_settings_requires_critical_env_in_production(monkeypatch):
     # Clear cache to force reload
     Settings.model_config["env_file"] = None
     from app.config import get_settings
+
     get_settings.cache_clear()
 
     settings = get_settings()
@@ -36,6 +37,7 @@ def test_settings_allows_missing_optional_env_in_debug(monkeypatch):
 
     # Clear cache
     from app.config import get_settings
+
     get_settings.cache_clear()
 
     settings = get_settings()
@@ -45,4 +47,3 @@ def test_settings_allows_missing_optional_env_in_debug(monkeypatch):
         settings.validate_for_production()
     except ValueError:
         pytest.fail("validate_for_production() should not raise in debug mode")
-

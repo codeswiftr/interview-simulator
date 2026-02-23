@@ -46,14 +46,16 @@ def run_cli(cmd: list[str], capture_json: bool = True) -> dict[str, Any] | str:
                 raise Exception(f"{error_code}: {error_msg}")
             return response
         except json.JSONDecodeError as e:
-            raise Exception(f"Failed to parse JSON: {e}\nOutput: {result.stdout}")
+            raise Exception(f"Failed to parse JSON: {e}\nOutput: {result.stdout}") from e
     else:
         if result.returncode != 0:
             raise Exception(f"Command failed: {result.stderr}")
         return result.stdout
 
 
-def generate_question_bank(topics: list[str], questions_per_topic: int = 5) -> dict[str, list[dict]]:
+def generate_question_bank(
+    topics: list[str], questions_per_topic: int = 5
+) -> dict[str, list[dict]]:
     """Generate a question bank for multiple topics.
 
     Args:
@@ -72,14 +74,16 @@ def generate_question_bank(topics: list[str], questions_per_topic: int = 5) -> d
     for topic in topics:
         print(f"\nGenerating {questions_per_topic} questions for: {topic}")
 
-        response = run_cli([
-            "interview-sim",
-            "generate-questions",
-            "--topic",
-            topic,
-            "--count",
-            str(questions_per_topic),
-        ])
+        response = run_cli(
+            [
+                "interview-sim",
+                "generate-questions",
+                "--topic",
+                topic,
+                "--count",
+                str(questions_per_topic),
+            ]
+        )
 
         questions = response["data"]["questions"]
         question_bank[topic] = questions
@@ -110,16 +114,18 @@ def analyze_session_transcripts(session_ids: list[str]) -> dict[str, Any]:
 
     print(f"\nProcessing {len(session_ids)} sessions...")
 
-    response = run_cli([
-        "interview-sim",
-        "batch-feedback",
-        "--session-ids",
-        str(sessions_file),
-    ])
+    response = run_cli(
+        [
+            "interview-sim",
+            "batch-feedback",
+            "--session-ids",
+            str(sessions_file),
+        ]
+    )
 
     results = response["data"]
 
-    print(f"\n✓ Batch processing complete:")
+    print("\n✓ Batch processing complete:")
     print(f"  Total: {results['total']}")
     print(f"  Successful: {results['successful']}")
     print(f"  Failed: {results['failed']}")
@@ -159,17 +165,17 @@ def export_weekly_metrics(user_id: str | None = None) -> dict[str, Any]:
     metrics = response["data"]
 
     print(f"\nPeriod: {metrics['start_date'][:10]} to {metrics['end_date'][:10]}")
-    print(f"\nSession Metrics:")
+    print("\nSession Metrics:")
     print(f"  Total sessions: {metrics['sessions']['total']}")
     print(f"  Completed: {metrics['sessions']['completed']}")
     print(f"  Completion rate: {metrics['sessions']['completion_rate']}%")
 
-    print(f"\nPerformance:")
+    print("\nPerformance:")
     print(f"  Average score: {metrics['performance']['average_score']}/100")
     print(f"  Scored sessions: {metrics['performance']['scored_sessions']}")
 
     if metrics["category_breakdown"]:
-        print(f"\nCategory Breakdown:")
+        print("\nCategory Breakdown:")
         for category, count in metrics["category_breakdown"].items():
             print(f"  {category}: {count}")
 
@@ -194,14 +200,16 @@ def generate_weekly_report(output_dir: Path) -> Path:
 
     # 1. Export metrics
     metrics_file = output_dir / f"metrics_{timestamp}.json"
-    run_cli([
-        "interview-sim",
-        "export-metrics",
-        "--period",
-        "weekly",
-        "--output",
-        str(metrics_file),
-    ])
+    run_cli(
+        [
+            "interview-sim",
+            "export-metrics",
+            "--period",
+            "weekly",
+            "--output",
+            str(metrics_file),
+        ]
+    )
     print(f"\n✓ Metrics exported to: {metrics_file}")
 
     # 2. Generate summary report
@@ -242,7 +250,9 @@ def main():
     topics = ["leadership", "communication", "problem-solving"]
     question_bank = generate_question_bank(topics, questions_per_topic=3)
 
-    print(f"\n✓ Generated question bank with {sum(len(qs) for qs in question_bank.values())} total questions")
+    print(
+        f"\n✓ Generated question bank with {sum(len(qs) for qs in question_bank.values())} total questions"
+    )
 
     # Example 2: Export weekly metrics
     export_weekly_metrics()

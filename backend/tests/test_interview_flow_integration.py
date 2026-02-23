@@ -16,7 +16,7 @@ async def test_full_interview_flow(client, db_session):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Behavioral question {i+1}",
+                "content": f"Behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
             },
@@ -73,6 +73,7 @@ async def test_full_interview_flow(client, db_session):
     assert end_resp.status_code == 200
     assert end_resp.json()["status"] == "completed"
 
+
 @pytest.mark.asyncio
 async def test_quota_enforcement_integration(client, db_session):
     """Test that free user is blocked after exceeding quota.
@@ -86,7 +87,7 @@ async def test_quota_enforcement_integration(client, db_session):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Behavioral question {i+1}",
+                "content": f"Behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
             },
@@ -119,6 +120,7 @@ async def test_quota_enforcement_integration(client, db_session):
     assert detail["interviews_limit"] == 3
     assert "limit" in detail["message"].lower()
 
+
 @pytest.mark.asyncio
 async def test_audio_processing_integration(client, db_session, tmp_path):
     """Test audio upload → Transcription → Analysis → Feedback flow."""
@@ -129,7 +131,7 @@ async def test_audio_processing_integration(client, db_session, tmp_path):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Behavioral question {i+1}",
+                "content": f"Behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
             },
@@ -188,6 +190,7 @@ async def test_audio_processing_integration(client, db_session, tmp_path):
     # Note: Actual transcription/analysis happens in background
     # In a real test, we'd wait and verify the results
 
+
 @pytest.mark.asyncio
 async def test_company_targeted_interview(client, db_session):
     """Test that target_company filters questions by company_tags."""
@@ -199,7 +202,7 @@ async def test_company_targeted_interview(client, db_session):
         resp = await client.post(
             "/api/v1/questions",
             json={
-                "content": f"Google behavioral question {i+1}",
+                "content": f"Google behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
                 "company_tags": ["google"],
@@ -224,7 +227,7 @@ async def test_company_targeted_interview(client, db_session):
         resp = await client.post(
             "/api/v1/questions",
             json={
-                "content": f"General behavioral question {i+1}",
+                "content": f"General behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
                 "company_tags": [],
@@ -268,6 +271,7 @@ async def test_company_targeted_interview(client, db_session):
     for qid in question_ids:
         assert qid in google_questions
 
+
 @pytest.mark.asyncio
 async def test_company_targeted_interview_fallback(client, db_session):
     """Test fallback to general pool when not enough company-specific questions."""
@@ -291,7 +295,7 @@ async def test_company_targeted_interview_fallback(client, db_session):
         resp = await client.post(
             "/api/v1/questions",
             json={
-                "content": f"General behavioral question {i+1}",
+                "content": f"General behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
                 "company_tags": [],
@@ -333,6 +337,7 @@ async def test_company_targeted_interview_fallback(client, db_session):
     question_ids = [q["id"] for q in questions]
     assert google_question_id in question_ids
 
+
 @pytest.mark.asyncio
 async def test_interview_without_target_company(client, db_session):
     """Test interview without target_company uses general question pool."""
@@ -354,7 +359,7 @@ async def test_interview_without_target_company(client, db_session):
         await client.post(
             "/api/v1/questions",
             json={
-                "content": f"General behavioral question {i+1}",
+                "content": f"General behavioral question {i + 1}",
                 "category": "behavioral",
                 "difficulty": "medium",
                 "company_tags": [],
@@ -390,4 +395,3 @@ async def test_interview_without_target_company(client, db_session):
     assert questions_resp.status_code == 200
     questions = questions_resp.json()
     assert len(questions) == 2
-

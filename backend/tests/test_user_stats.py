@@ -21,6 +21,7 @@ async def test_get_my_stats_returns_counts_and_average_score(client, db_session)
 
     # Create some interview sessions
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
@@ -58,6 +59,7 @@ async def test_get_my_stats_returns_counts_and_average_score(client, db_session)
     assert data["average_score"] == 85.0  # (80 + 90) / 2
     assert data["total_practice_time_seconds"] == 900  # 300 + 600
 
+
 @pytest.mark.asyncio
 async def test_get_my_progress_returns_trend_and_recommendations(client, db_session):
     """Test that user progress endpoint returns trend data and practice recommendations."""
@@ -69,6 +71,7 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, db_sess
 
     # Create completed sessions with feedback
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
@@ -123,6 +126,7 @@ async def test_get_my_progress_returns_trend_and_recommendations(client, db_sess
     assert data["average_audio_score"] == 75.0  # (70 + 80) / 2
     assert data["average_content_score"] == 85.0  # (80 + 90) / 2
 
+
 @pytest.mark.asyncio
 async def test_progress_endpoints_require_auth(client):
     """Test that progress endpoints require authentication."""
@@ -134,6 +138,7 @@ async def test_progress_endpoints_require_auth(client):
 
     readiness_resp = await client.get("/api/v1/users/me/readiness-score")
     assert readiness_resp.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_readiness_score_returns_null_when_no_sessions(client, db_session):
@@ -149,6 +154,7 @@ async def test_readiness_score_returns_null_when_no_sessions(client, db_session)
     assert data["improvement_trend"] is None
     assert "message" in data
 
+
 @pytest.mark.asyncio
 async def test_readiness_score_calculates_from_last_5_sessions(client, db_session):
     """Test that readiness score calculates average from last 5 completed sessions."""
@@ -159,6 +165,7 @@ async def test_readiness_score_calculates_from_last_5_sessions(client, db_sessio
     user_id = user_resp.json()["id"]
 
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
@@ -182,6 +189,7 @@ async def test_readiness_score_calculates_from_last_5_sessions(client, db_sessio
     assert data["readiness_score"] == 80.0
     assert data["sessions_used"] == 5
 
+
 @pytest.mark.asyncio
 async def test_readiness_score_improvement_trend(client, db_session):
     """Test that improvement trend shows difference between newer and older sessions."""
@@ -192,6 +200,7 @@ async def test_readiness_score_improvement_trend(client, db_session):
     user_id = user_resp.json()["id"]
 
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
 
@@ -218,4 +227,3 @@ async def test_readiness_score_improvement_trend(client, db_session):
     data = resp.json()
     assert data["sessions_used"] == 4
     assert data["improvement_trend"] == 20.0  # 90 - 70
-

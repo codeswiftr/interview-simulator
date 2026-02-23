@@ -4,7 +4,6 @@ Tests file extension validation, file size checks, feature flags.
 No database or filesystem required.
 """
 
-
 from app.api.upload import (
     ALLOWED_EXTENSIONS,
     MAX_FILE_SIZE,

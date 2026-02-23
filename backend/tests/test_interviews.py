@@ -717,6 +717,7 @@ async def test_quick_practice_nonexistent_question_fails(client, db_session):
 
 # Epic 2 Phase 2: Additional Tests for Coverage
 
+
 @pytest.mark.asyncio
 async def test_create_interview_with_all_options(client, db_session):
     """Test POST /interviews with all optional fields."""
@@ -901,9 +902,7 @@ async def test_quota_enforcement_pro_tier_unlimited(client, db_session):
     token = await register_and_login(client, email="pro_tier@example.com")
 
     # Upgrade user to Pro tier
-    result = await db_session.exec(
-        select(User).where(User.email == "pro_tier@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "pro_tier@example.com"))
     user = result.first()
     user.subscription_tier = SubscriptionTier.PRO
     await db_session.commit()
@@ -1499,9 +1498,7 @@ async def test_list_interviews_with_all_statuses(client, db_session):
     token = await register_and_login(client, email="all_statuses@example.com")
 
     # Upgrade user to PRO to create more than 3 interviews
-    result = await db_session.exec(
-        select(User).where(User.email == "all_statuses@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "all_statuses@example.com"))
     user = result.first()
     user.subscription_tier = SubscriptionTier.PRO
     await db_session.commit()
@@ -1604,9 +1601,8 @@ async def test_quick_practice_increments_quota(client, db_session):
 
     # Get initial count
     from app.models.user import User
-    result = await db_session.exec(
-        select(User).where(User.email == "quick_quota@example.com")
-    )
+
+    result = await db_session.exec(select(User).where(User.email == "quick_quota@example.com"))
     user = result.first()
     initial_count = user.total_interviews
 

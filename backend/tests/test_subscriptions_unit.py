@@ -116,12 +116,14 @@ async def test_handle_checkout_completed_success(
         "user_id": str(test_user.id),
     }
 
-    with patch("app.api.subscriptions.get_stripe_client", return_value=mock_stripe_client):
-        with patch("app.api.subscriptions.get_analytics") as mock_analytics:
-            mock_analytics_instance = MagicMock()
-            mock_analytics.return_value = mock_analytics_instance
+    with (
+        patch("app.api.subscriptions.get_stripe_client", return_value=mock_stripe_client),
+        patch("app.api.subscriptions.get_analytics") as mock_analytics,
+    ):
+        mock_analytics_instance = MagicMock()
+        mock_analytics.return_value = mock_analytics_instance
 
-            await _handle_checkout_completed(session_obj, db_session)
+        await _handle_checkout_completed(session_obj, db_session)
 
     # Refresh user to get updated data
     await db_session.refresh(test_user)
@@ -295,12 +297,14 @@ async def test_handle_subscription_deleted_downgrades_to_free(
         "customer_id": "cus_123",
     }
 
-    with patch("app.api.subscriptions.get_stripe_client", return_value=mock_stripe_client):
-        with patch("app.api.subscriptions.get_analytics") as mock_analytics:
-            mock_analytics_instance = MagicMock()
-            mock_analytics.return_value = mock_analytics_instance
+    with (
+        patch("app.api.subscriptions.get_stripe_client", return_value=mock_stripe_client),
+        patch("app.api.subscriptions.get_analytics") as mock_analytics,
+    ):
+        mock_analytics_instance = MagicMock()
+        mock_analytics.return_value = mock_analytics_instance
 
-            await _handle_subscription_deleted(subscription_obj, db_session)
+        await _handle_subscription_deleted(subscription_obj, db_session)
 
     # Refresh user
     await db_session.refresh(test_user)

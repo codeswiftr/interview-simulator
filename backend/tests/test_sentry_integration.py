@@ -1,7 +1,6 @@
 """Tests for Sentry error monitoring integration."""
 
 
-
 class TestSentryConfiguration:
     """Tests for Sentry configuration in settings."""
 

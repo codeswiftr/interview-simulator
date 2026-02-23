@@ -25,12 +25,7 @@ async def test_webhook_without_signature_rejected(client, db_session):
     """Test that webhooks without Stripe signature are rejected."""
     webhook_payload = {
         "type": "checkout.session.completed",
-        "data": {
-            "object": {
-                "customer": "cus_test123",
-                "subscription": "sub_test123"
-            }
-        }
+        "data": {"object": {"customer": "cus_test123", "subscription": "sub_test123"}},
     }
 
     with patch("app.api.subscriptions.settings") as mock_settings:
@@ -51,12 +46,7 @@ async def test_webhook_with_invalid_signature_rejected(client, db_session):
     """Test that webhooks with invalid signatures are rejected."""
     webhook_payload = {
         "type": "checkout.session.completed",
-        "data": {
-            "object": {
-                "customer": "cus_test123",
-                "subscription": "sub_test123"
-            }
-        }
+        "data": {"object": {"customer": "cus_test123", "subscription": "sub_test123"}},
     }
 
     with patch("app.api.subscriptions.settings") as mock_settings:
@@ -65,7 +55,7 @@ async def test_webhook_with_invalid_signature_rejected(client, db_session):
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "invalid_signature"}
+            headers={"stripe-signature": "invalid_signature"},
         )
 
         assert response.status_code == 400
@@ -82,10 +72,7 @@ async def test_webhook_with_malformed_json_rejected(client, db_session):
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             content=b"not valid json{{{",
-            headers={
-                "stripe-signature": "t=123,v1=sig",
-                "content-type": "application/json"
-            }
+            headers={"stripe-signature": "t=123,v1=sig", "content-type": "application/json"},
         )
 
         assert response.status_code == 400
@@ -105,20 +92,22 @@ async def test_webhook_checkout_completed_missing_customer_id(client, db_session
             "object": {
                 # Missing customer field
                 "subscription": "sub_test123",
-                "metadata": {"user_id": user_id}
+                "metadata": {"user_id": user_id},
             }
-        }
+        },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
 
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Should return success but log warning (idempotent behavior)
@@ -135,20 +124,22 @@ async def test_webhook_checkout_completed_missing_user_id(client, db_session):
             "object": {
                 "customer": "cus_test123",
                 "subscription": "sub_test123",
-                "metadata": {}  # Missing user_id
+                "metadata": {},  # Missing user_id
             }
-        }
+        },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
 
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Should return success but not update any user
@@ -167,20 +158,22 @@ async def test_webhook_checkout_completed_nonexistent_user(client, db_session):
             "object": {
                 "customer": "cus_test123",
                 "subscription": "sub_test123",
-                "metadata": {"user_id": fake_user_id}
+                "metadata": {"user_id": fake_user_id},
             }
-        }
+        },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
 
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Should return success (idempotent) but log warning
@@ -196,6 +189,7 @@ async def test_webhook_subscription_deleted_downgrades_user(client, db_session):
 
     # First upgrade user to pro
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
     user.subscription_tier = SubscriptionTier.PRO
@@ -206,23 +200,20 @@ async def test_webhook_subscription_deleted_downgrades_user(client, db_session):
     webhook_payload = {
         "id": "evt_test123",
         "type": "customer.subscription.deleted",
-        "data": {
-            "object": {
-                "id": "sub_test123",
-                "customer": "cus_test123"
-            }
-        }
+        "data": {"object": {"id": "sub_test123", "customer": "cus_test123"}},
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
 
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         assert response.status_code == 200
@@ -241,6 +232,7 @@ async def test_webhook_subscription_updated_handles_trial_ending(client, db_sess
     user_id = user_resp.json()["id"]
 
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
     user.stripe_subscription_id = "sub_test123"
@@ -257,17 +249,21 @@ async def test_webhook_subscription_updated_handles_trial_ending(client, db_sess
                     "data": [
                         {
                             "price": {"id": "price_pro"},
-                            "current_period_end": int((datetime.now(UTC) + timedelta(days=30)).timestamp())
+                            "current_period_end": int(
+                                (datetime.now(UTC) + timedelta(days=30)).timestamp()
+                            ),
                         }
                     ]
-                }
+                },
             }
-        }
+        },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct, \
-         patch("app.api.subscriptions._get_tier_from_price") as mock_get_tier:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+        patch("app.api.subscriptions._get_tier_from_price") as mock_get_tier,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
         mock_get_tier.return_value = SubscriptionTier.PRO
@@ -275,7 +271,7 @@ async def test_webhook_subscription_updated_handles_trial_ending(client, db_sess
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         assert response.status_code == 200
@@ -291,18 +287,20 @@ async def test_webhook_handles_unknown_event_type_gracefully(client, db_session)
     webhook_payload = {
         "id": "evt_test123",
         "type": "customer.unknown.event",
-        "data": {"object": {}}
+        "data": {"object": {}},
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
 
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Should return success (idempotent)
@@ -323,14 +321,16 @@ async def test_webhook_stripe_api_error_returns_500_for_retry(client, db_session
             "object": {
                 "customer": "cus_test123",
                 "subscription": "sub_test123",
-                "metadata": {"user_id": user_id}
+                "metadata": {"user_id": user_id},
             }
-        }
+        },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct, \
-         patch("app.api.subscriptions.stripe.Subscription.retrieve") as mock_retrieve:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+        patch("app.api.subscriptions.stripe.Subscription.retrieve") as mock_retrieve,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
         # Simulate Stripe API error
@@ -339,7 +339,7 @@ async def test_webhook_stripe_api_error_returns_500_for_retry(client, db_session
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Should return 500 so Stripe retries
@@ -356,14 +356,16 @@ async def test_webhook_database_error_returns_500_for_retry(client, db_session):
             "object": {
                 "customer": "cus_test123",
                 "subscription": "sub_test123",
-                "metadata": {"user_id": str(uuid4())}
+                "metadata": {"user_id": str(uuid4())},
             }
-        }
+        },
     }
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct, \
-         patch("app.api.subscriptions.get_session") as mock_get_session:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+        patch("app.api.subscriptions.get_session") as mock_get_session,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
 
@@ -377,7 +379,7 @@ async def test_webhook_database_error_returns_500_for_retry(client, db_session):
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Should return 500 for retry
@@ -392,6 +394,7 @@ async def test_webhook_idempotency_duplicate_event_handled(client, db_session):
     user_id = user_resp.json()["id"]
 
     from sqlmodel import select
+
     result = await db_session.exec(select(User).where(User.id == user_id))
     user = result.first()
     user.stripe_customer_id = "cus_test123"
@@ -404,9 +407,9 @@ async def test_webhook_idempotency_duplicate_event_handled(client, db_session):
             "object": {
                 "customer": "cus_test123",
                 "subscription": "sub_test123",
-                "metadata": {"user_id": user_id}
+                "metadata": {"user_id": user_id},
             }
-        }
+        },
     }
 
     mock_subscription = MagicMock()
@@ -416,16 +419,18 @@ async def test_webhook_idempotency_duplicate_event_handled(client, db_session):
             "data": [
                 {
                     "price": {"id": "price_pro"},
-                    "current_period_end": int((datetime.now(UTC) + timedelta(days=30)).timestamp())
+                    "current_period_end": int((datetime.now(UTC) + timedelta(days=30)).timestamp()),
                 }
             ]
-        }
+        },
     }[key]
 
-    with patch("app.api.subscriptions.settings") as mock_settings, \
-         patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct, \
-         patch("app.api.subscriptions.stripe.Subscription.retrieve") as mock_retrieve, \
-         patch("app.api.subscriptions._get_tier_from_price") as mock_get_tier:
+    with (
+        patch("app.api.subscriptions.settings") as mock_settings,
+        patch("app.api.subscriptions.stripe.Webhook.construct_event") as mock_construct,
+        patch("app.api.subscriptions.stripe.Subscription.retrieve") as mock_retrieve,
+        patch("app.api.subscriptions._get_tier_from_price") as mock_get_tier,
+    ):
         mock_settings.stripe_webhook_secret = "whsec_test123"
         mock_construct.return_value = webhook_payload
         mock_retrieve.return_value = mock_subscription
@@ -435,13 +440,13 @@ async def test_webhook_idempotency_duplicate_event_handled(client, db_session):
         response1 = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         response2 = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         # Both should succeed (idempotent)
@@ -456,10 +461,7 @@ async def test_webhook_idempotency_duplicate_event_handled(client, db_session):
 @pytest.mark.asyncio
 async def test_webhook_without_configured_secret_returns_503(client, db_session):
     """Test that webhooks fail gracefully when webhook secret is not configured."""
-    webhook_payload = {
-        "type": "checkout.session.completed",
-        "data": {"object": {}}
-    }
+    webhook_payload = {"type": "checkout.session.completed", "data": {"object": {}}}
 
     with patch("app.api.subscriptions.settings") as mock_settings:
         mock_settings.stripe_webhook_secret = None  # Not configured
@@ -467,7 +469,7 @@ async def test_webhook_without_configured_secret_returns_503(client, db_session)
         response = await client.post(
             "/api/v1/subscriptions/webhook",
             json=webhook_payload,
-            headers={"stripe-signature": "valid_signature"}
+            headers={"stripe-signature": "valid_signature"},
         )
 
         assert response.status_code == 503

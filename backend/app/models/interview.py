@@ -1,7 +1,7 @@
 """Interview session models."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime
@@ -9,7 +9,7 @@ from sqlalchemy.types import JSON, String
 from sqlmodel import Field, SQLModel
 
 
-class InterviewType(str, Enum):
+class InterviewType(StrEnum):
     """Types of interview sessions."""
 
     BEHAVIORAL = "behavioral"
@@ -18,7 +18,7 @@ class InterviewType(str, Enum):
     MIXED = "mixed"
 
 
-class DifficultyLevel(str, Enum):
+class DifficultyLevel(StrEnum):
     """Question difficulty levels."""
 
     EASY = "easy"
@@ -27,7 +27,7 @@ class DifficultyLevel(str, Enum):
     MIXED = "mixed"
 
 
-class InterviewStatus(str, Enum):
+class InterviewStatus(StrEnum):
     """Interview session status."""
 
     SCHEDULED = "scheduled"
@@ -37,7 +37,7 @@ class InterviewStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class ProcessingStatus(str, Enum):
+class ProcessingStatus(StrEnum):
     """Response processing status."""
 
     PENDING = "pending"

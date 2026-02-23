@@ -196,8 +196,17 @@ class TestGenerateFeedback:
         mock_metrics.improvements = ["Add more examples"]
         mock_metrics.detailed_feedback = "Detailed analysis..."
 
-        with patch.object(feedback_service.content_analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics), \
-             patch.object(feedback_service.content_analyzer, "calculate_overall_score", return_value=80.0):
+        with (
+            patch.object(
+                feedback_service.content_analyzer,
+                "analyze",
+                new_callable=AsyncMock,
+                return_value=mock_metrics,
+            ),
+            patch.object(
+                feedback_service.content_analyzer, "calculate_overall_score", return_value=80.0
+            ),
+        ):
             result = await feedback_service.generate_feedback(mock_session, response_id)
 
         assert result is not None

@@ -166,7 +166,9 @@ class TestJWTRefreshTokenVerification:
 
     def test_none_stored_token_fails(self):
         """None stored token should be rejected."""
-        assert verify_refresh_token(None, "some-token", datetime.now(UTC) + timedelta(days=1)) is False
+        assert (
+            verify_refresh_token(None, "some-token", datetime.now(UTC) + timedelta(days=1)) is False
+        )
 
     def test_verify_refresh_token_none_stored_token_fails(self):
         """Test that None stored token fails verification."""

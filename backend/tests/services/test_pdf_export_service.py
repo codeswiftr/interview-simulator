@@ -172,7 +172,9 @@ class TestPDFExportServiceConversion:
         service = PDFExportService()
 
         with patch.object(service, "_html_to_pdf") as mock_convert:
-            mock_convert.side_effect = ValueError("PDF generation unavailable - WeasyPrint not installed")
+            mock_convert.side_effect = ValueError(
+                "PDF generation unavailable - WeasyPrint not installed"
+            )
 
             with pytest.raises(ValueError, match="WeasyPrint not installed"):
                 mock_convert("<html></html>")
@@ -231,6 +233,7 @@ class TestPDFExportServiceIntegration:
         mock_session = AsyncMock()
 
         call_count = 0
+
         async def mock_exec(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -319,6 +322,7 @@ class TestPDFExportServiceIntegration:
         mock_session = AsyncMock()
 
         call_count = 0
+
         async def mock_exec(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -361,6 +365,7 @@ class TestPDFExportServiceHtmlToPdf:
         service = PDFExportService()
 
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -368,9 +373,11 @@ class TestPDFExportServiceHtmlToPdf:
                 raise ImportError("No module named 'weasyprint'")
             return original_import(name, *args, **kwargs)
 
-        with patch.object(builtins, "__import__", mock_import):
-            with pytest.raises(ValueError, match="WeasyPrint not installed"):
-                service._html_to_pdf("<html><body>Test</body></html>")
+        with (
+            patch.object(builtins, "__import__", mock_import),
+            pytest.raises(ValueError, match="WeasyPrint not installed"),
+        ):
+            service._html_to_pdf("<html><body>Test</body></html>")
 
     def test_html_to_pdf_generation_error(self):
         """Should raise ValueError when PDF generation fails."""
@@ -384,6 +391,7 @@ class TestPDFExportServiceHtmlToPdf:
 
         with patch.dict("sys.modules", {"weasyprint": MagicMock(HTML=mock_html_class)}):
             import sys
+
             sys.modules["weasyprint"] = MagicMock(HTML=mock_html_class)
             try:
                 with pytest.raises(ValueError, match="PDF generation failed"):

@@ -186,19 +186,18 @@ class TestProcessResponseAudioAsync:
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_session.commit = AsyncMock()
 
-        with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(service, "_process_audio_with_retry", return_value=("transcript", {})), \
-             patch.object(service.audio_service, "save_audio_feedback", new_callable=AsyncMock), \
-             patch.object(service, "generate_content_feedback_async", new_callable=AsyncMock):
-
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(service, "_process_audio_with_retry", return_value=("transcript", {})),
+            patch.object(service.audio_service, "save_audio_feedback", new_callable=AsyncMock),
+            patch.object(service, "generate_content_feedback_async", new_callable=AsyncMock),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
             # Use the tmp_path as base for the audio path
             with patch("pathlib.Path.exists", return_value=True):
-                await service.process_response_audio_async(
-                    response_id, f"/uploads/audio/test.webm"
-                )
+                await service.process_response_audio_async(response_id, "/uploads/audio/test.webm")
 
     @pytest.mark.asyncio
     async def test_handles_processing_error(self, caplog, tmp_path):
@@ -222,11 +221,14 @@ class TestProcessResponseAudioAsync:
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_session.commit = AsyncMock()
 
-        with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(service, "_process_audio_with_retry", side_effect=Exception("Processing failed")), \
-             patch.object(service, "_update_processing_status_failed", new_callable=AsyncMock), \
-             caplog.at_level(logging.ERROR):
-
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                service, "_process_audio_with_retry", side_effect=Exception("Processing failed")
+            ),
+            patch.object(service, "_update_processing_status_failed", new_callable=AsyncMock),
+            caplog.at_level(logging.ERROR),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -278,12 +280,15 @@ class TestProcessAudioWithRetry:
                 raise ConnectionError("Transient error")
             return "transcript", {"metrics": "data"}
 
-        with patch.object(
-            service.audio_service,
-            "process_response_audio",
-            side_effect=mock_process,
-        ), patch("asyncio.sleep", new_callable=AsyncMock), \
-           caplog.at_level(logging.WARNING):
+        with (
+            patch.object(
+                service.audio_service,
+                "process_response_audio",
+                side_effect=mock_process,
+            ),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            caplog.at_level(logging.WARNING),
+        ):
             transcript, metrics = await service._process_audio_with_retry(
                 mock_session, response_id, "/path/to/audio.webm"
             )
@@ -299,17 +304,20 @@ class TestProcessAudioWithRetry:
         mock_session = AsyncMock()
         response_id = uuid4()
 
-        with patch.object(
-            service.audio_service,
-            "process_response_audio",
-            new_callable=AsyncMock,
-            side_effect=TimeoutError("Always times out"),
-        ), patch("asyncio.sleep", new_callable=AsyncMock), \
-           caplog.at_level(logging.ERROR):
-            with pytest.raises(TimeoutError):
-                await service._process_audio_with_retry(
-                    mock_session, response_id, "/path/to/audio.webm"
-                )
+        with (
+            patch.object(
+                service.audio_service,
+                "process_response_audio",
+                new_callable=AsyncMock,
+                side_effect=TimeoutError("Always times out"),
+            ),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(TimeoutError),
+        ):
+            await service._process_audio_with_retry(
+                mock_session, response_id, "/path/to/audio.webm"
+            )
 
         assert "failed after" in caplog.text.lower()
 
@@ -327,15 +335,18 @@ class TestProcessAudioWithRetry:
             call_count += 1
             raise TypeError("Permanent error")
 
-        with patch.object(
-            service.audio_service,
-            "process_response_audio",
-            side_effect=mock_process,
-        ), caplog.at_level(logging.ERROR):
-            with pytest.raises(TypeError, match="Permanent error"):
-                await service._process_audio_with_retry(
-                    mock_session, response_id, "/path/to/audio.webm"
-                )
+        with (
+            patch.object(
+                service.audio_service,
+                "process_response_audio",
+                side_effect=mock_process,
+            ),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(TypeError, match="Permanent error"),
+        ):
+            await service._process_audio_with_retry(
+                mock_session, response_id, "/path/to/audio.webm"
+            )
 
         # Should only be called once - no retries for permanent errors
         assert call_count == 1
@@ -353,16 +364,19 @@ class TestProcessAudioWithRetry:
         async def mock_sleep(delay):
             sleep_delays.append(delay)
 
-        with patch.object(
-            service.audio_service,
-            "process_response_audio",
-            new_callable=AsyncMock,
-            side_effect=[
-                ValueError("Retry 1"),
-                ValueError("Retry 2"),
-                ("transcript", {}),
-            ],
-        ), patch("asyncio.sleep", side_effect=mock_sleep):
+        with (
+            patch.object(
+                service.audio_service,
+                "process_response_audio",
+                new_callable=AsyncMock,
+                side_effect=[
+                    ValueError("Retry 1"),
+                    ValueError("Retry 2"),
+                    ("transcript", {}),
+                ],
+            ),
+            patch("asyncio.sleep", side_effect=mock_sleep),
+        ):
             await service._process_audio_with_retry(
                 mock_session, response_id, "/path/to/audio.webm"
             )
@@ -389,9 +403,7 @@ class TestUpdateProcessingStatusFailed:
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_session.commit = AsyncMock()
 
-        await service._update_processing_status_failed(
-            mock_session, response_id, "Test error"
-        )
+        await service._update_processing_status_failed(mock_session, response_id, "Test error")
 
         assert mock_response.processing_status == ProcessingStatus.FAILED
         assert mock_response.processing_error == "Test error"
@@ -412,9 +424,7 @@ class TestUpdateProcessingStatusFailed:
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_session.commit = AsyncMock()
 
-        await service._update_processing_status_failed(
-            mock_session, response_id, long_error
-        )
+        await service._update_processing_status_failed(mock_session, response_id, long_error)
 
         assert len(mock_response.processing_error) == 500
 
@@ -431,9 +441,7 @@ class TestUpdateProcessingStatusFailed:
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         # Should not raise
-        await service._update_processing_status_failed(
-            mock_session, response_id, "Error"
-        )
+        await service._update_processing_status_failed(mock_session, response_id, "Error")
 
     @pytest.mark.asyncio
     async def test_handles_commit_error(self, caplog):
@@ -451,9 +459,7 @@ class TestUpdateProcessingStatusFailed:
 
         with caplog.at_level(logging.ERROR):
             # Should not raise
-            await service._update_processing_status_failed(
-                mock_session, response_id, "Error"
-            )
+            await service._update_processing_status_failed(mock_session, response_id, "Error")
 
         assert "Failed to update" in caplog.text
 
@@ -474,8 +480,10 @@ class TestGenerateContentFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             caplog.at_level(logging.DEBUG):
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            caplog.at_level(logging.DEBUG),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -496,9 +504,13 @@ class TestGenerateContentFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result_none)
 
-        with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(service.feedback_service, "generate_feedback", new_callable=AsyncMock) as mock_generate, \
-             patch.object(service, "_maybe_generate_session_feedback", new_callable=AsyncMock):
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                service.feedback_service, "generate_feedback", new_callable=AsyncMock
+            ) as mock_generate,
+            patch.object(service, "_maybe_generate_session_feedback", new_callable=AsyncMock),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -518,13 +530,16 @@ class TestGenerateContentFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result_none)
 
-        with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(
-                 service.feedback_service,
-                 "generate_feedback",
-                 new_callable=AsyncMock,
-                 side_effect=ValueError("No transcript"),
-             ), caplog.at_level(logging.DEBUG):
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                service.feedback_service,
+                "generate_feedback",
+                new_callable=AsyncMock,
+                side_effect=ValueError("No transcript"),
+            ),
+            caplog.at_level(logging.DEBUG),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -544,13 +559,16 @@ class TestGenerateContentFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result_none)
 
-        with patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(
-                 service.feedback_service,
-                 "generate_feedback",
-                 new_callable=AsyncMock,
-                 side_effect=RuntimeError("Unexpected error"),
-             ), caplog.at_level(logging.ERROR):
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                service.feedback_service,
+                "generate_feedback",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("Unexpected error"),
+            ),
+            caplog.at_level(logging.ERROR),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -581,8 +599,10 @@ class TestGenerateSessionFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        with patch("asyncio.sleep", side_effect=mock_sleep), \
-             patch("app.services.background_tasks.SessionLocal") as mock_session_local:
+        with (
+            patch("asyncio.sleep", side_effect=mock_sleep),
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -603,9 +623,11 @@ class TestGenerateSessionFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        with patch("asyncio.sleep", new_callable=AsyncMock), \
-             patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             caplog.at_level(logging.DEBUG):
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            caplog.at_level(logging.DEBUG),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -628,14 +650,16 @@ class TestGenerateSessionFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result_none)
 
-        with patch("asyncio.sleep", new_callable=AsyncMock), \
-             patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(
-                 service.feedback_service,
-                 "generate_session_feedback",
-                 new_callable=AsyncMock,
-                 return_value=mock_feedback,
-             ) as mock_generate:
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                service.feedback_service,
+                "generate_session_feedback",
+                new_callable=AsyncMock,
+                return_value=mock_feedback,
+            ) as mock_generate,
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -655,14 +679,17 @@ class TestGenerateSessionFeedbackAsync:
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(return_value=mock_result_none)
 
-        with patch("asyncio.sleep", new_callable=AsyncMock), \
-             patch("app.services.background_tasks.SessionLocal") as mock_session_local, \
-             patch.object(
-                 service.feedback_service,
-                 "generate_session_feedback",
-                 new_callable=AsyncMock,
-                 side_effect=ValueError("No responses"),
-             ), caplog.at_level(logging.DEBUG):
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                service.feedback_service,
+                "generate_session_feedback",
+                new_callable=AsyncMock,
+                side_effect=ValueError("No responses"),
+            ),
+            caplog.at_level(logging.DEBUG),
+        ):
             mock_session_local.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_local.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -774,18 +801,18 @@ class TestProcessResponseAudioAsyncOuterException:
             raise Exception("Database connection pool exhausted")
 
         # Need to mock Path.exists() to return True so we get past the early returns
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("app.services.background_tasks.SessionLocal") as mock_session_local:
-                mock_ctx = MagicMock()
-                mock_ctx.__aenter__ = mock_aenter_error
-                mock_ctx.__aexit__ = AsyncMock()
-                mock_session_local.return_value = mock_ctx
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            caplog.at_level(logging.ERROR),
+        ):
+            mock_ctx = MagicMock()
+            mock_ctx.__aenter__ = mock_aenter_error
+            mock_ctx.__aexit__ = AsyncMock()
+            mock_session_local.return_value = mock_ctx
 
-                with caplog.at_level(logging.ERROR):
-                    # Use valid audio URL format to pass the first check
-                    await service.process_response_audio_async(
-                        response_id, "/uploads/audio/test.wav"
-                    )
+            # Use valid audio URL format to pass the first check
+            await service.process_response_audio_async(response_id, "/uploads/audio/test.wav")
 
         assert "Failed to start background audio processing" in caplog.text
         assert str(response_id) in caplog.text
@@ -1021,7 +1048,10 @@ class TestGenerateSessionFeedbackAsyncExceptions:
                 await service.generate_session_feedback_async(session_id)
 
         # Should log the inner exception
-        assert "Background session feedback generation failed" in caplog.text or "Failed to start" in caplog.text
+        assert (
+            "Background session feedback generation failed" in caplog.text
+            or "Failed to start" in caplog.text
+        )
 
     @pytest.mark.asyncio
     async def test_value_error_in_generate_session_feedback_async(self, caplog):

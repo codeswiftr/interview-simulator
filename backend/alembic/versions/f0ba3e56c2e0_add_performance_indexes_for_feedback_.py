@@ -14,6 +14,7 @@ Revises: 0012_add_interview_shares
 Create Date: 2026-02-01 12:32:24.156259+00:00
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -21,8 +22,8 @@ from collections.abc import Sequence
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'f0ba3e56c2e0'
-down_revision: str | None = '0012_add_interview_shares'
+revision: str = "f0ba3e56c2e0"
+down_revision: str | None = "0012_add_interview_shares"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -42,8 +43,7 @@ def upgrade() -> None:
     # Note: Using CREATE INDEX IF NOT EXISTS to avoid errors if the indexes
     # already exist from unique constraints
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_audio_feedback_response_id "
-        "ON audio_feedback (response_id)"
+        "CREATE INDEX IF NOT EXISTS idx_audio_feedback_response_id ON audio_feedback (response_id)"
     )
 
     op.execute(
@@ -53,8 +53,7 @@ def upgrade() -> None:
 
     # Also add for video_feedback for consistency
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_video_feedback_response_id "
-        "ON video_feedback (response_id)"
+        "CREATE INDEX IF NOT EXISTS idx_video_feedback_response_id ON video_feedback (response_id)"
     )
 
 

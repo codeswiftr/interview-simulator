@@ -77,12 +77,15 @@ async def sample_response(db_session, sample_interview_session):
 
 
 @pytest.mark.asyncio
-async def test_background_tasks_log_correlation_fields(caplog, sample_response, tmp_path, db_session):
+async def test_background_tasks_log_correlation_fields(
+    caplog, sample_response, tmp_path, db_session
+):
     """Test that background tasks log correlation fields (response_id, task_name)."""
     background_tasks = BackgroundTaskService()
 
     # Create audio file in the expected location
     from pathlib import Path
+
     audio_dir = Path("backend/uploads/audio")
     audio_dir.mkdir(parents=True, exist_ok=True)
     audio_file = audio_dir / "test_audio.webm"
@@ -100,15 +103,21 @@ async def test_background_tasks_log_correlation_fields(caplog, sample_response, 
     mock_metrics.overall_audio_score = 76.0
 
     try:
-        with caplog.at_level(logging.INFO), patch(
-            "app.services.background_tasks.SessionLocal"
-        ) as mock_session_local, patch.object(
-            background_tasks, "_process_audio_with_retry",
-            new_callable=AsyncMock, return_value=("Test transcript", mock_metrics),
-        ), patch.object(
-            background_tasks.audio_service, "save_audio_feedback", new_callable=AsyncMock
-        ), patch.object(
-            background_tasks, "generate_content_feedback_async", new_callable=AsyncMock
+        with (
+            caplog.at_level(logging.INFO),
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                background_tasks,
+                "_process_audio_with_retry",
+                new_callable=AsyncMock,
+                return_value=("Test transcript", mock_metrics),
+            ),
+            patch.object(
+                background_tasks.audio_service, "save_audio_feedback", new_callable=AsyncMock
+            ),
+            patch.object(
+                background_tasks, "generate_content_feedback_async", new_callable=AsyncMock
+            ),
         ):
             # Mock the session context manager to return our test response
             mock_session = MagicMock()
@@ -126,19 +135,34 @@ async def test_background_tasks_log_correlation_fields(caplog, sample_response, 
             await background_tasks.process_response_audio_async(sample_response.id, audio_url)
 
         # Check that logs contain correlation fields
-        log_records = [record for record in caplog.records if "Successfully processed audio" in record.getMessage()]
-        assert len(log_records) > 0, f"Expected log 'Successfully processed audio' not found. Available logs: {[r.getMessage() for r in caplog.records]}"
+        log_records = [
+            record
+            for record in caplog.records
+            if "Successfully processed audio" in record.getMessage()
+        ]
+        assert len(log_records) > 0, (
+            f"Expected log 'Successfully processed audio' not found. Available logs: {[r.getMessage() for r in caplog.records]}"
+        )
 
         # Verify correlation fields are present in log extra
         for record in log_records:
             # Check if fields are in extra dict or as attributes
             extra = getattr(record, "extra", {}) or {}
-            has_response_id = hasattr(record, "response_id") or "response_id" in extra or str(sample_response.id) in str(record.getMessage())
-            has_task_name = hasattr(record, "task_name") or "task_name" in extra or "process_response_audio" in str(record.getMessage())
+            has_response_id = (
+                hasattr(record, "response_id")
+                or "response_id" in extra
+                or str(sample_response.id) in str(record.getMessage())
+            )
+            has_task_name = (
+                hasattr(record, "task_name")
+                or "task_name" in extra
+                or "process_response_audio" in str(record.getMessage())
+            )
             # At least one correlation indicator should be present
-            assert has_response_id or has_task_name, f"Log record missing correlation fields: {record.getMessage()}"
+            assert has_response_id or has_task_name, (
+                f"Log record missing correlation fields: {record.getMessage()}"
+            )
     finally:
         # Cleanup
         if audio_file.exists():
             audio_file.unlink()
-

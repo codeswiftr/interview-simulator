@@ -75,9 +75,7 @@ async def test_analytics_generated_with_session_feedback(prepare_database, test_
 
     # Generate session feedback (should also trigger analytics)
     feedback_service = FeedbackService()
-    session_feedback = await feedback_service.generate_session_feedback(
-        test_session, session.id
-    )
+    session_feedback = await feedback_service.generate_session_feedback(test_session, session.id)
 
     # Verify session feedback was created
     assert session_feedback is not None
@@ -85,6 +83,7 @@ async def test_analytics_generated_with_session_feedback(prepare_database, test_
 
     # Verify analytics were also created
     from sqlmodel import select
+
     analytics_result = await test_session.exec(
         select(InterviewAnalytics).where(InterviewAnalytics.session_id == session.id)
     )
@@ -141,12 +140,11 @@ async def test_analytics_not_duplicated(prepare_database, test_session):
 
     # Try to generate analytics again
     from app.services.behavioral_analytics_service import BehavioralAnalyticsService
+
     analytics_service = BehavioralAnalyticsService()
 
     with pytest.raises(ValueError, match="Analytics already exist"):
-        await analytics_service.calculate_session_analytics(
-            test_session, session.id, user.id
-        )
+        await analytics_service.calculate_session_analytics(test_session, session.id, user.id)
 
 
 @requires_db
@@ -183,6 +181,7 @@ async def test_filler_word_detection_accuracy(prepare_database, test_session):
 
     # Generate analytics
     from app.services.behavioral_analytics_service import BehavioralAnalyticsService
+
     analytics_service = BehavioralAnalyticsService()
     analytics = await analytics_service.calculate_session_analytics(
         test_session, session.id, user.id
@@ -234,6 +233,7 @@ async def test_star_compliance_scoring(prepare_database, test_session):
 
     # Generate analytics
     from app.services.behavioral_analytics_service import BehavioralAnalyticsService
+
     analytics_service = BehavioralAnalyticsService()
     analytics = await analytics_service.calculate_session_analytics(
         test_session, session.id, user.id

@@ -85,9 +85,7 @@ async def test_assign_questions_mixed_interview_type_selects_from_all_categories
 
     # Verify questions come from different categories
     result = await db_session.exec(
-        select(Question).where(
-            Question.id.in_([iq.question_id for iq in assigned])
-        )
+        select(Question).where(Question.id.in_([iq.question_id for iq in assigned]))
     )
     assigned_questions = list(result.all())
 
@@ -218,9 +216,7 @@ async def test_assign_questions_no_difficulty_filter_selects_all_difficulties(
 
 # Test: Single question assignment
 @pytest.mark.asyncio
-async def test_assign_questions_single_question_count(
-    db_session, test_user, interview_service
-):
+async def test_assign_questions_single_question_count(db_session, test_user, interview_service):
     """Test assignment works with question_count=1."""
     question = Question(
         content="Single question",
@@ -248,9 +244,7 @@ async def test_assign_questions_single_question_count(
 
 # Test: Large question count
 @pytest.mark.asyncio
-async def test_assign_questions_large_question_count(
-    db_session, test_user, interview_service
-):
+async def test_assign_questions_large_question_count(db_session, test_user, interview_service):
     """Test assignment works with larger question counts."""
     # Create 10 questions
     questions = [
@@ -328,9 +322,7 @@ async def test_assign_questions_company_specific_with_mixed_difficulty(
 
 # Test: Exact match on question count
 @pytest.mark.asyncio
-async def test_assign_questions_exact_match_no_overflow(
-    db_session, test_user, interview_service
-):
+async def test_assign_questions_exact_match_no_overflow(db_session, test_user, interview_service):
     """Test assignment when exactly the right number of questions exist."""
     # Create exactly 3 questions
     questions = [
@@ -362,9 +354,7 @@ async def test_assign_questions_exact_match_no_overflow(
 
 # Test: Multiple calls to same interview (idempotency check)
 @pytest.mark.asyncio
-async def test_get_interview_questions_empty_session(
-    db_session, test_user, interview_service
-):
+async def test_get_interview_questions_empty_session(db_session, test_user, interview_service):
     """Test get_interview_questions returns empty list for session without questions."""
     interview = InterviewSession(
         user_id=test_user.id,
@@ -407,9 +397,7 @@ async def test_assign_specific_question_copies_time_limit_correctly(
     await db_session.commit()
     await db_session.refresh(interview)
 
-    assigned = await interview_service.assign_specific_question(
-        db_session, interview, question.id
-    )
+    assigned = await interview_service.assign_specific_question(db_session, interview, question.id)
 
     assert assigned.time_limit_seconds == 600
 

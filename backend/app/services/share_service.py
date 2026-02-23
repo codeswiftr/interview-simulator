@@ -71,9 +71,7 @@ class ShareService:
         logger.info(f"Created share link for interview {interview_id}")
         return share
 
-    async def get_shared_interview(
-        self, session: AsyncSession, token: str
-    ) -> SharedInterviewRead:
+    async def get_shared_interview(self, session: AsyncSession, token: str) -> SharedInterviewRead:
         """Get interview data via share token.
 
         Args:
@@ -112,17 +110,12 @@ class ShareService:
             raise ValueError("Interview not found")
 
         # Get user who created share (for display name)
-        user_result = await session.exec(
-            select(User).where(User.id == share.created_by)
-        )
+        user_result = await session.exec(select(User).where(User.id == share.created_by))
         user = user_result.first()
 
         # Get anonymous display name
         if user:
-            if user.full_name:
-                shared_by = user.full_name.split()[0]  # First name only
-            else:
-                shared_by = user.email.split("@")[0]  # Email prefix
+            shared_by = user.full_name.split()[0] if user.full_name else user.email.split("@")[0]
         else:
             shared_by = "A user"
 
@@ -152,16 +145,18 @@ class ShareService:
             )
             content_feedback = feedback_result.first()
 
-            response_data.append({
-                "question": question.content if question else "",
-                "category": question.category.value if question else "",
-                "difficulty": question.difficulty.value if question else "",
-                "transcript": response.transcript or "",
-                "duration_seconds": response.duration_seconds,
-                "score": content_feedback.overall_content_score if content_feedback else 0,
-                "strengths": content_feedback.strengths[:3] if content_feedback else [],
-                "improvements": content_feedback.improvements[:3] if content_feedback else [],
-            })
+            response_data.append(
+                {
+                    "question": question.content if question else "",
+                    "category": question.category.value if question else "",
+                    "difficulty": question.difficulty.value if question else "",
+                    "transcript": response.transcript or "",
+                    "duration_seconds": response.duration_seconds,
+                    "score": content_feedback.overall_content_score if content_feedback else 0,
+                    "strengths": content_feedback.strengths[:3] if content_feedback else [],
+                    "improvements": content_feedback.improvements[:3] if content_feedback else [],
+                }
+            )
 
         return SharedInterviewRead(
             interview_type=interview.interview_type.value,
@@ -174,9 +169,7 @@ class ShareService:
             responses=response_data,
         )
 
-    async def revoke_share_link(
-        self, session: AsyncSession, share_id: UUID, user_id: UUID
-    ) -> bool:
+    async def revoke_share_link(self, session: AsyncSession, share_id: UUID, user_id: UUID) -> bool:
         """Revoke (delete) a share link.
 
         Args:

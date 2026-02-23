@@ -38,12 +38,15 @@ async def test_user(db_session):
     await db_session.refresh(user)
     return user
 
+
 @pytest.fixture
 async def interview_service():
     """Provide an instance of InterviewService."""
     return InterviewService()
 
+
 # Test: Company-specific filtering (line 79)
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_with_company_tags_filters_correctly(
@@ -100,14 +103,13 @@ async def test_assign_questions_with_company_tags_filters_correctly(
 
     # Verify all assigned questions have 'google' in company_tags
     result = await db_session.exec(
-        select(Question).where(
-            Question.id.in_([iq.question_id for iq in assigned])
-        )
+        select(Question).where(Question.id.in_([iq.question_id for iq in assigned]))
     )
     assigned_questions = list(result.all())
 
     for question in assigned_questions:
         assert "google" in question.company_tags, f"Expected 'google' in {question.company_tags}"
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_company_filtering_case_insensitive(
@@ -143,7 +145,9 @@ async def test_assign_questions_company_filtering_case_insensitive(
     assert len(assigned) == 1
     assert assigned[0].question_id == microsoft_question.id
 
+
 # Test: Fallback pool logic (lines 88, 105)
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_fallback_to_general_pool_when_insufficient_company_questions(
@@ -181,10 +185,15 @@ async def test_assign_questions_fallback_to_general_pool_when_insufficient_compa
         difficulty=Difficulty.MEDIUM,
     )
 
-    db_session.add_all([
-        google_question1, google_question2,
-        general_question1, general_question2, general_question3
-    ])
+    db_session.add_all(
+        [
+            google_question1,
+            google_question2,
+            general_question1,
+            general_question2,
+            general_question3,
+        ]
+    )
     await db_session.commit()
 
     # Request 5 questions for Google (but only 2 exist with Google tag)
@@ -209,6 +218,7 @@ async def test_assign_questions_fallback_to_general_pool_when_insufficient_compa
     assigned_ids = [iq.question_id for iq in assigned]
     assert google_question1.id in assigned_ids
     assert google_question2.id in assigned_ids
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_fallback_excludes_already_selected_questions(
@@ -258,7 +268,9 @@ async def test_assign_questions_fallback_excludes_already_selected_questions(
     assigned_ids = [iq.question_id for iq in assigned]
     assert len(assigned_ids) == len(set(assigned_ids)), "Duplicate questions assigned"
 
+
 # Test: Error handling for insufficient questions (lines 110-119)
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_raises_error_when_not_enough_questions_available(
@@ -301,6 +313,7 @@ async def test_assign_questions_raises_error_when_not_enough_questions_available
     assert "category 'technical'" in error_message
     assert "difficulty 'hard'" in error_message
 
+
 @pytest.mark.asyncio
 async def test_assign_questions_error_message_includes_category_for_specific_type(
     db_session, test_user, interview_service
@@ -326,6 +339,7 @@ async def test_assign_questions_error_message_includes_category_for_specific_typ
     error_message = str(exc_info.value)
     assert "category 'behavioral'" in error_message
     assert "Requested 3, found 0" in error_message
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_error_message_excludes_difficulty_for_mixed(
@@ -353,6 +367,7 @@ async def test_assign_questions_error_message_excludes_difficulty_for_mixed(
     assert "difficulty" not in error_message.lower()
     assert "category 'system_design'" in error_message
 
+
 @pytest.mark.asyncio
 async def test_assign_questions_error_message_shows_mixed_category_for_mixed_interview(
     db_session, test_user, interview_service
@@ -377,7 +392,9 @@ async def test_assign_questions_error_message_shows_mixed_category_for_mixed_int
     error_message = str(exc_info.value)
     assert "category 'mixed'" in error_message
 
+
 # Test: InterviewQuestion record creation (lines 126-135)
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_creates_interview_question_records_with_correct_order(
@@ -414,6 +431,7 @@ async def test_assign_questions_creates_interview_question_records_with_correct_
     # Verify order starts at 1 and is sequential
     orders = sorted([iq.order for iq in assigned])
     assert orders == [1, 2, 3, 4, 5]
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_sets_time_limit_from_question(
@@ -453,11 +471,10 @@ async def test_assign_questions_sets_time_limit_from_question(
 
     # Verify time limits are set correctly
     for iq in assigned:
-        result = await db_session.exec(
-            select(Question).where(Question.id == iq.question_id)
-        )
+        result = await db_session.exec(select(Question).where(Question.id == iq.question_id))
         question = result.first()
         assert iq.time_limit_seconds == question.expected_duration_seconds
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_creates_persisted_records_with_ids(
@@ -497,7 +514,9 @@ async def test_assign_questions_creates_persisted_records_with_ids(
         assert iq.session_id == interview.id
         assert iq.question_id is not None
 
+
 # Test: Additional edge cases
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_respects_difficulty_filter_in_company_pool(
@@ -538,6 +557,7 @@ async def test_assign_questions_respects_difficulty_filter_in_company_pool(
 
     assert len(assigned) == 1
     assert assigned[0].question_id == easy_google.id
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_respects_difficulty_filter_in_general_pool(
@@ -587,6 +607,7 @@ async def test_assign_questions_respects_difficulty_filter_in_general_pool(
     assert general_medium.id in assigned_ids
     assert general_hard.id not in assigned_ids
 
+
 @pytest.mark.asyncio
 async def test_assign_questions_only_selects_active_questions(
     db_session, test_user, interview_service
@@ -625,6 +646,7 @@ async def test_assign_questions_only_selects_active_questions(
 
     assert len(assigned) == 1
     assert assigned[0].question_id == active_question.id
+
 
 @pytest.mark.asyncio
 async def test_get_interview_questions_returns_ordered_list(
@@ -681,6 +703,7 @@ async def test_get_interview_questions_returns_ordered_list(
     assert result[1].id == questions[0].id  # order=2
     assert result[2].id == questions[1].id  # order=3
 
+
 @pytest.mark.asyncio
 async def test_has_assigned_questions_returns_true_when_questions_exist(
     db_session, test_user, interview_service
@@ -717,6 +740,7 @@ async def test_has_assigned_questions_returns_true_when_questions_exist(
     result = await interview_service.has_assigned_questions(db_session, interview.id)
     assert result is True
 
+
 @pytest.mark.asyncio
 async def test_has_assigned_questions_returns_false_when_no_questions(
     db_session, test_user, interview_service
@@ -735,6 +759,7 @@ async def test_has_assigned_questions_returns_false_when_no_questions(
     # Check
     result = await interview_service.has_assigned_questions(db_session, interview.id)
     assert result is False
+
 
 @pytest.mark.asyncio
 async def test_assign_specific_question_creates_interview_question(
@@ -763,14 +788,13 @@ async def test_assign_specific_question_creates_interview_question(
     await db_session.refresh(interview)
 
     # Assign specific question
-    result = await interview_service.assign_specific_question(
-        db_session, interview, question.id
-    )
+    result = await interview_service.assign_specific_question(db_session, interview, question.id)
 
     assert result.session_id == interview.id
     assert result.question_id == question.id
     assert result.order == 1
     assert result.time_limit_seconds == 180
+
 
 @pytest.mark.asyncio
 async def test_assign_specific_question_raises_error_for_inactive_question(
@@ -800,11 +824,10 @@ async def test_assign_specific_question_raises_error_for_inactive_question(
 
     # Try to assign inactive question
     with pytest.raises(ValueError) as exc_info:
-        await interview_service.assign_specific_question(
-            db_session, interview, question.id
-        )
+        await interview_service.assign_specific_question(db_session, interview, question.id)
 
     assert "not found or is inactive" in str(exc_info.value)
+
 
 @pytest.mark.asyncio
 async def test_assign_specific_question_raises_error_for_nonexistent_question(
@@ -824,8 +847,6 @@ async def test_assign_specific_question_raises_error_for_nonexistent_question(
     # Try to assign non-existent question
     fake_id = uuid4()
     with pytest.raises(ValueError) as exc_info:
-        await interview_service.assign_specific_question(
-            db_session, interview, fake_id
-        )
+        await interview_service.assign_specific_question(db_session, interview, fake_id)
 
     assert "not found or is inactive" in str(exc_info.value)

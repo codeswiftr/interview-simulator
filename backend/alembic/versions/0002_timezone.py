@@ -18,7 +18,13 @@ def upgrade() -> None:
     tables_columns = {
         "users": ["subscription_expires_at", "created_at", "updated_at", "last_login_at"],
         "questions": ["created_at", "updated_at"],
-        "interview_sessions": ["scheduled_at", "started_at", "ended_at", "created_at", "updated_at"],
+        "interview_sessions": [
+            "scheduled_at",
+            "started_at",
+            "ended_at",
+            "created_at",
+            "updated_at",
+        ],
         "interview_questions": ["asked_at"],
         "interview_responses": ["created_at"],
         "audio_feedback": ["created_at"],
@@ -40,7 +46,13 @@ def downgrade() -> None:
     tables_columns = {
         "users": ["subscription_expires_at", "created_at", "updated_at", "last_login_at"],
         "questions": ["created_at", "updated_at"],
-        "interview_sessions": ["scheduled_at", "started_at", "ended_at", "created_at", "updated_at"],
+        "interview_sessions": [
+            "scheduled_at",
+            "started_at",
+            "ended_at",
+            "created_at",
+            "updated_at",
+        ],
         "interview_questions": ["asked_at"],
         "interview_responses": ["created_at"],
         "audio_feedback": ["created_at"],

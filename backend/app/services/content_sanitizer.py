@@ -9,8 +9,23 @@ from html_sanitizer import Sanitizer
 
 # Default safe tags for sanitization
 _DEFAULT_TAGS = {
-    "a", "abbr", "b", "blockquote", "br", "code", "em",
-    "h1", "h2", "h3", "i", "li", "ol", "p", "pre", "strong", "ul",
+    "a",
+    "abbr",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "i",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "strong",
+    "ul",
 }
 
 # Default sanitizer config
@@ -69,7 +84,7 @@ class HTMLContentSanitizer:
         if not content:
             return ""
         # Simple tag stripping
-        return re.sub(r'<[^>]+>', '', content)
+        return re.sub(r"<[^>]+>", "", content)
 
 
 def sanitize_html(content: str) -> str:

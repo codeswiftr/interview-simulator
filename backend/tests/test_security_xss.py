@@ -8,7 +8,6 @@ Tests for:
 - Content-Type enforcement
 """
 
-
 import pytest
 
 from app.services.content_sanitizer import (
@@ -143,13 +142,13 @@ class TestHTMLSanitization:
 
         # Check allowed tags list exists
         allowed_tags = sanitizer.allowed_tags
-        safe_tags = {'p', 'h1', 'h2', 'h3', 'strong', 'em', 'ul', 'ol', 'li'}
+        safe_tags = {"p", "h1", "h2", "h3", "strong", "em", "ul", "ol", "li"}
 
         for tag in safe_tags:
             assert tag in allowed_tags
 
         # Check dangerous tags are not allowed
-        dangerous_tags = {'script', 'iframe', 'object', 'embed', 'form', 'input', 'button'}
+        dangerous_tags = {"script", "iframe", "object", "embed", "form", "input", "button"}
         for tag in dangerous_tags:
             assert tag not in allowed_tags
 
@@ -219,7 +218,7 @@ class TestContentValidation:
         response = await client.post(
             "/api/v1/users/login",
             data="email=test@example.com&password=password123",
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
 
         # FastAPI's OAuth2 form endpoint accepts form data, but body parsing fails for JSON endpoints
@@ -230,8 +229,7 @@ class TestContentValidation:
     async def test_content_type_sniffing_prevention(self, client):
         """Test content type sniffing is prevented."""
         response = await client.get(
-            "/api/v1/health",
-            headers={"Accept": "text/html,application/xhtml+xml,application/xml"}
+            "/api/v1/health", headers={"Accept": "text/html,application/xhtml+xml,application/xml"}
         )
 
         # Should not return HTML
@@ -319,7 +317,7 @@ class TestTemplateSecurity:
         }
 
         # HTML escaping should prevent XSS
-        for key, value in dangerous_context.items():
+        for _key, value in dangerous_context.items():
             escaped = escape(value)
             assert "<script>" not in escaped
             assert "&lt;" in escaped
@@ -378,7 +376,7 @@ class TestXSSIntegrationTests:
             "interview_id": "test-id",
             "rating": 5,
             "content": "<script>steal_token()</script> Great interview!",
-            "improvements": ["<img src=x onerror=alert('XSS')>Add more questions"]
+            "improvements": ["<img src=x onerror=alert('XSS')>Add more questions"],
         }
 
         # Submit feedback - expect rejection without auth
@@ -395,10 +393,7 @@ class TestXSSIntegrationTests:
         """Test questions endpoint handles XSS in query params."""
         xss_query = "<script>alert('XSS')</script>"
 
-        response = await client.get(
-            "/api/v1/questions/",
-            params={"category": xss_query}
-        )
+        response = await client.get("/api/v1/questions/", params={"category": xss_query})
 
         # Should handle gracefully - returns list or error, not XSS in response
         assert response.status_code in [200, 400, 401, 404, 422]
@@ -438,7 +433,7 @@ class TestXSSEdgeCases:
         ]
 
         for xss in unicode_xss:
-            decoded = xss.encode().decode('unicode-escape')
+            decoded = xss.encode().decode("unicode-escape")
             sanitized = sanitize_html(decoded)
 
             # Should handle encoded scripts

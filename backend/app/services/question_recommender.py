@@ -59,9 +59,7 @@ async def recommend_next_questions(
         return []
 
     # 1. Get same-topic questions (2)
-    same_topic = await _get_same_topic_questions(
-        session, current_question, excluded_ids, limit=2
-    )
+    same_topic = await _get_same_topic_questions(session, current_question, excluded_ids, limit=2)
     recommendations.extend([str(q.id) for q in same_topic])
     excluded_ids.update(q.id for q in same_topic)
 
@@ -116,7 +114,7 @@ async def _get_same_topic_questions(
     if current_question.topic_tags:
         query = (
             select(Question)
-            .where(Question.is_active == True)
+            .where(Question.is_active.is_(True))
             .where(Question.id.notin_(exclude_ids))
             .where(Question.category == current_question.category)
             .where(Question.topic_tags.overlap(current_question.topic_tags))
@@ -130,7 +128,7 @@ async def _get_same_topic_questions(
     # Fall back to same category
     query = (
         select(Question)
-        .where(Question.is_active == True)
+        .where(Question.is_active.is_(True))
         .where(Question.id.notin_(exclude_ids))
         .where(Question.category == current_question.category)
         .limit(limit)
@@ -172,7 +170,7 @@ async def _get_questions_by_difficulty(
     """Get questions of a specific difficulty in a category."""
     query = (
         select(Question)
-        .where(Question.is_active == True)
+        .where(Question.is_active.is_(True))
         .where(Question.id.notin_(exclude_ids))
         .where(Question.category == category)
         .where(Question.difficulty == difficulty)
@@ -229,7 +227,7 @@ async def _get_questions_by_topics(
 
     query = (
         select(Question)
-        .where(Question.is_active == True)
+        .where(Question.is_active.is_(True))
         .where(Question.id.notin_(exclude_ids))
         .where(Question.topic_tags.overlap(topics))
         .limit(limit)
@@ -263,7 +261,7 @@ async def _get_popular_questions(
     """
     query = (
         select(Question)
-        .where(Question.is_active == True)
+        .where(Question.is_active.is_(True))
         .where(Question.id.notin_(exclude_ids))
         .order_by(Question.created_at.desc())  # Most recent as proxy for popular
         .limit(limit)

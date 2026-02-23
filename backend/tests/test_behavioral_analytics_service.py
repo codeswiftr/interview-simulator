@@ -179,7 +179,9 @@ async def test_calculate_session_analytics(prepare_database, test_session, analy
 
 @requires_db
 @pytest.mark.asyncio
-async def test_calculate_session_analytics_no_responses(prepare_database, test_session, analytics_service):
+async def test_calculate_session_analytics_no_responses(
+    prepare_database, test_session, analytics_service
+):
     """Test analytics calculation with no responses raises error."""
     user = User(
         email="test@example.com",
@@ -199,14 +201,14 @@ async def test_calculate_session_analytics_no_responses(prepare_database, test_s
     await test_session.refresh(session)
 
     with pytest.raises(ValueError, match="No responses found"):
-        await analytics_service.calculate_session_analytics(
-            test_session, session.id, user.id
-        )
+        await analytics_service.calculate_session_analytics(test_session, session.id, user.id)
 
 
 @requires_db
 @pytest.mark.asyncio
-async def test_calculate_session_analytics_already_exists(prepare_database, test_session, analytics_service):
+async def test_calculate_session_analytics_already_exists(
+    prepare_database, test_session, analytics_service
+):
     """Test analytics calculation when analytics already exist raises error."""
     user = User(
         email="test@example.com",
@@ -242,9 +244,7 @@ async def test_calculate_session_analytics_already_exists(prepare_database, test
     await test_session.commit()
 
     with pytest.raises(ValueError, match="Analytics already exist"):
-        await analytics_service.calculate_session_analytics(
-            test_session, session.id, user.id
-        )
+        await analytics_service.calculate_session_analytics(test_session, session.id, user.id)
 
 
 @requires_db

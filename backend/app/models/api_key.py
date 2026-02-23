@@ -4,7 +4,7 @@ Provides secure API key management for programmatic access to the platform.
 """
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -13,10 +13,12 @@ from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
 # Constrained string types
-StrictKeyName = Annotated[str, StringConstraints(min_length=1, max_length=100, strip_whitespace=True)]
+StrictKeyName = Annotated[
+    str, StringConstraints(min_length=1, max_length=100, strip_whitespace=True)
+]
 
 
-class APIKeyScope(str, Enum):
+class APIKeyScope(StrEnum):
     """Scopes for API key permissions."""
 
     READ = "read"  # Read-only access to user's data
@@ -93,10 +95,7 @@ class APIKey(SQLModel, table=True):
         if not self.is_active:
             return False
 
-        if self.expires_at and datetime.now(UTC) > self.expires_at:
-            return False
-
-        return True
+        return not (self.expires_at and datetime.now(UTC) > self.expires_at)
 
 
 class APIKeyCreate(SQLModel):

@@ -11,9 +11,7 @@ from app.main import app
 @pytest.fixture
 async def client():
     """Create async test client."""
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
@@ -167,6 +165,7 @@ class TestCheckRedis:
             mock_settings.redis_url = "redis://localhost:6379"
 
             import builtins
+
             original_import = builtins.__import__
 
             def mock_import(name, *args, **kwargs):
@@ -216,7 +215,9 @@ class TestCheckAIServices:
             mock_settings.openai_api_key = None
             mock_settings.anthropic_api_key = ""
             # Remove openrouter_api_key attribute
-            delattr(mock_settings, "openrouter_api_key") if hasattr(mock_settings, "openrouter_api_key") else None
+            delattr(mock_settings, "openrouter_api_key") if hasattr(
+                mock_settings, "openrouter_api_key"
+            ) else None
 
             result = check_ai_services()
 

@@ -18,7 +18,7 @@ def generate_webhook_payload(event_type, data):
         "id": f"evt_{uuid4().hex}",
         "object": "event",
         "type": event_type,
-        "data": {"object": data}
+        "data": {"object": data},
     }
 
 
@@ -31,15 +31,15 @@ def webhook_secret():
 @pytest.fixture
 def mock_signature(webhook_secret):
     """Generate valid webhook signature."""
+
     def _sign(payload):
         timestamp = "1234567890"
         signed_payload = f"{timestamp}.{json.dumps(payload)}"
         signature = hmac.new(
-            webhook_secret.encode(),
-            signed_payload.encode(),
-            hashlib.sha256
+            webhook_secret.encode(), signed_payload.encode(), hashlib.sha256
         ).hexdigest()
         return f"t={timestamp},v1={signature}"
+
     return _sign
 
 
@@ -49,17 +49,20 @@ class TestStripeWebhook:
     @pytest.mark.asyncio
     async def test_webhook_checkout_completed(self, client, mock_signature):
         """Should handle checkout.session.completed event."""
-        payload = generate_webhook_payload("checkout.session.completed", {
-            "id": "cs_test_123",
-            "customer": "cus_test_123",
-            "subscription": "sub_test_123",
-            "metadata": {"user_id": "test-user-id"}
-        })
+        payload = generate_webhook_payload(
+            "checkout.session.completed",
+            {
+                "id": "cs_test_123",
+                "customer": "cus_test_123",
+                "subscription": "sub_test_123",
+                "metadata": {"user_id": "test-user-id"},
+            },
+        )
 
         response = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
 
         assert response.status_code == 200
@@ -67,17 +70,20 @@ class TestStripeWebhook:
     @pytest.mark.asyncio
     async def test_webhook_subscription_updated(self, client, mock_signature):
         """Should handle customer.subscription.updated event."""
-        payload = generate_webhook_payload("customer.subscription.updated", {
-            "id": "sub_test_123",
-            "customer": "cus_test_123",
-            "status": "active",
-            "current_period_end": 1234567890
-        })
+        payload = generate_webhook_payload(
+            "customer.subscription.updated",
+            {
+                "id": "sub_test_123",
+                "customer": "cus_test_123",
+                "status": "active",
+                "current_period_end": 1234567890,
+            },
+        )
 
         response = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
 
         assert response.status_code == 200
@@ -85,16 +91,15 @@ class TestStripeWebhook:
     @pytest.mark.asyncio
     async def test_webhook_subscription_deleted(self, client, mock_signature):
         """Should handle customer.subscription.deleted event."""
-        payload = generate_webhook_payload("customer.subscription.deleted", {
-            "id": "sub_test_123",
-            "customer": "cus_test_123",
-            "status": "canceled"
-        })
+        payload = generate_webhook_payload(
+            "customer.subscription.deleted",
+            {"id": "sub_test_123", "customer": "cus_test_123", "status": "canceled"},
+        )
 
         response = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
 
         assert response.status_code == 200
@@ -102,16 +107,15 @@ class TestStripeWebhook:
     @pytest.mark.asyncio
     async def test_webhook_payment_failed(self, client, mock_signature):
         """Should handle invoice.payment_failed event."""
-        payload = generate_webhook_payload("invoice.payment_failed", {
-            "id": "in_test_123",
-            "customer": "cus_test_123",
-            "subscription": "sub_test_123"
-        })
+        payload = generate_webhook_payload(
+            "invoice.payment_failed",
+            {"id": "in_test_123", "customer": "cus_test_123", "subscription": "sub_test_123"},
+        )
 
         response = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
 
         assert response.status_code == 200
@@ -124,7 +128,7 @@ class TestStripeWebhook:
         response = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": "invalid_signature"}
+            headers={"Stripe-Signature": "invalid_signature"},
         )
 
         assert response.status_code == 400
@@ -134,10 +138,7 @@ class TestStripeWebhook:
         """Should reject requests without signature."""
         payload = generate_webhook_payload("checkout.session.completed", {})
 
-        response = await client.post(
-            "/api/v1/stripe/webhook",
-            json=payload
-        )
+        response = await client.post("/api/v1/stripe/webhook", json=payload)
 
         assert response.status_code == 400
 
@@ -149,7 +150,7 @@ class TestStripeWebhook:
         response = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
 
         # Should accept but not process
@@ -167,14 +168,14 @@ class TestWebhookIdempotency:
             "id": event_id,
             "object": "event",
             "type": "checkout.session.completed",
-            "data": {"object": {"id": "cs_test_123"}}
+            "data": {"object": {"id": "cs_test_123"}},
         }
 
         # First request
         response1 = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
         assert response1.status_code == 200
 
@@ -182,7 +183,7 @@ class TestWebhookIdempotency:
         response2 = await client.post(
             "/api/v1/stripe/webhook",
             json=payload,
-            headers={"Stripe-Signature": mock_signature(payload)}
+            headers={"Stripe-Signature": mock_signature(payload)},
         )
         assert response2.status_code == 200
         # Should be handled idempotently

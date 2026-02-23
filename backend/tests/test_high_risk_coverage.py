@@ -54,9 +54,7 @@ class TestAuthEndpointsIntegration:
         assert data["total_interviews"] == 0
 
         # Verify in database
-        result = await db_session.exec(
-            select(User).where(User.email == unique_email)
-        )
+        result = await db_session.exec(select(User).where(User.email == unique_email))
         user = result.first()
         assert user is not None
         assert user.subscription_tier == SubscriptionTier.FREE
@@ -280,7 +278,7 @@ class TestInterviewCreationFlow:
         # Create questions first
         for i in range(5):
             question = Question(
-                content=f"Behavioral question {i+1}: Tell me about a challenge.",
+                content=f"Behavioral question {i + 1}: Tell me about a challenge.",
                 category=QuestionCategory.BEHAVIORAL,
                 difficulty=Difficulty.MEDIUM,
                 expected_duration_seconds=180,
@@ -305,9 +303,7 @@ class TestInterviewCreationFlow:
 
         # Verify questions were assigned
         questions_result = await db_session.exec(
-            select(InterviewQuestion).where(
-                InterviewQuestion.session_id == interview_id
-            )
+            select(InterviewQuestion).where(InterviewQuestion.session_id == interview_id)
         )
         questions = questions_result.all()
         assert len(questions) == 3
@@ -363,7 +359,7 @@ class TestInterviewCreationFlow:
         token = await register_and_login(client)
 
         # Create multiple interviews
-        for i in range(5):
+        for _ in range(5):
             await client.post(
                 "/api/v1/interviews",
                 json={"interview_type": "behavioral"},
@@ -553,7 +549,7 @@ class TestSubscriptionTierEnforcement:
         assert status_resp.json()["interviews_this_month"] == 0
 
         # Create 3 interviews
-        for i in range(3):
+        for _ in range(3):
             resp = await client.post(
                 "/api/v1/interviews",
                 json={"interview_type": "behavioral"},
@@ -578,9 +574,10 @@ class TestSubscriptionTierEnforcement:
         """
         token = await register_and_login(client)
 
-        with patch("app.api.subscriptions.settings") as mock_settings, \
-             patch("app.api.subscriptions.stripe") as mock_stripe:
-
+        with (
+            patch("app.api.subscriptions.settings") as mock_settings,
+            patch("app.api.subscriptions.stripe") as mock_stripe,
+        ):
             mock_settings.stripe_secret_key = "sk_test_xxx"
             mock_settings.cors_origins = ["http://localhost:3000"]
             mock_settings.stripe_trial_days = 0
@@ -637,7 +634,9 @@ class TestSubscriptionTierEnforcement:
         token = await register_and_login(client)
 
         # Simulate PRO tier
-        result = await db_session.exec(select(User).where(User.email.like("testuser_%@example.com")))
+        result = await db_session.exec(
+            select(User).where(User.email.like("testuser_%@example.com"))
+        )
         # Get the user from login response instead
         user_resp = await client.get(
             "/api/v1/users/me",
@@ -660,7 +659,7 @@ class TestSubscriptionTierEnforcement:
         assert status_resp.json()["interviews_limit"] is None  # Unlimited
 
         # Should be able to create multiple interviews
-        for i in range(5):
+        for _ in range(5):
             resp = await client.post(
                 "/api/v1/interviews",
                 json={"interview_type": "behavioral"},
@@ -865,7 +864,7 @@ class TestPasswordResetFlow:
         result = await db_session.exec(
             select(PasswordResetToken).where(
                 PasswordResetToken.user_id == user.id,
-                PasswordResetToken.used == False,
+                PasswordResetToken.used.is_(False),
             )
         )
         reset_token = result.first()
@@ -923,7 +922,7 @@ class TestPasswordResetFlow:
         result = await db_session.exec(
             select(PasswordResetToken).where(
                 PasswordResetToken.user_id == user.id,
-                PasswordResetToken.used == False,
+                PasswordResetToken.used.is_(False),
             )
         )
         reset_token = result.first()

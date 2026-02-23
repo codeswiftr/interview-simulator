@@ -4,8 +4,6 @@ Tests password hashing, verification, migration, and token functions.
 No database required.
 """
 
-
-
 from app.security import (
     BCRYPT_PREFIX,
     PBKDF2_PREFIX,

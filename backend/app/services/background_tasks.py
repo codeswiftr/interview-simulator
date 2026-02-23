@@ -368,7 +368,9 @@ class BackgroundTaskService:
             )
 
             try:
-                feedback = await self.feedback_service.generate_session_feedback(session, session_id)
+                feedback = await self.feedback_service.generate_session_feedback(
+                    session, session_id
+                )
                 self._log_with_context(
                     logging.INFO,
                     f"Successfully auto-generated session feedback for {session_id}",

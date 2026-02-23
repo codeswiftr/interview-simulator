@@ -406,9 +406,7 @@ class TestGetUserSkillsGap:
         assert result.data_available is True
         assert len(result.dimensions) > 0
 
-        content_dim = next(
-            (d for d in result.dimensions if d.name == "Content"), None
-        )
+        content_dim = next((d for d in result.dimensions if d.name == "Content"), None)
         assert content_dim is not None
         assert content_dim.target_score == 90
         assert content_dim.trend in ["improving", "declining", "stable"]
@@ -460,9 +458,7 @@ class TestGetUserSkillsGap:
             db_session, test_user_for_improvements.id
         )
 
-        delivery_dim = next(
-            (d for d in result.dimensions if d.name == "Delivery"), None
-        )
+        delivery_dim = next((d for d in result.dimensions if d.name == "Delivery"), None)
         assert delivery_dim is not None
         assert delivery_dim.target_score == 85
 
@@ -515,9 +511,7 @@ class TestGetUserSkillsGap:
             db_session, test_user_for_improvements.id
         )
 
-        behavioral_dim = next(
-            (d for d in result.dimensions if d.name == "Behavioral"), None
-        )
+        behavioral_dim = next((d for d in result.dimensions if d.name == "Behavioral"), None)
         assert behavioral_dim is not None
         assert behavioral_dim.target_score == 90
 
@@ -570,9 +564,7 @@ class TestGetUserSkillsGap:
             db_session, test_user_for_improvements.id
         )
 
-        technical_dim = next(
-            (d for d in result.dimensions if d.name == "Technical"), None
-        )
+        technical_dim = next((d for d in result.dimensions if d.name == "Technical"), None)
         assert technical_dim is not None
         assert technical_dim.target_score == 85
 
@@ -625,9 +617,7 @@ class TestGetUserSkillsGap:
             db_session, test_user_for_improvements.id
         )
 
-        system_design_dim = next(
-            (d for d in result.dimensions if d.name == "System Design"), None
-        )
+        system_design_dim = next((d for d in result.dimensions if d.name == "System Design"), None)
         assert system_design_dim is not None
         assert system_design_dim.target_score == 80
 
@@ -680,9 +670,7 @@ class TestGetUserSkillsGap:
             db_session, test_user_for_improvements.id
         )
 
-        communication_dim = next(
-            (d for d in result.dimensions if d.name == "Communication"), None
-        )
+        communication_dim = next((d for d in result.dimensions if d.name == "Communication"), None)
         assert communication_dim is not None
         assert communication_dim.target_score == 90
 

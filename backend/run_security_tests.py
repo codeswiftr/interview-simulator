@@ -107,10 +107,7 @@ class SecurityTestRunner:
 
         # Run integration tests
         print("\n🔗 Running Integration Tests...")
-        self._run_test_category(
-            "integration",
-            ["tests/test_security_integration.py"]
-        )
+        self._run_test_category("integration", ["tests/test_security_integration.py"])
 
         # Calculate total duration
         self.results["summary"]["duration"] = time.time() - start_time
@@ -157,19 +154,19 @@ class SecurityTestRunner:
 
                     # Check for critical failures
                     if self.results["categories"][category]["failed"] > 0:
-                        self.results["critical_issues"].append(
-                            f"Critical failures in {category}"
-                        )
+                        self.results["critical_issues"].append(f"Critical failures in {category}")
 
                     # Extract failed tests
                     for test in report.get("tests", []):
                         if test.get("outcome") in ["failed", "error"]:
-                            self.results["recommendations"].append({
-                                "category": category,
-                                "test": test.get("nodeid", "unknown"),
-                                "issue": "Test failed - check security implementation",
-                                "severity": "high" if "security" in category else "medium",
-                            })
+                            self.results["recommendations"].append(
+                                {
+                                    "category": category,
+                                    "test": test.get("nodeid", "unknown"),
+                                    "issue": "Test failed - check security implementation",
+                                    "severity": "high" if "security" in category else "medium",
+                                }
+                            )
 
             except FileNotFoundError:
                 print(f"  ⚠️  Could not read report for {category}")
@@ -270,18 +267,26 @@ class SecurityTestRunner:
                     coverage = json.load(f)
                     self.results["coverage"] = {
                         "total_coverage": coverage.get("totals", {}).get("percent_covered", 0),
-                        "files": {}
+                        "files": {},
                     }
 
                     for filename, file_data in coverage.get("files", {}).items():
                         if any(mod in filename for mod in ["security", "rate_limit", "users"]):
                             self.results["coverage"]["files"][filename] = {
-                                "lines_covered": file_data.get("summary", {}).get("covered_lines", 0),
-                                "lines_missing": file_data.get("summary", {}).get("missing_lines", 0),
-                                "percent_covered": file_data.get("summary", {}).get("percent_covered", 0),
+                                "lines_covered": file_data.get("summary", {}).get(
+                                    "covered_lines", 0
+                                ),
+                                "lines_missing": file_data.get("summary", {}).get(
+                                    "missing_lines", 0
+                                ),
+                                "percent_covered": file_data.get("summary", {}).get(
+                                    "percent_covered", 0
+                                ),
                             }
 
-                    print(f"\n📊 Security Module Coverage: {self.results['coverage']['total_coverage']:.1f}%")
+                    print(
+                        f"\n📊 Security Module Coverage: {self.results['coverage']['total_coverage']:.1f}%"
+                    )
 
             except FileNotFoundError:
                 print("  ⚠️  Could not read coverage report")
@@ -293,17 +298,18 @@ class SecurityTestRunner:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Run security test suite")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed output")
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Show detailed output"
-    )
-    parser.add_argument(
-        "-o", "--output-report",
+        "-o",
+        "--output-report",
         default="security_report.json",
-        help="Output report file (default: security_report.json)"
+        help="Output report file (default: security_report.json)",
     )
     parser.add_argument(
-        "-c", "--coverage", action="store_true",
-        help="Generate coverage report for security modules"
+        "-c",
+        "--coverage",
+        action="store_true",
+        help="Generate coverage report for security modules",
     )
 
     args = parser.parse_args()

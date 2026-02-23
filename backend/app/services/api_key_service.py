@@ -85,7 +85,7 @@ async def create_api_key(
 
     # Check user's existing key count (limit to 10 keys per user)
     existing_keys = await session.exec(
-        select(APIKey).where(APIKey.user_id == user_id, APIKey.is_active == True)
+        select(APIKey).where(APIKey.user_id == user_id, APIKey.is_active.is_(True))
     )
     if len(list(existing_keys.all())) >= 10:
         raise ValueError("Maximum number of API keys (10) reached. Delete unused keys first.")
@@ -228,7 +228,7 @@ async def verify_api_key_and_get_user(session: AsyncSession, plain_key: str) -> 
     result = await session.exec(
         select(APIKey).where(
             APIKey.key_prefix == key_prefix,
-            APIKey.is_active == True,
+            APIKey.is_active.is_(True),
         )
     )
 

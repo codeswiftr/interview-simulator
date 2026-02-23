@@ -26,8 +26,7 @@ async def test_forgot_password_always_returns_success(client, db_session):
     """Test that forgot password always returns success (no user enumeration)."""
     # Request password reset for non-existent email
     response = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": "nonexistent@example.com"}
+        "/api/v1/auth/forgot-password", json={"email": "nonexistent@example.com"}
     )
 
     # Should return success even though user doesn't exist
@@ -43,8 +42,7 @@ async def test_forgot_password_does_not_send_email_for_nonexistent_user(client, 
         mock_email_service.return_value = mock_service
 
         response = await client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": "nonexistent@example.com"}
+            "/api/v1/auth/forgot-password", json={"email": "nonexistent@example.com"}
         )
 
         assert response.status_code == 200
@@ -62,10 +60,7 @@ async def test_forgot_password_sends_email_for_existing_user(client, db_session)
         mock_service = AsyncMock()
         mock_email_service.return_value = mock_service
 
-        response = await client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": email}
-        )
+        response = await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
         assert response.status_code == 200
         # Email service should be called
@@ -86,7 +81,7 @@ async def test_reset_password_with_expired_token_rejected(client, db_session):
     expired_token = PasswordResetToken(
         user_id=user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(UTC) - timedelta(hours=1)
+        expires_at=datetime.now(UTC) - timedelta(hours=1),
     )
     db_session.add(expired_token)
     await db_session.commit()
@@ -94,10 +89,7 @@ async def test_reset_password_with_expired_token_rejected(client, db_session):
     # Try to reset password with expired token
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": expired_token.token,
-            "new_password": "NewSecurePassword123!"
-        }
+        json={"token": expired_token.token, "new_password": "NewSecurePassword123!"},
     )
 
     assert response.status_code in [400, 401]
@@ -119,7 +111,7 @@ async def test_reset_password_token_single_use_only(client, db_session):
         user_id=user.id,
         token=secrets.token_urlsafe(32),
         expires_at=datetime.now(UTC) + timedelta(hours=1),
-        is_used=False
+        is_used=False,
     )
     db_session.add(reset_token)
     await db_session.commit()
@@ -127,20 +119,14 @@ async def test_reset_password_token_single_use_only(client, db_session):
     # First use should succeed
     response1 = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": reset_token.token,
-            "new_password": "NewSecurePassword123!"
-        }
+        json={"token": reset_token.token, "new_password": "NewSecurePassword123!"},
     )
     assert response1.status_code == 200
 
     # Second use should fail
     response2 = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": reset_token.token,
-            "new_password": "AnotherPassword456!"
-        }
+        json={"token": reset_token.token, "new_password": "AnotherPassword456!"},
     )
     assert response2.status_code in [400, 401]
 
@@ -150,10 +136,7 @@ async def test_reset_password_with_invalid_token_rejected(client, db_session):
     """Test that invalid reset tokens are rejected."""
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": "invalid_token_123",
-            "new_password": "NewSecurePassword123!"
-        }
+        json={"token": "invalid_token_123", "new_password": "NewSecurePassword123!"},
     )
 
     assert response.status_code in [400, 401]
@@ -174,7 +157,7 @@ async def test_reset_password_validates_new_password_strength(client, db_session
     reset_token = PasswordResetToken(
         user_id=user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(UTC) + timedelta(hours=1)
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
     )
     db_session.add(reset_token)
     await db_session.commit()
@@ -184,8 +167,8 @@ async def test_reset_password_validates_new_password_strength(client, db_session
         "/api/v1/auth/reset-password",
         json={
             "token": reset_token.token,
-            "new_password": "weak"  # Too weak
-        }
+            "new_password": "weak",  # Too weak
+        },
     )
 
     assert response.status_code in [400, 422]
@@ -206,7 +189,7 @@ async def test_reset_password_prevents_same_as_old_password(client, db_session):
     reset_token = PasswordResetToken(
         user_id=user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(UTC) + timedelta(hours=1)
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
     )
     db_session.add(reset_token)
     await db_session.commit()
@@ -216,8 +199,8 @@ async def test_reset_password_prevents_same_as_old_password(client, db_session):
         "/api/v1/auth/reset-password",
         json={
             "token": reset_token.token,
-            "new_password": old_password  # Same as old
-        }
+            "new_password": old_password,  # Same as old
+        },
     )
 
     # Should either reject or allow (depending on security policy)
@@ -233,8 +216,7 @@ async def test_forgot_password_email_timing_attack_prevention(client, db_session
     # Time request for non-existent email
     start = time.time()
     response1 = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": "nonexistent@example.com"}
+        "/api/v1/auth/forgot-password", json={"email": "nonexistent@example.com"}
     )
     time1 = time.time() - start
 
@@ -244,10 +226,7 @@ async def test_forgot_password_email_timing_attack_prevention(client, db_session
 
     # Time request for existing email
     start = time.time()
-    response2 = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": email}
-    )
+    response2 = await client.post("/api/v1/auth/forgot-password", json={"email": email})
     time2 = time.time() - start
 
     # Both should succeed
@@ -268,10 +247,7 @@ async def test_reset_password_invalidates_all_user_sessions(client, db_session):
     token = await register_and_login(client, email=email, password=password)
 
     # Verify token works
-    response = await client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": token}
-    )
+    response = await client.get("/api/v1/users/me", headers={"Authorization": token})
     assert response.status_code == 200
     user_id = response.json()["id"]
 
@@ -283,7 +259,7 @@ async def test_reset_password_invalidates_all_user_sessions(client, db_session):
     reset_token = PasswordResetToken(
         user_id=user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(UTC) + timedelta(hours=1)
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
     )
     db_session.add(reset_token)
     await db_session.commit()
@@ -291,17 +267,11 @@ async def test_reset_password_invalidates_all_user_sessions(client, db_session):
     # Reset password
     await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": reset_token.token,
-            "new_password": "NewSecurePassword456!"
-        }
+        json={"token": reset_token.token, "new_password": "NewSecurePassword456!"},
     )
 
     # Old token should no longer work
-    response = await client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": token}
-    )
+    response = await client.get("/api/v1/users/me", headers={"Authorization": token})
     # Should be unauthorized (session invalidated) or still work if not implemented
     assert response.status_code in [200, 401]
 
@@ -315,10 +285,7 @@ async def test_forgot_password_rate_limiting_per_email(client, db_session):
     # Send multiple reset requests rapidly
     responses = []
     for _ in range(10):
-        response = await client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": email}
-        )
+        response = await client.post("/api/v1/auth/forgot-password", json={"email": email})
         responses.append(response)
 
     # All should succeed (for security, we don't reveal rate limiting)
@@ -335,7 +302,7 @@ async def test_forgot_password_email_case_insensitive(client, db_session):
     # Request with different case
     response = await client.post(
         "/api/v1/auth/forgot-password",
-        json={"email": "casetest@example.com"}  # Lowercase
+        json={"email": "casetest@example.com"},  # Lowercase
     )
 
     assert response.status_code == 200
@@ -346,10 +313,7 @@ async def test_reset_token_not_leaked_in_error_messages(client, db_session):
     """Test that error messages don't leak reset token information."""
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": "test_token_123",
-            "new_password": "NewPassword123!"
-        }
+        json={"token": "test_token_123", "new_password": "NewPassword123!"},
     )
 
     # Error message should not contain the token
@@ -363,10 +327,7 @@ async def test_reset_password_with_sql_injection_attempt(client, db_session):
 
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": malicious_token,
-            "new_password": "NewPassword123!"
-        }
+        json={"token": malicious_token, "new_password": "NewPassword123!"},
     )
 
     # Should be rejected safely without SQL execution
@@ -378,10 +339,7 @@ async def test_forgot_password_with_xss_attempt_in_email(client, db_session):
     """Test that XSS attempts in email are handled safely."""
     malicious_email = "<script>alert('xss')</script>@example.com"
 
-    response = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": malicious_email}
-    )
+    response = await client.post("/api/v1/auth/forgot-password", json={"email": malicious_email})
 
     # Should return success (no user enumeration) and handle safely
     assert response.status_code == 200
@@ -401,12 +359,12 @@ async def test_multiple_active_reset_tokens_per_user(client, db_session):
     token1 = PasswordResetToken(
         user_id=user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(UTC) + timedelta(hours=1)
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
     )
     token2 = PasswordResetToken(
         user_id=user.id,
         token=secrets.token_urlsafe(32),
-        expires_at=datetime.now(UTC) + timedelta(hours=1)
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
     )
     db_session.add(token1)
     db_session.add(token2)
@@ -415,19 +373,13 @@ async def test_multiple_active_reset_tokens_per_user(client, db_session):
     # Both tokens should work (or first invalidates second)
     response1 = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": token1.token,
-            "new_password": "NewPassword123!"
-        }
+        json={"token": token1.token, "new_password": "NewPassword123!"},
     )
     assert response1.status_code == 200
 
     response2 = await client.post(
         "/api/v1/auth/reset-password",
-        json={
-            "token": token2.token,
-            "new_password": "AnotherPassword456!"
-        }
+        json={"token": token2.token, "new_password": "AnotherPassword456!"},
     )
     # Second should fail if first invalidated all tokens
     assert response2.status_code in [200, 400, 401]

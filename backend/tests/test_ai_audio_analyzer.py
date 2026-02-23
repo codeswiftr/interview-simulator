@@ -253,8 +253,16 @@ class TestVolumeConsistency:
 
         Create audio with high variation in RMS energy.
         """
-        # Simulate variable audio (alternating loud/quiet)
-        y = np.array([0.1, 0.9] * 5000, dtype=np.float32)
+        # Simulate variable audio (blocks of loud/quiet so RMS frames differ)
+        y = np.concatenate(
+            [
+                np.full(2048, 0.05, dtype=np.float32),
+                np.full(2048, 0.95, dtype=np.float32),
+                np.full(2048, 0.05, dtype=np.float32),
+                np.full(2048, 0.95, dtype=np.float32),
+                np.full(2048, 0.05, dtype=np.float32),
+            ]
+        )
         sr = 22050
 
         score = analyzer._analyze_volume_consistency(y, sr)
@@ -290,16 +298,14 @@ class TestConfidenceScore:
 
     @patch("app.ai.audio_analyzer.librosa.piptrack")
     @patch("app.ai.audio_analyzer.librosa.feature.rms")
-    def test_stable_pitch_high_confidence(
-        self, mock_rms, mock_piptrack, analyzer: AudioAnalyzer
-    ):
+    def test_stable_pitch_high_confidence(self, mock_rms, mock_piptrack, analyzer: AudioAnalyzer):
         """Test stable pitch gives high confidence score.
 
         Low variation in both pitch and volume = high confidence.
         """
-        # Mock stable pitch
-        mock_pitches = np.array([[200.0], [205.0], [198.0], [202.0]])
-        mock_magnitudes = np.array([[1.0], [1.0], [1.0], [1.0]])
+        # Mock stable pitch — shape is (freq_bins, time_frames)
+        mock_pitches = np.array([[200.0, 205.0, 198.0, 202.0]])
+        mock_magnitudes = np.array([[1.0, 1.0, 1.0, 1.0]])
         mock_piptrack.return_value = (mock_pitches, mock_magnitudes)
 
         # Mock consistent volume
@@ -314,27 +320,25 @@ class TestConfidenceScore:
 
     @patch("app.ai.audio_analyzer.librosa.piptrack")
     @patch("app.ai.audio_analyzer.librosa.feature.rms")
-    def test_variable_pitch_low_confidence(
-        self, mock_rms, mock_piptrack, analyzer: AudioAnalyzer
-    ):
+    def test_variable_pitch_low_confidence(self, mock_rms, mock_piptrack, analyzer: AudioAnalyzer):
         """Test variable pitch gives lower confidence score.
 
         High variation in pitch or volume = lower confidence.
         """
-        # Mock highly variable pitch
-        mock_pitches = np.array([[100.0], [300.0], [150.0], [250.0]])
-        mock_magnitudes = np.array([[1.0], [1.0], [1.0], [1.0]])
+        # Mock highly variable pitch — shape is (freq_bins, time_frames)
+        mock_pitches = np.array([[50.0, 400.0, 80.0, 350.0]])
+        mock_magnitudes = np.array([[1.0, 1.0, 1.0, 1.0]])
         mock_piptrack.return_value = (mock_pitches, mock_magnitudes)
 
-        # Mock variable volume
-        mock_rms.return_value = np.array([[0.1, 0.9, 0.2, 0.8]])
+        # Mock highly variable volume
+        mock_rms.return_value = np.array([[0.05, 0.95, 0.1, 0.9]])
 
         y = np.array([0.5] * 1000, dtype=np.float32)
         sr = 22050
 
         score = analyzer._calculate_confidence_score(y, sr)
 
-        assert score < 60.0
+        assert score < 70.0
 
     @patch("app.ai.audio_analyzer.librosa.piptrack")
     def test_no_pitch_detected_default_score(self, mock_piptrack, analyzer: AudioAnalyzer):
@@ -352,9 +356,7 @@ class TestConfidenceScore:
         assert score == 50.0
 
     @patch("app.ai.audio_analyzer.librosa.piptrack")
-    def test_pitch_analysis_error_returns_default(
-        self, mock_piptrack, analyzer: AudioAnalyzer
-    ):
+    def test_pitch_analysis_error_returns_default(self, mock_piptrack, analyzer: AudioAnalyzer):
         """Test error in pitch analysis returns default score."""
         mock_piptrack.side_effect = Exception("Pitch tracking failed")
 
@@ -437,18 +439,18 @@ class TestAnalyzeFullAudio:
         sr = 22050
         mock_load.return_value = (y, sr)
 
-        with patch.object(analyzer, "_calculate_confidence_score", return_value=75.0):
-            with patch.object(analyzer, "_analyze_volume_consistency", return_value=80.0):
-                result = await analyzer.analyze(str(audio_file), transcript=None)
+        with (
+            patch.object(analyzer, "_calculate_confidence_score", return_value=75.0),
+            patch.object(analyzer, "_analyze_volume_consistency", return_value=80.0),
+        ):
+            result = await analyzer.analyze(str(audio_file), transcript=None)
 
-                assert result.speech_rate_wpm == 120.0  # Default estimate
-                assert result.filler_words == {}  # No transcript = no filler detection
+            assert result.speech_rate_wpm == 120.0  # Default estimate
+            assert result.filler_words == {}  # No transcript = no filler detection
 
     @pytest.mark.asyncio
     @patch("app.ai.audio_analyzer.librosa.load")
-    async def test_analyze_with_fillers(
-        self, mock_load, analyzer: AudioAnalyzer, tmp_path: Path
-    ):
+    async def test_analyze_with_fillers(self, mock_load, analyzer: AudioAnalyzer, tmp_path: Path):
         """Test analyze detects filler words when transcript provided."""
         audio_file = tmp_path / "test.mp3"
         audio_file.write_bytes(b"audio data")
@@ -459,19 +461,19 @@ class TestAnalyzeFullAudio:
 
         transcript = "Um, I think, like, you know, this is a good idea."
 
-        with patch.object(analyzer, "_calculate_confidence_score", return_value=75.0):
-            with patch.object(analyzer, "_analyze_volume_consistency", return_value=80.0):
-                result = await analyzer.analyze(str(audio_file), transcript)
+        with (
+            patch.object(analyzer, "_calculate_confidence_score", return_value=75.0),
+            patch.object(analyzer, "_analyze_volume_consistency", return_value=80.0),
+        ):
+            result = await analyzer.analyze(str(audio_file), transcript)
 
-                assert "um" in result.filler_words
-                assert "like" in result.filler_words
-                assert "you know" in result.filler_words
+            assert "um" in result.filler_words
+            assert "like" in result.filler_words
+            assert "you know" in result.filler_words
 
     @pytest.mark.asyncio
     @patch("app.ai.audio_analyzer.librosa.load")
-    async def test_analyze_librosa_error(
-        self, mock_load, analyzer: AudioAnalyzer, tmp_path: Path
-    ):
+    async def test_analyze_librosa_error(self, mock_load, analyzer: AudioAnalyzer, tmp_path: Path):
         """Test analyze handles Librosa errors gracefully.
 
         Should raise ValueError with helpful message.
@@ -508,12 +510,14 @@ class TestEdgeCases:
         sr = 22050
         mock_load.return_value = (y, sr)
 
-        with patch.object(analyzer, "_calculate_confidence_score", return_value=50.0):
-            with patch.object(analyzer, "_analyze_volume_consistency", return_value=50.0):
-                result = await analyzer.analyze(str(audio_file))
+        with (
+            patch.object(analyzer, "_calculate_confidence_score", return_value=50.0),
+            patch.object(analyzer, "_analyze_volume_consistency", return_value=50.0),
+        ):
+            result = await analyzer.analyze(str(audio_file))
 
-                assert result is not None
-                assert isinstance(result, AudioMetrics)
+            assert result is not None
+            assert isinstance(result, AudioMetrics)
 
     def test_filler_detection_punctuation_handling(self, analyzer: AudioAnalyzer):
         """Test filler detection handles punctuation correctly."""

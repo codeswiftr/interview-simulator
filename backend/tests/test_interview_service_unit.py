@@ -87,7 +87,7 @@ class TestAssignQuestions:
 
         # Create mock questions
         questions = []
-        for i in range(2):
+        for _ in range(2):
             q = MagicMock(spec=Question)
             q.id = uuid4()
             q.expected_duration_seconds = 180
@@ -118,7 +118,7 @@ class TestAssignQuestions:
 
         # Company-specific questions
         company_questions = []
-        for i in range(1):
+        for _ in range(1):
             q = MagicMock(spec=Question)
             q.id = uuid4()
             q.expected_duration_seconds = 180
@@ -126,7 +126,7 @@ class TestAssignQuestions:
 
         # General questions
         general_questions = []
-        for i in range(1):
+        for _ in range(1):
             q = MagicMock(spec=Question)
             q.id = uuid4()
             q.expected_duration_seconds = 180
@@ -310,7 +310,9 @@ class TestAssignSpecificQuestion:
         mock_result.first.return_value = question
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await interview_service.assign_specific_question(mock_session, interview, question_id)
+        result = await interview_service.assign_specific_question(
+            mock_session, interview, question_id
+        )
 
         assert result is not None
         assert mock_session.add.called

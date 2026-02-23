@@ -108,6 +108,7 @@ class TestSendPasswordReset:
 
         with patch.dict("sys.modules", {"resend": MagicMock()}):
             import sys
+
             mock_resend = sys.modules["resend"]
             mock_resend.Emails.send.return_value = {"id": "email_123"}
 

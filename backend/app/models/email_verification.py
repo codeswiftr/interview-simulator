@@ -24,6 +24,4 @@ class EmailVerificationToken(SQLModel, table=True):
     token: str = Field(unique=True, index=True, description="Verification token")
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     used: bool = Field(default=False)
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))

@@ -17,10 +17,14 @@ from app.models.user import SubscriptionTier, User
 
 
 # Helper functions (not fixtures) for creating test users with dynamic emails
-async def register_and_login_pro(client: AsyncClient, db_session, email: str = "user@example.com") -> str:
+async def register_and_login_pro(
+    client: AsyncClient, db_session, email: str = "user@example.com"
+) -> str:
     """Register Pro tier user and return bearer token."""
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
+    resp = await client.post(
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
+    )
     token = resp.json()["access_token"]
 
     # Upgrade to Pro tier for preparation access
@@ -36,9 +40,12 @@ async def register_and_login_pro(client: AsyncClient, db_session, email: str = "
 async def register_and_login_free(client: AsyncClient, email: str = "user@example.com") -> str:
     """Register Free tier user and return bearer token."""
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
-    resp = await client.post("/api/v1/users/login", json={"email": email, "password": "SecureTest123!"})
+    resp = await client.post(
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
+    )
     token = resp.json()["access_token"]
     return f"Bearer {token}"
+
 
 @pytest.mark.asyncio
 async def test_start_preparation_requires_pro_tier(client, db_session):
@@ -65,6 +72,7 @@ async def test_start_preparation_requires_pro_tier(client, db_session):
 
     assert response.status_code == 402  # Payment Required
     assert "upgrade" in response.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_list_preparations(client, db_session):
@@ -108,6 +116,7 @@ async def test_list_preparations(client, db_session):
     assert data["preparations"][0]["id"] == str(preparation.id)
     assert data["preparations"][0]["question_content"] == "Test question for listing"
 
+
 @pytest.mark.asyncio
 async def test_start_preparation_success(client, db_session):
     """Test successful preparation start."""
@@ -134,6 +143,7 @@ async def test_start_preparation_success(client, db_session):
     data = response.json()
     assert "preparation_id" in data
     assert data["stage"] == "detective"
+
 
 @pytest.mark.asyncio
 async def test_get_detective_question(client, db_session):
@@ -174,6 +184,7 @@ async def test_get_detective_question(client, db_session):
     assert "question" in data
     assert data["order"] == 1
     assert isinstance(data["is_complete"], bool)
+
 
 @pytest.mark.asyncio
 async def test_submit_detective_answer(client, db_session):
@@ -223,6 +234,7 @@ async def test_submit_detective_answer(client, db_session):
     data = response.json()
     assert "stage" in data
     assert isinstance(data["is_complete"], bool)
+
 
 @pytest.mark.asyncio
 async def test_generate_draft(client, db_session):
@@ -280,6 +292,7 @@ async def test_generate_draft(client, db_session):
     assert len(data["draft_answer"]) > 0
     assert data["stage"] == "practice"
 
+
 @pytest.mark.asyncio
 async def test_get_draft(client, db_session):
     """Test getting draft answer."""
@@ -319,7 +332,9 @@ async def test_get_draft(client, db_session):
     assert data["draft_answer"] == preparation.draft_answer
     assert "STAR" in data["draft_answer"] or "Situation" in data["draft_answer"]
 
+
 # Practice Endpoints Tests
+
 
 @pytest.mark.asyncio
 async def test_start_practice_success(client, db_session):
@@ -368,6 +383,7 @@ async def test_start_practice_success(client, db_session):
     assert attempt is not None
     assert attempt.id == UUID(data["attempt_id"])
 
+
 @pytest.mark.asyncio
 async def test_start_practice_requires_draft(client, db_session):
     """Test that starting practice requires a draft."""
@@ -405,6 +421,7 @@ async def test_start_practice_requires_draft(client, db_session):
     assert response.status_code == 400
     assert "draft" in response.json()["detail"].lower()
 
+
 @pytest.mark.asyncio
 async def test_start_practice_requires_pro_tier(client, db_session):
     """Test that practice requires Pro/Premium tier."""
@@ -420,9 +437,7 @@ async def test_start_practice_requires_pro_tier(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "freepractice@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "freepractice@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -442,6 +457,7 @@ async def test_start_practice_requires_pro_tier(client, db_session):
     )
 
     assert response.status_code == 402  # Payment Required
+
 
 @pytest.mark.asyncio
 async def test_submit_practice_success(client, db_session):
@@ -519,6 +535,7 @@ async def test_submit_practice_success(client, db_session):
     # Cleanup
     audio_file.unlink(missing_ok=True)
 
+
 @pytest.mark.asyncio
 async def test_submit_practice_creates_attempt_if_missing(client, db_session):
     """Test that submit creates an attempt if none exists."""
@@ -537,9 +554,7 @@ async def test_submit_practice_creates_attempt_if_missing(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "autoattempt@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "autoattempt@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -590,6 +605,7 @@ async def test_submit_practice_creates_attempt_if_missing(client, db_session):
     # Cleanup
     audio_file.unlink(missing_ok=True)
 
+
 @pytest.mark.asyncio
 async def test_submit_practice_audio_not_found(client, db_session):
     """Test that submitting with invalid audio URL returns error."""
@@ -605,9 +621,7 @@ async def test_submit_practice_audio_not_found(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "invalidaudio@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "invalidaudio@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -629,6 +643,7 @@ async def test_submit_practice_audio_not_found(client, db_session):
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_get_attempts_success(client, db_session):
@@ -687,6 +702,7 @@ async def test_get_attempts_success(client, db_session):
     assert data["attempts"][0]["transcript"] == "Second practice attempt"
     assert data["attempts"][1]["transcript"] == "First practice attempt"
 
+
 @pytest.mark.asyncio
 async def test_get_attempts_empty(client, db_session):
     """Test getting attempts when none exist."""
@@ -702,9 +718,7 @@ async def test_get_attempts_empty(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "noattempts@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "noattempts@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -727,6 +741,7 @@ async def test_get_attempts_empty(client, db_session):
     data = response.json()
     assert "attempts" in data
     assert len(data["attempts"]) == 0
+
 
 @pytest.mark.asyncio
 async def test_get_attempts_unauthorized(client, db_session):
@@ -765,7 +780,9 @@ async def test_get_attempts_unauthorized(client, db_session):
 
     assert response.status_code == 404
 
+
 # Rating Endpoints Tests
+
 
 @pytest.mark.asyncio
 async def test_rate_delivery_success(client, db_session):
@@ -841,6 +858,7 @@ async def test_rate_delivery_success(client, db_session):
         assert attempt.delivery_score == 85.0
         assert attempt.comparison_feedback is not None
 
+
 @pytest.mark.asyncio
 async def test_rate_delivery_no_transcript(client, db_session):
     """Test that rating fails if attempt has no transcript."""
@@ -856,9 +874,7 @@ async def test_rate_delivery_no_transcript(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "notranscript@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "notranscript@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -890,6 +906,7 @@ async def test_rate_delivery_no_transcript(client, db_session):
     assert response.status_code == 400
     assert "transcript" in response.json()["detail"].lower()
 
+
 @pytest.mark.asyncio
 async def test_get_comparison_success(client, db_session):
     """Test getting comparison view."""
@@ -905,9 +922,7 @@ async def test_get_comparison_success(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "comparison@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "comparison@example.com"))
     user = result.first()
 
     preparation = AnswerPreparation(
@@ -944,6 +959,7 @@ async def test_get_comparison_success(client, db_session):
     assert data["delivery_score"] == 85.0
     assert data["comparison_feedback"] == "Good delivery covering main points."
 
+
 @pytest.mark.asyncio
 async def test_get_comparison_unauthorized(client, db_session):
     """Test that users cannot access other users' comparisons."""
@@ -960,9 +976,7 @@ async def test_get_comparison_unauthorized(client, db_session):
     await db_session.commit()
     await db_session.refresh(question)
 
-    result = await db_session.exec(
-        select(User).where(User.email == "user1comp@example.com")
-    )
+    result = await db_session.exec(select(User).where(User.email == "user1comp@example.com"))
     user1 = result.first()
 
     preparation = AnswerPreparation(

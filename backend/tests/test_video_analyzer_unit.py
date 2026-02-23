@@ -84,19 +84,22 @@ class TestVideoAnalyzerAnalyze:
         analyzer = VideoAnalyzer()
 
         # Create temp file to pass existence check
-        with patch("pathlib.Path.exists", return_value=True):
-            # Make cv2 import fail
-            with patch.dict("sys.modules", {"cv2": None}):
-                import builtins
-                original_import = builtins.__import__
+        import builtins
 
-                def mock_import(name, *args, **kwargs):
-                    if name == "cv2":
-                        raise ImportError("No module named 'cv2'")
-                    return original_import(name, *args, **kwargs)
+        original_import = builtins.__import__
 
-                with patch.object(builtins, "__import__", mock_import):
-                    metrics = await analyzer.analyze("/tmp/test.mp4")
+        def mock_import(name, *args, **kwargs):
+            if name == "cv2":
+                raise ImportError("No module named 'cv2'")
+            return original_import(name, *args, **kwargs)
+
+        # Make cv2 import fail
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch.dict("sys.modules", {"cv2": None}),
+            patch.object(builtins, "__import__", mock_import),
+        ):
+            metrics = await analyzer.analyze("/tmp/test.mp4")
 
         # Should return neutral defaults
         assert metrics.confidence_score == 0.5
@@ -115,11 +118,13 @@ class TestVideoAnalyzerAnalyze:
         mock_capture.isOpened.return_value = False
         mock_cv2.VideoCapture.return_value = mock_capture
 
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch.dict("sys.modules", {"cv2": mock_cv2}):
-                metrics = await analyzer.analyze("/tmp/test.mp4")
-                # Should return neutral metrics when capture fails
-                assert metrics.confidence_score == 0.5
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch.dict("sys.modules", {"cv2": mock_cv2}),
+        ):
+            metrics = await analyzer.analyze("/tmp/test.mp4")
+            # Should return neutral metrics when capture fails
+            assert metrics.confidence_score == 0.5
 
     @pytest.mark.asyncio
     async def test_analyze_exception_during_loop(self):
@@ -132,12 +137,14 @@ class TestVideoAnalyzerAnalyze:
         mock_capture.read.side_effect = Exception("Hardware failure")
         mock_cv2.VideoCapture.return_value = mock_capture
 
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch.dict("sys.modules", {"cv2": mock_cv2}):
-                metrics = await analyzer.analyze("/tmp/test.mp4")
-                # Should return neutral metrics due to exception
-                assert metrics.confidence_score == 0.5
-                mock_capture.release.assert_called_once()
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch.dict("sys.modules", {"cv2": mock_cv2}),
+        ):
+            metrics = await analyzer.analyze("/tmp/test.mp4")
+            # Should return neutral metrics due to exception
+            assert metrics.confidence_score == 0.5
+            mock_capture.release.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_analyze_partial_success(self):
@@ -148,17 +155,16 @@ class TestVideoAnalyzerAnalyze:
         mock_capture = MagicMock()
         mock_capture.isOpened.return_value = True
         # Return one frame then fail
-        mock_capture.read.side_effect = [
-            (True, MagicMock()),
-            Exception("Hardware failure")
-        ]
+        mock_capture.read.side_effect = [(True, MagicMock()), Exception("Hardware failure")]
         mock_cv2.VideoCapture.return_value = mock_capture
 
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch.dict("sys.modules", {"cv2": mock_cv2}):
-                metrics = await analyzer.analyze("/tmp/test.mp4")
-                assert metrics.frame_count == 1
-                mock_capture.release.assert_called_once()
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch.dict("sys.modules", {"cv2": mock_cv2}),
+        ):
+            metrics = await analyzer.analyze("/tmp/test.mp4")
+            assert metrics.frame_count == 1
+            mock_capture.release.assert_called_once()
 
 
 class TestNeutralMetrics:
@@ -306,22 +312,25 @@ class TestCalculateMetrics:
         assert metrics.fidget_count is None
 
     def test_calculate_metrics_extreme_values(self):
-        """Test metrics with extremely high motion."""
+        """Test metrics with extremely high and variable motion (jittery)."""
         analyzer = VideoAnalyzer()
         start_time = time.perf_counter()
 
+        # High variance motion → high jitter → high nervousness
+        # Alternating 0 and 1000 gives avg=500, variance=250000
+        jittery_scores = [0.0, 1000.0] * 5
         metrics = analyzer._calculate_metrics(
             start_time=start_time,
             frame_count=100,
             sampled_frames=10,
-            motion_scores=[1000.0] * 10,
+            motion_scores=jittery_scores,
             center_hits=0,
             looking_away=10,
         )
 
         assert metrics.confidence_score >= 0.0
-        assert metrics.nervousness_score == 1.0  # Capped at 1.0
-        assert metrics.hand_gesture_frequency == 1.0 # Capped at 1.0
+        assert metrics.nervousness_score == 1.0  # Capped at 1.0 (high jitter)
+        assert metrics.hand_gesture_frequency == 1.0  # Capped at 1.0 (high avg motion)
 
 
 class TestCountCenterHits:
@@ -352,7 +361,7 @@ class TestCountCenterHits:
         # One centered, one off-center
         faces = [
             (860, 440, 200, 200),  # Centered
-            (50, 100, 100, 100),   # Off-center
+            (50, 100, 100, 100),  # Off-center
             (900, 400, 150, 150),  # Also centered
         ]
         frame_shape = (1080, 1920, 3)

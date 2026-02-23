@@ -108,9 +108,7 @@ class TestGetSameTopicQuestions:
         mock_result.all.return_value = matching_qs
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await _get_same_topic_questions(
-            mock_session, current_question, set(), limit=2
-        )
+        result = await _get_same_topic_questions(mock_session, current_question, set(), limit=2)
 
         assert len(result) == 2
 
@@ -141,9 +139,7 @@ class TestGetSameTopicQuestions:
 
         mock_session.exec = AsyncMock(side_effect=mock_exec)
 
-        result = await _get_same_topic_questions(
-            mock_session, current_question, set(), limit=2
-        )
+        result = await _get_same_topic_questions(mock_session, current_question, set(), limit=2)
 
         assert len(result) == 1
 
@@ -162,9 +158,7 @@ class TestGetSameTopicQuestions:
         mock_result.all.return_value = category_qs
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await _get_same_topic_questions(
-            mock_session, current_question, set(), limit=2
-        )
+        result = await _get_same_topic_questions(mock_session, current_question, set(), limit=2)
 
         assert len(result) == 1
 

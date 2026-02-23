@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -22,11 +23,17 @@ from app.models.interview import (
     InterviewStatus,
     InterviewType,
 )
+from app.models.interview_share import (
+    InterviewShareRead,
+    SharedInterviewRead,
+)
 from app.models.question import Question, QuestionRead
 from app.models.user import User
 from app.services.analytics import Events, get_analytics
 from app.services.background_tasks import background_tasks
 from app.services.interview_service import InterviewService
+from app.services.pdf_export_service import PDFExportService
+from app.services.share_service import ShareService
 
 logger = logging.getLogger(__name__)
 
@@ -102,10 +109,10 @@ async def create_interview(
     # Calculate remaining interviews for free users
     from app.models.user import SubscriptionTier
 
-    FREE_TIER_LIMIT = 3
+    free_tier_limit = 3
     remaining = None
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        remaining = max(0, FREE_TIER_LIMIT - current_user.interviews_this_month)
+        remaining = max(0, free_tier_limit - current_user.interviews_this_month)
 
     # Return interview with remaining count
     return {
@@ -518,10 +525,10 @@ async def create_quick_practice(
     # Calculate remaining interviews for free users
     from app.models.user import SubscriptionTier
 
-    FREE_TIER_LIMIT = 3
+    free_tier_limit = 3
     remaining = None
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        remaining = max(0, FREE_TIER_LIMIT - current_user.interviews_this_month)
+        remaining = max(0, free_tier_limit - current_user.interviews_this_month)
 
     # Return interview with remaining count
     return {
@@ -542,15 +549,6 @@ async def create_quick_practice(
 # Export & Share Endpoints
 # ============================================================================
 
-from fastapi.responses import Response
-
-from app.models.interview_share import (
-    InterviewShareRead,
-    SharedInterviewRead,
-)
-from app.services.pdf_export_service import PDFExportService
-from app.services.share_service import ShareService
-
 pdf_service = PDFExportService()
 share_service = ShareService()
 
@@ -566,22 +564,18 @@ async def export_interview_pdf(
     Returns PDF file with interview results, feedback, and scores.
     """
     try:
-        pdf_bytes = await pdf_service.generate_interview_pdf(
-            session, interview_id, current_user.id
-        )
+        pdf_bytes = await pdf_service.generate_interview_pdf(session, interview_id, current_user.id)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="interview-{interview_id}.pdf"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="interview-{interview_id}.pdf"'},
         )
     except ValueError as e:
         if "not found" in str(e).lower():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
         if "denied" in str(e).lower():
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.post("/{interview_id}/share", response_model=InterviewShareRead)
@@ -595,9 +589,7 @@ async def create_share_link(
     Link expires after 7 days. Returns existing link if one already exists.
     """
     try:
-        share = await share_service.create_share_link(
-            session, interview_id, current_user.id
-        )
+        share = await share_service.create_share_link(session, interview_id, current_user.id)
         return InterviewShareRead(
             id=share.id,
             interview_id=share.interview_id,
@@ -609,8 +601,8 @@ async def create_share_link(
         )
     except ValueError as e:
         if "not found" in str(e).lower():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
 
 
 @router.get("/{interview_id}/shares", response_model=list[InterviewShareRead])
@@ -620,9 +612,7 @@ async def list_share_links(
     current_user: User = Depends(get_current_user),
 ) -> list[InterviewShareRead]:
     """List all share links for an interview."""
-    shares = await share_service.get_shares_for_interview(
-        session, interview_id, current_user.id
-    )
+    shares = await share_service.get_shares_for_interview(session, interview_id, current_user.id)
     return [
         InterviewShareRead(
             id=s.id,
@@ -648,8 +638,8 @@ async def revoke_share_link(
         await share_service.revoke_share_link(session, share_id, current_user.id)
     except ValueError as e:
         if "not found" in str(e).lower():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
 
 
 # Public endpoint - no auth required
@@ -669,5 +659,5 @@ async def get_shared_interview(
             raise HTTPException(
                 status_code=status.HTTP_410_GONE,
                 detail="Share link has expired",
-            )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+            ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

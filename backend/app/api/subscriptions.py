@@ -295,7 +295,9 @@ async def _handle_checkout_completed(event_data: dict[str, Any], db_session: Asy
 
             user.stripe_subscription_id = subscription_id
             user.subscription_tier = tier
-            user.subscription_status = status_enum.value if isinstance(status_enum, SubscriptionStatus) else status_enum
+            user.subscription_status = (
+                status_enum.value if isinstance(status_enum, SubscriptionStatus) else status_enum
+            )
             user.subscription_expires_at = subscription.current_period_end
 
             await db_session.commit()
@@ -349,7 +351,11 @@ async def _handle_subscription_updated(event_data: dict[str, Any], db_session: A
         if subscription:
             tier = _map_pricing_tier(subscription.tier)
             user.subscription_tier = tier
-            user.subscription_status = subscription.status.value if isinstance(subscription.status, SubscriptionStatus) else subscription.status
+            user.subscription_status = (
+                subscription.status.value
+                if isinstance(subscription.status, SubscriptionStatus)
+                else subscription.status
+            )
             user.subscription_expires_at = subscription.current_period_end
             await db_session.commit()
             return
@@ -468,17 +474,17 @@ async def get_subscription_status(
             logger.warning(f"Failed to sync subscription from Stripe: {e}")
 
     # Free tier limit: 3 interviews per month
-    FREE_TIER_LIMIT = 3
+    free_tier_limit = 3
 
     # Determine interview limit based on tier
     interviews_limit = None
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        interviews_limit = FREE_TIER_LIMIT
+        interviews_limit = free_tier_limit
     # Pro and Team have unlimited
 
     can_create_interview = True
     if current_user.subscription_tier == SubscriptionTier.FREE:
-        can_create_interview = current_user.interviews_this_month < FREE_TIER_LIMIT
+        can_create_interview = current_user.interviews_this_month < free_tier_limit
 
     return SubscriptionStatus(
         tier=current_user.subscription_tier,

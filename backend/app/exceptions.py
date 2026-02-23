@@ -16,11 +16,11 @@ Usage:
     raise QuotaExceededError(limit=5, used=5, plan="free")
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """Machine-readable error codes for API responses."""
 
     # Authentication & Authorization
@@ -384,7 +384,9 @@ class AIServiceError(AppError):
             status_code=503,
             details={
                 "service": service,
-            } if service else {},
+            }
+            if service
+            else {},
         )
 
 

@@ -94,14 +94,16 @@ class TestBackgroundTasks:
         audio_file.write_bytes(b"fake audio data")
         audio_url = f"/uploads/audio/{audio_file.name}"
 
-        with patch.object(
-            background_tasks.audio_service,
-            "process_response_audio",
-            return_value=("Test transcript", MagicMock()),
-        ), patch.object(
-            background_tasks.audio_service, "save_audio_feedback", return_value=MagicMock()
-        ), patch.object(
-            background_tasks, "generate_content_feedback_async", return_value=None
+        with (
+            patch.object(
+                background_tasks.audio_service,
+                "process_response_audio",
+                return_value=("Test transcript", MagicMock()),
+            ),
+            patch.object(
+                background_tasks.audio_service, "save_audio_feedback", return_value=MagicMock()
+            ),
+            patch.object(background_tasks, "generate_content_feedback_async", return_value=None),
         ):
             await background_tasks.process_response_audio_async(sample_response.id, audio_url)
 
@@ -131,13 +133,14 @@ class TestBackgroundTasks:
         """Test that content feedback is created."""
         from unittest.mock import AsyncMock
 
-        with patch(
-            "app.services.background_tasks.SessionLocal"
-        ) as mock_session_local, patch.object(
-            background_tasks.feedback_service,
-            "generate_feedback",
-            new_callable=AsyncMock,
-        ) as mock_generate:
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                background_tasks.feedback_service,
+                "generate_feedback",
+                new_callable=AsyncMock,
+            ) as mock_generate,
+        ):
             # Mock the async context manager for SessionLocal
             mock_session = AsyncMock()
             mock_session.__aenter__.return_value = db_session
@@ -156,13 +159,14 @@ class TestBackgroundTasks:
         """Test that session feedback is created."""
         from unittest.mock import AsyncMock
 
-        with patch(
-            "app.services.background_tasks.SessionLocal"
-        ) as mock_session_local, patch.object(
-            background_tasks.feedback_service,
-            "generate_session_feedback",
-            new_callable=AsyncMock,
-        ) as mock_generate:
+        with (
+            patch("app.services.background_tasks.SessionLocal") as mock_session_local,
+            patch.object(
+                background_tasks.feedback_service,
+                "generate_session_feedback",
+                new_callable=AsyncMock,
+            ) as mock_generate,
+        ):
             # Mock the async context manager for SessionLocal
             mock_session = AsyncMock()
             mock_session.__aenter__.return_value = db_session
@@ -188,7 +192,9 @@ class TestBackgroundTasks:
             return MagicMock()
 
         with patch.object(
-            background_tasks.feedback_service, "generate_session_feedback", side_effect=mock_generate
+            background_tasks.feedback_service,
+            "generate_session_feedback",
+            side_effect=mock_generate,
         ):
             start_time = asyncio.get_event_loop().time()
             await background_tasks.generate_session_feedback_async(sample_interview_session.id)
@@ -203,9 +209,7 @@ class TestBackgroundTasks:
     ):
         """Test that invalid audio URL is handled gracefully."""
         # Should not raise exception, just log warning
-        await background_tasks.process_response_audio_async(
-            sample_response.id, "invalid-url"
-        )
+        await background_tasks.process_response_audio_async(sample_response.id, "invalid-url")
 
     @pytest.mark.asyncio
     async def test_process_response_audio_async_missing_file_handles_gracefully(
@@ -226,11 +230,14 @@ class TestBackgroundTasks:
         audio_file.write_bytes(b"fake audio data")
 
         # Mock audio_service to always fail with transient error
-        with patch.object(
-            background_tasks.audio_service,
-            "process_response_audio",
-            side_effect=ConnectionError("Transient error"),
-        ), pytest.raises(ConnectionError):
+        with (
+            patch.object(
+                background_tasks.audio_service,
+                "process_response_audio",
+                side_effect=ConnectionError("Transient error"),
+            ),
+            pytest.raises(ConnectionError),
+        ):
             await background_tasks._process_audio_with_retry(
                 db_session, sample_response.id, str(audio_file)
             )
@@ -244,11 +251,14 @@ class TestBackgroundTasks:
         audio_file.write_bytes(b"fake audio data")
 
         # Mock audio_service to fail with permanent error
-        with patch.object(
-            background_tasks.audio_service,
-            "process_response_audio",
-            side_effect=ValueError("Permanent error - invalid format"),
-        ), pytest.raises(ValueError, match="Permanent error"):
+        with (
+            patch.object(
+                background_tasks.audio_service,
+                "process_response_audio",
+                side_effect=ValueError("Permanent error - invalid format"),
+            ),
+            pytest.raises(ValueError, match="Permanent error"),
+        ):
             await background_tasks._process_audio_with_retry(
                 db_session, sample_response.id, str(audio_file)
             )
@@ -305,4 +315,3 @@ class TestBackgroundTasks:
         ):
             # Should not raise exception, just log error
             await background_tasks.generate_session_feedback_async(sample_interview_session.id)
-

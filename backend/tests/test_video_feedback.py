@@ -94,6 +94,7 @@ async def test_upload_video_updates_response_and_saves_file(client, db_session, 
         stored_path = Path("backend") / stored_path
     assert stored_path.exists()
 
+
 @pytest.mark.asyncio
 async def test_upload_video_rejects_invalid_extension(client, db_session):
     """Invalid video extensions should be rejected."""
@@ -135,6 +136,7 @@ async def test_upload_video_rejects_invalid_extension(client, db_session):
     )
     assert resp.status_code == 400
     assert "File type not allowed" in resp.text
+
 
 @pytest.mark.asyncio
 async def test_process_response_video_saves_feedback(db_session, tmp_path):
@@ -190,9 +192,7 @@ async def test_process_response_video_saves_feedback(db_session, tmp_path):
         new=AsyncMock(return_value=metrics),
     ):
         service = VideoService()
-        feedback = await service.process_response_video(
-            db_session, response.id, str(video_file)
-        )
+        feedback = await service.process_response_video(db_session, response.id, str(video_file))
 
     assert isinstance(feedback, VideoFeedback)
     assert feedback.confidence_score == metrics.confidence_score

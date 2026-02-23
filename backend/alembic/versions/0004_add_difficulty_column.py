@@ -5,6 +5,7 @@ Revises: 0003_processing_status
 Create Date: 2025-12-02
 
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
@@ -19,10 +20,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "interview_sessions",
-        sa.Column("difficulty", sa.String(), nullable=True)
-    )
+    op.add_column("interview_sessions", sa.Column("difficulty", sa.String(), nullable=True))
 
 
 def downgrade() -> None:

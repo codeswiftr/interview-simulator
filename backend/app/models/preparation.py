@@ -1,7 +1,7 @@
 """Answer preparation models for AI Ghostwriter feature."""
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey
@@ -9,7 +9,7 @@ from sqlalchemy.types import String
 from sqlmodel import Field, SQLModel
 
 
-class PreparationStage(str, Enum):
+class PreparationStage(StrEnum):
     """Stages of answer preparation."""
 
     DETECTIVE = "detective"  # Gathering context via Q&A
@@ -32,20 +32,14 @@ class AnswerPreparation(SQLModel, table=True):
     question_id: UUID = Field(foreign_key="questions.id", index=True)
 
     # Stage tracking
-    stage: PreparationStage = Field(
-        default=PreparationStage.DETECTIVE, sa_column=Column(String)
-    )
+    stage: PreparationStage = Field(default=PreparationStage.DETECTIVE, sa_column=Column(String))
 
     # Generated content
     draft_answer: str | None = Field(default=None, description="AI-generated draft answer")
 
     # Timestamps
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
-    updated_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class PreparationQnA(SQLModel, table=True):
@@ -59,7 +53,9 @@ class PreparationQnA(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     preparation_id: UUID = Field(
-        sa_column=Column(ForeignKey("answer_preparations.id", ondelete="CASCADE"), nullable=False, index=True)
+        sa_column=Column(
+            ForeignKey("answer_preparations.id", ondelete="CASCADE"), nullable=False, index=True
+        )
     )
 
     # Q&A content
@@ -68,9 +64,7 @@ class PreparationQnA(SQLModel, table=True):
     order: int = Field(description="Order of question in the sequence")
 
     # Timestamps
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))
 
 
 class DeliveryAttempt(SQLModel, table=True):
@@ -84,7 +78,9 @@ class DeliveryAttempt(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     preparation_id: UUID = Field(
-        sa_column=Column(ForeignKey("answer_preparations.id", ondelete="CASCADE"), nullable=False, index=True)
+        sa_column=Column(
+            ForeignKey("answer_preparations.id", ondelete="CASCADE"), nullable=False, index=True
+        )
     )
 
     # Delivery content
@@ -105,6 +101,4 @@ class DeliveryAttempt(SQLModel, table=True):
     )
 
     # Timestamps
-    created_at: datetime = Field(
-        default_factory=now_utc, sa_column=Column(DateTime(timezone=True))
-    )
+    created_at: datetime = Field(default_factory=now_utc, sa_column=Column(DateTime(timezone=True)))

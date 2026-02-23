@@ -63,8 +63,7 @@ class TestPasswordResetEmail:
         """In debug mode, email is logged but not actually sent."""
         with caplog.at_level(logging.INFO):
             result = await email_service_debug.send_password_reset(
-                email="test@example.com",
-                reset_url="https://app.codeswiftr.com/reset?token=abc123"
+                email="test@example.com", reset_url="https://app.codeswiftr.com/reset?token=abc123"
             )
 
         assert result is True
@@ -79,8 +78,7 @@ class TestPasswordResetEmail:
 
         with patch("resend.Emails.send", return_value=mock_response) as mock_send:
             result = await email_service_resend.send_password_reset(
-                email="user@example.com",
-                reset_url="https://app.codeswiftr.com/reset?token=xyz789"
+                email="user@example.com", reset_url="https://app.codeswiftr.com/reset?token=xyz789"
             )
 
         assert result is True
@@ -91,14 +89,17 @@ class TestPasswordResetEmail:
         assert "xyz789" in call_args["html"] or "xyz789" in call_args["text"]
 
     @pytest.mark.asyncio
-    async def test_password_reset_email_resend_failure_falls_back(self, email_service_resend, caplog):
+    async def test_password_reset_email_resend_failure_falls_back(
+        self, email_service_resend, caplog
+    ):
         """When Resend fails, logs error and returns False if no SMTP fallback."""
-        with patch("resend.Emails.send", side_effect=Exception("API rate limited")):
-            with caplog.at_level(logging.ERROR):
-                result = await email_service_resend.send_password_reset(
-                    email="user@example.com",
-                    reset_url="https://app.codeswiftr.com/reset?token=fail"
-                )
+        with (
+            patch("resend.Emails.send", side_effect=Exception("API rate limited")),
+            caplog.at_level(logging.ERROR),
+        ):
+            result = await email_service_resend.send_password_reset(
+                email="user@example.com", reset_url="https://app.codeswiftr.com/reset?token=fail"
+            )
 
         # No SMTP fallback configured, so should fail
         assert result is False
@@ -110,15 +111,14 @@ class TestPasswordResetEmail:
         mock_aiosmtplib = MagicMock()
         mock_aiosmtplib.send = AsyncMock()
 
-        with patch.dict("sys.modules", {"aiosmtplib": mock_aiosmtplib}):
-            with patch("app.services.email_service.aiosmtplib", mock_aiosmtplib, create=True):
-                # Reimport to use patched module
-
-
-                result = await email_service.send_password_reset(
-                    email="smtp@example.com",
-                    reset_url="https://app.codeswiftr.com/reset?token=smtp123"
-                )
+        with (
+            patch.dict("sys.modules", {"aiosmtplib": mock_aiosmtplib}),
+            patch("app.services.email_service.aiosmtplib", mock_aiosmtplib, create=True),
+        ):
+            # Reimport to use patched module
+            result = await email_service.send_password_reset(
+                email="smtp@example.com", reset_url="https://app.codeswiftr.com/reset?token=smtp123"
+            )
 
         # The function should return True if SMTP succeeds
         # Since we're mocking at import level, this may vary
@@ -131,7 +131,7 @@ class TestPasswordResetEmail:
         with caplog.at_level(logging.WARNING):
             result = await email_service.send_password_reset(
                 email="timeout@example.com",
-                reset_url="https://app.codeswiftr.com/reset?token=timeout"
+                reset_url="https://app.codeswiftr.com/reset?token=timeout",
             )
 
         # Without aiosmtplib, should log warning about missing package or fail gracefully
@@ -152,7 +152,7 @@ class TestPasswordResetEmail:
             with caplog.at_level(logging.WARNING):
                 result = await service.send_password_reset(
                     email="nocfg@example.com",
-                    reset_url="https://app.codeswiftr.com/reset?token=nocfg"
+                    reset_url="https://app.codeswiftr.com/reset?token=nocfg",
                 )
 
         assert result is False
@@ -168,7 +168,7 @@ class TestEmailVerification:
         with caplog.at_level(logging.INFO):
             result = await email_service_debug.send_email_verification(
                 email="new@example.com",
-                verification_url="https://app.codeswiftr.com/verify?token=verify123"
+                verification_url="https://app.codeswiftr.com/verify?token=verify123",
             )
 
         assert result is True
@@ -184,7 +184,7 @@ class TestEmailVerification:
         with patch("resend.Emails.send", return_value=mock_response) as mock_send:
             result = await email_service_resend.send_email_verification(
                 email="verify@example.com",
-                verification_url="https://app.codeswiftr.com/verify?token=verifyabc"
+                verification_url="https://app.codeswiftr.com/verify?token=verifyabc",
             )
 
         assert result is True
@@ -209,13 +209,13 @@ class TestTemplateRendering:
         </html>
         """
 
-        with patch.object(Path, "exists", return_value=True):
-            with patch.object(Path, "read_text", return_value=template_content):
-                html, plain = email_service._load_html_template(
-                    "test_template.html",
-                    name="John Doe",
-                    reset_url="https://example.com/reset"
-                )
+        with (
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "read_text", return_value=template_content),
+        ):
+            html, plain = email_service._load_html_template(
+                "test_template.html", name="John Doe", reset_url="https://example.com/reset"
+            )
 
         assert "John Doe" in html
         assert "https://example.com/reset" in html
@@ -223,12 +223,13 @@ class TestTemplateRendering:
 
     def test_load_html_template_fallback_when_missing(self, email_service, caplog):
         """When template file doesn't exist, fallback is used."""
-        with patch.object(Path, "exists", return_value=False):
-            with caplog.at_level(logging.WARNING):
-                html, plain = email_service._load_html_template(
-                    "nonexistent.html",
-                    reset_url="https://example.com/reset"
-                )
+        with (
+            patch.object(Path, "exists", return_value=False),
+            caplog.at_level(logging.WARNING),
+        ):
+            html, plain = email_service._load_html_template(
+                "nonexistent.html", reset_url="https://example.com/reset"
+            )
 
         assert "template not found" in caplog.text
         assert "https://example.com/reset" in plain
@@ -254,8 +255,7 @@ class TestEmailValidation:
         with caplog.at_level(logging.INFO):
             # The service should handle this - either escape or reject
             result = await email_service_debug.send_password_reset(
-                email=malicious_email,
-                reset_url="https://app.codeswiftr.com/reset?token=xss"
+                email=malicious_email, reset_url="https://app.codeswiftr.com/reset?token=xss"
             )
 
         # In debug mode it logs, we just verify no crash
@@ -270,8 +270,7 @@ class TestEmailValidation:
 
         with caplog.at_level(logging.INFO):
             result = await email_service_debug.send_password_reset(
-                email="test@example.com",
-                reset_url=malicious_url
+                email="test@example.com", reset_url=malicious_url
             )
 
         # In debug mode it logs - verify it completes
@@ -288,8 +287,7 @@ class TestResendIntegration:
 
         with patch("resend.Emails.send", return_value=mock_response) as mock_send:
             await email_service_resend.send_password_reset(
-                email="test@example.com",
-                reset_url="https://example.com/reset"
+                email="test@example.com", reset_url="https://example.com/reset"
             )
 
         call_args = mock_send.call_args[0][0]
@@ -299,12 +297,13 @@ class TestResendIntegration:
     @pytest.mark.asyncio
     async def test_resend_failure_logs_error(self, email_service_resend, caplog):
         """When Resend API fails, error is logged."""
-        with patch("resend.Emails.send", side_effect=Exception("Network error")):
-            with caplog.at_level(logging.ERROR):
-                result = await email_service_resend.send_password_reset(
-                    email="test@example.com",
-                    reset_url="https://example.com/reset"
-                )
+        with (
+            patch("resend.Emails.send", side_effect=Exception("Network error")),
+            caplog.at_level(logging.ERROR),
+        ):
+            result = await email_service_resend.send_password_reset(
+                email="test@example.com", reset_url="https://example.com/reset"
+            )
 
         # Should fail and log error
         assert result is False
@@ -316,12 +315,13 @@ class TestResendIntegration:
         # Return response without 'id' key - covers line 129
         mock_response = {}
 
-        with patch("resend.Emails.send", return_value=mock_response):
-            with caplog.at_level(logging.INFO):
-                result = await email_service_resend.send_password_reset(
-                    email="test@example.com",
-                    reset_url="https://example.com/reset"
-                )
+        with (
+            patch("resend.Emails.send", return_value=mock_response),
+            caplog.at_level(logging.INFO),
+        ):
+            result = await email_service_resend.send_password_reset(
+                email="test@example.com", reset_url="https://example.com/reset"
+            )
 
         assert result is True
         assert "Password reset email sent via Resend to test@example.com" in caplog.text
@@ -344,6 +344,7 @@ class TestResendIntegration:
 
             # Mock resend import to raise ImportError - covers line 133
             import builtins
+
             original_import = builtins.__import__
 
             def mock_import(name, *args, **kwargs):
@@ -351,12 +352,13 @@ class TestResendIntegration:
                     raise ImportError("No module named 'resend'")
                 return original_import(name, *args, **kwargs)
 
-            with patch.object(builtins, "__import__", mock_import):
-                with caplog.at_level(logging.WARNING):
-                    result = await service.send_password_reset(
-                        email="test@example.com",
-                        reset_url="https://example.com/reset"
-                    )
+            with (
+                patch.object(builtins, "__import__", mock_import),
+                caplog.at_level(logging.WARNING),
+            ):
+                result = await service.send_password_reset(
+                    email="test@example.com", reset_url="https://example.com/reset"
+                )
 
         assert result is False
         assert "Resend package not installed" in caplog.text
@@ -367,12 +369,13 @@ class TestResendIntegration:
         # Return response without 'id' key - covers line 255
         mock_response = {}
 
-        with patch("resend.Emails.send", return_value=mock_response):
-            with caplog.at_level(logging.INFO):
-                result = await email_service_resend.send_email_verification(
-                    email="verify@example.com",
-                    verification_url="https://example.com/verify"
-                )
+        with (
+            patch("resend.Emails.send", return_value=mock_response),
+            caplog.at_level(logging.INFO),
+        ):
+            result = await email_service_resend.send_email_verification(
+                email="verify@example.com", verification_url="https://example.com/verify"
+            )
 
         assert result is True
         assert "Email verification sent via Resend to verify@example.com" in caplog.text
@@ -392,6 +395,7 @@ class TestResendIntegration:
             service = EmailService()
 
             import builtins
+
             original_import = builtins.__import__
 
             def mock_import(name, *args, **kwargs):
@@ -399,12 +403,13 @@ class TestResendIntegration:
                     raise ImportError("No module named 'resend'")
                 return original_import(name, *args, **kwargs)
 
-            with patch.object(builtins, "__import__", mock_import):
-                with caplog.at_level(logging.WARNING):
-                    result = await service.send_email_verification(
-                        email="test@example.com",
-                        verification_url="https://example.com/verify"
-                    )
+            with (
+                patch.object(builtins, "__import__", mock_import),
+                caplog.at_level(logging.WARNING),
+            ):
+                result = await service.send_email_verification(
+                    email="test@example.com", verification_url="https://example.com/verify"
+                )
 
         assert result is False
         assert "Resend package not installed" in caplog.text
@@ -412,12 +417,13 @@ class TestResendIntegration:
     @pytest.mark.asyncio
     async def test_verification_resend_exception_logs_error(self, email_service_resend, caplog):
         """When Resend API fails for verification, error is logged."""
-        with patch("resend.Emails.send", side_effect=Exception("API Error")):
-            with caplog.at_level(logging.ERROR):
-                result = await email_service_resend.send_email_verification(
-                    email="test@example.com",
-                    verification_url="https://example.com/verify"
-                )
+        with (
+            patch("resend.Emails.send", side_effect=Exception("API Error")),
+            caplog.at_level(logging.ERROR),
+        ):
+            result = await email_service_resend.send_email_verification(
+                email="test@example.com", verification_url="https://example.com/verify"
+            )
 
         assert result is False
         assert "Failed to send email via Resend" in caplog.text
@@ -446,12 +452,13 @@ class TestSMTPEmailVerification:
         mock_aiosmtplib.send = AsyncMock(return_value=None)
 
         import sys
+
         sys.modules["aiosmtplib"] = mock_aiosmtplib
         try:
             with caplog.at_level(logging.INFO):
                 result = await email_service_smtp_only.send_email_verification(
                     email="verify@example.com",
-                    verification_url="https://example.com/verify?token=test"
+                    verification_url="https://example.com/verify?token=test",
                 )
                 # The test validates the code path is exercised
                 assert result in [True, False]
@@ -463,6 +470,7 @@ class TestSMTPEmailVerification:
     async def test_verification_smtp_import_error(self, email_service_smtp_only, caplog):
         """When aiosmtplib not installed for verification, logs warning."""
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -470,12 +478,13 @@ class TestSMTPEmailVerification:
                 raise ImportError("No module named 'aiosmtplib'")
             return original_import(name, *args, **kwargs)
 
-        with patch.object(builtins, "__import__", mock_import):
-            with caplog.at_level(logging.WARNING):
-                result = await email_service_smtp_only.send_email_verification(
-                    email="test@example.com",
-                    verification_url="https://example.com/verify"
-                )
+        with (
+            patch.object(builtins, "__import__", mock_import),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = await email_service_smtp_only.send_email_verification(
+                email="test@example.com", verification_url="https://example.com/verify"
+            )
 
         assert result is False
         assert "aiosmtplib not installed" in caplog.text
@@ -487,12 +496,12 @@ class TestSMTPEmailVerification:
         mock_aiosmtplib.send = AsyncMock(side_effect=Exception("SMTP connection refused"))
 
         import sys
+
         sys.modules["aiosmtplib"] = mock_aiosmtplib
         try:
             with caplog.at_level(logging.ERROR):
                 result = await email_service_smtp_only.send_email_verification(
-                    email="test@example.com",
-                    verification_url="https://example.com/verify"
+                    email="test@example.com", verification_url="https://example.com/verify"
                 )
 
             assert result is False
@@ -515,8 +524,7 @@ class TestSMTPEmailVerification:
 
             with caplog.at_level(logging.WARNING):
                 result = await service.send_email_verification(
-                    email="nocfg@example.com",
-                    verification_url="https://example.com/verify"
+                    email="nocfg@example.com", verification_url="https://example.com/verify"
                 )
 
         assert result is False
@@ -543,6 +551,7 @@ class TestPasswordResetSMTPErrors:
     async def test_password_reset_smtp_import_error(self, email_service_smtp_only, caplog):
         """When aiosmtplib not installed for password reset, logs warning."""
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -550,12 +559,13 @@ class TestPasswordResetSMTPErrors:
                 raise ImportError("No module named 'aiosmtplib'")
             return original_import(name, *args, **kwargs)
 
-        with patch.object(builtins, "__import__", mock_import):
-            with caplog.at_level(logging.WARNING):
-                result = await email_service_smtp_only.send_password_reset(
-                    email="test@example.com",
-                    reset_url="https://example.com/reset"
-                )
+        with (
+            patch.object(builtins, "__import__", mock_import),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = await email_service_smtp_only.send_password_reset(
+                email="test@example.com", reset_url="https://example.com/reset"
+            )
 
         assert result is False
         assert "aiosmtplib not installed" in caplog.text
@@ -567,12 +577,12 @@ class TestPasswordResetSMTPErrors:
         mock_aiosmtplib.send = AsyncMock(side_effect=Exception("SMTP timeout"))
 
         import sys
+
         sys.modules["aiosmtplib"] = mock_aiosmtplib
         try:
             with caplog.at_level(logging.ERROR):
                 result = await email_service_smtp_only.send_password_reset(
-                    email="test@example.com",
-                    reset_url="https://example.com/reset"
+                    email="test@example.com", reset_url="https://example.com/reset"
                 )
 
             assert result is False

@@ -52,7 +52,9 @@ class TestCreateShareLink:
         mock_session.refresh.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_returns_existing_active_share(self, service, mock_session, user_id, interview_id):
+    async def test_returns_existing_active_share(
+        self, service, mock_session, user_id, interview_id
+    ):
         interview = MagicMock()
         interview.user_id = user_id
 
@@ -71,7 +73,9 @@ class TestCreateShareLink:
         mock_session.add.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_raises_if_interview_not_found(self, service, mock_session, user_id, interview_id):
+    async def test_raises_if_interview_not_found(
+        self, service, mock_session, user_id, interview_id
+    ):
         interview_result = MagicMock()
         interview_result.first.return_value = None
         mock_session.exec.return_value = interview_result
@@ -148,8 +152,11 @@ class TestGetSharedInterview:
         responses_result.all.return_value = []
 
         mock_session.exec.side_effect = [
-            share_result, interview_result, user_result,
-            feedback_result, responses_result,
+            share_result,
+            interview_result,
+            user_result,
+            feedback_result,
+            responses_result,
         ]
 
         await service.get_shared_interview(mock_session, "valid-token")
@@ -202,8 +209,11 @@ class TestGetSharedInterview:
         responses_result.all.return_value = []
 
         mock_session.exec.side_effect = [
-            share_result, interview_result, user_result,
-            feedback_result, responses_result,
+            share_result,
+            interview_result,
+            user_result,
+            feedback_result,
+            responses_result,
         ]
 
         result = await service.get_shared_interview(mock_session, "token")
@@ -239,8 +249,11 @@ class TestGetSharedInterview:
         responses_result.all.return_value = []
 
         mock_session.exec.side_effect = [
-            share_result, interview_result, user_result,
-            feedback_result, responses_result,
+            share_result,
+            interview_result,
+            user_result,
+            feedback_result,
+            responses_result,
         ]
 
         result = await service.get_shared_interview(mock_session, "token")
@@ -272,8 +285,11 @@ class TestGetSharedInterview:
         responses_result.all.return_value = []
 
         mock_session.exec.side_effect = [
-            share_result, interview_result, user_result,
-            feedback_result, responses_result,
+            share_result,
+            interview_result,
+            user_result,
+            feedback_result,
+            responses_result,
         ]
 
         result = await service.get_shared_interview(mock_session, "token")
@@ -330,9 +346,13 @@ class TestGetSharedInterview:
         content_fb_result.first.return_value = content_fb
 
         mock_session.exec.side_effect = [
-            share_result, interview_result, user_result,
-            session_fb_result, responses_result,
-            question_result, content_fb_result,
+            share_result,
+            interview_result,
+            user_result,
+            session_fb_result,
+            responses_result,
+            question_result,
+            content_fb_result,
         ]
 
         result = await service.get_shared_interview(mock_session, "token")

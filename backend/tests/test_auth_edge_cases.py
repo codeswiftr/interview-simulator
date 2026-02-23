@@ -18,7 +18,9 @@ async def create_test_user(
     await client.post("/api/v1/users/register", json={"email": email, "password": password})
     return email
 
+
 # Refresh Token Edge Cases
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_with_empty_token_fails(client):
@@ -30,6 +32,7 @@ async def test_refresh_token_with_empty_token_fails(client):
     # Empty string should fail validation (422) or authentication (401)
     assert resp.status_code in [401, 422]
 
+
 @pytest.mark.asyncio
 async def test_refresh_token_with_malformed_token_fails(client):
     """Test POST /auth/refresh with malformed token fails."""
@@ -38,6 +41,7 @@ async def test_refresh_token_with_malformed_token_fails(client):
         json={"refresh_token": "not-a-valid-token-format"},
     )
     assert resp.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_with_sql_injection_attempt(client):
@@ -50,6 +54,7 @@ async def test_refresh_token_with_sql_injection_attempt(client):
     )
     assert resp.status_code == 401
     assert "invalid" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_reuse_after_rotation(client, db_session):
@@ -80,6 +85,7 @@ async def test_refresh_token_reuse_after_rotation(client, db_session):
     )
     assert refresh_resp2.status_code == 401
 
+
 @pytest.mark.asyncio
 async def test_refresh_token_concurrent_use_detection(client, db_session):
     """Test detection of concurrent/stolen token use."""
@@ -104,6 +110,7 @@ async def test_refresh_token_concurrent_use_detection(client, db_session):
         json={"refresh_token": refresh_token},
     )
     assert resp2.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_clears_on_expiration(client, db_session):
@@ -135,7 +142,9 @@ async def test_refresh_token_clears_on_expiration(client, db_session):
     assert user.refresh_token is None
     assert user.refresh_token_expires_at is None
 
+
 # Password Reset Edge Cases
+
 
 @pytest.mark.asyncio
 async def test_reset_password_with_invalid_token_format(client):
@@ -146,6 +155,7 @@ async def test_reset_password_with_invalid_token_format(client):
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_reset_password_token_sql_injection_protection(client):
@@ -158,6 +168,7 @@ async def test_reset_password_token_sql_injection_protection(client):
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_reset_password_with_very_short_password(client, db_session):
@@ -182,6 +193,7 @@ async def test_reset_password_with_very_short_password(client, db_session):
     )
     # Should return validation error (422) or bad request (400) for weak password
     assert resp.status_code in [200, 400, 422]
+
 
 @pytest.mark.asyncio
 async def test_reset_password_deletes_inactive_user_token(client, db_session):
@@ -211,6 +223,7 @@ async def test_reset_password_deletes_inactive_user_token(client, db_session):
     # Should succeed in resetting password (user can reactivate by resetting)
     assert resp.status_code == 200
 
+
 @pytest.mark.asyncio
 async def test_forgot_password_case_insensitive_email(client, db_session):
     """Test forgot password with different email casing."""
@@ -235,6 +248,7 @@ async def test_forgot_password_case_insensitive_email(client, db_session):
     # Should have token because emails are case-insensitive
     assert len(tokens) >= 1
 
+
 @pytest.mark.asyncio
 async def test_forgot_password_with_whitespace_email(client):
     """Test forgot password with email containing whitespace."""
@@ -244,6 +258,7 @@ async def test_forgot_password_with_whitespace_email(client):
     )
     # Should handle gracefully (either trim or return success without sending)
     assert resp.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_multiple_password_reset_requests(client, db_session):
@@ -262,6 +277,7 @@ async def test_multiple_password_reset_requests(client, db_session):
     )
     tokens = list(result.all())
     assert len(tokens) == 2
+
 
 @pytest.mark.asyncio
 async def test_reset_password_with_oldest_token_when_multiple_exist(client, db_session):
@@ -290,6 +306,7 @@ async def test_reset_password_with_oldest_token_when_multiple_exist(client, db_s
         json={"token": first_token.token, "new_password": "NewSecure456!"},
     )
     assert resp.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_reset_password_clears_refresh_tokens(client, db_session):
@@ -328,6 +345,7 @@ async def test_reset_password_clears_refresh_tokens(client, db_session):
     # Current implementation doesn't invalidate refresh tokens on password reset
     assert refresh_resp.status_code in [200, 401]
 
+
 @pytest.mark.asyncio
 async def test_forgot_password_with_special_characters_in_email(client):
     """Test forgot password with special characters in email."""
@@ -337,6 +355,7 @@ async def test_forgot_password_with_special_characters_in_email(client):
         json={"email": "test+tag@example.com"},
     )
     assert resp.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_reset_password_token_timing_attack_protection(client, db_session):
@@ -361,7 +380,7 @@ async def test_reset_password_token_timing_attack_protection(client, db_session)
     result = await db_session.exec(
         select(PasswordResetToken)
         .where(PasswordResetToken.user_id == user.id)
-        .where(PasswordResetToken.used == False)
+        .where(PasswordResetToken.used.is_(False))
     )
     valid_token = result.first()
 
@@ -375,6 +394,7 @@ async def test_reset_password_token_timing_attack_protection(client, db_session)
     # Both should return similar response structures
     assert "detail" in resp1.json() or "message" in resp1.json()
     assert "detail" in resp2.json() or "message" in resp2.json()
+
 
 @pytest.mark.asyncio
 async def test_refresh_with_deleted_user_fails(client, db_session):
@@ -400,6 +420,7 @@ async def test_refresh_with_deleted_user_fails(client, db_session):
         json={"refresh_token": refresh_token},
     )
     assert resp.status_code == 401
+
 
 @pytest.mark.asyncio
 async def test_reset_password_very_long_token(client):

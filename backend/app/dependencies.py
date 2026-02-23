@@ -44,7 +44,7 @@ async def get_current_user(
         payload = auth.decode_token(token)
         user_id: str = payload.sub
     except Exception:
-        raise credentials_exception
+        raise credentials_exception from None
 
     # Fetch user from database
     result = await session.exec(select(User).where(User.id == user_id))
@@ -93,12 +93,12 @@ async def check_interview_quota(
         await session.commit()
 
     # Free tier limit: 3 interviews per month
-    FREE_TIER_LIMIT = 3
+    free_tier_limit = 3
 
     # Check quota based on tier
     if (
         current_user.subscription_tier == SubscriptionTier.FREE
-        and current_user.interviews_this_month >= FREE_TIER_LIMIT
+        and current_user.interviews_this_month >= free_tier_limit
     ):
         # Build upgrade details with Stripe checkout URL
         upgrade_url = None
@@ -109,9 +109,9 @@ async def check_interview_quota(
             upgrade_url = f"{settings.frontend_url}/upgrade?price_id={price_id}"
 
         detail_message = {
-            "message": f"Free tier limit reached ({FREE_TIER_LIMIT} interviews per month). Upgrade to Pro for unlimited interviews.",
+            "message": f"Free tier limit reached ({free_tier_limit} interviews per month). Upgrade to Pro for unlimited interviews.",
             "interviews_used": current_user.interviews_this_month,
-            "interviews_limit": FREE_TIER_LIMIT,
+            "interviews_limit": free_tier_limit,
             "upgrade_url": upgrade_url,
             "price_id": price_id,
         }

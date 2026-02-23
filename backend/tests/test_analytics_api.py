@@ -18,9 +18,11 @@ TEST_ALGORITHM = "HS256"
 @pytest.fixture(autouse=True)
 def mock_jwt_config():
     """Mock JWT configuration for all tests."""
-    with patch("app.security.get_jwt_secret_key", return_value=TEST_SECRET):
-        with patch("app.security.get_jwt_algorithm", return_value=TEST_ALGORITHM):
-            yield
+    with (
+        patch("app.security.get_jwt_secret_key", return_value=TEST_SECRET),
+        patch("app.security.get_jwt_algorithm", return_value=TEST_ALGORITHM),
+    ):
+        yield
 
 
 def create_test_token(user_id: str) -> str:
@@ -94,7 +96,9 @@ async def test_get_session_analytics(prepare_database, test_session, client: Asy
 
 @requires_db
 @pytest.mark.asyncio
-async def test_get_session_analytics_unauthorized(prepare_database, test_session, client: AsyncClient):
+async def test_get_session_analytics_unauthorized(
+    prepare_database, test_session, client: AsyncClient
+):
     """Test GET /api/v1/analytics/sessions/{session_id} without auth fails."""
     session_id = uuid4()
 
@@ -129,7 +133,9 @@ async def test_get_session_analytics_not_found(prepare_database, test_session, c
 
 @requires_db
 @pytest.mark.asyncio
-async def test_get_session_analytics_no_analytics(prepare_database, test_session, client: AsyncClient):
+async def test_get_session_analytics_no_analytics(
+    prepare_database, test_session, client: AsyncClient
+):
     """Test GET /api/v1/analytics/sessions/{session_id} when analytics not generated."""
     user = User(
         email="test@example.com",
@@ -342,7 +348,9 @@ async def test_generate_session_analytics(prepare_database, test_session, client
 
 @requires_db
 @pytest.mark.asyncio
-async def test_generate_session_analytics_no_responses(prepare_database, test_session, client: AsyncClient):
+async def test_generate_session_analytics_no_responses(
+    prepare_database, test_session, client: AsyncClient
+):
     """Test POST /api/v1/analytics/generate/{session_id} with no responses."""
     user = User(
         email="test@example.com",
@@ -373,7 +381,9 @@ async def test_generate_session_analytics_no_responses(prepare_database, test_se
 
 @requires_db
 @pytest.mark.asyncio
-async def test_generate_session_analytics_unauthorized_access(prepare_database, test_session, client: AsyncClient):
+async def test_generate_session_analytics_unauthorized_access(
+    prepare_database, test_session, client: AsyncClient
+):
     """Test POST /api/v1/analytics/generate/{session_id} for other user's session."""
     # Create two users
     user1 = User(

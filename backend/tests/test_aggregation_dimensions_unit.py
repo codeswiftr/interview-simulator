@@ -43,8 +43,15 @@ def _make_response(session_id, response_id=None, category="behavioral"):
     return (r, q)
 
 
-def _make_content_feedback(response_id, overall=75.0, technical=80.0, structure=70.0,
-                           completeness=65.0, relevance=85.0, star=60.0):
+def _make_content_feedback(
+    response_id,
+    overall=75.0,
+    technical=80.0,
+    structure=70.0,
+    completeness=65.0,
+    relevance=85.0,
+    star=60.0,
+):
     cf = MagicMock(spec=ContentFeedback)
     cf.response_id = response_id
     cf.overall_content_score = overall
@@ -135,9 +142,7 @@ class TestComputeBehavioralDimension:
         recent = _make_session()
         r1, q1 = _make_response(recent.id, category="technical")
         cf1 = _make_content_feedback(r1.id)
-        dim = agg_service._compute_behavioral_dimension(
-            [(r1, q1)], {r1.id: cf1}, [recent], []
-        )
+        dim = agg_service._compute_behavioral_dimension([(r1, q1)], {r1.id: cf1}, [recent], [])
         assert dim is None
 
 
@@ -160,9 +165,7 @@ class TestComputeTechnicalDimension:
         recent = _make_session()
         r1, q1 = _make_response(recent.id, category="behavioral")
         cf1 = _make_content_feedback(r1.id)
-        dim = agg_service._compute_technical_dimension(
-            [(r1, q1)], {r1.id: cf1}, [recent], []
-        )
+        dim = agg_service._compute_technical_dimension([(r1, q1)], {r1.id: cf1}, [recent], [])
         assert dim is None
 
 
@@ -190,9 +193,7 @@ class TestComputeCommunicationDimension:
         cf1 = _make_content_feedback(r1.id, relevance=80.0, structure=60.0)
         feedbacks = {r1.id: cf1}
 
-        dim = agg_service._compute_communication_dimension(
-            [(r1, q1)], feedbacks, [recent], []
-        )
+        dim = agg_service._compute_communication_dimension([(r1, q1)], feedbacks, [recent], [])
         assert dim is not None
         assert dim.name == "Communication"
         # Score = relevance * 0.5 + structure * 0.5 = 80*0.5 + 60*0.5 = 70.0
@@ -201,7 +202,5 @@ class TestComputeCommunicationDimension:
     def test_returns_none_without_content_feedbacks(self, agg_service):
         recent = _make_session()
         r1, q1 = _make_response(recent.id)
-        dim = agg_service._compute_communication_dimension(
-            [(r1, q1)], {}, [recent], []
-        )
+        dim = agg_service._compute_communication_dimension([(r1, q1)], {}, [recent], [])
         assert dim is None

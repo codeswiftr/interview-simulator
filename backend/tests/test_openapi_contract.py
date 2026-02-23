@@ -24,6 +24,7 @@ async def openapi_schema(client: AsyncClient) -> dict:
     assert response.status_code == 200
     return response.json()
 
+
 class TestOpenAPISchemaStructure:
     """Tests for OpenAPI schema structure and completeness."""
 
@@ -61,6 +62,7 @@ class TestOpenAPISchemaStructure:
         assert "components" in openapi_schema
         assert "schemas" in openapi_schema["components"]
         assert len(openapi_schema["components"]["schemas"]) > 0
+
 
 class TestCriticalEndpointsInSchema:
     """Test that critical API endpoints are documented in OpenAPI schema."""
@@ -102,6 +104,7 @@ class TestCriticalEndpointsInSchema:
         feedback_paths = [p for p in paths if "/feedback" in p]
         assert len(feedback_paths) > 0, "No feedback endpoints found in schema"
 
+
 class TestSchemaModelsExist:
     """Test that critical schema models are defined."""
 
@@ -134,6 +137,7 @@ class TestSchemaModelsExist:
         feedback_schemas = [s for s in schemas if "feedback" in s.lower()]
         assert len(feedback_schemas) > 0, "No feedback schemas found"
 
+
 class TestEndpointResponseCodes:
     """Test that endpoints return status codes matching the schema."""
 
@@ -160,25 +164,23 @@ class TestEndpointResponseCodes:
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_invalid_resource_returns_404(
-        self, client: AsyncClient, openapi_schema: dict
-    ):
+    async def test_invalid_resource_returns_404(self, client: AsyncClient, openapi_schema: dict):
         """Test non-existent resources return 404."""
         import uuid
+
         response = await client.get(f"/api/v1/questions/{uuid.uuid4()}")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_validation_error_returns_422(
-        self, client: AsyncClient, openapi_schema: dict
-    ):
+    async def test_validation_error_returns_422(self, client: AsyncClient, openapi_schema: dict):
         """Test validation errors return 422 for malformed requests."""
         # Use missing required field to trigger 422
         response = await client.post(
             "/api/v1/users/register",
-            json={"email": "test@example.com"}  # Missing required password field
+            json={"email": "test@example.com"},  # Missing required password field
         )
         assert response.status_code == 422
+
 
 class TestResponseContentTypes:
     """Test that response content types match schema."""
@@ -201,6 +203,7 @@ class TestResponseContentTypes:
         error_data = response.json()
         assert "detail" in error_data
 
+
 class TestRequestValidation:
     """Test request validation against schema."""
 
@@ -210,7 +213,7 @@ class TestRequestValidation:
         # Missing password should return 422
         response = await client.post(
             "/api/v1/users/register",
-            json={"email": "test@example.com"}  # Missing password
+            json={"email": "test@example.com"},  # Missing password
         )
         assert response.status_code == 422
         error = response.json()
@@ -219,10 +222,7 @@ class TestRequestValidation:
     @pytest.mark.asyncio
     async def test_register_requires_password(self, client: AsyncClient):
         """Test registration requires password field."""
-        response = await client.post(
-            "/api/v1/users/register",
-            json={"email": "test@example.com"}
-        )
+        response = await client.post("/api/v1/users/register", json={"email": "test@example.com"})
         assert response.status_code == 422
 
     @pytest.mark.asyncio
@@ -231,11 +231,11 @@ class TestRequestValidation:
         # Register and login
         await client.post(
             "/api/v1/users/register",
-            json={"email": "enum_test@example.com", "password": "SecureTest123!"}
+            json={"email": "enum_test@example.com", "password": "SecureTest123!"},
         )
         login_resp = await client.post(
             "/api/v1/users/login",
-            json={"email": "enum_test@example.com", "password": "SecureTest123!"}
+            json={"email": "enum_test@example.com", "password": "SecureTest123!"},
         )
         token = f"Bearer {login_resp.json()['access_token']}"
 
@@ -243,9 +243,10 @@ class TestRequestValidation:
         response = await client.post(
             "/api/v1/interviews",
             json={"interview_type": "invalid_type"},
-            headers={"Authorization": token}
+            headers={"Authorization": token},
         )
         assert response.status_code == 422
+
 
 class TestSchemaEnumValues:
     """Test that schema enums are properly defined and match implementation."""
@@ -255,10 +256,7 @@ class TestSchemaEnumValues:
         """Test InterviewType enum values are documented."""
         schemas = openapi_schema["components"]["schemas"]
         # Find interview type enum
-        [
-            s for s in schemas
-            if "interviewtype" in s.lower() or "interview_type" in s.lower()
-        ]
+        [s for s in schemas if "interviewtype" in s.lower() or "interview_type" in s.lower()]
         # Even if not found as separate enum, check in interview session schema
         assert len(schemas) > 0  # At least some schemas exist
 
@@ -275,11 +273,9 @@ class TestSchemaEnumValues:
     async def test_question_category_enum_in_schema(self, openapi_schema: dict):
         """Test QuestionCategory enum values are documented."""
         schemas = openapi_schema["components"]["schemas"]
-        [
-            s for s in schemas
-            if "category" in s.lower() or "questioncategory" in s.lower()
-        ]
+        [s for s in schemas if "category" in s.lower() or "questioncategory" in s.lower()]
         assert len(schemas) > 0
+
 
 class TestEndpointMethodsMatch:
     """Test that HTTP methods in schema match implementation."""
@@ -289,10 +285,7 @@ class TestEndpointMethodsMatch:
         """Test GET endpoints work as documented."""
         paths = openapi_schema["paths"]
         # Find GET endpoints
-        get_endpoints = [
-            path for path, methods in paths.items()
-            if "get" in methods
-        ]
+        get_endpoints = [path for path, methods in paths.items() if "get" in methods]
         assert len(get_endpoints) > 0
 
         # Test a sample GET endpoint - health router is at /health
@@ -305,7 +298,7 @@ class TestEndpointMethodsMatch:
         response = await client.post(
             "/api/v1/users/register",
             json={"email": "post_test@example.com", "password": "SecureTest123!"},
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
         assert response.status_code in [201, 400]  # 201 success or 400 if already exists
 
@@ -315,6 +308,7 @@ class TestEndpointMethodsMatch:
         # Health endpoint at /health doesn't support DELETE
         response = await client.delete("/health")
         assert response.status_code == 405
+
 
 class TestSecuritySchemes:
     """Test security schemes in OpenAPI spec."""
@@ -338,6 +332,7 @@ class TestSecuritySchemes:
             response = await client.get(endpoint)
             assert response.status_code == 401, f"{endpoint} should require auth"
 
+
 class TestTagsOrganization:
     """Test that OpenAPI tags are properly organized."""
 
@@ -358,6 +353,7 @@ class TestTagsOrganization:
         # At least some expected tags should be present
         common_tags = expected_tags & actual_tags
         assert len(common_tags) > 0, f"Expected some of {expected_tags}, found {actual_tags}"
+
 
 class TestSchemaConsistency:
     """Test schema consistency across the API."""

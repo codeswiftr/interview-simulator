@@ -75,9 +75,7 @@ JSON:
             )
         return self._client
 
-    async def rate_delivery(
-        self, draft: str, delivery_transcript: str
-    ) -> DeliveryRating:
+    async def rate_delivery(self, draft: str, delivery_transcript: str) -> DeliveryRating:
         """Rate a delivery attempt against the prepared draft.
 
         Args:
@@ -110,9 +108,7 @@ JSON:
         try:
             client = self._get_client()
 
-            prompt = self.RATING_PROMPT.format(
-                draft=draft, delivery=delivery_transcript
-            )
+            prompt = self.RATING_PROMPT.format(draft=draft, delivery=delivery_transcript)
 
             response = await client.chat.completions.create(
                 model="anthropic/claude-3.5-haiku",

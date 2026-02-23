@@ -26,6 +26,7 @@ def agg_service(scoring_service):
 
 # --- _split_sessions ---
 
+
 class TestSplitSessions:
     def test_split_with_more_than_recent_count(self):
         sessions = [MagicMock() for _ in range(10)]
@@ -61,6 +62,7 @@ class TestSplitSessions:
 
 # --- aggregate_strengths_and_improvements ---
 
+
 class TestAggregateStrengths:
     def _make_feedback(self, strengths, improvements):
         fb = MagicMock(spec=ContentFeedback)
@@ -88,7 +90,9 @@ class TestAggregateStrengths:
         feedbacks = [
             self._make_feedback(["A", "B", "C", "D"], ["X"]),
         ]
-        strengths, improvements = agg_service.aggregate_strengths_and_improvements(feedbacks, top_n=2)
+        strengths, improvements = agg_service.aggregate_strengths_and_improvements(
+            feedbacks, top_n=2
+        )
         assert len(strengths) == 2
 
     def test_single_feedback(self, agg_service):
@@ -99,6 +103,7 @@ class TestAggregateStrengths:
 
 
 # --- determine_practice_areas ---
+
 
 class TestDeterminePracticeAreas:
     def _make_feedback(self, technical=80, structure=80, completeness=80, star=80):

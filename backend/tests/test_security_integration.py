@@ -27,7 +27,7 @@ class TestAuthenticationFlowSecurity:
             "email": "newuser@example.com",
             "password": "SecurePassword123!",
             "full_name": "New User",
-            "experience_level": "mid"
+            "experience_level": "mid",
         }
 
         response = await client.post("/api/v1/users/register", json=register_data)
@@ -40,10 +40,7 @@ class TestAuthenticationFlowSecurity:
         assert "id" in user_data
 
         # 2. Login with correct credentials
-        login_data = {
-            "email": "newuser@example.com",
-            "password": "SecurePassword123!"
-        }
+        login_data = {"email": "newuser@example.com", "password": "SecurePassword123!"}
 
         response = await client.post("/api/v1/users/login", json=login_data)
         assert response.status_code == 200
@@ -67,10 +64,7 @@ class TestAuthenticationFlowSecurity:
         assert profile["full_name"] == "New User"
 
         # 4. Test token refresh
-        response = await client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": refresh_token}
-        )
+        response = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
         assert response.status_code == 200
 
         new_tokens = response.json()
@@ -100,8 +94,8 @@ class TestAuthenticationFlowSecurity:
                 json={
                     "email": f"test_{weak_pw}@example.com",
                     "password": weak_pw,
-                    "full_name": "Test User"
-                }
+                    "full_name": "Test User",
+                },
             )
             assert response.status_code == 422  # Validation error
 
@@ -119,8 +113,8 @@ class TestAuthenticationFlowSecurity:
                 "email": "migration_test@example.com",
                 "password": "TestPassword123!",
                 "full_name": "Migration Test User",
-                "experience_level": "senior"
-            }
+                "experience_level": "senior",
+            },
         )
 
         # May already exist from previous run
@@ -130,10 +124,7 @@ class TestAuthenticationFlowSecurity:
         # Login should work
         response = await client.post(
             "/api/v1/users/login",
-            json={
-                "email": "migration_test@example.com",
-                "password": "TestPassword123!"
-            }
+            json={"email": "migration_test@example.com", "password": "TestPassword123!"},
         )
 
         assert response.status_code == 200
@@ -148,8 +139,8 @@ class TestAuthenticationFlowSecurity:
             "/api/v1/users/login",
             json={
                 "email": "session@example.com",
-                "password": "Password123!"  # Assuming user exists
-            }
+                "password": "Password123!",  # Assuming user exists
+            },
         )
 
         if response.status_code != 200:
@@ -159,15 +150,12 @@ class TestAuthenticationFlowSecurity:
                 json={
                     "email": "session@example.com",
                     "password": "Password123!",
-                    "full_name": "Session User"
-                }
+                    "full_name": "Session User",
+                },
             )
             response = await client.post(
                 "/api/v1/users/login",
-                json={
-                    "email": "session@example.com",
-                    "password": "Password123!"
-                }
+                json={"email": "session@example.com", "password": "Password123!"},
             )
 
         assert response.status_code == 200
@@ -179,11 +167,7 @@ class TestAuthenticationFlowSecurity:
         # 2. Test concurrent session limits (if implemented)
         # Create another session
         response2 = await client.post(
-            "/api/v1/users/login",
-            json={
-                "email": "session@example.com",
-                "password": "Password123!"
-            }
+            "/api/v1/users/login", json={"email": "session@example.com", "password": "Password123!"}
         )
 
         # Should allow multiple sessions unless restricted
@@ -194,7 +178,7 @@ class TestAuthenticationFlowSecurity:
 
         # 4. Test automatic token refresh
         # Wait for token to be near expiry (mock)
-        with patch('app.security.datetime') as mock_dt:
+        with patch("app.security.datetime") as mock_dt:
             # Simulate token expiry
             mock_dt.now.return_value = datetime.now(UTC) + timedelta(minutes=20)
             mock_dt.side_effect = lambda *args, **kw: datetime.now(UTC)
@@ -233,10 +217,7 @@ class TestAPIRateLimitingIntegration:
         # Login first
         response = await client.post(
             "/api/v1/users/login",
-            json={
-                "email": "ratelimit@example.com",
-                "password": "Password123!"
-            }
+            json={"email": "ratelimit@example.com", "password": "Password123!"},
         )
 
         if response.status_code != 200:
@@ -245,15 +226,12 @@ class TestAPIRateLimitingIntegration:
                 json={
                     "email": "ratelimit@example.com",
                     "password": "Password123!",
-                    "full_name": "Rate Limit Test"
-                }
+                    "full_name": "Rate Limit Test",
+                },
             )
             response = await client.post(
                 "/api/v1/users/login",
-                json={
-                    "email": "ratelimit@example.com",
-                    "password": "Password123!"
-                }
+                json={"email": "ratelimit@example.com", "password": "Password123!"},
             )
 
         assert response.status_code == 200
@@ -271,9 +249,7 @@ class TestAPIRateLimitingIntegration:
         # Should have higher limit or no limit
         if any(r.status_code == 429 for r in responses):
             # If limited, should be at higher threshold
-            rate_limited_at = next(
-                i for i, r in enumerate(responses) if r.status_code == 429
-            )
+            rate_limited_at = next(i for i, r in enumerate(responses) if r.status_code == 429)
             assert rate_limited_at > 60  # Higher than anonymous limit
 
     @pytest.mark.asyncio
@@ -293,7 +269,7 @@ class TestAPIRateLimitingIntegration:
 
         # All should complete without server errors
         for r in responses:
-            if hasattr(r, 'status_code'):
+            if hasattr(r, "status_code"):
                 # Should get success, rate limit, or auth required - not server error
                 assert r.status_code in [200, 401, 429], f"Unexpected status: {r.status_code}"
 
@@ -319,10 +295,7 @@ class TestContentSecurityIntegration:
         # Login first
         response = await client.post(
             "/api/v1/users/login",
-            json={
-                "email": "feedback@example.com",
-                "password": "Password123!"
-            }
+            json={"email": "feedback@example.com", "password": "Password123!"},
         )
 
         if response.status_code != 200:
@@ -331,15 +304,12 @@ class TestContentSecurityIntegration:
                 json={
                     "email": "feedback@example.com",
                     "password": "Password123!",
-                    "full_name": "Feedback User"
-                }
+                    "full_name": "Feedback User",
+                },
             )
             response = await client.post(
                 "/api/v1/users/login",
-                json={
-                    "email": "feedback@example.com",
-                    "password": "Password123!"
-                }
+                json={"email": "feedback@example.com", "password": "Password123!"},
             )
 
         assert response.status_code == 200
@@ -349,12 +319,8 @@ class TestContentSecurityIntegration:
         # Create an interview session
         response = await client.post(
             "/api/v1/interviews",
-            json={
-                "interview_type": "technical",
-                "difficulty": "medium",
-                "question_count": 1
-            },
-            headers=headers
+            json={"interview_type": "technical", "difficulty": "medium", "question_count": 1},
+            headers=headers,
         )
 
         assert response.status_code == 201
@@ -362,15 +328,10 @@ class TestContentSecurityIntegration:
         interview["id"]
 
         # Submit feedback with XSS attempts
-        xss_feedback = {
-            "content": "<script>alert('XSS')</script> Great answer!",
-            "rating": 5
-        }
+        xss_feedback = {"content": "<script>alert('XSS')</script> Great answer!", "rating": 5}
 
         response = await client.post(
-            "/api/v1/feedback/response/test-response/",
-            json=xss_feedback,
-            headers=headers
+            "/api/v1/feedback/response/test-response/", json=xss_feedback, headers=headers
         )
 
         # Should accept but sanitize
@@ -380,10 +341,7 @@ class TestContentSecurityIntegration:
         if response.status_code in [200, 201]:
             feedback_id = response.json().get("id")
             if feedback_id:
-                response = await client.get(
-                    f"/api/v1/feedback/{feedback_id}/",
-                    headers=headers
-                )
+                response = await client.get(f"/api/v1/feedback/{feedback_id}/", headers=headers)
 
                 if response.status_code == 200:
                     feedback = response.json()
@@ -403,6 +361,7 @@ class TestContentSecurityIntegration:
         This test verifies the API handles XSS attempts without crashing.
         """
         import uuid
+
         unique_id = str(uuid.uuid4())[:8]
 
         # Create user with potential XSS in profile
@@ -414,7 +373,7 @@ class TestContentSecurityIntegration:
                 "email": f"profile_{unique_id}@example.com",
                 "password": "Password123!",
                 "full_name": xss_name,
-            }
+            },
         )
 
         # Should accept (validation may happen at frontend) or sanitize
@@ -424,10 +383,7 @@ class TestContentSecurityIntegration:
         if response.status_code == 201:
             response = await client.post(
                 "/api/v1/users/login",
-                json={
-                    "email": f"profile_{unique_id}@example.com",
-                    "password": "Password123!"
-                }
+                json={"email": f"profile_{unique_id}@example.com", "password": "Password123!"},
             )
 
             tokens = response.json()
@@ -456,7 +412,7 @@ class TestContentSecurityIntegration:
         for query in xss_queries:
             response = await client.get(
                 "/api/v1/questions",  # Use existing endpoint
-                params={"search": query}
+                params={"search": query},
             )
 
             # Should handle without executing scripts - 200, 401, or 404
@@ -484,7 +440,7 @@ class TestCORSSecurityIntegration:
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": "Content-Type, Authorization",
-            }
+            },
         )
 
         # Should return 200 for valid preflight
@@ -499,7 +455,7 @@ class TestCORSSecurityIntegration:
             headers={
                 "Origin": "https://malicious-site.com",
                 "Access-Control-Request-Method": "POST",
-            }
+            },
         )
 
         # Should not include unauthorized origin
@@ -515,7 +471,7 @@ class TestCORSSecurityIntegration:
                 "Origin": "https://app.codeswiftr.com",
                 "Access-Control-Request-Method": "GET",
                 "Access-Control-Request-Credentials": "true",
-            }
+            },
         )
 
         if response.status_code == 200:
@@ -567,11 +523,7 @@ class TestFileUploadSecurity:
         """Test audio upload security measures."""
         # Login first
         response = await client.post(
-            "/api/v1/users/login",
-            json={
-                "email": "upload@example.com",
-                "password": "Password123!"
-            }
+            "/api/v1/users/login", json={"email": "upload@example.com", "password": "Password123!"}
         )
 
         if response.status_code != 200:
@@ -580,15 +532,12 @@ class TestFileUploadSecurity:
                 json={
                     "email": "upload@example.com",
                     "password": "Password123!",
-                    "full_name": "Upload User"
-                }
+                    "full_name": "Upload User",
+                },
             )
             response = await client.post(
                 "/api/v1/users/login",
-                json={
-                    "email": "upload@example.com",
-                    "password": "Password123!"
-                }
+                json={"email": "upload@example.com", "password": "Password123!"},
             )
 
         assert response.status_code == 200
@@ -597,22 +546,17 @@ class TestFileUploadSecurity:
 
         # Test with invalid file type (should be rejected)
         import uuid
+
         # Use valid UUID format for session_id
         test_session_id = str(uuid.uuid4())
         test_question_id = str(uuid.uuid4())
 
         malicious_content = b"<script>alert('XSS')</script>"
         files = {"file": ("malicious.js", malicious_content, "application/javascript")}
-        data = {
-            "session_id": test_session_id,
-            "question_id": test_question_id
-        }
+        data = {"session_id": test_session_id, "question_id": test_question_id}
 
         response = await client.post(
-            "/api/v1/upload/audio",
-            files=files,
-            data=data,
-            headers=headers
+            "/api/v1/upload/audio", files=files, data=data, headers=headers
         )
 
         # Should reject non-audio files (400/404/422)
@@ -624,10 +568,7 @@ class TestFileUploadSecurity:
         files = {"file": ("test.wav", audio_content, "audio/wav")}
 
         response = await client.post(
-            "/api/v1/upload/audio",
-            files=files,
-            data=data,
-            headers=headers
+            "/api/v1/upload/audio", files=files, data=data, headers=headers
         )
 
         # Should fail because session doesn't exist
@@ -649,11 +590,7 @@ class TestFileUploadSecurity:
             data = {"session_id": "test"}
 
             # Even if file type is valid, name should be sanitized
-            response = await client.post(
-                "/api/v1/upload/audio",
-                files=files,
-                data=data
-            )
+            response = await client.post("/api/v1/upload/audio", files=files, data=data)
 
             # Should handle path traversal attempts
             assert response.status_code in [400, 401, 422]
@@ -667,7 +604,11 @@ class TestErrorHandlingSecurity:
         """Test error messages don't leak sensitive information."""
         # Test various error scenarios
         error_scenarios = [
-            ("/api/v1/users/login", "POST", {"email": "nonexistent@example.com", "password": "wrong"}),
+            (
+                "/api/v1/users/login",
+                "POST",
+                {"email": "nonexistent@example.com", "password": "wrong"},
+            ),
             ("/api/v1/users/999999/", "GET", None),
             ("/api/v1/interviewsinvalid-uuid/", "GET", None),
             ("/api/v1/auth/refresh", "POST", {"refresh_token": "invalid-token"}),
@@ -700,10 +641,7 @@ class TestErrorHandlingSecurity:
     async def test_debug_info_not_leaked(self, client: AsyncClient):
         """Test debug information is not leaked in production."""
         # Request with debug header
-        response = await client.get(
-            "/api/v1/health",
-            headers={"Debug": "true"}
-        )
+        response = await client.get("/api/v1/health", headers={"Debug": "true"})
 
         # Should not include debug information
         response_text = response.text.lower()
@@ -737,6 +675,7 @@ class TestSessionTimeoutSecurity:
         This test verifies the basic token flow works.
         """
         import uuid
+
         unique_id = str(uuid.uuid4())[:8]
 
         # Create user and login
@@ -745,16 +684,13 @@ class TestSessionTimeoutSecurity:
             json={
                 "email": f"timeout_{unique_id}@example.com",
                 "password": "Password123!",
-                "full_name": "Timeout Test"
-            }
+                "full_name": "Timeout Test",
+            },
         )
 
         response = await client.post(
             "/api/v1/users/login",
-            json={
-                "email": f"timeout_{unique_id}@example.com",
-                "password": "Password123!"
-            }
+            json={"email": f"timeout_{unique_id}@example.com", "password": "Password123!"},
         )
 
         assert response.status_code == 200
@@ -776,10 +712,7 @@ class TestSessionTimeoutSecurity:
         # Login to get first session
         response = await client.post(
             "/api/v1/users/login",
-            json={
-                "email": "concurrent@example.com",
-                "password": "Password123!"
-            }
+            json={"email": "concurrent@example.com", "password": "Password123!"},
         )
 
         if response.status_code != 200:
@@ -788,15 +721,12 @@ class TestSessionTimeoutSecurity:
                 json={
                     "email": "concurrent@example.com",
                     "password": "Password123!",
-                    "full_name": "Concurrent Test"
-                }
+                    "full_name": "Concurrent Test",
+                },
             )
             response = await client.post(
                 "/api/v1/users/login",
-                json={
-                    "email": "concurrent@example.com",
-                    "password": "Password123!"
-                }
+                json={"email": "concurrent@example.com", "password": "Password123!"},
             )
 
         assert response.status_code == 200
@@ -806,11 +736,8 @@ class TestSessionTimeoutSecurity:
         headers = {"Authorization": f"Bearer {first_tokens['access_token']}"}
         response = await client.post(
             "/api/v1/users/mechange-password/",
-            json={
-                "current_password": "Password123!",
-                "new_password": "NewPassword456!"
-            },
-            headers=headers
+            json={"current_password": "Password123!", "new_password": "NewPassword456!"},
+            headers=headers,
         )
 
         # Old token might be invalidated immediately or after grace period

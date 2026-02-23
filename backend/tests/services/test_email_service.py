@@ -11,6 +11,7 @@ from app.services.email_service import EmailService
 def service():
     return EmailService()
 
+
 def test_load_html_template_fallback(service):
     """Test loading template when file doesn't exist."""
     with patch("app.services.email_service.Path.exists", return_value=False):
@@ -19,6 +20,7 @@ def test_load_html_template_fallback(service):
         assert "http://test.com" in html
         assert html == text
 
+
 @pytest.mark.asyncio
 async def test_send_password_reset_debug(service):
     """Test sending password reset in debug mode."""
@@ -26,6 +28,7 @@ async def test_send_password_reset_debug(service):
         mock_settings.debug = True
         result = await service.send_password_reset("test@example.com", "http://reset.com")
         assert result is True
+
 
 @pytest.mark.asyncio
 async def test_send_password_reset_resend_success(service):
@@ -42,6 +45,7 @@ async def test_send_password_reset_resend_success(service):
             result = await service.send_password_reset("test@example.com", "http://reset.com")
             assert result is True
             mock_send.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_send_password_reset_smtp_success(service):
@@ -60,6 +64,7 @@ async def test_send_password_reset_smtp_success(service):
 
         # Mock aiosmtplib module
         import sys
+
         mock_aiosmtplib = MagicMock()
         mock_aiosmtplib.send = AsyncMock()
         sys.modules["aiosmtplib"] = mock_aiosmtplib
@@ -68,6 +73,7 @@ async def test_send_password_reset_smtp_success(service):
         assert result is True
         mock_aiosmtplib.send.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_send_email_verification_debug(service):
     """Test sending email verification in debug mode."""
@@ -75,6 +81,7 @@ async def test_send_email_verification_debug(service):
         mock_settings.debug = True
         result = await service.send_email_verification("test@example.com", "http://verify.com")
         assert result is True
+
 
 @pytest.mark.asyncio
 async def test_send_email_verification_resend_success(service):
@@ -87,6 +94,7 @@ async def test_send_email_verification_resend_success(service):
         with patch("resend.Emails.send", return_value={"id": "email_456"}):
             result = await service.send_email_verification("test@example.com", "http://verify.com")
             assert result is True
+
 
 @pytest.mark.asyncio
 async def test_send_email_verification_no_service(service):

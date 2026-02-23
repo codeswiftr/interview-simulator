@@ -17,6 +17,7 @@ async def create_test_user(client: AsyncClient, email: str = "test@example.com")
     await client.post("/api/v1/users/register", json={"email": email, "password": "SecureTest123!"})
     return email
 
+
 @pytest.mark.asyncio
 async def test_forgot_password_generates_token(client: AsyncClient, db_session):
     """Test that forgot-password creates a token in the database."""
@@ -37,10 +38,13 @@ async def test_forgot_password_generates_token(client: AsyncClient, db_session):
     assert token.expires_at > datetime.now(UTC)
     assert len(token.token) > 0
 
+
 @pytest.mark.asyncio
 async def test_forgot_password_unknown_email_returns_success(client: AsyncClient, db_session):
     """Test that unknown email still returns success (security - don't reveal if email exists)."""
-    resp = await client.post("/api/v1/auth/forgot-password", json={"email": "nonexistent@example.com"})
+    resp = await client.post(
+        "/api/v1/auth/forgot-password", json={"email": "nonexistent@example.com"}
+    )
     assert resp.status_code == 200
     assert "password reset link has been sent" in resp.json()["message"].lower()
 
@@ -48,6 +52,7 @@ async def test_forgot_password_unknown_email_returns_success(client: AsyncClient
     result = await db_session.exec(select(PasswordResetToken))
     tokens = list(result.all())
     assert len(tokens) == 0
+
 
 @pytest.mark.asyncio
 async def test_forgot_password_email_service_failure(client: AsyncClient, db_session):
@@ -70,6 +75,7 @@ async def test_forgot_password_email_service_failure(client: AsyncClient, db_ses
     assert response.status_code == 200
     assert "sent" in response.json()["message"].lower()
 
+
 @pytest.mark.asyncio
 async def test_reset_password_validates_token(client: AsyncClient, db_session):
     """Test that valid token successfully resets password."""
@@ -87,7 +93,7 @@ async def test_reset_password_validates_token(client: AsyncClient, db_session):
     new_password = "newpassword456"
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": new_password}
+        json={"token": reset_token.token, "new_password": new_password},
     )
     assert resp.status_code == 200
     assert "successfully reset" in resp.json()["message"].lower()
@@ -97,9 +103,12 @@ async def test_reset_password_validates_token(client: AsyncClient, db_session):
     assert reset_token.used is True
 
     # Verify user can log in with new password
-    login_resp = await client.post("/api/v1/users/login", json={"email": email, "password": new_password})
+    login_resp = await client.post(
+        "/api/v1/users/login", json={"email": email, "password": new_password}
+    )
     assert login_resp.status_code == 200
     assert "access_token" in login_resp.json()
+
 
 @pytest.mark.asyncio
 async def test_reset_password_rejects_expired_token(client: AsyncClient, db_session):
@@ -121,10 +130,11 @@ async def test_reset_password_rejects_expired_token(client: AsyncClient, db_sess
     # Try to reset password with expired token
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "newpassword"}
+        json={"token": reset_token.token, "new_password": "newpassword"},
     )
     assert resp.status_code == 400
     assert "expired" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_reset_password_rejects_used_token(client: AsyncClient, db_session):
@@ -142,27 +152,29 @@ async def test_reset_password_rejects_used_token(client: AsyncClient, db_session
     # Use token once
     resp1 = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "ValidNewPass1"}
+        json={"token": reset_token.token, "new_password": "ValidNewPass1"},
     )
     assert resp1.status_code == 200
 
     # Try to use token again
     resp2 = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": "ValidNewPass2"}
+        json={"token": reset_token.token, "new_password": "ValidNewPass2"},
     )
     assert resp2.status_code == 400
     assert "already been used" in resp2.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_reset_password_invalid_token(client: AsyncClient):
     """Test that invalid token returns error."""
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": "invalid-token-xyz", "new_password": "newpassword"}
+        json={"token": "invalid-token-xyz", "new_password": "newpassword"},
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_reset_password_hashes_new_password(client: AsyncClient, db_session):
@@ -181,7 +193,7 @@ async def test_reset_password_hashes_new_password(client: AsyncClient, db_sessio
     new_password = "super-secret-password"
     await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": reset_token.token, "new_password": new_password}
+        json={"token": reset_token.token, "new_password": new_password},
     )
 
     # Get user and verify password is hashed
@@ -194,6 +206,7 @@ async def test_reset_password_hashes_new_password(client: AsyncClient, db_sessio
 
     # But verify_password should work
     assert verify_password(new_password, user.hashed_password) is True
+
 
 @pytest.mark.asyncio
 async def test_forgot_password_multiple_requests(client: AsyncClient, db_session):
@@ -214,6 +227,7 @@ async def test_forgot_password_multiple_requests(client: AsyncClient, db_session
         assert token.used is False
         assert token.expires_at > datetime.now(UTC)
 
+
 @pytest.mark.asyncio
 async def test_forgot_password_rate_limiting(client: AsyncClient, db_session):
     """Test that forgot-password has rate limiting to prevent abuse."""
@@ -222,16 +236,14 @@ async def test_forgot_password_rate_limiting(client: AsyncClient, db_session):
     # Make multiple rapid requests (more than typical rate limit)
     responses = []
     for _i in range(10):
-        resp = await client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": email}
-        )
+        resp = await client.post("/api/v1/auth/forgot-password", json={"email": email})
         responses.append(resp.status_code)
 
     # All should succeed (rate limiting may be implemented at middleware level)
     # But we verify the endpoint handles multiple requests gracefully
     # In production, rate limiting middleware would block excessive requests
     assert all(status in [200, 429] for status in responses)
+
 
 @pytest.mark.asyncio
 async def test_reset_password_with_latest_token(client: AsyncClient, db_session):
@@ -243,7 +255,9 @@ async def test_reset_password_with_latest_token(client: AsyncClient, db_session)
     await client.post("/api/v1/auth/forgot-password", json={"email": email})
 
     # Get both tokens
-    result = await db_session.exec(select(PasswordResetToken).order_by(PasswordResetToken.created_at))
+    result = await db_session.exec(
+        select(PasswordResetToken).order_by(PasswordResetToken.created_at)
+    )
     tokens = list(result.all())
     assert len(tokens) == 2
 
@@ -253,13 +267,14 @@ async def test_reset_password_with_latest_token(client: AsyncClient, db_session)
     # Use the second (latest) token
     resp = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": second_token.token, "new_password": "newpassword"}
+        json={"token": second_token.token, "new_password": "newpassword"},
     )
     assert resp.status_code == 200
 
     # First token should still be valid (not used)
     await db_session.refresh(first_token)
     assert first_token.used is False
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_success(client: AsyncClient, db_session):
@@ -268,33 +283,28 @@ async def test_refresh_token_success(client: AsyncClient, db_session):
 
     # Login to get tokens
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": email, "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
     )
     assert login_resp.status_code == 200
     tokens = login_resp.json()
     refresh_token = tokens["refresh_token"]
 
     # Use refresh token to get new tokens
-    refresh_resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": refresh_token}
-    )
+    refresh_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert refresh_resp.status_code == 200
     new_tokens = refresh_resp.json()
     assert "access_token" in new_tokens
     assert "refresh_token" in new_tokens
     assert new_tokens["refresh_token"] != refresh_token  # Token rotation
 
+
 @pytest.mark.asyncio
 async def test_refresh_token_invalid_token(client: AsyncClient):
     """Test refresh endpoint rejects invalid refresh token."""
-    resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": "invalid-token-xyz"}
-    )
+    resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": "invalid-token-xyz"})
     assert resp.status_code == 401
     assert "invalid" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_expired_token(client: AsyncClient, db_session):
@@ -303,8 +313,7 @@ async def test_refresh_token_expired_token(client: AsyncClient, db_session):
 
     # Login to get tokens
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": email, "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
     )
     tokens = login_resp.json()
     refresh_token = tokens["refresh_token"]
@@ -316,12 +325,10 @@ async def test_refresh_token_expired_token(client: AsyncClient, db_session):
     await db_session.commit()
 
     # Try to refresh with expired token
-    resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": refresh_token}
-    )
+    resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert resp.status_code == 401
     assert "expired" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_clears_expired_token(client: AsyncClient, db_session):
@@ -330,8 +337,7 @@ async def test_refresh_token_clears_expired_token(client: AsyncClient, db_sessio
 
     # Login to get tokens
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": email, "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
     )
     tokens = login_resp.json()
     refresh_token = tokens["refresh_token"]
@@ -343,15 +349,13 @@ async def test_refresh_token_clears_expired_token(client: AsyncClient, db_sessio
     await db_session.commit()
 
     # Try to refresh with expired token
-    await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": refresh_token}
-    )
+    await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
 
     # Verify token was cleared
     await db_session.refresh(user)
     assert user.refresh_token is None
     assert user.refresh_token_expires_at is None
+
 
 @pytest.mark.asyncio
 async def test_reset_password_user_not_found_after_token_lookup(client: AsyncClient, db_session):
@@ -374,12 +378,12 @@ async def test_reset_password_user_not_found_after_token_lookup(client: AsyncCli
     user_id = user.id
 
     # Delete all tokens for this user first
-    await db_session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
-    )
-    for token in (await db_session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
-    )).all():
+    await db_session.exec(select(PasswordResetToken).where(PasswordResetToken.user_id == user_id))
+    for token in (
+        await db_session.exec(
+            select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+        )
+    ).all():
         await db_session.delete(token)
     await db_session.commit()
 
@@ -389,11 +393,11 @@ async def test_reset_password_user_not_found_after_token_lookup(client: AsyncCli
 
     # Try to reset password with token that no longer exists
     resp = await client.post(
-        "/api/v1/auth/reset-password",
-        json={"token": token_value, "new_password": "newpassword"}
+        "/api/v1/auth/reset-password", json={"token": token_value, "new_password": "newpassword"}
     )
     assert resp.status_code == 400
     assert "invalid" in resp.json()["detail"].lower()
+
 
 @pytest.mark.asyncio
 async def test_forgot_password_lowercase_email_normalization(client: AsyncClient, db_session):
@@ -413,6 +417,7 @@ async def test_forgot_password_lowercase_email_normalization(client: AsyncClient
     tokens = list(result.all())
     assert len(tokens) == 1
 
+
 @pytest.mark.asyncio
 async def test_refresh_token_null_refresh_token_handling(client: AsyncClient, db_session):
     """Test that refresh endpoint handles null refresh_token gracefully."""
@@ -420,8 +425,7 @@ async def test_refresh_token_null_refresh_token_handling(client: AsyncClient, db
 
     # Login to get tokens
     login_resp = await client.post(
-        "/api/v1/users/login",
-        json={"email": email, "password": "SecureTest123!"}
+        "/api/v1/users/login", json={"email": email, "password": "SecureTest123!"}
     )
     assert login_resp.status_code == 200
 
@@ -433,10 +437,6 @@ async def test_refresh_token_null_refresh_token_handling(client: AsyncClient, db
     await db_session.commit()
 
     # Try to refresh with null token
-    resp = await client.post(
-        "/api/v1/auth/refresh",
-        json={"refresh_token": "some-token"}
-    )
+    resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": "some-token"})
     assert resp.status_code == 401
     assert "invalid" in resp.json()["detail"].lower()
-

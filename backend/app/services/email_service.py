@@ -107,20 +107,34 @@ CareerSwiftr Team
 
                 # Use codeswiftr.com domain (verified in Resend)
                 # Always use validated defaults - never send empty from field
-                from_email = settings.resend_from_email if settings.resend_from_email else "hello@codeswiftr.com"
-                from_name = settings.resend_from_name if settings.resend_from_name else "Interview Simulator"
+                from_email = (
+                    settings.resend_from_email
+                    if settings.resend_from_email
+                    else "hello@codeswiftr.com"
+                )
+                from_name = (
+                    settings.resend_from_name
+                    if settings.resend_from_name
+                    else "Interview Simulator"
+                )
                 from_header = f"{from_name} <{from_email}>"
 
                 # Resend SDK v2+ uses dict instead of Params class
-                email_response = resend.Emails.send({
-                    "from": from_header,
-                    "to": [email],
-                    "subject": subject,
-                    "html": html_content,
-                    "text": plain_text,
-                })
+                email_response = resend.Emails.send(
+                    {
+                        "from": from_header,
+                        "to": [email],
+                        "subject": subject,
+                        "html": html_content,
+                        "text": plain_text,
+                    }
+                )
 
-                email_id = email_response.get("id") if isinstance(email_response, dict) else getattr(email_response, "id", None)
+                email_id = (
+                    email_response.get("id")
+                    if isinstance(email_response, dict)
+                    else getattr(email_response, "id", None)
+                )
                 if email_id:
                     logger.info(
                         f"Password reset email sent via Resend to {email} (email_id: {email_id})"
@@ -235,22 +249,38 @@ CareerSwiftr Team
 
                 # Use codeswiftr.com domain (verified in Resend)
                 # Always use validated defaults - never send empty from field
-                from_email = settings.resend_from_email if settings.resend_from_email else "hello@codeswiftr.com"
-                from_name = settings.resend_from_name if settings.resend_from_name else "Interview Simulator"
+                from_email = (
+                    settings.resend_from_email
+                    if settings.resend_from_email
+                    else "hello@codeswiftr.com"
+                )
+                from_name = (
+                    settings.resend_from_name
+                    if settings.resend_from_name
+                    else "Interview Simulator"
+                )
                 from_header = f"{from_name} <{from_email}>"
 
                 # Resend SDK v2+ uses dict instead of Params class
-                email_response = resend.Emails.send({
-                    "from": from_header,
-                    "to": [email],
-                    "subject": subject,
-                    "html": html_content,
-                    "text": plain_text,
-                })
+                email_response = resend.Emails.send(
+                    {
+                        "from": from_header,
+                        "to": [email],
+                        "subject": subject,
+                        "html": html_content,
+                        "text": plain_text,
+                    }
+                )
 
-                email_id = email_response.get("id") if isinstance(email_response, dict) else getattr(email_response, "id", None)
+                email_id = (
+                    email_response.get("id")
+                    if isinstance(email_response, dict)
+                    else getattr(email_response, "id", None)
+                )
                 if email_id:
-                    logger.info(f"Email verification sent via Resend to {email} (email_id: {email_id})")
+                    logger.info(
+                        f"Email verification sent via Resend to {email} (email_id: {email_id})"
+                    )
                 else:
                     logger.info(f"Email verification sent via Resend to {email}")
                 return True
@@ -289,7 +319,5 @@ CareerSwiftr Team
             except Exception as e:
                 logger.error(f"Failed to send email via SMTP to {email}: {e}", exc_info=True)
 
-        logger.warning(
-            f"Email service not configured. Would send verification email to {email}"
-        )
+        logger.warning(f"Email service not configured. Would send verification email to {email}")
         return False

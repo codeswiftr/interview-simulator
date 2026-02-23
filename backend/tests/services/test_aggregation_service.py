@@ -25,33 +25,33 @@ def service() -> AggregationService:
 
 
 def make_content_feedback(**kwargs) -> ContentFeedback:
-    defaults = dict(
-        response_id=uuid4(),
-        technical_accuracy=60,
-        star_adherence=60,
-        answer_structure=60,
-        completeness=60,
-        relevance=60,
-        overall_content_score=60,
-        strengths=[],
-        improvements=[],
-        detailed_feedback="",
-    )
+    defaults = {
+        "response_id": uuid4(),
+        "technical_accuracy": 60,
+        "star_adherence": 60,
+        "answer_structure": 60,
+        "completeness": 60,
+        "relevance": 60,
+        "overall_content_score": 60,
+        "strengths": [],
+        "improvements": [],
+        "detailed_feedback": "",
+    }
     defaults.update(kwargs)
     return ContentFeedback(**defaults)
 
 
 def make_audio_feedback(**kwargs) -> AudioFeedback:
-    defaults = dict(
-        response_id=uuid4(),
-        speech_rate_wpm=140,
-        speech_rate_score=80,
-        filler_words={},
-        filler_word_score=80,
-        volume_consistency=80,
-        confidence_score=80,
-        overall_audio_score=80,
-    )
+    defaults = {
+        "response_id": uuid4(),
+        "speech_rate_wpm": 140,
+        "speech_rate_score": 80,
+        "filler_words": {},
+        "filler_word_score": 80,
+        "volume_consistency": 80,
+        "confidence_score": 80,
+        "overall_audio_score": 80,
+    }
     defaults.update(kwargs)
     return AudioFeedback(**defaults)
 
@@ -116,8 +116,12 @@ def test_aggregate_strengths_and_improvements(service: AggregationService) -> No
 
 def test_determine_practice_areas(service: AggregationService) -> None:
     feedbacks = [
-        SimpleNamespace(technical_accuracy=60, answer_structure=65, completeness=68, star_adherence=50),
-        SimpleNamespace(technical_accuracy=60, answer_structure=65, completeness=68, star_adherence=50),
+        SimpleNamespace(
+            technical_accuracy=60, answer_structure=65, completeness=68, star_adherence=50
+        ),
+        SimpleNamespace(
+            technical_accuracy=60, answer_structure=65, completeness=68, star_adherence=50
+        ),
     ]
     areas = service.determine_practice_areas(feedbacks, threshold=70)
 
@@ -195,7 +199,9 @@ async def test_aggregate_user_progress_with_feedbacks(service: AggregationServic
 
 
 @pytest.mark.asyncio
-async def test_aggregate_user_improvements_insufficient_sessions(service: AggregationService) -> None:
+async def test_aggregate_user_improvements_insufficient_sessions(
+    service: AggregationService,
+) -> None:
     mock_session = AsyncMock()
     mock_result = MagicMock()
     mock_result.all.return_value = [
@@ -254,7 +260,9 @@ async def test_aggregate_user_improvements_delivery_behavioral(service: Aggregat
     )
     response_prev.id = uuid4()
 
-    question_behavioral = Question(content="Q", category="behavioral", difficulty="easy", is_active=True)
+    question_behavioral = Question(
+        content="Q", category="behavioral", difficulty="easy", is_active=True
+    )
 
     content_recent = make_content_feedback(
         response_id=response_recent.id,
@@ -337,7 +345,9 @@ async def test_aggregate_skills_gap_basic(service: AggregationService) -> None:
     )
     response_prev.id = uuid4()
 
-    question_behavioral = Question(content="Q", category="behavioral", difficulty="easy", is_active=True)
+    question_behavioral = Question(
+        content="Q", category="behavioral", difficulty="easy", is_active=True
+    )
 
     content_recent = make_content_feedback(
         response_id=response_recent.id,

@@ -124,7 +124,9 @@ async def test_list_questions_filter_by_role(client: AsyncClient, db_session: As
 
 
 @pytest.mark.asyncio
-async def test_list_questions_filter_by_industry_and_role(client: AsyncClient, db_session: AsyncSession):
+async def test_list_questions_filter_by_industry_and_role(
+    client: AsyncClient, db_session: AsyncSession
+):
     """Test filtering questions by both industry and role."""
     # Create questions with different industry/role combinations
     questions = [
@@ -161,7 +163,9 @@ async def test_list_questions_filter_by_industry_and_role(client: AsyncClient, d
 
 
 @pytest.mark.asyncio
-async def test_get_random_question_filter_by_industry(client: AsyncClient, db_session: AsyncSession):
+async def test_get_random_question_filter_by_industry(
+    client: AsyncClient, db_session: AsyncSession
+):
     """Test getting random question filtered by industry."""
     # Create questions with different industries
     for i in range(5):
@@ -225,7 +229,9 @@ async def test_get_random_question_filter_by_role(client: AsyncClient, db_sessio
 
 
 @pytest.mark.asyncio
-async def test_get_random_question_filter_by_industry_and_role(client: AsyncClient, db_session: AsyncSession):
+async def test_get_random_question_filter_by_industry_and_role(
+    client: AsyncClient, db_session: AsyncSession
+):
     """Test getting random question filtered by both industry and role."""
     # Create specific industry+role combinations
     db_session.add(

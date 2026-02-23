@@ -44,7 +44,7 @@ class TestCORSSecurity:
                     "Origin": origin,
                     "Access-Control-Request-Method": "POST",
                     "Access-Control-Request-Headers": "Content-Type, Authorization",
-                }
+                },
             )
 
             assert response.status_code == 200
@@ -66,11 +66,14 @@ class TestCORSSecurity:
                 headers={
                     "Origin": origin,
                     "Access-Control-Request-Method": "POST",
-                }
+                },
             )
 
             # Origin should not be in allow list (400 status for disallowed CORS)
-            assert response.status_code == 400 or response.headers.get("Access-Control-Allow-Origin") != origin
+            assert (
+                response.status_code == 400
+                or response.headers.get("Access-Control-Allow-Origin") != origin
+            )
 
     @pytest.mark.asyncio
     async def test_cors_credentials_not_wildcard(self, client):
@@ -81,7 +84,7 @@ class TestCORSSecurity:
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Credentials": "true",
-            }
+            },
         )
 
         # Should not use wildcard when credentials are allowed
@@ -97,7 +100,7 @@ class TestCORSSecurity:
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": "Authorization, Content-Type, X-Custom",
-            }
+            },
         )
 
         allowed_headers = response.headers.get("Access-Control-Allow-Headers", "")
@@ -113,7 +116,7 @@ class TestCORSSecurity:
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
-            }
+            },
         )
 
         allowed_methods = response.headers.get("Access-Control-Allow-Methods", "")
@@ -155,7 +158,7 @@ class TestRateLimitSecurity:
         # First 10 requests should be allowed
         for i in range(10):
             allowed, _ = rate_limiter.is_allowed(request)
-            assert allowed is True, f"Request {i+1} should be allowed"
+            assert allowed is True, f"Request {i + 1} should be allowed"
 
         # 11th request should be blocked
         allowed, headers = rate_limiter.is_allowed(request)
@@ -298,7 +301,9 @@ class TestIPValidationSecurity:
             "CF-Connecting-IP": "8.8.8.8",  # Real public IP
         }
         request.headers = MagicMock()
-        request.headers.get = lambda key, default=None: headers_dict.get(key) if headers_dict.get(key) is not None else default
+        request.headers.get = lambda key, default=None: (
+            headers_dict.get(key) if headers_dict.get(key) is not None else default
+        )
         request.url.path = "/api/v1/test"
         request.url.hostname = "api.example.com"
 
@@ -335,7 +340,9 @@ class TestIPValidationSecurity:
             "X-Real-IP": "1.1.1.1",  # Real public IP (Cloudflare DNS)
         }
         request.headers = MagicMock()
-        request.headers.get = lambda key, default=None: headers_dict.get(key) if headers_dict.get(key) is not None else default
+        request.headers.get = lambda key, default=None: (
+            headers_dict.get(key) if headers_dict.get(key) is not None else default
+        )
         request.url.path = "/api/v1/test"
         request.url.hostname = "interview-simulator-api-production.up.railway.app"
 
@@ -546,7 +553,9 @@ class TestSuspiciousActivityDetection:
             "CF-RAY": "",
         }
         request.headers = MagicMock()
-        request.headers.get = lambda key, default="": headers_dict.get(key) if headers_dict.get(key) is not None else default
+        request.headers.get = lambda key, default="": (
+            headers_dict.get(key) if headers_dict.get(key) is not None else default
+        )
 
         # First few suspicious activities
         for _ in range(3):
@@ -575,8 +584,7 @@ class TestRateLimitMiddleware:
         """Test certain paths are excluded from rate limiting."""
         app = MagicMock()
         middleware = SecureRateLimitMiddleware(
-            app,
-            exclude_paths=["/api/v1/health", "/docs", "/openapi.json"]
+            app, exclude_paths=["/api/v1/health", "/docs", "/openapi.json"]
         )
 
         # Health check should not be rate limited
@@ -656,10 +664,7 @@ class TestRateLimitMiddleware:
     async def test_middleware_user_context(self):
         """Test rate limiting respects user context."""
         app = MagicMock()
-        config = RateLimitConfig(
-            requests_per_minute=5,
-            user_requests_per_minute=20
-        )
+        config = RateLimitConfig(requests_per_minute=5, user_requests_per_minute=20)
         middleware = SecureRateLimitMiddleware(app, config=config, enable_ddos_headers=False)
 
         request = MagicMock()
@@ -706,7 +711,7 @@ class TestDDoSProtection:
         response = await client.post(
             "/api/v1/users/login",  # Correct login endpoint path
             json={"email": "test@example.com", "password": large_data},
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
 
         # Should be rejected or handled gracefully
@@ -721,7 +726,7 @@ class TestDDoSProtection:
 
         response = await client.get(
             "/health",  # Health endpoint at root
-            headers={"X-Large-Header": large_header}
+            headers={"X-Large-Header": large_header},
         )
 
         # Should handle gracefully - 200 if accepted, 400/431 if rejected
@@ -733,10 +738,7 @@ class TestDDoSProtection:
         import asyncio
 
         app = MagicMock()
-        config = RateLimitConfig(
-            requests_per_minute=10,
-            burst_size=5
-        )
+        config = RateLimitConfig(requests_per_minute=10, burst_size=5)
         middleware = SecureRateLimitMiddleware(app, config=config, enable_ddos_headers=False)
 
         request = MagicMock()
@@ -761,8 +763,8 @@ class TestDDoSProtection:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Count successful vs rate limited
-        successful = sum(1 for r in results if hasattr(r, 'status_code') and r.status_code == 200)
-        rate_limited = sum(1 for r in results if hasattr(r, 'status_code') and r.status_code == 429)
+        successful = sum(1 for r in results if hasattr(r, "status_code") and r.status_code == 200)
+        rate_limited = sum(1 for r in results if hasattr(r, "status_code") and r.status_code == 429)
 
         # Should have some successful and some rate limited
         assert successful > 0

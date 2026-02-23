@@ -29,6 +29,7 @@ async def sample_user(db_session):
     await db_session.refresh(user)
     return user
 
+
 @pytest.fixture
 async def sample_interview_session(db_session, sample_user):
     """Create a test interview session."""
@@ -43,6 +44,7 @@ async def sample_interview_session(db_session, sample_user):
     await db_session.refresh(session)
     return session
 
+
 @pytest.fixture
 async def sample_question(db_session):
     """Create a test question."""
@@ -55,6 +57,7 @@ async def sample_question(db_session):
     await db_session.commit()
     await db_session.refresh(question)
     return question
+
 
 @pytest.fixture
 async def sample_response(db_session, sample_interview_session, sample_question):
@@ -70,6 +73,7 @@ async def sample_response(db_session, sample_interview_session, sample_question)
     await db_session.refresh(response)
     return response
 
+
 @pytest.fixture
 def mock_audio_file(tmp_path):
     """Create a mock audio file for testing."""
@@ -77,10 +81,12 @@ def mock_audio_file(tmp_path):
     audio_file.write_bytes(b"fake audio data")
     return str(audio_file)
 
+
 @pytest.fixture
 def audio_service():
     """Create an AudioService instance."""
     return AudioService()
+
 
 class TestAudioService:
     """Test suite for AudioService."""
@@ -97,16 +103,17 @@ class TestAudioService:
             language="en",
         )
 
-        with patch.object(
-            audio_service.transcriber, "transcribe", return_value=mock_transcript
-        ), patch.object(
-            audio_service.analyzer,
-            "analyze",
-            return_value=AudioMetrics(
-                speech_rate_wpm=130.0,
-                filler_words={"um": 2},
-                volume_consistency=85.0,
-                confidence_score=75.0,
+        with (
+            patch.object(audio_service.transcriber, "transcribe", return_value=mock_transcript),
+            patch.object(
+                audio_service.analyzer,
+                "analyze",
+                return_value=AudioMetrics(
+                    speech_rate_wpm=130.0,
+                    filler_words={"um": 2},
+                    volume_consistency=85.0,
+                    confidence_score=75.0,
+                ),
             ),
         ):
             transcript, metrics = await audio_service.process_response_audio(
@@ -140,9 +147,10 @@ class TestAudioService:
             confidence_score=75.0,
         )
 
-        with patch.object(
-            audio_service.transcriber, "transcribe", return_value=mock_transcript
-        ), patch.object(audio_service.analyzer, "analyze", return_value=mock_metrics):
+        with (
+            patch.object(audio_service.transcriber, "transcribe", return_value=mock_transcript),
+            patch.object(audio_service.analyzer, "analyze", return_value=mock_metrics),
+        ):
             await audio_service.process_response_audio(
                 db_session, sample_response.id, mock_audio_file
             )
@@ -167,9 +175,14 @@ class TestAudioService:
         self, audio_service, db_session, sample_response, mock_audio_file
     ):
         """Test that transcription failures are handled gracefully."""
-        with patch.object(
-            audio_service.transcriber, "transcribe", side_effect=ValueError("Transcription failed")
-        ), pytest.raises(ValueError, match="Failed to process audio"):
+        with (
+            patch.object(
+                audio_service.transcriber,
+                "transcribe",
+                side_effect=ValueError("Transcription failed"),
+            ),
+            pytest.raises(ValueError, match="Failed to process audio"),
+        ):
             await audio_service.process_response_audio(
                 db_session, sample_response.id, mock_audio_file
             )
@@ -181,11 +194,13 @@ class TestAudioService:
         """Test that analysis failures are handled gracefully."""
         mock_transcript = TranscriptionResult(text="Test transcript", duration_seconds=120.0)
 
-        with patch.object(
-            audio_service.transcriber, "transcribe", return_value=mock_transcript
-        ), patch.object(
-            audio_service.analyzer, "analyze", side_effect=ValueError("Analysis failed")
-        ), pytest.raises(ValueError, match="Failed to process audio"):
+        with (
+            patch.object(audio_service.transcriber, "transcribe", return_value=mock_transcript),
+            patch.object(
+                audio_service.analyzer, "analyze", side_effect=ValueError("Analysis failed")
+            ),
+            pytest.raises(ValueError, match="Failed to process audio"),
+        ):
             await audio_service.process_response_audio(
                 db_session, sample_response.id, mock_audio_file
             )
@@ -207,9 +222,7 @@ class TestAudioService:
             confidence_score=80.0,
         )
 
-        feedback = await audio_service.save_audio_feedback(
-            db_session, sample_response.id, metrics
-        )
+        feedback = await audio_service.save_audio_feedback(db_session, sample_response.id, metrics)
 
         assert feedback.speech_rate_score == 100.0  # Optimal range
         assert feedback.filler_word_score > 0
@@ -234,4 +247,3 @@ class TestAudioService:
         # Try to create duplicate
         with pytest.raises(ValueError, match="already exists"):
             await audio_service.save_audio_feedback(db_session, sample_response.id, metrics)
-

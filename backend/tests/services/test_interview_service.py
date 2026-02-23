@@ -14,14 +14,19 @@ from app.services.interview_service import InterviewService
 def service():
     return InterviewService()
 
+
 @pytest.mark.asyncio
 async def test_get_category_for_type(service):
     """Test mapping interview type to question category."""
     assert service._get_category_for_type(InterviewType.BEHAVIORAL) == QuestionCategory.BEHAVIORAL
     assert service._get_category_for_type(InterviewType.TECHNICAL) == QuestionCategory.TECHNICAL
-    assert service._get_category_for_type(InterviewType.SYSTEM_DESIGN) == QuestionCategory.SYSTEM_DESIGN
+    assert (
+        service._get_category_for_type(InterviewType.SYSTEM_DESIGN)
+        == QuestionCategory.SYSTEM_DESIGN
+    )
     assert service._get_category_for_type(InterviewType.MIXED) is None
     assert service._get_category_for_type("unknown") is None
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_insufficient_questions(service):
@@ -46,6 +51,7 @@ async def test_assign_questions_insufficient_questions(service):
     assert "Not enough questions available" in str(exc_info.value)
     assert "difficulty 'easy'" in str(exc_info.value)
 
+
 @pytest.mark.asyncio
 async def test_assign_questions_insufficient_mixed_category_message(service):
     """Test error message when category is mixed and difficulty is mixed."""
@@ -68,6 +74,7 @@ async def test_assign_questions_insufficient_mixed_category_message(service):
     message = str(exc_info.value)
     assert "category 'mixed'" in message
     assert "difficulty" not in message
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_company_pool_sufficient(service):
@@ -92,6 +99,7 @@ async def test_assign_questions_company_pool_sufficient(service):
     assert result[0].question_id == q1.id
     assert result[0].time_limit_seconds == 150
     assert mock_session.exec.call_count == 1
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_general_only_with_no_difficulty(service):
@@ -120,6 +128,7 @@ async def test_assign_questions_general_only_with_no_difficulty(service):
     assert result[1].time_limit_seconds == 200
     assert mock_session.add.call_count == 2
 
+
 @pytest.mark.asyncio
 async def test_assign_questions_company_fallback_excludes_duplicates(service):
     """Test fallback to general pool when company pool insufficient."""
@@ -146,6 +155,7 @@ async def test_assign_questions_company_fallback_excludes_duplicates(service):
 
     assert [iq.question_id for iq in result] == [q1.id, q2.id]
     assert mock_session.exec.call_count == 2
+
 
 @pytest.mark.asyncio
 async def test_assign_questions_with_target_company(service):
@@ -180,6 +190,7 @@ async def test_assign_questions_with_target_company(service):
     assert result[1].question_id == q2.id
     assert mock_session.add.call_count == 2
 
+
 @pytest.mark.asyncio
 async def test_get_interview_questions(service):
     """Test retrieving assigned questions."""
@@ -196,6 +207,7 @@ async def test_get_interview_questions(service):
     assert len(result) == 1
     assert result[0].id == q1.id
 
+
 @pytest.mark.asyncio
 async def test_has_assigned_questions(service):
     """Test checking if questions are assigned."""
@@ -208,6 +220,7 @@ async def test_has_assigned_questions(service):
 
     assert await service.has_assigned_questions(mock_session, interview_id) is True
 
+
 @pytest.mark.asyncio
 async def test_has_assigned_questions_false(service):
     """Test checking when no questions are assigned."""
@@ -219,6 +232,7 @@ async def test_has_assigned_questions_false(service):
     mock_session.exec.return_value = mock_result
 
     assert await service.has_assigned_questions(mock_session, interview_id) is False
+
 
 @pytest.mark.asyncio
 async def test_assign_specific_question_success(service):
@@ -240,6 +254,7 @@ async def test_assign_specific_question_success(service):
     assert result.session_id == mock_interview.id
     assert mock_session.add.called
     mock_session.flush.assert_awaited()
+
 
 @pytest.mark.asyncio
 async def test_assign_specific_question_not_found(service):
@@ -270,11 +285,11 @@ async def test_assign_questions_integration_behavioral(db_session, test_user, se
     # Create test questions
     for i in range(5):
         question = Question(
-            content=f"Behavioral question {i+1}",
+            content=f"Behavioral question {i + 1}",
             category=QuestionCategory.BEHAVIORAL.value,
             difficulty=Difficulty.MEDIUM.value,
             expected_duration_seconds=180,
-            is_active=True
+            is_active=True,
         )
         db_session.add(question)
     await db_session.commit()
@@ -284,7 +299,7 @@ async def test_assign_questions_integration_behavioral(db_session, test_user, se
         user_id=test_user.id,
         interview_type=InterviewType.BEHAVIORAL.value,
         question_count=3,
-        difficulty=DifficultyLevel.MEDIUM.value
+        difficulty=DifficultyLevel.MEDIUM.value,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -307,23 +322,25 @@ async def test_assign_questions_integration_mixed_interview(db_session, test_use
     from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create mixed questions
-    categories = [QuestionCategory.BEHAVIORAL, QuestionCategory.TECHNICAL, QuestionCategory.SYSTEM_DESIGN]
+    categories = [
+        QuestionCategory.BEHAVIORAL,
+        QuestionCategory.TECHNICAL,
+        QuestionCategory.SYSTEM_DESIGN,
+    ]
     for i, category in enumerate(categories * 2):
         question = Question(
-            content=f"{category.value} question {i+1}",
+            content=f"{category.value} question {i + 1}",
             category=category.value,
             difficulty=Difficulty.MEDIUM.value,
             expected_duration_seconds=180,
-            is_active=True
+            is_active=True,
         )
         db_session.add(question)
     await db_session.commit()
 
     # Create mixed interview
     interview = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.MIXED.value,
-        question_count=4
+        user_id=test_user.id, interview_type=InterviewType.MIXED.value, question_count=4
     )
     db_session.add(interview)
     await db_session.commit()
@@ -347,23 +364,23 @@ async def test_assign_questions_integration_company_specific(db_session, test_us
     # Create Google-specific questions
     for i in range(3):
         question = Question(
-            content=f"Google technical question {i+1}",
+            content=f"Google technical question {i + 1}",
             category=QuestionCategory.TECHNICAL.value,
             difficulty=Difficulty.MEDIUM.value,
             company_tags=["google", "faang"],
             expected_duration_seconds=180,
-            is_active=True
+            is_active=True,
         )
         db_session.add(question)
 
     # Create general technical questions
     for i in range(3):
         question = Question(
-            content=f"General technical question {i+1}",
+            content=f"General technical question {i + 1}",
             category=QuestionCategory.TECHNICAL.value,
             difficulty=Difficulty.MEDIUM.value,
             expected_duration_seconds=180,
-            is_active=True
+            is_active=True,
         )
         db_session.add(question)
     await db_session.commit()
@@ -374,7 +391,7 @@ async def test_assign_questions_integration_company_specific(db_session, test_us
         interview_type=InterviewType.TECHNICAL.value,
         target_company="Google",
         question_count=5,
-        difficulty=DifficultyLevel.MEDIUM.value
+        difficulty=DifficultyLevel.MEDIUM.value,
     )
     db_session.add(interview)
     await db_session.commit()
@@ -399,20 +416,18 @@ async def test_assign_questions_integration_insufficient_questions(db_session, t
     # Create only 2 technical questions
     for i in range(2):
         question = Question(
-            content=f"Technical question {i+1}",
+            content=f"Technical question {i + 1}",
             category=QuestionCategory.TECHNICAL.value,
             difficulty=Difficulty.HARD.value,
             expected_duration_seconds=180,
-            is_active=True
+            is_active=True,
         )
         db_session.add(question)
     await db_session.commit()
 
     # Request 5 questions
     interview = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.TECHNICAL.value,
-        question_count=5
+        user_id=test_user.id, interview_type=InterviewType.TECHNICAL.value, question_count=5
     )
     db_session.add(interview)
     await db_session.commit()
@@ -433,9 +448,24 @@ async def test_get_interview_questions_integration(db_session, test_user, servic
     from app.models.question import Difficulty, Question, QuestionCategory
 
     # Create questions
-    q1 = Question(content="Q1", category=QuestionCategory.BEHAVIORAL.value, difficulty=Difficulty.EASY.value, is_active=True)
-    q2 = Question(content="Q2", category=QuestionCategory.BEHAVIORAL.value, difficulty=Difficulty.MEDIUM.value, is_active=True)
-    q3 = Question(content="Q3", category=QuestionCategory.BEHAVIORAL.value, difficulty=Difficulty.HARD.value, is_active=True)
+    q1 = Question(
+        content="Q1",
+        category=QuestionCategory.BEHAVIORAL.value,
+        difficulty=Difficulty.EASY.value,
+        is_active=True,
+    )
+    q2 = Question(
+        content="Q2",
+        category=QuestionCategory.BEHAVIORAL.value,
+        difficulty=Difficulty.MEDIUM.value,
+        is_active=True,
+    )
+    q3 = Question(
+        content="Q3",
+        category=QuestionCategory.BEHAVIORAL.value,
+        difficulty=Difficulty.HARD.value,
+        is_active=True,
+    )
     db_session.add_all([q1, q2, q3])
     await db_session.commit()
     await db_session.refresh(q1)
@@ -444,18 +474,22 @@ async def test_get_interview_questions_integration(db_session, test_user, servic
 
     # Create interview
     interview = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.BEHAVIORAL.value,
-        question_count=3
+        user_id=test_user.id, interview_type=InterviewType.BEHAVIORAL.value, question_count=3
     )
     db_session.add(interview)
     await db_session.commit()
     await db_session.refresh(interview)
 
     # Manually assign questions in specific order
-    iq1 = InterviewQuestion(session_id=interview.id, question_id=q3.id, order=1, time_limit_seconds=180)
-    iq2 = InterviewQuestion(session_id=interview.id, question_id=q1.id, order=2, time_limit_seconds=180)
-    iq3 = InterviewQuestion(session_id=interview.id, question_id=q2.id, order=3, time_limit_seconds=180)
+    iq1 = InterviewQuestion(
+        session_id=interview.id, question_id=q3.id, order=1, time_limit_seconds=180
+    )
+    iq2 = InterviewQuestion(
+        session_id=interview.id, question_id=q1.id, order=2, time_limit_seconds=180
+    )
+    iq3 = InterviewQuestion(
+        session_id=interview.id, question_id=q2.id, order=3, time_limit_seconds=180
+    )
     db_session.add_all([iq1, iq2, iq3])
     await db_session.commit()
 
@@ -476,17 +510,13 @@ async def test_has_assigned_questions_integration(db_session, test_user, service
 
     # Create interview without questions
     interview1 = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.BEHAVIORAL.value,
-        question_count=1
+        user_id=test_user.id, interview_type=InterviewType.BEHAVIORAL.value, question_count=1
     )
     db_session.add(interview1)
 
     # Create interview with questions
     interview2 = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.TECHNICAL.value,
-        question_count=1
+        user_id=test_user.id, interview_type=InterviewType.TECHNICAL.value, question_count=1
     )
     db_session.add(interview2)
     await db_session.commit()
@@ -499,7 +529,9 @@ async def test_has_assigned_questions_integration(db_session, test_user, service
     await db_session.commit()
     await db_session.refresh(question)
 
-    iq = InterviewQuestion(session_id=interview2.id, question_id=question.id, order=1, time_limit_seconds=180)
+    iq = InterviewQuestion(
+        session_id=interview2.id, question_id=question.id, order=1, time_limit_seconds=180
+    )
     db_session.add(iq)
     await db_session.commit()
 
@@ -520,7 +552,7 @@ async def test_assign_specific_question_integration(db_session, test_user, servi
         category=QuestionCategory.BEHAVIORAL.value,
         difficulty=Difficulty.MEDIUM.value,
         expected_duration_seconds=120,
-        is_active=True
+        is_active=True,
     )
     db_session.add(q1)
     await db_session.commit()
@@ -528,9 +560,7 @@ async def test_assign_specific_question_integration(db_session, test_user, servi
 
     # Create interview
     interview = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.BEHAVIORAL.value,
-        question_count=1
+        user_id=test_user.id, interview_type=InterviewType.BEHAVIORAL.value, question_count=1
     )
     db_session.add(interview)
     await db_session.commit()
@@ -558,9 +588,7 @@ async def test_assign_specific_question_integration_inactive(db_session, test_us
 
     # Create inactive question
     q1 = Question(
-        content="Inactive question",
-        category=QuestionCategory.BEHAVIORAL.value,
-        is_active=False
+        content="Inactive question", category=QuestionCategory.BEHAVIORAL.value, is_active=False
     )
     db_session.add(q1)
     await db_session.commit()
@@ -568,9 +596,7 @@ async def test_assign_specific_question_integration_inactive(db_session, test_us
 
     # Create interview
     interview = InterviewSession(
-        user_id=test_user.id,
-        interview_type=InterviewType.BEHAVIORAL.value,
-        question_count=1
+        user_id=test_user.id, interview_type=InterviewType.BEHAVIORAL.value, question_count=1
     )
     db_session.add(interview)
     await db_session.commit()

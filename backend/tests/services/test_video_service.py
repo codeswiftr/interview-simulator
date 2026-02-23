@@ -34,13 +34,15 @@ class TestProcessResponseVideo:
         mock_metrics = MagicMock(spec=VideoMetrics)
         mock_feedback = MagicMock(spec=VideoFeedback)
 
-        with patch.object(service, "analyze_video", return_value=mock_metrics) as mock_analyze:
-            with patch.object(service, "save_video_feedback", return_value=mock_feedback) as mock_save:
-                result = await service.process_response_video(mock_session, response_id, video_path)
+        with (
+            patch.object(service, "analyze_video", return_value=mock_metrics) as mock_analyze,
+            patch.object(service, "save_video_feedback", return_value=mock_feedback) as mock_save,
+        ):
+            result = await service.process_response_video(mock_session, response_id, video_path)
 
-                assert result == mock_feedback
-                mock_analyze.assert_called_once_with(mock_session, response_id, video_path)
-                mock_save.assert_called_once_with(mock_session, response_id, mock_metrics)
+            assert result == mock_feedback
+            mock_analyze.assert_called_once_with(mock_session, response_id, video_path)
+            mock_save.assert_called_once_with(mock_session, response_id, mock_metrics)
 
     @pytest.mark.asyncio
     async def test_raises_if_analyze_fails(self):
@@ -49,9 +51,11 @@ class TestProcessResponseVideo:
         mock_session = AsyncMock()
         response_id = uuid4()
 
-        with patch.object(service, "analyze_video", side_effect=ValueError("Analysis failed")):
-            with pytest.raises(ValueError, match="Analysis failed"):
-                await service.process_response_video(mock_session, response_id, "/path/video.mp4")
+        with (
+            patch.object(service, "analyze_video", side_effect=ValueError("Analysis failed")),
+            pytest.raises(ValueError, match="Analysis failed"),
+        ):
+            await service.process_response_video(mock_session, response_id, "/path/video.mp4")
 
     @pytest.mark.asyncio
     async def test_raises_if_save_fails(self):
@@ -61,10 +65,12 @@ class TestProcessResponseVideo:
         response_id = uuid4()
         mock_metrics = MagicMock(spec=VideoMetrics)
 
-        with patch.object(service, "analyze_video", return_value=mock_metrics):
-            with patch.object(service, "save_video_feedback", side_effect=ValueError("Save failed")):
-                with pytest.raises(ValueError, match="Save failed"):
-                    await service.process_response_video(mock_session, response_id, "/path/video.mp4")
+        with (
+            patch.object(service, "analyze_video", return_value=mock_metrics),
+            patch.object(service, "save_video_feedback", side_effect=ValueError("Save failed")),
+            pytest.raises(ValueError, match="Save failed"),
+        ):
+            await service.process_response_video(mock_session, response_id, "/path/video.mp4")
 
 
 class TestAnalyzeVideo:
@@ -92,9 +98,11 @@ class TestAnalyzeVideo:
         response_id = uuid4()
 
         # Mock _get_response to succeed
-        with patch.object(service, "_get_response", return_value=MagicMock()):
-            with pytest.raises(ValueError, match="Video file not found"):
-                await service.analyze_video(mock_session, response_id, "/non/existent/path.mp4")
+        with (
+            patch.object(service, "_get_response", return_value=MagicMock()),
+            pytest.raises(ValueError, match="Video file not found"),
+        ):
+            await service.analyze_video(mock_session, response_id, "/non/existent/path.mp4")
 
     @pytest.mark.asyncio
     async def test_analyzes_video_successfully(self, tmp_path):
@@ -116,16 +124,20 @@ class TestAnalyzeVideo:
             fidget_count=1,
             hand_gesture_frequency=0.5,
             processing_duration_ms=1000,
-            frame_count=300
+            frame_count=300,
         )
 
-        with patch.object(service, "_get_response", return_value=MagicMock()):
-            with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics):
-                result = await service.analyze_video(mock_session, response_id, str(video_file))
+        with (
+            patch.object(service, "_get_response", return_value=MagicMock()),
+            patch.object(
+                service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
+            result = await service.analyze_video(mock_session, response_id, str(video_file))
 
-                assert result == mock_metrics
-                assert result.confidence_score == 0.8
-                assert result.frame_count == 300
+            assert result == mock_metrics
+            assert result.confidence_score == 0.8
+            assert result.frame_count == 300
 
     @pytest.mark.asyncio
     async def test_handles_analyzer_exception(self, tmp_path, caplog):
@@ -137,14 +149,17 @@ class TestAnalyzeVideo:
         video_file = tmp_path / "test.mp4"
         video_file.write_bytes(b"fake video data")
 
-        with patch.object(service, "_get_response", return_value=MagicMock()):
-            with patch.object(
-                service.analyzer, "analyze",
+        with (
+            patch.object(service, "_get_response", return_value=MagicMock()),
+            patch.object(
+                service.analyzer,
+                "analyze",
                 new_callable=AsyncMock,
-                side_effect=Exception("Analyzer crashed")
-            ):
-                with pytest.raises(Exception, match="Analyzer crashed"):
-                    await service.analyze_video(mock_session, response_id, str(video_file))
+                side_effect=Exception("Analyzer crashed"),
+            ),
+            pytest.raises(Exception, match="Analyzer crashed"),
+        ):
+            await service.analyze_video(mock_session, response_id, str(video_file))
 
     @pytest.mark.asyncio
     async def test_passes_correct_path_to_analyzer(self, tmp_path):
@@ -165,14 +180,18 @@ class TestAnalyzeVideo:
             fidget_count=0,
             hand_gesture_frequency=0.0,
             processing_duration_ms=500,
-            frame_count=100
+            frame_count=100,
         )
 
-        with patch.object(service, "_get_response", return_value=MagicMock()):
-            with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics) as mock_analyze:
-                await service.analyze_video(mock_session, response_id, str(video_file))
+        with (
+            patch.object(service, "_get_response", return_value=MagicMock()),
+            patch.object(
+                service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+            ) as mock_analyze,
+        ):
+            await service.analyze_video(mock_session, response_id, str(video_file))
 
-                mock_analyze.assert_called_once_with(str(video_file))
+            mock_analyze.assert_called_once_with(str(video_file))
 
 
 class TestSaveVideoFeedback:
@@ -199,7 +218,7 @@ class TestSaveVideoFeedback:
             fidget_count=1,
             hand_gesture_frequency=0.5,
             processing_duration_ms=1000,
-            frame_count=300
+            frame_count=300,
         )
 
         with pytest.raises(ValueError, match="VideoFeedback already exists"):
@@ -221,7 +240,7 @@ class TestSaveVideoFeedback:
             fidget_count=1,
             hand_gesture_frequency=0.5,
             processing_duration_ms=1000,
-            frame_count=300
+            frame_count=300,
         )
 
         # Mock no existing feedback
@@ -262,7 +281,7 @@ class TestSaveVideoFeedback:
             fidget_count=None,  # None value
             hand_gesture_frequency=None,  # None value
             processing_duration_ms=500,
-            frame_count=0
+            frame_count=0,
         )
 
         mock_result = MagicMock()
@@ -290,7 +309,7 @@ class TestSaveVideoFeedback:
             fidget_count=0,
             hand_gesture_frequency=0.0,
             processing_duration_ms=0,
-            frame_count=0
+            frame_count=0,
         )
 
         mock_result = MagicMock()
@@ -319,7 +338,7 @@ class TestSaveVideoFeedback:
             fidget_count=999,
             hand_gesture_frequency=1.0,
             processing_duration_ms=60000,
-            frame_count=9999
+            frame_count=9999,
         )
 
         mock_result = MagicMock()
@@ -348,7 +367,7 @@ class TestSaveVideoFeedback:
             fidget_count=1,
             hand_gesture_frequency=0.5,
             processing_duration_ms=1000,
-            frame_count=300
+            frame_count=300,
         )
 
         mock_result = MagicMock()
@@ -375,7 +394,7 @@ class TestSaveVideoFeedback:
             fidget_count=1,
             hand_gesture_frequency=0.5,
             processing_duration_ms=1000,
-            frame_count=300
+            frame_count=300,
         )
 
         mock_result = MagicMock()
@@ -456,7 +475,7 @@ class TestVideoMetricsHandling:
             fidget_count=None,
             hand_gesture_frequency=None,
             processing_duration_ms=100,
-            frame_count=0
+            frame_count=0,
         )
 
         mock_result = MagicMock()
@@ -486,7 +505,7 @@ class TestVideoMetricsHandling:
             fidget_count=0,
             hand_gesture_frequency=0.8,
             processing_duration_ms=2000,
-            frame_count=900
+            frame_count=900,
         )
 
         mock_result = MagicMock()
@@ -517,7 +536,7 @@ class TestVideoMetricsHandling:
             fidget_count=25,
             hand_gesture_frequency=0.05,
             processing_duration_ms=3000,
-            frame_count=600
+            frame_count=600,
         )
 
         mock_result = MagicMock()
@@ -555,13 +574,17 @@ class TestEdgeCases:
                 fidget_count=0,
                 hand_gesture_frequency=0.0,
                 processing_duration_ms=100,
-                frame_count=100
+                frame_count=100,
             )
 
-            with patch.object(service, "_get_response", return_value=MagicMock()):
-                with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics):
-                    result = await service.analyze_video(mock_session, response_id, str(video_file))
-                    assert result is not None
+            with (
+                patch.object(service, "_get_response", return_value=MagicMock()),
+                patch.object(
+                    service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+                ),
+            ):
+                result = await service.analyze_video(mock_session, response_id, str(video_file))
+                assert result is not None
 
     @pytest.mark.asyncio
     async def test_handles_very_long_video_path(self, tmp_path):
@@ -584,13 +607,17 @@ class TestEdgeCases:
             fidget_count=0,
             hand_gesture_frequency=0.0,
             processing_duration_ms=100,
-            frame_count=100
+            frame_count=100,
         )
 
-        with patch.object(service, "_get_response", return_value=MagicMock()):
-            with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics):
-                result = await service.analyze_video(mock_session, response_id, str(long_path))
-                assert result is not None
+        with (
+            patch.object(service, "_get_response", return_value=MagicMock()),
+            patch.object(
+                service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
+            result = await service.analyze_video(mock_session, response_id, str(long_path))
+            assert result is not None
 
     @pytest.mark.asyncio
     async def test_handles_unicode_in_path(self, tmp_path):
@@ -611,13 +638,17 @@ class TestEdgeCases:
             fidget_count=0,
             hand_gesture_frequency=0.0,
             processing_duration_ms=100,
-            frame_count=100
+            frame_count=100,
         )
 
-        with patch.object(service, "_get_response", return_value=MagicMock()):
-            with patch.object(service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics):
-                result = await service.analyze_video(mock_session, response_id, str(video_file))
-                assert result is not None
+        with (
+            patch.object(service, "_get_response", return_value=MagicMock()),
+            patch.object(
+                service.analyzer, "analyze", new_callable=AsyncMock, return_value=mock_metrics
+            ),
+        ):
+            result = await service.analyze_video(mock_session, response_id, str(video_file))
+            assert result is not None
 
     @pytest.mark.asyncio
     async def test_handles_very_short_video(self):
@@ -636,7 +667,7 @@ class TestEdgeCases:
             fidget_count=0,
             hand_gesture_frequency=0.0,
             processing_duration_ms=50,
-            frame_count=5  # Very few frames
+            frame_count=5,  # Very few frames
         )
 
         mock_result = MagicMock()
@@ -665,7 +696,7 @@ class TestEdgeCases:
             fidget_count=1,
             hand_gesture_frequency=0.5,
             processing_duration_ms=300000,  # 5 minutes
-            frame_count=9000
+            frame_count=9000,
         )
 
         mock_result = MagicMock()
