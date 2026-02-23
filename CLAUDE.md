@@ -36,12 +36,10 @@ cd frontend && npm install && npm run dev
 
 ## Testing Commands
 ```bash
-cd backend && uv run pytest                    # All tests (385 tests, 38% line coverage)
+cd backend && uv run pytest                    # All tests (2,068 tests)
 cd backend && uv run pytest --cov=app --cov-report=html  # With coverage
 cd frontend && npm run build                   # Build check
 ```
-
-**Note**: High test count (385) with moderate line coverage (38%). Focus areas for coverage improvement: `interview_service.py` (18%), `video_service.py` (46%).
 
 ## Project Structure
 ```
@@ -101,7 +99,7 @@ audio_file -> Whisper API -> text -> Claude analysis -> feedback
 - Error format: `{"detail": "message", "code": "ERROR_CODE"}`
 
 ## Quality Gates
-- [ ] Test coverage: 70%+
+- [x] Test coverage: 70%+ (interview_service 100%, video_service 100%)
 - [ ] API response (p95): <200ms
 - [ ] Transcription: <30s for 5min audio
 - [ ] Feedback generation: <10s
