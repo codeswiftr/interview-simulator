@@ -1,4 +1,4 @@
-"""Authentication endpoints for password reset and token refresh."""
+"""Authentication endpoints for password reset, token refresh, and logout."""
 
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -11,6 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
 from app.db import get_session
+from app.dependencies import get_current_user
 from app.middleware.auth_rate_limit import forgot_password_rate_limit
 from app.models.password_reset import PasswordResetToken
 from app.models.user import RefreshTokenRequest, Token, User
@@ -165,6 +166,10 @@ async def reset_password(
     # Update user's password
     user.hashed_password = hash_password(payload.new_password)
 
+    # Invalidate refresh token — password change should end all sessions
+    user.refresh_token = None
+    user.refresh_token_expires_at = None
+
     # Mark token as used
     reset_token.used = True
 
@@ -226,3 +231,24 @@ async def refresh_token(
     await session.commit()
 
     return Token(access_token=new_access_token, refresh_token=new_refresh_token)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Invalidate the current user's refresh token.
+
+    This endpoint clears the stored refresh token so it can no longer be
+    used to obtain new access tokens.  The access token itself remains
+    valid until its natural expiry (short-lived by design).
+
+    Args:
+        current_user: Authenticated user from JWT
+        session: Database session
+    """
+    current_user.refresh_token = None
+    current_user.refresh_token_expires_at = None
+    session.add(current_user)
+    await session.commit()
