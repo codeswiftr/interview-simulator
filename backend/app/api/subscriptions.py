@@ -6,6 +6,7 @@ Checkout still uses local price IDs for interview-simulator-specific tiers.
 
 import logging
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 import stripe
@@ -30,7 +31,7 @@ router = APIRouter()
 _stripe_client = None
 
 
-def get_stripe_client():
+def get_stripe_client() -> Any:
     """Get or create the Stripe client."""
     global _stripe_client
     if _stripe_client is None and settings.stripe_secret_key:
@@ -159,7 +160,7 @@ async def create_checkout_session(
         # Create checkout session using raw stripe for local price ID support
         import stripe
 
-        checkout_session = stripe.checkout.Session.create(**checkout_params)
+        checkout_session = stripe.checkout.Session.create(**checkout_params)  # type: ignore[arg-type]
 
         get_analytics().capture(
             user_id=str(current_user.id),
@@ -188,7 +189,7 @@ async def create_checkout_session(
 
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request) -> dict:
+async def stripe_webhook(request: Request) -> dict[str, Any]:
     """Handle Stripe webhook events.
 
     Processes:
@@ -260,7 +261,7 @@ async def stripe_webhook(request: Request) -> dict:
     return {"status": "success"}
 
 
-async def _handle_checkout_completed(event_data: dict, db_session: AsyncSession) -> None:
+async def _handle_checkout_completed(event_data: dict[str, Any], db_session: AsyncSession) -> None:
     """Handle checkout.session.completed event."""
     from forge_shared.billing.models import SubscriptionStatus
 
@@ -319,7 +320,7 @@ async def _handle_checkout_completed(event_data: dict, db_session: AsyncSession)
             )
 
 
-async def _handle_subscription_updated(event_data: dict, db_session: AsyncSession) -> None:
+async def _handle_subscription_updated(event_data: dict[str, Any], db_session: AsyncSession) -> None:
     """Handle customer.subscription.updated event.
 
     Supports both forge-shared format (customer_id, subscription_id)
@@ -361,7 +362,7 @@ async def _handle_subscription_updated(event_data: dict, db_session: AsyncSessio
     await db_session.commit()
 
 
-async def _handle_subscription_deleted(event_data: dict, db_session: AsyncSession) -> None:
+async def _handle_subscription_deleted(event_data: dict[str, Any], db_session: AsyncSession) -> None:
     """Handle customer.subscription.deleted event."""
     customer_id = event_data.get("customer_id")
 
@@ -393,7 +394,7 @@ async def _handle_subscription_deleted(event_data: dict, db_session: AsyncSessio
     )
 
 
-def _map_pricing_tier(pricing_tier) -> SubscriptionTier:
+def _map_pricing_tier(pricing_tier: Any) -> SubscriptionTier:
     """Map forge_shared.billing.PricingTier to local SubscriptionTier.
 
     forge_shared uses: FREE, STARTER, PRO, ENTERPRISE
@@ -623,7 +624,7 @@ async def create_portal_session(
 async def cancel_subscription(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> dict:
+) -> dict[str, Any]:
     """Cancel active subscription and downgrade to free tier.
 
     Args:
