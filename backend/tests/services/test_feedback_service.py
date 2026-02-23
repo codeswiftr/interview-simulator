@@ -191,11 +191,13 @@ async def test_generate_session_feedback_generates_missing_feedbacks() -> None:
 
     # generate_feedback is called internally; stub it so it doesn't fail
     stub_generate = AsyncMock(return_value=MagicMock())
-    with patch.object(service, "generate_feedback", new=stub_generate):
-        with patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=[])):
-            with patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls:
-                mock_ba_cls.return_value.calculate_session_analytics = AsyncMock()
-                result = await service.generate_session_feedback(mock_session, session_id)
+    with (
+        patch.object(service, "generate_feedback", new=stub_generate),
+        patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=[])),
+        patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls,
+    ):
+        mock_ba_cls.return_value.calculate_session_analytics = AsyncMock()
+        result = await service.generate_session_feedback(mock_session, session_id)
 
     assert result is session_fb
     # generate_feedback was called once for the response that had no feedback
@@ -244,12 +246,14 @@ async def test_generate_session_feedback_skips_failed_feedback_generation() -> N
             raise ValueError("analysis failed")
         return MagicMock()
 
-    with patch.object(service, "generate_feedback", new=failing_generate):
-        with patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=[])):
-            with patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls:
-                mock_ba_cls.return_value.calculate_session_analytics = AsyncMock()
-                # Should NOT raise — errors are swallowed
-                result = await service.generate_session_feedback(mock_session, session_id)
+    with (
+        patch.object(service, "generate_feedback", new=failing_generate),
+        patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=[])),
+        patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls,
+    ):
+        mock_ba_cls.return_value.calculate_session_analytics = AsyncMock()
+        # Should NOT raise — errors are swallowed
+        result = await service.generate_session_feedback(mock_session, session_id)
 
     assert result is not None
     assert call_count == 2  # both responses attempted
@@ -302,11 +306,13 @@ async def test_generate_session_feedback_full_orchestration() -> None:
 
     recommended_ids = [str(uuid4()), str(uuid4())]
 
-    with patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=recommended_ids)) as mock_recommend:
-        with patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls:
-            mock_ba_inst = mock_ba_cls.return_value
-            mock_ba_inst.calculate_session_analytics = AsyncMock()
-            result = await service.generate_session_feedback(mock_session, session_id)
+    with (
+        patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=recommended_ids)),
+        patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls,
+    ):
+        mock_ba_inst = mock_ba_cls.return_value
+        mock_ba_inst.calculate_session_analytics = AsyncMock()
+        result = await service.generate_session_feedback(mock_session, session_id)
 
     # Verify aggregation called with correct args
     mock_aggregation.aggregate_session_feedback.assert_awaited_once_with(
@@ -379,10 +385,12 @@ async def test_generate_session_feedback_recommendation_failure_handled() -> Non
     async def boom(*args, **kwargs):
         raise RuntimeError("recommender offline")
 
-    with patch("app.services.feedback_service.recommend_next_questions", new=boom):
-        with patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls:
-            mock_ba_cls.return_value.calculate_session_analytics = AsyncMock()
-            result = await service.generate_session_feedback(mock_session, session_id)
+    with (
+        patch("app.services.feedback_service.recommend_next_questions", new=boom),
+        patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls,
+    ):
+        mock_ba_cls.return_value.calculate_session_analytics = AsyncMock()
+        result = await service.generate_session_feedback(mock_session, session_id)
 
     # Should have fallen back to empty list — create_session_feedback called with []
     _, call_kwargs = mock_persistence.create_session_feedback.call_args
@@ -423,12 +431,14 @@ async def test_generate_session_feedback_behavioral_analytics_failure_handled() 
         aggregation_service=mock_aggregation,
     )
 
-    with patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=[])):
-        with patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls:
-            mock_ba_inst = mock_ba_cls.return_value
-            mock_ba_inst.calculate_session_analytics = AsyncMock(side_effect=ValueError("analytics already exist"))
-            # Should NOT propagate — ValueError is caught silently
-            result = await service.generate_session_feedback(mock_session, session_id)
+    with (
+        patch("app.services.feedback_service.recommend_next_questions", new=AsyncMock(return_value=[])),
+        patch("app.services.feedback_service.BehavioralAnalyticsService") as mock_ba_cls,
+    ):
+        mock_ba_inst = mock_ba_cls.return_value
+        mock_ba_inst.calculate_session_analytics = AsyncMock(side_effect=ValueError("analytics already exist"))
+        # Should NOT propagate — ValueError is caught silently
+        result = await service.generate_session_feedback(mock_session, session_id)
 
     assert result is session_fb
     mock_session.commit.assert_awaited_once()
@@ -462,10 +472,12 @@ async def test_generate_video_feedback_path_resolution_direct() -> None:
     def direct_exists(self: Path) -> bool:
         return str(self) == relative_video
 
-    with patch.object(service.persistence_service, "get_video_by_response_id", new=AsyncMock(return_value=None)):
-        with patch.object(service.video_service, "process_response_video", new=AsyncMock(return_value=video_fb)) as mock_pvr:
-            with patch.object(Path, "exists", direct_exists):
-                result = await service.generate_video_feedback(mock_session, response_id)
+    with (
+        patch.object(service.persistence_service, "get_video_by_response_id", new=AsyncMock(return_value=None)),
+        patch.object(service.video_service, "process_response_video", new=AsyncMock(return_value=video_fb)) as mock_pvr,
+        patch.object(Path, "exists", direct_exists),
+    ):
+        result = await service.generate_video_feedback(mock_session, response_id)
 
     assert result is video_fb
     # Path passed to process_response_video should be the direct path (no backend/ prefix)
@@ -507,10 +519,12 @@ async def test_generate_video_feedback_path_resolution_backend_prefix(tmp_path: 
             return True
         return original_exists(self)
 
-    with patch.object(service.persistence_service, "get_video_by_response_id", new=AsyncMock(return_value=None)):
-        with patch.object(service.video_service, "process_response_video", new=AsyncMock(return_value=video_fb)) as mock_pvr:
-            with patch.object(Path, "exists", patched_exists):
-                result = await service.generate_video_feedback(mock_session, response_id)
+    with (
+        patch.object(service.persistence_service, "get_video_by_response_id", new=AsyncMock(return_value=None)),
+        patch.object(service.video_service, "process_response_video", new=AsyncMock(return_value=video_fb)) as mock_pvr,
+        patch.object(Path, "exists", patched_exists),
+    ):
+        result = await service.generate_video_feedback(mock_session, response_id)
 
     assert result is video_fb
     # Path passed must start with "backend/"
@@ -536,7 +550,9 @@ async def test_generate_video_feedback_path_not_found() -> None:
     def always_false(self: Path) -> bool:
         return False
 
-    with patch.object(service.persistence_service, "get_video_by_response_id", new=AsyncMock(return_value=None)):
-        with patch.object(Path, "exists", always_false):
-            with pytest.raises(ValueError, match="Video file not found"):
-                await service.generate_video_feedback(mock_session, response_id)
+    with (
+        patch.object(service.persistence_service, "get_video_by_response_id", new=AsyncMock(return_value=None)),
+        patch.object(Path, "exists", always_false),
+        pytest.raises(ValueError, match="Video file not found"),
+    ):
+        await service.generate_video_feedback(mock_session, response_id)

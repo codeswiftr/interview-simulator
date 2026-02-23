@@ -15,7 +15,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helper: build a mock Request for rate-limiter tests
 # ---------------------------------------------------------------------------
@@ -56,23 +55,24 @@ class TestCORSConfiguration:
 
         from app.main import app
 
-        for middleware in app.middleware_stack.__class__.__mro__:
+        for _middleware in app.middleware_stack.__class__.__mro__:
             pass  # just ensure import works
 
         # Walk the middleware stack to find CORSMiddleware kwargs
         # FastAPI stores middleware as a list of (cls, args, kwargs) tuples
-        for cls, args, kwargs in app.user_middleware:
+        for cls, _args, kwargs in app.user_middleware:
             if cls is CORSMiddleware:
                 return kwargs
         return None
 
     def test_cors_allow_methods_is_explicit_not_wildcard(self):
         """CORS allow_methods must list explicit HTTP verbs, not a wildcard."""
-        from app.main import app
         from fastapi.middleware.cors import CORSMiddleware
 
+        from app.main import app
+
         cors_kwargs = None
-        for cls, args, kwargs in app.user_middleware:
+        for cls, _args, kwargs in app.user_middleware:
             if cls is CORSMiddleware:
                 cors_kwargs = kwargs
                 break
@@ -87,11 +87,12 @@ class TestCORSConfiguration:
 
     def test_cors_allow_headers_is_explicit_not_wildcard(self):
         """CORS allow_headers must list explicit header names, not a wildcard."""
-        from app.main import app
         from fastapi.middleware.cors import CORSMiddleware
 
+        from app.main import app
+
         cors_kwargs = None
-        for cls, args, kwargs in app.user_middleware:
+        for cls, _args, kwargs in app.user_middleware:
             if cls is CORSMiddleware:
                 cors_kwargs = kwargs
                 break
@@ -104,11 +105,12 @@ class TestCORSConfiguration:
 
     def test_cors_expose_headers_includes_correlation_id(self):
         """CORS expose_headers must include X-Correlation-ID."""
-        from app.main import app
         from fastapi.middleware.cors import CORSMiddleware
 
+        from app.main import app
+
         cors_kwargs = None
-        for cls, args, kwargs in app.user_middleware:
+        for cls, _args, kwargs in app.user_middleware:
             if cls is CORSMiddleware:
                 cors_kwargs = kwargs
                 break
@@ -493,7 +495,7 @@ class TestEmailMasking:
 class TestSecurityHeaders:
     """Verify that the SecurityHeadersMiddleware sets the required headers."""
 
-    def _make_starlette_request(self) -> "Request":
+    def _make_starlette_request(self):
         """Build a minimal Starlette Request object for middleware dispatch."""
         from starlette.requests import Request
 
