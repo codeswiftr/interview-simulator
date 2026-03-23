@@ -1,0 +1,5656 @@
+Bytecode compiled 8919 files in 293ms
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CareerSwiftr Interview Simulator",
+    "description": "AI-powered interview practice platform for software engineers",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Basic health check endpoint (always returns healthy if app is running).",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Readiness Check",
+        "description": "Readiness check including actual dependency connectivity.\n\nReturns HTTP 503 if database is unreachable (critical dependency).\nRedis and AI services are optional - their absence degrades but doesn't fail.",
+        "operationId": "readiness_check_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Readiness Check Health Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/details": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Detailed",
+        "description": "Detailed health check with dependency status.\n\nReturns comprehensive status of all dependencies including response times.\nDoes not block the main health route.",
+        "operationId": "health_detailed_health_details_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "type": "object",
+                  "title": "Response Health Detailed Health Details Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Forgot Password",
+        "description": "Request a password reset email.\n\nAlways returns success for security (don't reveal if email exists).\nGenerates a secure token and sends reset link via email.\n\nArgs:\n    payload: Email address for password reset\n    session: Database session\n\nReturns:\n    Success message (always, regardless of email existence)",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Forgot Password Api V1 Auth Forgot Password Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Reset Password",
+        "description": "Reset password using a valid token.\n\nValidates token exists, is not used, and is not expired.\nUpdates user's password and marks token as used.\n\nArgs:\n    payload: Token and new password\n    session: Database session\n\nReturns:\n    Success message\n\nRaises:\n    HTTPException: If token is invalid, expired, or already used",
+        "operationId": "reset_password_api_v1_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Reset Password Api V1 Auth Reset Password Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh Token",
+        "description": "Refresh access token using a valid refresh token.\n\nImplements token rotation: invalidates old refresh token and issues new pair.\n\nArgs:\n    payload: Refresh token from client\n    session: Database session\n\nReturns:\n    New access and refresh tokens\n\nRaises:\n    HTTPException: If refresh token is invalid or expired",
+        "operationId": "refresh_token_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/register": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Register User",
+        "description": "Register a new user.",
+        "operationId": "register_user_api_v1_users_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/login": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Login",
+        "description": "Authenticate user and return access and refresh tokens.\n\nImplements lazy migration from pbkdf2_sha256 to bcrypt for improved security.",
+        "operationId": "login_api_v1_users_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get Me",
+        "description": "Get current authenticated user.",
+        "operationId": "get_me_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete Account",
+        "description": "Delete user account (soft delete).\n\nSets is_active to False and anonymizes personal data.",
+        "operationId": "delete_account_api_v1_users_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update Profile",
+        "description": "Update user profile (name, email).\n\nEmail changes require the new email to be unique.",
+        "operationId": "update_profile_api_v1_users_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/verify-email": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Verify Email",
+        "description": "Verify email address using verification token.\n\nUpdates user email to the verified new email address.\n\nArgs:\n    token: Email verification token from email link\n    session: Database session\n\nReturns:\n    Success message\n\nRaises:\n    HTTPException: If token is invalid, expired, or already used",
+        "operationId": "verify_email_api_v1_users_verify_email_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Verify Email Api V1 Users Verify Email Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/change-password": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Change Password",
+        "description": "Change user password.\n\nRequires current password for verification.\nNew passwords will be hashed with bcrypt for improved security.",
+        "operationId": "change_password_api_v1_users_me_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Change Password Api V1 Users Me Change Password Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/stats": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get My Stats",
+        "description": "Get user statistics: total sessions, completed sessions, average score, practice time.\n\nArgs:\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Dictionary with user statistics",
+        "operationId": "get_my_stats_api_v1_users_me_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get My Stats Api V1 Users Me Stats Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/progress": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get My Progress",
+        "description": "Get user progress: time-series of session scores and practice recommendations.\n\nArgs:\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Dictionary with progress data and recommendations",
+        "operationId": "get_my_progress_api_v1_users_me_progress_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get My Progress Api V1 Users Me Progress Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/improvements": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get My Improvements",
+        "description": "Get improvement metrics by criteria category.\n\nAnalyzes performance trends across Delivery, Behavioral, and Technical\ndimensions based on the user's last 10 completed sessions.\n\nCategories:\n- Delivery: Audio metrics (speech rate, filler words, confidence, volume)\n- Behavioral: STAR adherence, structure (behavioral questions only)\n- Technical: Accuracy, completeness (technical/system_design questions)\n\nReturns:\n    Dictionary with improvements/areas for each category:\n    {\n        \"delivery\": { \"current_score\", \"previous_score\", \"trend\", \"improvements\", \"areas_to_work_on\" },\n        \"behavioral\": { ... },\n        \"technical\": { ... },\n        \"sessions_analyzed\": int,\n        \"data_available\": bool\n    }",
+        "operationId": "get_my_improvements_api_v1_users_me_improvements_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get My Improvements Api V1 Users Me Improvements Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/skills-gap": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get Skills Gap",
+        "description": "Get skills gap analysis with 6 skill dimensions.\n\nAnalyzes performance across 6 dimensions based on the user's\nlast 20 completed sessions:\n\n- Content: Overall content quality (avg overall_content_score)\n- Delivery: Audio/speaking quality (avg overall_audio_score)\n- Behavioral: STAR method and structure (behavioral questions only)\n- Technical: Technical accuracy (technical questions only)\n- System Design: System design skills (system_design questions only)\n- Communication: Clarity proxy (relevance + structure average)\n\nEach dimension includes:\n- current_score: 0-100, computed from recent sessions\n- target_score: 0-100, goal (typically 85-95)\n- sessions_with_data: How many sessions contributed\n- trend: \"improving\" | \"declining\" | \"stable\"\n\nReturns:\n    SkillsGapResponse with dimensions list and metadata.\n    If user has <2 sessions, returns data_available=false.",
+        "operationId": "get_skills_gap_api_v1_users_me_skills_gap_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillsGapResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/readiness-score": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get Readiness Score",
+        "description": "Get interview readiness score based on last 5 completed sessions.\n\nThe readiness score is a percentage (0-100) representing how prepared\nthe user is for interviews based on recent practice performance.\n\nScoring logic:\n- Based on average score of last 5 completed sessions\n- Requires at least 1 session to calculate\n- Returns null if no completed sessions with scores\n\nArgs:\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Dictionary with readiness_score, sessions_used, and improvement_trend",
+        "operationId": "get_readiness_score_api_v1_users_me_readiness_score_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Readiness Score Api V1 Users Me Readiness Score Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/questions": {
+      "get": {
+        "tags": [
+          "Questions"
+        ],
+        "summary": "List Questions",
+        "description": "List interview questions with optional filters.",
+        "operationId": "list_questions_api_v1_questions_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/QuestionCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Difficulty"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Difficulty"
+            }
+          },
+          {
+            "name": "company",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by company tag",
+              "title": "Company"
+            },
+            "description": "Filter by company tag"
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by topic tag",
+              "title": "Topic"
+            },
+            "description": "Filter by topic tag"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionRead"
+                  },
+                  "title": "Response List Questions Api V1 Questions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Questions"
+        ],
+        "summary": "Create Question",
+        "description": "Create a new question (requires authentication).",
+        "operationId": "create_question_api_v1_questions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/questions/random": {
+      "get": {
+        "tags": [
+          "Questions"
+        ],
+        "summary": "Get Random Question",
+        "description": "Get a random question matching criteria.",
+        "operationId": "get_random_question_api_v1_questions_random_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/QuestionCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Difficulty"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Difficulty"
+            }
+          },
+          {
+            "name": "exclude_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Question IDs to exclude",
+              "title": "Exclude Ids"
+            },
+            "description": "Question IDs to exclude"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/questions/{question_id}": {
+      "get": {
+        "tags": [
+          "Questions"
+        ],
+        "summary": "Get Question",
+        "description": "Get a specific question by ID.",
+        "operationId": "get_question_api_v1_questions__question_id__get",
+        "parameters": [
+          {
+            "name": "question_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Question Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Create Interview",
+        "description": "Create a new interview session.\n\nEnforces subscription quota limits (Free: 3/month, Pro: unlimited).",
+        "operationId": "create_interview_api_v1_interviews_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewSessionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "List Interviews",
+        "description": "List user's interview sessions.",
+        "operationId": "list_interviews_api_v1_interviews_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/InterviewStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InterviewSessionRead"
+                  },
+                  "title": "Response List Interviews Api V1 Interviews Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Get Interview",
+        "description": "Get interview session details.",
+        "operationId": "get_interview_api_v1_interviews__interview_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Cancel Interview",
+        "description": "Cancel a scheduled interview.",
+        "operationId": "cancel_interview_api_v1_interviews__interview_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/start": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Start Interview",
+        "description": "Start an interview session.\n\nWhen starting an interview, random questions are assigned based on\nthe interview type. Questions are linked via InterviewQuestion records.",
+        "operationId": "start_interview_api_v1_interviews__interview_id__start_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/questions": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Get Interview Questions",
+        "description": "Get all questions assigned to an interview session.\n\nReturns questions in the order they should be asked.\nMust be called after the interview has been started.",
+        "operationId": "get_interview_questions_api_v1_interviews__interview_id__questions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionRead"
+                  },
+                  "title": "Response Get Interview Questions Api V1 Interviews  Interview Id  Questions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/end": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "End Interview",
+        "description": "End an interview session.\n\nAfter ending, automatically triggers background generation of session feedback.",
+        "operationId": "end_interview_api_v1_interviews__interview_id__end_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/responses": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Submit Response",
+        "description": "Submit a response to an interview question.",
+        "operationId": "submit_response_api_v1_interviews__interview_id__responses_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewResponseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewResponseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Get Responses",
+        "description": "Get all responses for an interview session with question data.",
+        "operationId": "get_responses_api_v1_interviews__interview_id__responses_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InterviewResponseRead"
+                  },
+                  "title": "Response Get Responses Api V1 Interviews  Interview Id  Responses Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/feedback": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Get Interview Feedback",
+        "description": "Placeholder for feedback retrieval.",
+        "operationId": "get_interview_feedback_api_v1_interviews__interview_id__feedback_get",
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Interview Feedback Api V1 Interviews  Interview Id  Feedback Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/quick-practice": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Create Quick Practice",
+        "description": "Create a 1-question practice session with a specific question.\n\nAllows users to practice individual questions from the question bank.\nEnforces subscription quota limits (Free: 3/month, Pro: unlimited).",
+        "operationId": "create_quick_practice_api_v1_interviews_quick_practice_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "question_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Question Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewSessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/export": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Export Interview Pdf",
+        "description": "Export interview as PDF document.\n\nReturns PDF file with interview results, feedback, and scores.",
+        "operationId": "export_interview_pdf_api_v1_interviews__interview_id__export_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/share": {
+      "post": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Create Share Link",
+        "description": "Create a shareable link for an interview.\n\nLink expires after 7 days. Returns existing link if one already exists.",
+        "operationId": "create_share_link_api_v1_interviews__interview_id__share_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterviewShareRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/{interview_id}/shares": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "List Share Links",
+        "description": "List all share links for an interview.",
+        "operationId": "list_share_links_api_v1_interviews__interview_id__shares_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "interview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InterviewShareRead"
+                  },
+                  "title": "Response List Share Links Api V1 Interviews  Interview Id  Shares Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/shares/{share_id}": {
+      "delete": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Revoke Share Link",
+        "description": "Revoke (delete) a share link.",
+        "operationId": "revoke_share_link_api_v1_interviews_shares__share_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "share_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Share Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interviews/shared/{token}": {
+      "get": {
+        "tags": [
+          "Interviews"
+        ],
+        "summary": "Get Shared Interview",
+        "description": "View a shared interview (public, no auth required).\n\nReturns read-only interview data if token is valid and not expired.",
+        "operationId": "get_shared_interview_api_v1_interviews_shared__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedInterviewRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/session/{session_id}": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Get Session Feedback",
+        "description": "Get aggregated feedback for an entire interview session.\n\nReturns overall scores, top strengths/improvements, and practice recommendations.\n\nArgs:\n    session_id: UUID of the interview session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    SessionFeedback with aggregated analysis\n\nRaises:\n    HTTPException: If session not found, unauthorized, or no feedback available",
+        "operationId": "get_session_feedback_api_v1_feedback_session__session_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionFeedbackRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/session/{session_id}/all": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Get All Session Feedbacks",
+        "description": "Get feedback for all responses in a session.\n\nReturns individual feedback for each response in the interview.\n\nArgs:\n    session_id: UUID of the interview session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    List of ContentFeedback records\n\nRaises:\n    HTTPException: If session not found or unauthorized",
+        "operationId": "get_all_session_feedbacks_api_v1_feedback_session__session_id__all_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContentFeedbackRead"
+                  },
+                  "title": "Response Get All Session Feedbacks Api V1 Feedback Session  Session Id  All Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/response/{response_id}": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Get Response Feedback",
+        "description": "Get feedback for a single interview response.\n\nReturns detailed content analysis including scores, strengths, and improvements.\n\nArgs:\n    response_id: UUID of the response\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    ContentFeedback with detailed analysis\n\nRaises:\n    HTTPException: If response not found, unauthorized, or no feedback available",
+        "operationId": "get_response_feedback_api_v1_feedback_response__response_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Response Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentFeedbackRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/video/{response_id}": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Get Video Feedback",
+        "description": "Get video feedback for a single interview response.",
+        "operationId": "get_video_feedback_api_v1_feedback_video__response_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Response Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFeedbackRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/generate/response/{response_id}": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Generate Response Feedback",
+        "description": "Generate feedback for a single interview response.\n\nAnalyzes the response content using AI and creates a ContentFeedback record.\n\nArgs:\n    response_id: UUID of the response to analyze\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Newly created ContentFeedback\n\nRaises:\n    HTTPException: If response not found, unauthorized, or analysis fails",
+        "operationId": "generate_response_feedback_api_v1_feedback_generate_response__response_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Response Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentFeedbackRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/generate/video/{response_id}": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Generate Video Feedback",
+        "description": "Generate video feedback for a single interview response.",
+        "operationId": "generate_video_feedback_api_v1_feedback_generate_video__response_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "response_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Response Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFeedbackRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/generate/session/{session_id}": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Generate Session Feedback",
+        "description": "Generate aggregated feedback for entire interview session.\n\nAnalyzes all responses and creates aggregated scores and recommendations.\nWill automatically generate individual response feedback if not already done.\n\nArgs:\n    session_id: UUID of the interview session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Newly created SessionFeedback\n\nRaises:\n    HTTPException: If session not found, unauthorized, or analysis fails",
+        "operationId": "generate_session_feedback_api_v1_feedback_generate_session__session_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionFeedbackRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/session/{session_id}/status": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Get Session Processing Status",
+        "description": "Get processing status summary for an interview session.\n\nReturns counts of responses by processing_status, whether session feedback exists,\nand whether all responses are fully processed.\n\nArgs:\n    session_id: UUID of the interview session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Dictionary with processing status summary\n\nRaises:\n    HTTPException: If session not found or unauthorized",
+        "operationId": "get_session_processing_status_api_v1_feedback_session__session_id__status_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Session Processing Status Api V1 Feedback Session  Session Id  Status Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/session/{session_id}/comparison": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Get Session Comparison",
+        "description": "Get session score comparison vs user's average.\n\nReturns the session score, user's overall average score, and improvement percentage.\n\nArgs:\n    session_id: UUID of the interview session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Dictionary with session_score, average_score, and improvement_percent\n\nRaises:\n    HTTPException: If session not found, unauthorized, or no feedback available",
+        "operationId": "get_session_comparison_api_v1_feedback_session__session_id__comparison_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Session Comparison Api V1 Feedback Session  Session Id  Comparison Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transcription/transcribe": {
+      "post": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Transcribe Audio",
+        "description": "Transcribe an audio file using OpenAI Whisper.\n\nAccepts audio files up to 25MB in formats:\nmp3, mp4, mpeg, mpga, m4a, wav, webm\n\nArgs:\n    file: Audio file to transcribe\n    include_timestamps: Include word-level timestamps in response\n    language: Optional language hint (ISO 639-1 code, e.g., 'en')\n\nReturns:\n    TranscriptionResponse with transcript text and metadata",
+        "operationId": "transcribe_audio_api_v1_transcription_transcribe_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include_timestamps",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Timestamps"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_transcribe_audio_api_v1_transcription_transcribe_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid audio file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unsupported format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transcription/supported-formats": {
+      "get": {
+        "tags": [
+          "Transcription"
+        ],
+        "summary": "Get Supported Formats",
+        "description": "Get list of supported audio formats and limits.",
+        "operationId": "get_supported_formats_api_v1_transcription_supported_formats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Supported Formats Api V1 Transcription Supported Formats Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/upload/audio": {
+      "post": {
+        "tags": [
+          "Upload"
+        ],
+        "summary": "Upload Audio",
+        "description": "Upload an audio file for an interview response or practice attempt.\n\nValidates that:\n- File is an allowed audio format\n- File size is within limits\n- Interview session or preparation belongs to the current user",
+        "operationId": "upload_audio_api_v1_upload_audio_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_audio_api_v1_upload_audio_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/upload/video": {
+      "post": {
+        "tags": [
+          "Upload"
+        ],
+        "summary": "Upload Video",
+        "description": "Upload a video file for a specific interview response.\n\nValidates:\n- File extension and size\n- Response ownership (response belongs to current user)",
+        "operationId": "upload_video_api_v1_upload_video_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_video_api_v1_upload_video_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/subscriptions/checkout": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Create Checkout Session",
+        "description": "Create Stripe Checkout session for subscription upgrade.\n\nArgs:\n    price_id: Stripe price ID for the subscription tier\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    CheckoutSessionResponse with redirect URL\n\nRaises:\n    HTTPException: If Stripe API call fails",
+        "operationId": "create_checkout_session_api_v1_subscriptions_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/subscriptions/webhook": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Stripe Webhook",
+        "description": "Handle Stripe webhook events.\n\nProcesses:\n- checkout.session.completed: Upgrade user subscription\n- customer.subscription.updated: Update subscription status\n- customer.subscription.deleted: Downgrade to free tier\n\nArgs:\n    request: FastAPI request with Stripe webhook payload\n\nReturns:\n    Success response",
+        "operationId": "stripe_webhook_api_v1_subscriptions_webhook_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Stripe Webhook Api V1 Subscriptions Webhook Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/status": {
+      "get": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Get Subscription Status",
+        "description": "Get current subscription status and usage limits.\n\nSyncs subscription data from Stripe if the user has a customer ID.\n\nArgs:\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    SubscriptionStatus with tier, limits, and usage",
+        "operationId": "get_subscription_status_api_v1_subscriptions_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/subscriptions/pricing": {
+      "get": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Get Pricing Config",
+        "description": "Get Stripe pricing configuration.\n\nReturns price IDs for subscription tiers. Frontend should use these\nwhen creating checkout sessions.",
+        "operationId": "get_pricing_config_api_v1_subscriptions_pricing_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/portal": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Create Portal Session",
+        "description": "Create Stripe Customer Portal session for managing subscription.\n\nAllows users to view invoices, update payment methods, and cancel subscription.\n\nArgs:\n    current_user: Authenticated user\n\nReturns:\n    PortalSessionResponse with redirect URL to Stripe portal",
+        "operationId": "create_portal_session_api_v1_subscriptions_portal_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/subscriptions/cancel": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Cancel Subscription",
+        "description": "Cancel active subscription and downgrade to free tier.\n\nArgs:\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    Success message",
+        "operationId": "cancel_subscription_api_v1_subscriptions_cancel_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Cancel Subscription Api V1 Subscriptions Cancel Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/coaching/hint": {
+      "post": {
+        "tags": [
+          "Coaching"
+        ],
+        "summary": "Get Coaching Hint",
+        "description": "Generate a contextual coaching hint based on question and transcript.\n\nArgs:\n    request: Coaching hint request with question, type, and transcript\n    current_user: Current authenticated user\n\nReturns:\n    CoachingHintResponse with generated hint\n\nRaises:\n    HTTPException: If question_type is invalid or rate limit exceeded",
+        "operationId": "get_coaching_hint_api_v1_coaching_hint_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachingHintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachingHintResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/coaching/hint/stream": {
+      "post": {
+        "tags": [
+          "Coaching"
+        ],
+        "summary": "Get Coaching Hint Stream",
+        "description": "Generate a contextual coaching hint with streaming support.\n\nStreams hint chunks as they are generated by the AI model for low latency.\n\nArgs:\n    request: Coaching hint request with question, type, and transcript\n    current_user: Current authenticated user\n\nReturns:\n    StreamingResponse with Server-Sent Events (SSE) format\n\nRaises:\n    HTTPException: If question_type is invalid or rate limit exceeded",
+        "operationId": "get_coaching_hint_stream_api_v1_coaching_hint_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachingHintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/preparation": {
+      "get": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "List Preparations",
+        "description": "List all preparation sessions for the current user.\n\nReturns preparations ordered by most recently updated first.\n\nArgs:\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    PreparationsListResponse with list of user's preparations",
+        "operationId": "list_preparations_api_v1_preparation_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreparationsListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/state": {
+      "get": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Get Preparation State",
+        "description": "Get complete preparation state for resume flows.",
+        "operationId": "get_preparation_state_api_v1_preparation__preparation_id__state_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreparationStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/start": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Start Preparation",
+        "description": "Start answer preparation for a question.\n\nArgs:\n    request: Preparation start request with question_id\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    PreparationStartResponse with preparation_id and initial stage\n\nRaises:\n    HTTPException: If question not found, tier check fails, or preparation already exists",
+        "operationId": "start_preparation_api_v1_preparation_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreparationStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreparationStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/detective/question": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Get Detective Question",
+        "description": "Get the next clarifying question from the detective stage.\n\nUses Gemini 2.0 Flash to generate contextual questions based on:\n- The original interview question\n- Previous Q&A in this preparation session\n- User's experience level\n\nArgs:\n    preparation_id: UUID of the preparation session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    DetectiveQuestionResponse with the next question\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or stage is not detective",
+        "operationId": "get_detective_question_api_v1_preparation__preparation_id__detective_question_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetectiveQuestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/detective/answer": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Submit Detective Answer",
+        "description": "Submit answer to a detective question.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    request: Answer to the question\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    DetectiveAnswerResponse with next question or completion status\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or stage is not detective",
+        "operationId": "submit_detective_answer_api_v1_preparation__preparation_id__detective_answer_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DetectiveAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetectiveAnswerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/generate-draft": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Generate Draft",
+        "description": "Generate personalized draft answer using Claude Haiku 4.5.\n\nUses all Q&A from detective stage to create a STAR-formatted answer.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    DraftResponse with generated draft answer\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or stage is not draft",
+        "operationId": "generate_draft_api_v1_preparation__preparation_id__generate_draft_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/draft": {
+      "get": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Get Draft",
+        "description": "Get the generated draft answer.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    DraftResponse with draft answer\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or draft not generated",
+        "operationId": "get_draft_api_v1_preparation__preparation_id__draft_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Update Draft",
+        "description": "Update the draft answer.\n\nAllows users to edit their AI-generated draft before practicing.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    request: DraftUpdateRequest with updated draft\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    DraftResponse with updated draft answer\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or draft not generated",
+        "operationId": "update_draft_api_v1_preparation__preparation_id__draft_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/practice/start": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Start Practice",
+        "description": "Start a practice delivery attempt for a prepared answer.\n\nCreates a new DeliveryAttempt record and transitions preparation to PRACTICE stage.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    PracticeStartResponse with attempt_id and stage\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or draft not generated",
+        "operationId": "start_practice_api_v1_preparation__preparation_id__practice_start_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/practice/submit": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Submit Practice",
+        "description": "Submit a practice delivery attempt with audio.\n\nTranscribes the audio and stores the transcript. The attempt can later be rated\nusing the rating endpoint (Epic 3).\n\nArgs:\n    preparation_id: UUID of the preparation session\n    request: PracticeSubmitRequest with audio_url\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    PracticeSubmitResponse with attempt_id, transcript, and stage\n\nRaises:\n    HTTPException: If preparation not found, unauthorized, or transcription fails",
+        "operationId": "submit_practice_api_v1_preparation__preparation_id__practice_submit_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/attempts": {
+      "get": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Get Attempts",
+        "description": "Get all delivery attempts for a preparation session.\n\nReturns attempts ordered by creation time (newest first).\n\nArgs:\n    preparation_id: UUID of the preparation session\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    AttemptsResponse with list of delivery attempts\n\nRaises:\n    HTTPException: If preparation not found or unauthorized",
+        "operationId": "get_attempts_api_v1_preparation__preparation_id__attempts_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/rate-delivery": {
+      "post": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Rate Delivery",
+        "description": "Rate a delivery attempt against the prepared draft.\n\nCompares the transcribed delivery to the draft answer using AI\nand provides scores and feedback.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    request: RateDeliveryRequest with attempt_id\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    RateDeliveryResponse with scores and feedback\n\nRaises:\n    HTTPException: If preparation, attempt, or draft not found",
+        "operationId": "rate_delivery_api_v1_preparation__preparation_id__rate_delivery_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateDeliveryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateDeliveryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preparation/{preparation_id}/comparison": {
+      "get": {
+        "tags": [
+          "Preparation"
+        ],
+        "summary": "Get Comparison",
+        "description": "Get side-by-side comparison of draft and delivery.\n\nArgs:\n    preparation_id: UUID of the preparation session\n    attempt_id: UUID of the delivery attempt (query parameter)\n    current_user: Authenticated user\n    session: Database session\n\nReturns:\n    ComparisonResponse with draft, delivery, scores, and feedback\n\nRaises:\n    HTTPException: If preparation or attempt not found",
+        "operationId": "get_comparison_api_v1_preparation__preparation_id__comparison_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "preparation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Preparation Id"
+            }
+          },
+          {
+            "name": "attempt_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID of the delivery attempt",
+              "title": "Attempt Id"
+            },
+            "description": "UUID of the delivery attempt"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint with API information.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AttemptsResponse": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryAttemptRead"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempts"
+        ],
+        "title": "AttemptsResponse"
+      },
+      "AudioUploadResponse": {
+        "properties": {
+          "audio_url": {
+            "type": "string",
+            "title": "Audio Url"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_url",
+          "file_size_bytes",
+          "filename"
+        ],
+        "title": "AudioUploadResponse",
+        "description": "Response model for audio upload."
+      },
+      "Body_transcribe_audio_api_v1_transcription_transcribe_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_transcribe_audio_api_v1_transcription_transcribe_post"
+      },
+      "Body_upload_audio_api_v1_upload_audio_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "question_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Id"
+          },
+          "preparation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preparation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_audio_api_v1_upload_audio_post"
+      },
+      "Body_upload_video_api_v1_upload_video_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "response_id": {
+            "type": "string",
+            "title": "Response Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "response_id"
+        ],
+        "title": "Body_upload_video_api_v1_upload_video_post"
+      },
+      "CheckoutRequest": {
+        "properties": {
+          "price_id": {
+            "type": "string",
+            "title": "Price Id"
+          },
+          "referral_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "price_id"
+        ],
+        "title": "CheckoutRequest",
+        "description": "Request model for checkout session creation."
+      },
+      "CheckoutSessionResponse": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "CheckoutSessionResponse",
+        "description": "Response model for checkout session creation."
+      },
+      "CoachingHintRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "title": "Question",
+            "description": "The interview question"
+          },
+          "question_type": {
+            "type": "string",
+            "title": "Question Type",
+            "description": "Type of question: behavioral, technical, or system_design"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript",
+            "description": "Current transcript of the candidate's answer",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "question_type"
+        ],
+        "title": "CoachingHintRequest",
+        "description": "Request model for coaching hint generation."
+      },
+      "CoachingHintResponse": {
+        "properties": {
+          "hint": {
+            "type": "string",
+            "title": "Hint",
+            "description": "Contextual coaching hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hint"
+        ],
+        "title": "CoachingHintResponse",
+        "description": "Response model for coaching hint."
+      },
+      "ComparisonResponse": {
+        "properties": {
+          "draft": {
+            "type": "string",
+            "title": "Draft"
+          },
+          "delivery": {
+            "type": "string",
+            "title": "Delivery"
+          },
+          "delivery_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Score"
+          },
+          "comparison_feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Feedback"
+          },
+          "strengths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strengths"
+          },
+          "improvements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Improvements"
+          }
+        },
+        "type": "object",
+        "required": [
+          "draft",
+          "delivery",
+          "delivery_score",
+          "comparison_feedback",
+          "strengths",
+          "improvements"
+        ],
+        "title": "ComparisonResponse"
+      },
+      "ContentFeedbackRead": {
+        "properties": {
+          "technical_accuracy": {
+            "type": "number",
+            "title": "Technical Accuracy"
+          },
+          "answer_structure": {
+            "type": "number",
+            "title": "Answer Structure"
+          },
+          "completeness": {
+            "type": "number",
+            "title": "Completeness"
+          },
+          "overall_content_score": {
+            "type": "number",
+            "title": "Overall Content Score"
+          },
+          "strengths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strengths"
+          },
+          "improvements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Improvements"
+          },
+          "detailed_feedback": {
+            "type": "string",
+            "title": "Detailed Feedback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "technical_accuracy",
+          "answer_structure",
+          "completeness",
+          "overall_content_score",
+          "strengths",
+          "improvements",
+          "detailed_feedback"
+        ],
+        "title": "ContentFeedbackRead",
+        "description": "Schema for content feedback response."
+      },
+      "DeliveryAttemptRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "preparation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Preparation Id"
+          },
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "delivery_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Score"
+          },
+          "comparison_feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparison Feedback"
+          },
+          "strengths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strengths"
+          },
+          "improvements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Improvements"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "preparation_id",
+          "audio_url",
+          "transcript",
+          "delivery_score",
+          "comparison_feedback",
+          "created_at"
+        ],
+        "title": "DeliveryAttemptRead"
+      },
+      "DetectiveAnswerRequest": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Answer",
+            "description": "User's answer to the clarifying question"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer"
+        ],
+        "title": "DetectiveAnswerRequest"
+      },
+      "DetectiveAnswerResponse": {
+        "properties": {
+          "next_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Question"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage"
+        ],
+        "title": "DetectiveAnswerResponse"
+      },
+      "DetectiveQuestionResponse": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "is_complete": {
+            "type": "boolean",
+            "title": "Is Complete",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "order"
+        ],
+        "title": "DetectiveQuestionResponse"
+      },
+      "Difficulty": {
+        "type": "string",
+        "enum": [
+          "easy",
+          "medium",
+          "hard"
+        ],
+        "title": "Difficulty",
+        "description": "Question difficulty levels."
+      },
+      "DifficultyLevel": {
+        "type": "string",
+        "enum": [
+          "easy",
+          "medium",
+          "hard",
+          "mixed"
+        ],
+        "title": "DifficultyLevel",
+        "description": "Question difficulty levels."
+      },
+      "DraftResponse": {
+        "properties": {
+          "draft_answer": {
+            "type": "string",
+            "title": "Draft Answer"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "draft_answer",
+          "stage"
+        ],
+        "title": "DraftResponse"
+      },
+      "DraftUpdateRequest": {
+        "properties": {
+          "draft_answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Draft Answer",
+            "description": "Updated draft answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "draft_answer"
+        ],
+        "title": "DraftUpdateRequest"
+      },
+      "ExperienceLevel": {
+        "type": "string",
+        "enum": [
+          "junior",
+          "mid",
+          "senior"
+        ],
+        "title": "ExperienceLevel",
+        "description": "User experience level for personalized feedback."
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "description": "Request schema for forgot password."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InterviewResponseCreate": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Question Id"
+          },
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "title": "Duration Seconds",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id"
+        ],
+        "title": "InterviewResponseCreate",
+        "description": "Schema for creating an interview response."
+      },
+      "InterviewResponseRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          },
+          "question_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Question Id"
+          },
+          "audio_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Url"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "title": "Duration Seconds"
+          },
+          "word_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Word Count"
+          },
+          "filler_word_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filler Word Count"
+          },
+          "processing_status": {
+            "$ref": "#/components/schemas/ProcessingStatus"
+          },
+          "processing_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuestionInResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_id",
+          "question_id",
+          "audio_url",
+          "video_url",
+          "transcript",
+          "duration_seconds",
+          "word_count",
+          "filler_word_count",
+          "processing_status",
+          "processing_error",
+          "created_at"
+        ],
+        "title": "InterviewResponseRead",
+        "description": "Schema for interview response output."
+      },
+      "InterviewSessionCreate": {
+        "properties": {
+          "interview_type": {
+            "$ref": "#/components/schemas/InterviewType",
+            "default": "behavioral"
+          },
+          "company_style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Style"
+          },
+          "target_company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Company"
+          },
+          "question_count": {
+            "type": "integer",
+            "title": "Question Count",
+            "default": 5
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DifficultyLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          }
+        },
+        "type": "object",
+        "title": "InterviewSessionCreate",
+        "description": "Schema for creating interview session."
+      },
+      "InterviewSessionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "interview_type": {
+            "$ref": "#/components/schemas/InterviewType"
+          },
+          "company_style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Style"
+          },
+          "target_company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Company"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InterviewStatus"
+          },
+          "question_count": {
+            "type": "integer",
+            "title": "Question Count"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "interview_type",
+          "company_style",
+          "target_company",
+          "status",
+          "question_count",
+          "overall_score",
+          "duration_seconds",
+          "created_at"
+        ],
+        "title": "InterviewSessionRead",
+        "description": "Schema for interview session response."
+      },
+      "InterviewShareRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "interview_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Interview Id"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "share_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "interview_id",
+          "token",
+          "expires_at",
+          "view_count",
+          "created_at"
+        ],
+        "title": "InterviewShareRead",
+        "description": "Schema for share link response."
+      },
+      "InterviewStatus": {
+        "type": "string",
+        "enum": [
+          "scheduled",
+          "in_progress",
+          "completed",
+          "analyzed",
+          "cancelled"
+        ],
+        "title": "InterviewStatus",
+        "description": "Interview session status."
+      },
+      "InterviewType": {
+        "type": "string",
+        "enum": [
+          "behavioral",
+          "technical",
+          "system_design",
+          "mixed"
+        ],
+        "title": "InterviewType",
+        "description": "Types of interview sessions."
+      },
+      "PasswordChange": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange",
+        "description": "Schema for changing password."
+      },
+      "PortalSessionResponse": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "PortalSessionResponse",
+        "description": "Response model for customer portal session."
+      },
+      "PracticeStartResponse": {
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attempt Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "stage"
+        ],
+        "title": "PracticeStartResponse"
+      },
+      "PracticeSubmitRequest": {
+        "properties": {
+          "audio_url": {
+            "type": "string",
+            "title": "Audio Url",
+            "description": "URL to the uploaded audio file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio_url"
+        ],
+        "title": "PracticeSubmitRequest"
+      },
+      "PracticeSubmitResponse": {
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attempt Id"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "transcript",
+          "stage"
+        ],
+        "title": "PracticeSubmitResponse"
+      },
+      "PreparationListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "question_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Question Id"
+          },
+          "question_content": {
+            "type": "string",
+            "title": "Question Content"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "draft_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Answer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "question_id",
+          "question_content",
+          "stage",
+          "draft_answer",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PreparationListItem"
+      },
+      "PreparationQnA": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "preparation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Preparation Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question",
+            "description": "Clarifying question asked by AI"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer",
+            "description": "User's answer to the question"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order",
+            "description": "Order of question in the sequence"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preparation_id",
+          "question",
+          "answer",
+          "order"
+        ],
+        "title": "PreparationQnA",
+        "description": "Stores Q&A from detective stage of answer preparation."
+      },
+      "PreparationStartRequest": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Question Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id"
+        ],
+        "title": "PreparationStartRequest"
+      },
+      "PreparationStartResponse": {
+        "properties": {
+          "preparation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Preparation Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preparation_id",
+          "stage",
+          "message"
+        ],
+        "title": "PreparationStartResponse"
+      },
+      "PreparationStateResponse": {
+        "properties": {
+          "preparation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Preparation Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "question": {
+            "$ref": "#/components/schemas/QuestionContext"
+          },
+          "qna": {
+            "items": {
+              "$ref": "#/components/schemas/PreparationQnA"
+            },
+            "type": "array",
+            "title": "Qna"
+          },
+          "current_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Question"
+          },
+          "draft_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Answer"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryAttemptRead"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preparation_id",
+          "stage",
+          "question",
+          "qna",
+          "current_question",
+          "draft_answer",
+          "attempts"
+        ],
+        "title": "PreparationStateResponse"
+      },
+      "PreparationsListResponse": {
+        "properties": {
+          "preparations": {
+            "items": {
+              "$ref": "#/components/schemas/PreparationListItem"
+            },
+            "type": "array",
+            "title": "Preparations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preparations"
+        ],
+        "title": "PreparationsListResponse"
+      },
+      "PricingConfig": {
+        "properties": {
+          "pro_monthly_price_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pro Monthly Price Id"
+          },
+          "pro_annual_price_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pro Annual Price Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pro_monthly_price_id",
+          "pro_annual_price_id"
+        ],
+        "title": "PricingConfig",
+        "description": "Response model for pricing configuration."
+      },
+      "ProcessingStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "transcribing",
+          "analyzing",
+          "completed",
+          "failed"
+        ],
+        "title": "ProcessingStatus",
+        "description": "Response processing status."
+      },
+      "QuestionCategory": {
+        "type": "string",
+        "enum": [
+          "behavioral",
+          "technical",
+          "system_design"
+        ],
+        "title": "QuestionCategory",
+        "description": "Question category types."
+      },
+      "QuestionContext": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "company_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content"
+        ],
+        "title": "QuestionContext"
+      },
+      "QuestionCreate": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "category": {
+            "$ref": "#/components/schemas/QuestionCategory"
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/Difficulty"
+          },
+          "company_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Company Tags",
+            "default": []
+          },
+          "topic_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topic Tags",
+            "default": []
+          },
+          "expected_duration_seconds": {
+            "type": "integer",
+            "title": "Expected Duration Seconds",
+            "default": 180
+          },
+          "sample_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Answer"
+          },
+          "evaluation_criteria": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evaluation Criteria",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "category",
+          "difficulty"
+        ],
+        "title": "QuestionCreate",
+        "description": "Schema for question creation."
+      },
+      "QuestionInResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "difficulty": {
+            "type": "string",
+            "title": "Difficulty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "category",
+          "difficulty"
+        ],
+        "title": "QuestionInResponse",
+        "description": "Minimal question data embedded in response."
+      },
+      "QuestionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "category": {
+            "$ref": "#/components/schemas/QuestionCategory"
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/Difficulty"
+          },
+          "company_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Company Tags"
+          },
+          "topic_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topic Tags"
+          },
+          "expected_duration_seconds": {
+            "type": "integer",
+            "title": "Expected Duration Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "category",
+          "difficulty",
+          "company_tags",
+          "topic_tags",
+          "expected_duration_seconds"
+        ],
+        "title": "QuestionRead",
+        "description": "Schema for question response."
+      },
+      "RateDeliveryRequest": {
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attempt Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id"
+        ],
+        "title": "RateDeliveryRequest"
+      },
+      "RateDeliveryResponse": {
+        "properties": {
+          "delivery_score": {
+            "type": "number",
+            "title": "Delivery Score"
+          },
+          "content_coverage": {
+            "type": "number",
+            "title": "Content Coverage"
+          },
+          "key_points": {
+            "type": "number",
+            "title": "Key Points"
+          },
+          "flow_structure": {
+            "type": "number",
+            "title": "Flow Structure"
+          },
+          "comparison_feedback": {
+            "type": "string",
+            "title": "Comparison Feedback"
+          },
+          "strengths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strengths"
+          },
+          "improvements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Improvements"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delivery_score",
+          "content_coverage",
+          "key_points",
+          "flow_structure",
+          "comparison_feedback",
+          "strengths",
+          "improvements",
+          "stage"
+        ],
+        "title": "RateDeliveryResponse"
+      },
+      "RefreshTokenRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshTokenRequest",
+        "description": "Request schema for token refresh."
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest",
+        "description": "Request schema for password reset."
+      },
+      "SessionFeedbackRead": {
+        "properties": {
+          "overall_score": {
+            "type": "number",
+            "title": "Overall Score"
+          },
+          "audio_score": {
+            "type": "number",
+            "title": "Audio Score"
+          },
+          "content_score": {
+            "type": "number",
+            "title": "Content Score"
+          },
+          "top_strengths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Strengths"
+          },
+          "top_improvements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Improvements"
+          },
+          "recommended_practice_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Practice Areas"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overall_score",
+          "audio_score",
+          "content_score",
+          "top_strengths",
+          "top_improvements",
+          "recommended_practice_areas",
+          "created_at"
+        ],
+        "title": "SessionFeedbackRead",
+        "description": "Schema for session feedback response."
+      },
+      "SharedInterviewRead": {
+        "properties": {
+          "interview_type": {
+            "type": "string",
+            "title": "Interview Type"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "audio_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Score"
+          },
+          "content_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Score"
+          },
+          "question_count": {
+            "type": "integer",
+            "title": "Question Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "shared_by": {
+            "type": "string",
+            "title": "Shared By"
+          },
+          "responses": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Responses",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "interview_type",
+          "overall_score",
+          "audio_score",
+          "content_score",
+          "question_count",
+          "created_at",
+          "shared_by"
+        ],
+        "title": "SharedInterviewRead",
+        "description": "Schema for viewing a shared interview (public)."
+      },
+      "SkillDimension": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "current_score": {
+            "type": "number",
+            "title": "Current Score"
+          },
+          "target_score": {
+            "type": "number",
+            "title": "Target Score"
+          },
+          "sessions_with_data": {
+            "type": "integer",
+            "title": "Sessions With Data"
+          },
+          "trend": {
+            "type": "string",
+            "title": "Trend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "current_score",
+          "target_score",
+          "sessions_with_data",
+          "trend"
+        ],
+        "title": "SkillDimension",
+        "description": "A single skill dimension with current score and target.\n\nUsed in Skills Gap Analysis to show radar chart dimensions."
+      },
+      "SkillsGapResponse": {
+        "properties": {
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/SkillDimension"
+            },
+            "type": "array",
+            "title": "Dimensions"
+          },
+          "sessions_analyzed": {
+            "type": "integer",
+            "title": "Sessions Analyzed"
+          },
+          "data_available": {
+            "type": "boolean",
+            "title": "Data Available"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimensions",
+          "sessions_analyzed",
+          "data_available",
+          "last_updated"
+        ],
+        "title": "SkillsGapResponse",
+        "description": "Complete skills gap analysis response.\n\nReturns 6 skill dimensions computed from the user's interview sessions:\n- Content: Overall content quality (from ContentFeedback.overall_content_score)\n- Delivery: Audio/speaking quality (from AudioFeedback.overall_audio_score)\n- Behavioral: STAR method and structure (behavioral questions only)\n- Technical: Technical accuracy (technical questions only)\n- System Design: System design skills (system_design questions only)\n- Communication: Clarity and relevance (relevance + structure average)"
+      },
+      "SubscriptionStatus": {
+        "properties": {
+          "tier": {
+            "$ref": "#/components/schemas/SubscriptionTier"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "interviews_this_month": {
+            "type": "integer",
+            "title": "Interviews This Month"
+          },
+          "interviews_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interviews Limit"
+          },
+          "can_create_interview": {
+            "type": "boolean",
+            "title": "Can Create Interview"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier",
+          "status",
+          "expires_at",
+          "interviews_this_month",
+          "interviews_limit",
+          "can_create_interview"
+        ],
+        "title": "SubscriptionStatus",
+        "description": "Response model for subscription status."
+      },
+      "SubscriptionTier": {
+        "type": "string",
+        "enum": [
+          "free",
+          "pro",
+          "team"
+        ],
+        "title": "SubscriptionTier",
+        "description": "User subscription tiers."
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "Token",
+        "description": "JWT token response with refresh token."
+      },
+      "TranscriptionError": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "error_type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "error_type"
+        ],
+        "title": "TranscriptionError",
+        "description": "Error response model."
+      },
+      "TranscriptionResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "segments": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segments"
+          },
+          "estimated_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TranscriptionResponse",
+        "description": "Response model for transcription endpoint."
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "experience_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperienceLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserCreate",
+        "description": "Schema for user creation."
+      },
+      "UserLogin": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLogin",
+        "description": "Schema for user login."
+      },
+      "UserRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "experience_level": {
+            "$ref": "#/components/schemas/ExperienceLevel"
+          },
+          "subscription_tier": {
+            "$ref": "#/components/schemas/SubscriptionTier"
+          },
+          "interviews_this_month": {
+            "type": "integer",
+            "title": "Interviews This Month"
+          },
+          "total_interviews": {
+            "type": "integer",
+            "title": "Total Interviews"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "experience_level",
+          "subscription_tier",
+          "interviews_this_month",
+          "total_interviews",
+          "created_at"
+        ],
+        "title": "UserRead",
+        "description": "Schema for user response."
+      },
+      "UserUpdate": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "experience_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperienceLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate",
+        "description": "Schema for updating user profile."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VideoFeedbackRead": {
+        "properties": {
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score"
+          },
+          "nervousness_score": {
+            "type": "number",
+            "title": "Nervousness Score"
+          },
+          "engagement_score": {
+            "type": "number",
+            "title": "Engagement Score"
+          },
+          "eye_contact_percentage": {
+            "type": "number",
+            "title": "Eye Contact Percentage"
+          },
+          "looking_away_count": {
+            "type": "integer",
+            "title": "Looking Away Count"
+          },
+          "fidget_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fidget Count"
+          },
+          "hand_gesture_frequency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hand Gesture Frequency"
+          },
+          "processing_duration_ms": {
+            "type": "integer",
+            "title": "Processing Duration Ms"
+          },
+          "frame_count": {
+            "type": "integer",
+            "title": "Frame Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confidence_score",
+          "nervousness_score",
+          "engagement_score",
+          "eye_contact_percentage",
+          "looking_away_count",
+          "processing_duration_ms",
+          "frame_count"
+        ],
+        "title": "VideoFeedbackRead",
+        "description": "Schema for video feedback response."
+      },
+      "VideoUploadResponse": {
+        "properties": {
+          "video_url": {
+            "type": "string",
+            "title": "Video Url"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video_url",
+          "file_size_bytes",
+          "filename"
+        ],
+        "title": "VideoUploadResponse",
+        "description": "Response model for video upload."
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/users/login"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "timestamp": "2026-01-18T09:29:38.858480+00:00",
+    "quality_score": 65.0,
+    "coverage_percent": 0.0,
+    "complexity_score": 0.0,
+    "security_issues": 0
+  },
+  {
+    "timestamp": "2026-01-18T10:56:41.422582+00:00",
+    "quality_score": 43.0,
+    "coverage_percent": 0.0,
+    "complexity_score": 3.6417233560090705,
+    "security_issues": 6
+  },
+  {
+    "timestamp": "2026-01-18T11:00:40.702761+00:00",
+    "quality_score": 43.0,
+    "coverage_percent": 0.0,
+    "complexity_score": 3.6417233560090705,
+    "security_issues": 6
+  },
+  {
+    "timestamp": "2026-01-29T13:51:37.820530+00:00",
+    "quality_score": 63.0,
+    "coverage_percent": 0.0,
+    "complexity_score": 3.6522727272727273,
+    "security_issues": 4
+  },
+  {
+    "timestamp": "2026-01-29T22:00:17.168055+00:00",
+    "quality_score": 63.0,
+    "coverage_percent": 0.0,
+    "complexity_score": 3.6522727272727273,
+    "security_issues": 4
+  },
+  {
+    "timestamp": "2026-02-01T16:23:25.140572+00:00",
+    "quality_score": 96.67437722419929,
+    "coverage_percent": 67.34875444839858,
+    "complexity_score": 3.6576576576576576,
+    "security_issues": 4
+  },
+  {
+    "timestamp": "2026-02-01T16:24:36.458311+00:00",
+    "quality_score": 96.67437722419929,
+    "coverage_percent": 67.34875444839858,
+    "complexity_score": 3.6576576576576576,
+    "security_issues": 4
+  },
+  {
+    "timestamp": "2026-02-01T18:45:26.476476+00:00",
+    "quality_score": 96.67437722419929,
+    "coverage_percent": 67.34875444839858,
+    "complexity_score": 3.6576576576576576,
+    "security_issues": 4
+  },
+  {
+    "timestamp": "2026-03-03T07:42:11.112899+00:00",
+    "quality_score": 96.0,
+    "coverage_percent": 91.64769742601996,
+    "complexity_score": 3.3821548821548824,
+    "security_issues": 8
+  },
+  {
+    "timestamp": "2026-03-03T07:53:25.619246+00:00",
+    "quality_score": 96.0,
+    "coverage_percent": 91.64769742601996,
+    "complexity_score": 3.3821548821548824,
+    "security_issues": 8
+  },
+  {
+    "timestamp": "2026-03-03T07:56:33.852933+00:00",
+    "quality_score": 96.0,
+    "coverage_percent": 91.64769742601996,
+    "complexity_score": 3.3821548821548824,
+    "security_issues": 8
+  },
+  {
+    "timestamp": "2026-03-03T07:59:12.450178+00:00",
+    "quality_score": 96.0,
+    "coverage_percent": 91.64769742601996,
+    "complexity_score": 3.3821548821548824,
+    "security_issues": 8
+  },
+  {
+    "timestamp": "2026-03-03T08:12:04.425426+00:00",
+    "quality_score": 96.0,
+    "coverage_percent": 91.64769742601996,
+    "complexity_score": 3.3821548821548824,
+    "security_issues": 8
+  }
+]

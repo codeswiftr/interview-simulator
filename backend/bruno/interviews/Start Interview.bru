@@ -1,0 +1,15 @@
+meta {
+  name: Start Interview
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/interviews/{{interviewId}}/start
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

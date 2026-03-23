@@ -1,0 +1,67 @@
+# Plaid Engineering Deep Dive: Inside the Infrastructure Connecting 12,000 Banks
+
+When you click "Connect your bank account" inside a fintech app, you trigger a sequence of engineering decisions that took Plaid years to get right. Plaid sits between two worlds that were never designed to talk to each other: a modern API ecosystem built on REST and OAuth, and a legacy financial infrastructure of mainframes, proprietary protocols, and bank login flows originally designed for humans. Bridging those worlds at scale — 12,000+ financial institutions, hundreds of millions of accounts, billions of transactions — without losing data fidelity, breaking security guarantees, or crashing under load is one of the harder infrastructure problems in fintech. Understanding how Plaid approached it tells you a great deal about the engineering culture and the kinds of problems Plaid engineers solve day-to-day.
+
+---
+
+## Bank Connectivity Infrastructure: APIs, OAuth, and the Fallback Stack
+
+Plaid's connectivity layer is not a single system — it is a tiered hierarchy of integration methods, chosen per institution based on what each bank actually supports.
+
+The top tier is **direct OAuth API partnerships**. Major banks — Chase, Wells Fargo, Bank of America, Capital One — have published developer APIs under the Financial Data Exchange (FDX) standard or their own proprietary variants. Plaid integrates with these via server-to-server OAuth 2.0 flows. The user authorizes Plaid at the bank's own login page (never entering credentials into Plaid's UI), receives an authorization code, and Plaid exchanges it for an access token scoped to that user's accounts. This token grants read access to account balances, transaction history, and account metadata. The happy path has well-defined error codes, structured JSON responses, and predictable rate limits.
+
+The second tier is **screen scraping via browser automation**, used for the thousands of institutions that have no developer API. Plaid's scrapers operate headless browsers — historically Selenium-based, more recently Playwright-compatible stacks — that navigate the bank's actual consumer login flow, authenticate with stored credentials (encrypted at rest, never exposed in plaintext after initial capture), and parse the HTML or XHR responses to extract account data. This creates a set of reliability problems that are inherently external: banks change their login flows without notice, implement CAPTCHA challenges that break automation, deploy bot-detection that flags Plaid's traffic patterns, and push multi-factor authentication prompts that require real-time user interaction. Plaid's scraping infrastructure must detect each of these failure modes and either retry with a modified approach, fall back to manual re-authentication, or surface an actionable error state to the end-user through the Link product.
+
+The reliability challenge of the scraping tier is not engineering incompetence — it is the fundamental constraint of depending on systems you do not control. Plaid's internal metrics track per-institution success rates, and institutions with fragile login flows generate disproportionate on-call load. The engineering investment in detecting, classifying, and recovering from bank-side failures is substantial: Plaid maintains a failure taxonomy that covers broken DOM selectors, session expiry during multi-step auth flows, intermittent bank-side 503s, MFA prompt detection, and security challenge screens. Each category has a different recovery strategy, and the classification must happen fast enough to keep the user in a responsive state during the Link flow.
+
+---
+
+## Data Normalization at Financial Scale
+
+Every bank returns transaction data in a different format. A debit at a grocery store might arrive as `"WHOLEFDS MKT #10 02/14"` from one institution, `"WHOLE FOODS MARKET"` from another, and `"ACH CREDIT WFM PAYMENT 3829201"` from a third. Plaid's **merchant enrichment pipeline** resolves these raw strings into structured merchant records — canonical merchant name, merchant category code (MCC), logo, geolocation, and deduplication key.
+
+The enrichment pipeline runs as a multi-stage processing graph. Raw transaction descriptions enter a normalization stage that strips bank-specific prefixes, transaction IDs, and date artifacts. A learned embeddings model maps the normalized string to a vector space where similar merchant descriptions cluster together, enabling fuzzy matching against Plaid's merchant database even for descriptions with high surface-level variance. When confidence is below threshold, a secondary classifier attempts rule-based extraction using patterns for known bank message formats. Merchants that pass neither stage are flagged for manual review and eventually feed back into training data.
+
+Transaction **categorization** is a parallel problem. Plaid's categorization model assigns each transaction a hierarchical category label — e.g., `Food and Drink > Restaurants > Fast Food` — using a multi-class classifier trained on labeled transaction histories. The model combines the merchant identity (when resolved) with the raw description, transaction amount, day-of-week, and account type as features. Amount matters: a $4.50 transaction at a coffee shop is categorized differently from a $450 transaction at the same merchant. Temporal features matter: recurring fixed-amount transactions on the same day each month are likely subscriptions, not one-time purchases.
+
+Account metadata normalization is equally non-trivial. Banks represent account types differently — a checking account might be encoded as `"DDA"` (Demand Deposit Account), `"CHK"`, `"Checking"`, or a numeric code from a proprietary product catalog. Plaid's schema maps all of these to a canonical `AccountType` and `AccountSubtype` enum. Balances require special handling: available balance and current balance are distinct concepts (the difference is pending transactions), but banks expose them with varying names and semantics. Plaid's normalization layer must understand each bank's specific interpretation and map it correctly.
+
+---
+
+## Security Architecture for Financial Data
+
+Plaid operates under a security model with a clear hierarchy of threats: credential theft, token compromise, and unauthorized data access. The architecture addresses each layer.
+
+**Credential handling** in the scraping tier follows a strict key-management pattern. User credentials are encrypted with a per-user key derived from a master key held in a hardware security module (HSM). The encryption happens at the point of entry — credentials are never stored in plaintext after the initial user input. When the scraper needs to authenticate, it decrypts the credential in-memory for the duration of the request and discards the plaintext. The encrypted credential at rest is useless without the per-user key, and the per-user key is useless without the HSM master key. This defense-in-depth means a database breach does not yield usable credentials.
+
+**OAuth token management** for the API tier follows a different model — tokens are long-lived but scoped. Plaid stores access tokens encrypted at rest, rotates them proactively when banks support token refresh, and invalidates them immediately when users revoke access through Plaid's account management portal or through the bank's own consent management. Token scope is enforced on Plaid's side: a token granted for account balance access cannot be used to initiate payments, even if the bank's API technically accepts it under the same OAuth flow.
+
+**The FDX standard** (Financial Data Exchange) is the emerging industry protocol that Plaid both shaped and is now betting on. FDX defines a common API schema for financial data sharing, consent management, and OAuth token lifecycle, aiming to replace screen scraping entirely with a standardized API layer that all institutions would implement. Plaid is a founding member of the FDX governance body and has significant influence over the standard's design. From an engineering perspective, broader FDX adoption would let Plaid deprecate the scraping tier — removing its largest reliability and security surface — and standardize on a single integration model. The political and economic dynamics of getting 12,000 banks to implement a new API standard explain why this transition is measured in years, not quarters.
+
+**Encryption in transit** uses mutual TLS for server-to-server connections with bank APIs and standard TLS 1.3 for all consumer-facing traffic. Plaid's data plane is segmented so that services handling raw credentials are isolated from services handling derived data (transactions, balances), limiting blast radius in the event of a service-level compromise.
+
+---
+
+## The Link Product: Embedded UX on Unreliable Infrastructure
+
+Plaid Link is the JavaScript widget that end users interact with when connecting their bank accounts inside a third-party app. It renders as an iframe or a popup window, loads Plaid's UI, and manages the entire bank connection flow — institution search, credential entry (for scraping-tier banks), OAuth redirect handling, and MFA — before returning a public token to the host application.
+
+The engineering challenge of Link is building a reliable, accessible, conversion-optimized UX on top of infrastructure that is sometimes unreliable. A user who encounters a bank-side error mid-flow has no context to distinguish "Plaid is broken" from "your bank's login system returned a 503." Link's error handling must classify the failure, surface a message that is accurate without being alarming, and offer a recoverable path — retry, choose a different institution, or use a manual account number entry fallback.
+
+Conversion optimization in Link is a data engineering problem as much as a UX problem. Plaid A/B tests institution search ranking (showing recently-connected or regionally-popular banks first increases selection speed), credential form layout, error message phrasing, and the placement of OAuth vs. credential-entry flows. The metric is not session conversion alone — a user who connects successfully but revokes access within 24 hours represents a different failure mode than a user who abandons at institution search. Plaid tracks conversion funnels with step-level granularity.
+
+Accessibility is a hard requirement, not an afterthought. Link must be operable via keyboard navigation and screen reader, meet WCAG 2.1 AA contrast requirements, and behave correctly when embedded in host apps that use their own custom CSS. The iframe isolation that protects Plaid's UI from host-app style leakage also limits the host app's ability to customize Link's appearance — a deliberate trade-off that Plaid manages through a theming API that exposes safe customization points (colors, fonts, logo) while keeping layout control internal.
+
+---
+
+## Interview Implications: What Plaid Actually Tests
+
+Plaid's engineering culture is reliability-first in a way that reflects the cost of failures — when Plaid's connectivity layer breaks, users cannot pay bills, landlords cannot verify income, and fintech apps cannot onboard customers. The interview process screens explicitly for engineers who internalize reliability as a design constraint, not a feature.
+
+**System design questions** at Plaid frequently involve bank aggregation and data pipeline architecture. Common prompts include: design a system that connects to 12,000 financial institutions with varying API quality and returns account balance data within 500ms for the 95th percentile; design a transaction categorization pipeline that handles 50 million transactions per day with sub-second enrichment latency; design a webhook delivery system that guarantees at-least-once delivery for bank transaction events even when downstream consumers are temporarily unavailable. These questions test whether candidates think in terms of fallback tiers, circuit breakers, retry budgets, and failure classification — not just the happy path.
+
+**Security consciousness** is tested throughout, not siloed into a dedicated question. Interviewers expect candidates to raise credential storage, token scope, and encryption-at-rest considerations unprompted when designing systems that handle financial credentials. If you propose a design that stores access tokens in a relational database without mentioning encryption or key management, that is a signal that you are not thinking at the right threat level for Plaid's domain.
+
+**Financial domain vocabulary** matters. Plaid interviewers expect candidates to know the difference between ACH and wire transfers, what an MCC code is and why it matters for categorization, what OAuth 2.0's authorization code flow looks like at the protocol level, and why screen scraping is an engineering problem rather than just a legal or policy one. Demonstrating this fluency signals that you have thought carefully about the domain, not just prepared generic system design answers.
+
+Prepare by studying the FDX API specification, reviewing Plaid's public developer documentation for their transaction and auth APIs, and practicing system design scenarios that involve external dependencies with unpredictable reliability. Plaid's engineering bar is set by the reality that their infrastructure is embedded inside apps that users trust with their financial lives — the engineers who succeed there are the ones who build like that trust is non-negotiable.

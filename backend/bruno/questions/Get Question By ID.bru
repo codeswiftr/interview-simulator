@@ -1,0 +1,15 @@
+meta {
+  name: Get Question By ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/questions/{{questionId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

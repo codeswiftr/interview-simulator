@@ -1,0 +1,500 @@
+import { http, HttpResponse } from 'msw';
+import type { User, InterviewSession, Question, InterviewResponse, Feedback } from '../../types';
+
+const API_URL = 'http://localhost:8000/api/v1';
+
+// Mock data factories
+export const mockUser: User = {
+  id: 'mock-user-id',
+  email: 'test@example.com',
+  full_name: 'Test User',
+  experience_level: 'mid',
+  subscription_tier: 'free',
+  interviews_this_month: 0,
+  total_interviews: 0,
+  created_at: new Date().toISOString(),
+};
+
+export const mockInterview: InterviewSession = {
+  id: 'mock-interview-id',
+  interview_type: 'behavioral',
+  company_style: 'Tech Corp',
+  status: 'scheduled',
+  question_count: 5,
+  created_at: new Date().toISOString(),
+};
+
+export const mockQuestion: Question = {
+  id: 'mock-question-id',
+  category: 'behavioral',
+  difficulty: 'medium',
+  content: 'Tell me about a time when you faced a challenging situation at work.',
+  expected_duration_seconds: 120,
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const mockResponse: InterviewResponse = {
+  id: 'mock-response-id',
+  session_id: 'mock-interview-id',
+  question_id: 'mock-question-id',
+  audio_url: 'https://example.com/audio.mp3',
+  transcript: 'This is a sample transcript.',
+  duration_seconds: 90,
+  word_count: 150,
+  filler_word_count: 5,
+  processing_status: 'completed',
+  submitted_at: new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const mockFeedback: Feedback = {
+  id: 'mock-feedback-id',
+  response_id: 'mock-response-id',
+  overall_score: 85,
+  content_score: 80,
+  delivery_score: 90,
+  structure_score: 85,
+  communication_clarity_score: 88,
+  strengths: ['Clear communication', 'Good structure'],
+  weaknesses: ['Could be more specific'],
+  improvement_suggestions: ['Add more concrete examples'],
+  detailed_analysis: 'Overall good response with room for improvement.',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const handlers = [
+  // Auth handlers
+  http.post(`${API_URL}/users/login`, () => {
+    return HttpResponse.json({
+      access_token: 'mock-access-token',
+      refresh_token: 'mock-refresh-token',
+      token_type: 'bearer',
+    });
+  }),
+
+  http.post(`${API_URL}/users/register`, () => {
+    return HttpResponse.json(mockUser);
+  }),
+
+  http.post(`${API_URL}/users/logout`, () => {
+    return HttpResponse.json({ message: 'Logged out successfully' });
+  }),
+
+  http.post(`${API_URL}/auth/refresh`, () => {
+    return HttpResponse.json({
+      access_token: 'new-mock-access-token',
+      refresh_token: 'new-mock-refresh-token',
+      token_type: 'bearer',
+    });
+  }),
+
+  http.get(`${API_URL}/users/me`, () => {
+    return HttpResponse.json(mockUser);
+  }),
+
+  http.post(`${API_URL}/auth/forgot-password`, () => {
+    return HttpResponse.json({ message: 'Password reset email sent' });
+  }),
+
+  http.post(`${API_URL}/auth/reset-password`, () => {
+    return HttpResponse.json({ message: 'Password reset successfully' });
+  }),
+
+  // User handlers
+  http.patch(`${API_URL}/users/me`, () => {
+    return HttpResponse.json(mockUser);
+  }),
+
+  http.post(`${API_URL}/users/me/change-password`, () => {
+    return HttpResponse.json({ message: 'Password changed successfully' });
+  }),
+
+  http.delete(`${API_URL}/users/me`, () => {
+    return HttpResponse.json({ message: 'Account deleted successfully' });
+  }),
+
+  http.get(`${API_URL}/users/me/stats`, () => {
+    return HttpResponse.json({
+      total_sessions: 10,
+      completed_sessions: 8,
+      average_score: 82,
+      total_practice_time_seconds: 3600,
+    });
+  }),
+
+  http.get(`${API_URL}/users/me/progress`, () => {
+    return HttpResponse.json({
+      score_trend: [
+        { date: '2024-01-01', score: 75 },
+        { date: '2024-01-02', score: 80 },
+      ],
+    });
+  }),
+
+  http.get(`${API_URL}/users/me/readiness-score`, () => {
+    return HttpResponse.json({
+      readiness_score: 85,
+      sessions_used: 10,
+      improvement_trend: 5,
+      message: 'You are well-prepared for interviews',
+    });
+  }),
+
+  http.get(`${API_URL}/users/me/improvements`, () => {
+    return HttpResponse.json({
+      delivery: {
+        current_score: 82,
+        previous_score: 78,
+        trend: 'improving',
+        improvements: ['Reduce filler words', 'Slow down pacing'],
+        areas_to_work_on: ['Eye contact', 'Vocal variety'],
+      },
+      behavioral: {
+        current_score: 79,
+        previous_score: 77,
+        trend: 'improving',
+        improvements: ['Use STAR format', 'Add more outcome detail'],
+        areas_to_work_on: ['Quantify impact', 'Show ownership'],
+      },
+      technical: {
+        current_score: 74,
+        previous_score: 75,
+        trend: 'declining',
+        improvements: ['Explain trade-offs', 'Clarify assumptions'],
+        areas_to_work_on: ['Edge cases', 'Complexity analysis'],
+      },
+      sessions_analyzed: 6,
+      data_available: true,
+    });
+  }),
+
+  http.get(`${API_URL}/users/me/skills-gap`, () => {
+    return HttpResponse.json({
+      dimensions: [
+        {
+          name: 'System Design',
+          current_score: 72,
+          target_score: 85,
+          sessions_with_data: 5,
+          trend: 'improving',
+        },
+        {
+          name: 'Behavioral',
+          current_score: 80,
+          target_score: 90,
+          sessions_with_data: 6,
+          trend: 'stable',
+        },
+      ],
+      sessions_analyzed: 6,
+      data_available: true,
+      last_updated: new Date().toISOString(),
+    });
+  }),
+
+  // Interview handlers
+  http.get(`${API_URL}/interviews`, () => {
+    return HttpResponse.json([mockInterview]);
+  }),
+
+  http.get(`${API_URL}/interviews/:id`, () => {
+    return HttpResponse.json(mockInterview);
+  }),
+
+  http.post(`${API_URL}/interviews`, () => {
+    return HttpResponse.json(mockInterview);
+  }),
+
+  http.post(`${API_URL}/interviews/quick-practice`, () => {
+    return HttpResponse.json(mockInterview);
+  }),
+
+  http.post(`${API_URL}/interviews/:id/start`, () => {
+    return HttpResponse.json({ ...mockInterview, status: 'in_progress' });
+  }),
+
+  http.post(`${API_URL}/interviews/:id/end`, () => {
+    return HttpResponse.json({ ...mockInterview, status: 'completed' });
+  }),
+
+  http.delete(`${API_URL}/interviews/:id`, () => {
+    return HttpResponse.json({ message: 'Interview deleted successfully' });
+  }),
+
+  http.get(`${API_URL}/interviews/:id/questions`, () => {
+    return HttpResponse.json([mockQuestion]);
+  }),
+
+  http.get(`${API_URL}/interviews/:id/responses`, () => {
+    return HttpResponse.json([mockResponse]);
+  }),
+
+  // Questions handlers
+  http.get(`${API_URL}/questions`, () => {
+    return HttpResponse.json([mockQuestion]);
+  }),
+
+  http.get(`${API_URL}/questions/:id`, () => {
+    return HttpResponse.json(mockQuestion);
+  }),
+
+  http.get(`${API_URL}/questions/random`, () => {
+    return HttpResponse.json(mockQuestion);
+  }),
+
+  // Responses handlers
+  http.post(`${API_URL}/interviews/:sessionId/responses`, () => {
+    return HttpResponse.json(mockResponse);
+  }),
+
+  http.get(`${API_URL}/responses/:id`, () => {
+    return HttpResponse.json(mockResponse);
+  }),
+
+  // Feedback handlers
+  http.get(`${API_URL}/feedback/response/:responseId`, () => {
+    return HttpResponse.json(mockFeedback);
+  }),
+
+  http.get(`${API_URL}/feedback/session/:sessionId`, () => {
+    return HttpResponse.json({
+      overall_score: 85,
+      audio_score: 80,
+      content_score: 88,
+      top_strengths: ['Clear communication', 'Good structure'],
+      top_improvements: ['Add more examples', 'Reduce filler words'],
+      recommended_practice_areas: ['Technical questions', 'System design'],
+    });
+  }),
+
+  http.get(`${API_URL}/feedback/session/:sessionId/all`, () => {
+    return HttpResponse.json([mockFeedback]);
+  }),
+
+  http.get(`${API_URL}/feedback/session/:sessionId/status`, () => {
+    return HttpResponse.json({
+      total_responses: 5,
+      analyzed_responses: 3,
+      pending_responses: 2,
+      is_complete: false,
+    });
+  }),
+
+  http.get(`${API_URL}/feedback/session/:sessionId/comparison`, () => {
+    return HttpResponse.json({
+      session_score: 85,
+      average_score: 80,
+      improvement_percent: 6.25,
+      sessions_compared: 10,
+    });
+  }),
+
+  http.post(`${API_URL}/feedback/generate/session/:sessionId`, () => {
+    return HttpResponse.json({ message: 'Feedback generation started' });
+  }),
+
+  http.post(`${API_URL}/feedback/generate/response/:responseId`, () => {
+    return HttpResponse.json(mockFeedback);
+  }),
+
+  // Upload handlers
+  http.post(`${API_URL}/upload/audio`, async ({ request }) => {
+    const contentType = request.headers.get('content-type') || '';
+
+    // REGRESSION TEST: Ensure Content-Type is multipart/form-data, not application/json
+    // This prevents the 422 Unprocessable Content error that occurs when FormData
+    // is sent with JSON content type instead of multipart/form-data
+    if (contentType.includes('application/json')) {
+      return HttpResponse.json(
+        { detail: 'Content-Type must be multipart/form-data for file uploads, not application/json' },
+        { status: 422 }
+      );
+    }
+
+    if (!contentType.includes('multipart/form-data')) {
+      return HttpResponse.json(
+        { detail: 'Content-Type must be multipart/form-data for file uploads' },
+        { status: 422 }
+      );
+    }
+
+    // Validate FormData fields
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const sessionId = formData.get('session_id');
+    const questionId = formData.get('question_id');
+
+    if (!file || !sessionId || !questionId) {
+      return HttpResponse.json(
+        { detail: 'Missing required fields: file, session_id, question_id' },
+        { status: 422 }
+      );
+    }
+
+    return HttpResponse.json({
+      audio_url: 'https://example.com/uploaded-audio.mp3',
+      duration_seconds: 120,
+    });
+  }),
+
+  // Subscriptions handlers
+  http.get(`${API_URL}/subscriptions/status`, () => {
+    return HttpResponse.json({
+      tier: 'free',
+      status: 'active',
+      expires_at: null,
+      interviews_this_month: 0,
+      interviews_limit: 3,
+      can_create_interview: true,
+    });
+  }),
+
+  http.get(`${API_URL}/subscriptions/pricing`, () => {
+    return HttpResponse.json({
+      pro_monthly_price_id: 'price_monthly',
+      pro_annual_price_id: 'price_annual',
+    });
+  }),
+
+  http.post(`${API_URL}/subscriptions/checkout`, () => {
+    return HttpResponse.json({
+      url: 'https://checkout.stripe.com/session/test',
+    });
+  }),
+
+  http.post(`${API_URL}/subscriptions/portal`, () => {
+    return HttpResponse.json({
+      url: 'https://billing.stripe.com/portal/test',
+    });
+  }),
+
+  http.post(`${API_URL}/subscriptions/cancel`, () => {
+    return HttpResponse.json({ message: 'Subscription cancelled successfully' });
+  }),
+
+  // Preparation API handlers (AI Ghostwriter)
+  http.post(`${API_URL}/preparation/start`, () => {
+    return HttpResponse.json({
+      preparation_id: 'prep-test-id',
+      stage: 'detective',
+      message: 'Preparation started',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation`, () => {
+    return HttpResponse.json({
+      preparations: [],
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/state`, () => {
+    return HttpResponse.json({
+      stage: 'detective',
+      question: {
+        id: 'question-test-id',
+        content: 'Tell me about a challenging project',
+        category: 'behavioral',
+        difficulty: 'medium',
+      },
+      current_question: 'Can you tell me about a specific project that relates to this question?',
+      qna: [],
+      draft_answer: null,
+      attempts: [],
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/detective/question`, () => {
+    return HttpResponse.json({
+      question: 'Can you tell me about a specific project that relates to this question?',
+      order: 1,
+      is_complete: false,
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/detective/answer`, () => {
+    return HttpResponse.json({
+      next_question: 'What challenges did you face in that project?',
+      stage: 'detective',
+      is_complete: false,
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/generate-draft`, () => {
+    return HttpResponse.json({
+      draft_answer: '**Situation**: I worked on a project where...\n**Task**: My responsibility was...\n**Action**: I took the following steps...\n**Result**: The outcome was...',
+      stage: 'draft',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/draft`, () => {
+    return HttpResponse.json({
+      draft_answer: '**Situation**: I worked on a project where...\n**Task**: My responsibility was...\n**Action**: I took the following steps...\n**Result**: The outcome was...',
+      stage: 'draft',
+    });
+  }),
+
+  http.patch(`${API_URL}/preparation/:id/draft`, () => {
+    return HttpResponse.json({
+      draft_answer: 'Updated draft answer...',
+      stage: 'draft',
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/practice/start`, () => {
+    return HttpResponse.json({
+      attempt_id: 'attempt-test-id',
+      stage: 'practice',
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/practice/submit`, () => {
+    return HttpResponse.json({
+      attempt_id: 'attempt-test-id',
+      transcript: 'This is the transcribed delivery from practice.',
+      stage: 'practice',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/attempts`, () => {
+    return HttpResponse.json({
+      attempts: [
+        {
+          id: 'attempt-1',
+          preparation_id: 'prep-test-id',
+          audio_url: 'https://example.com/audio1.mp3',
+          transcript: 'First practice attempt transcript',
+          delivery_score: null,
+          comparison_feedback: null,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+  }),
+
+  http.post(`${API_URL}/preparation/:id/rate-delivery`, () => {
+    return HttpResponse.json({
+      delivery_score: 85,
+      content_coverage: 90,
+      key_points: 85,
+      flow_structure: 80,
+      strengths: ['Clear communication', 'Good structure', 'Relevant examples'],
+      improvements: ['Add more specific metrics', 'Improve pacing', 'Better conclusion'],
+      comparison_feedback: 'Your delivery covered most key points from the draft. Good structure and flow.',
+    });
+  }),
+
+  http.get(`${API_URL}/preparation/:id/comparison`, () => {
+    return HttpResponse.json({
+      draft: '**Situation**: I worked on a project...',
+      delivery: 'I worked on a project where we had to...',
+      delivery_score: 85,
+      comparison_feedback: 'Good coverage of main points.',
+      strengths: ['Clear communication', 'Good examples'],
+      improvements: ['Add more metrics', 'Better pacing'],
+    });
+  }),
+];

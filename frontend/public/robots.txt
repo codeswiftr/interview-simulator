@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Block authenticated/app pages
+Disallow: /dashboard
+Disallow: /interview/
+Disallow: /feedback/
+Disallow: /settings
+Disallow: /preparation/
+Disallow: /progress
+Disallow: /analytics
+Disallow: /shared/
+Disallow: /team
+Disallow: /join/
+Disallow: /api/
+
+Sitemap: https://app.codeswiftr.com/sitemap.xml

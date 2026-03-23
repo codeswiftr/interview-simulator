@@ -1,0 +1,226 @@
+# =============================================================================
+# Interview Simulator - Local Development Environment
+# Complete docker-compose configuration for local development
+# =============================================================================
+version: '3.9'
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: interview-simulator-dev-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-interview_simulator}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-interview_simulator}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - app-network
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache & Session Store
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: interview-simulator-dev-redis
+    restart: unless-stopped
+
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --loglevel warning
+
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+    networks:
+      - app-network
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend (Development Mode)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+      target: builder  # Use builder stage for faster rebuilds
+
+    container_name: interview-simulator-dev-backend
+    restart: unless-stopped
+
+    environment:
+      # Application
+      APP_NAME: "Interview Simulator Development"
+      DEBUG: "true"
+      ENVIRONMENT: "development"
+      LOG_LEVEL: "DEBUG"
+
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-interview_simulator}
+
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+
+      # Security (development keys - DO NOT use in production!)
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key_change_in_production_32_chars_minimum}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+
+      # AI Services (optional for local dev)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER:-groq}
+      CONTENT_ANALYSIS_PROVIDER: ${CONTENT_ANALYSIS_PROVIDER:-openrouter}
+
+      # Stripe (optional for local dev)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+
+      # Email (optional for local dev)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-dev@localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+
+      # Analytics (optional for local dev)
+      POSTHOG_API_KEY: ${POSTHOG_API_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://app.posthog.com}
+
+      # CORS (permissive for development)
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173"]}
+
+      # Development settings
+      RELOAD: "true"
+      WORKERS: "1"
+
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+    volumes:
+      # Mount source code for hot-reloading
+      - ../backend/app:/app/app:ro
+      - ../backend/alembic:/app/alembic:ro
+      - ../backend/alembic.ini:/app/alembic.ini:ro
+      # Persistent uploads directory
+      - uploads_data:/app/uploads
+      # Development logs
+      - ./logs/backend:/app/logs
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - app-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Development mode - no strict resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+  # ---------------------------------------------------------------------------
+  # React Frontend (Development Mode with Vite)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile.frontend.dev
+      args:
+        - NODE_ENV=development
+
+    container_name: interview-simulator-dev-frontend
+    restart: unless-stopped
+
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_APP_ENV=development
+      - NODE_ENV=development
+
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+
+    volumes:
+      # Mount source code for hot-reloading
+      - ../frontend/src:/app/src:ro
+      - ../frontend/public:/app/public:ro
+      - ../frontend/index.html:/app/index.html:ro
+      - ../frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ../frontend/tailwind.config.js:/app/tailwind.config.js:ro
+      - ../frontend/postcss.config.js:/app/postcss.config.js:ro
+      - ../frontend/tsconfig.json:/app/tsconfig.json:ro
+      - ../frontend/tsconfig.app.json:/app/tsconfig.app.json:ro
+      # Node modules as anonymous volume for performance
+      - /app/node_modules
+
+    depends_on:
+      - backend
+
+    networks:
+      - app-network
+
+    # Development mode - no strict resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  app-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local

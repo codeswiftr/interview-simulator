@@ -1,0 +1,19 @@
+meta {
+  name: Get Interview Questions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/interviews/{{interviewId}}/questions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+vars:pre-request {
+  interviewId: 6a8927aa-489a-494f-8049-36854124d92b
+}

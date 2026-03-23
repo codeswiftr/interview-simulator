@@ -1,0 +1,15 @@
+meta {
+  name: Get All Session Feedback
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/feedback/session/{{interviewId}}/all
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

@@ -1,0 +1,704 @@
+"""Interview session management endpoints."""
+
+import asyncio
+import logging
+from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
+from sqlmodel import delete, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.db import get_session
+from app.dependencies import check_interview_quota, get_current_user
+from app.models.interview import (
+    InterviewQuestion,
+    InterviewResponse,
+    InterviewResponseCreate,
+    InterviewResponseRead,
+    InterviewSession,
+    InterviewSessionCreate,
+    InterviewSessionRead,
+    InterviewStatus,
+    InterviewType,
+)
+from app.models.interview_share import (
+    InterviewShareRead,
+    SharedInterviewRead,
+)
+from app.models.question import Question, QuestionRead
+from app.models.user import User
+from app.services.analytics import Events, get_analytics
+from app.services.background_tasks import background_tasks
+from app.services.interview_service import InterviewService
+from app.services.pdf_export_service import PDFExportService
+from app.services.share_service import ShareService
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+interview_service = InterviewService()
+
+# Module-level job queue reference; set during app startup by main.py.
+# None signals that the forge-jobs queue is unavailable (fall back to
+# fire-and-forget asyncio.create_task for tests / early-start paths).
+_job_queue: Any = None
+
+
+def set_job_queue(queue: Any) -> None:
+    """Register the application-level forge-jobs queue.
+
+    Called once from the FastAPI lifespan handler after the queue is
+    initialised.  Exposed at module level so it can be patched in unit tests.
+    """
+    global _job_queue  # noqa: PLW0603
+    _job_queue = queue
+
+
+def _get_time() -> datetime:
+    return datetime.now(UTC)
+
+
+async def _get_interview_for_user(
+    session: AsyncSession, interview_id: UUID, user_id: UUID
+) -> InterviewSession:
+    result = await session.exec(
+        select(InterviewSession).where(
+            InterviewSession.id == interview_id, InterviewSession.user_id == user_id
+        )
+    )
+    interview = result.first()
+    if not interview:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
+    return interview
+
+
+@router.post(
+    "",
+    response_model=InterviewSessionRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_interview_quota)],
+)
+async def create_interview(
+    payload: InterviewSessionCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Create a new interview session.
+
+    Enforces subscription quota limits (Free: 3/month, Pro: unlimited).
+    """
+    interview = InterviewSession(
+        user_id=current_user.id,
+        interview_type=payload.interview_type,
+        company_style=payload.company_style,
+        target_company=payload.target_company,
+        question_count=payload.question_count,
+        difficulty=payload.difficulty,
+        status=InterviewStatus.SCHEDULED,
+        scheduled_at=payload.scheduled_at,
+    )
+    session.add(interview)
+
+    # NOTE: interviews_this_month and total_interviews were already atomically
+    # incremented by check_interview_quota (the route dependency).  Do NOT
+    # increment them again here — that would double-count each interview.
+
+    await session.commit()
+    await session.refresh(interview)
+
+    # Re-read the up-to-date counter from DB so remaining_interviews is accurate
+    # (the quota dependency runs in a separate session from the route handler).
+    await session.refresh(current_user)
+
+    # Track interview created event
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_CREATED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+            "difficulty": interview.difficulty,
+            "company_style": interview.company_style,
+        },
+    )
+
+    # Calculate remaining interviews for free users
+    from app.models.user import SubscriptionTier
+
+    free_tier_limit = 3
+    remaining = None
+    if current_user.subscription_tier == SubscriptionTier.FREE:
+        remaining = max(0, free_tier_limit - current_user.interviews_this_month)
+
+    # Return interview with remaining count
+    return {
+        "id": interview.id,
+        "interview_type": interview.interview_type,
+        "company_style": interview.company_style,
+        "target_company": interview.target_company,
+        "status": interview.status,
+        "question_count": interview.question_count,
+        "overall_score": interview.overall_score,
+        "duration_seconds": interview.duration_seconds,
+        "created_at": interview.created_at,
+        "remaining_interviews": remaining,
+    }
+
+
+@router.get("", response_model=list[InterviewSessionRead])
+async def list_interviews(
+    status_filter: InterviewStatus | None = Query(None, alias="status"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[InterviewSession]:
+    """List user's interview sessions."""
+    stmt = select(InterviewSession).where(InterviewSession.user_id == current_user.id)
+    if status_filter:
+        stmt = stmt.where(InterviewSession.status == status_filter)
+
+    stmt = stmt.order_by(InterviewSession.created_at.desc()).limit(limit).offset(offset)
+    result = await session.exec(stmt)
+    return result.all()
+
+
+@router.get("/{interview_id}", response_model=InterviewSessionRead)
+async def get_interview(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> InterviewSession:
+    """Get interview session details."""
+    return await _get_interview_for_user(session, interview_id, current_user.id)
+
+
+@router.post("/{interview_id}/start", response_model=InterviewSessionRead)
+async def start_interview(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> InterviewSession:
+    """Start an interview session.
+
+    When starting an interview, random questions are assigned based on
+    the interview type. Questions are linked via InterviewQuestion records.
+    """
+    interview = await _get_interview_for_user(session, interview_id, current_user.id)
+    if interview.status not in {InterviewStatus.SCHEDULED, InterviewStatus.IN_PROGRESS}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot start interview"
+        )
+
+    # Assign questions if not already assigned (idempotent for re-starting)
+    # Check both if questions exist AND if the count matches (prevents partial/duplicate assignments)
+    existing_questions = await interview_service.get_interview_questions(session, interview_id)
+    expected_count = interview.question_count
+
+    if len(existing_questions) != expected_count:
+        # Clear any existing questions if count doesn't match (handles partial assignments or duplicates)
+        if existing_questions:
+            await session.exec(
+                delete(InterviewQuestion).where(InterviewQuestion.session_id == interview_id)
+            )
+            await session.flush()
+        # Assign the correct number of questions
+        try:
+            await interview_service.assign_questions(session, interview)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            ) from None
+
+    interview.status = InterviewStatus.IN_PROGRESS
+    interview.started_at = interview.started_at or _get_time()
+    await session.commit()
+    await session.refresh(interview)
+
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_STARTED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+            "difficulty": interview.difficulty,
+            "company_style": interview.company_style,
+        },
+    )
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.ACTIVATION_STARTED,
+        properties={
+            "activation_type": "interview",
+            "interview_id": str(interview.id),
+        },
+    )
+    return interview
+
+
+@router.get("/{interview_id}/questions", response_model=list[QuestionRead])
+async def get_interview_questions(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[Question]:
+    """Get all questions assigned to an interview session.
+
+    Returns questions in the order they should be asked.
+    Must be called after the interview has been started.
+    """
+    # Verify interview exists and belongs to user
+    interview = await _get_interview_for_user(session, interview_id, current_user.id)
+
+    # Check if interview has been started (questions are assigned on start)
+    if interview.status == InterviewStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Interview has not been started. Call POST /start first.",
+        )
+
+    questions = await interview_service.get_interview_questions(session, interview_id)
+
+    if not questions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No questions found for this interview.",
+        )
+
+    return questions
+
+
+@router.post("/{interview_id}/end", response_model=InterviewSessionRead)
+async def end_interview(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> InterviewSession:
+    """End an interview session.
+
+    After ending, automatically triggers background generation of session feedback.
+    """
+    interview = await _get_interview_for_user(session, interview_id, current_user.id)
+    if interview.status not in {InterviewStatus.IN_PROGRESS, InterviewStatus.SCHEDULED}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot end interview")
+
+    now = _get_time()
+    interview.status = InterviewStatus.COMPLETED
+    interview.ended_at = now
+    interview.started_at = interview.started_at or now
+    interview.duration_seconds = int((interview.ended_at - interview.started_at).total_seconds())
+    await session.commit()
+    await session.refresh(interview)
+
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_COMPLETED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+            "difficulty": interview.difficulty,
+            "duration_seconds": interview.duration_seconds,
+        },
+    )
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.ACTIVATION_COMPLETED,
+        properties={
+            "activation_type": "interview",
+            "interview_id": str(interview.id),
+        },
+    )
+
+    # Set activated_at on first session completion (idempotent)
+    if current_user.activated_at is None:
+        current_user.activated_at = now
+        await session.commit()
+
+    # Enqueue background session feedback generation via DB-backed job queue
+    if _job_queue is not None:
+        await _job_queue.enqueue(
+            "generate_session_feedback",
+            {"session_id": str(interview_id)},
+        )
+    else:
+        # Fallback: fire-and-forget (job queue not available, e.g. tests)
+        asyncio.create_task(background_tasks.generate_session_feedback_async(interview_id))
+
+    return interview
+
+
+@router.delete("/{interview_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_interview(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Cancel a scheduled interview."""
+    interview = await _get_interview_for_user(session, interview_id, current_user.id)
+    if interview.status != InterviewStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only scheduled interviews can be cancelled",
+        )
+    interview.status = InterviewStatus.CANCELLED
+    await session.commit()
+
+
+@router.post(
+    "/{interview_id}/responses",
+    response_model=InterviewResponseRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_response(
+    interview_id: UUID,
+    payload: InterviewResponseCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> InterviewResponse:
+    """Submit a response to an interview question."""
+    # Verify interview exists and belongs to user
+    interview = await _get_interview_for_user(session, interview_id, current_user.id)
+
+    # Validate interview is in progress
+    if interview.status != InterviewStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only submit responses to interviews in progress",
+        )
+
+    # Verify question belongs to this interview session
+    question_link_result = await session.exec(
+        select(InterviewQuestion).where(
+            InterviewQuestion.session_id == interview_id,
+            InterviewQuestion.question_id == payload.question_id,
+        )
+    )
+    question_link = question_link_result.first()
+    if not question_link:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Question does not belong to this interview session",
+        )
+
+    # Create the response
+    response = InterviewResponse(
+        session_id=interview_id,
+        question_id=payload.question_id,
+        audio_url=payload.audio_url,
+        video_url=payload.video_url,
+        transcript=payload.transcript,
+        duration_seconds=payload.duration_seconds,
+    )
+
+    # Calculate word count if transcript is provided
+    if payload.transcript:
+        response.word_count = len(payload.transcript.split())
+
+    session.add(response)
+    await session.commit()
+    await session.refresh(response)
+
+    # Enqueue audio processing via DB-backed job queue if audio_url provided
+    if payload.audio_url and not payload.transcript:
+        if _job_queue is not None:
+            await _job_queue.enqueue(
+                "process_audio",
+                {"response_id": str(response.id), "audio_url": payload.audio_url},
+            )
+        else:
+            # Fallback: fire-and-forget (job queue not available, e.g. tests)
+            asyncio.create_task(
+                background_tasks.process_response_audio_async(response.id, payload.audio_url)
+            )
+
+    return response
+
+
+@router.get("/{interview_id}/responses", response_model=list[InterviewResponseRead])
+async def get_responses(
+    interview_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    """Get all responses for an interview session with question data."""
+    # Verify interview exists and belongs to user
+    await _get_interview_for_user(session, interview_id, current_user.id)
+
+    # Fetch all responses for this interview
+    result = await session.exec(
+        select(InterviewResponse)
+        .where(InterviewResponse.session_id == interview_id)
+        .order_by(InterviewResponse.created_at)
+    )
+    responses = result.all()
+
+    # Fetch questions for all responses
+    question_ids = [r.question_id for r in responses]
+    if question_ids:
+        question_result = await session.exec(select(Question).where(Question.id.in_(question_ids)))
+        questions_map = {q.id: q for q in question_result.all()}
+    else:
+        questions_map = {}
+
+    # Build response with embedded question data
+    response_data = []
+    for r in responses:
+        question = questions_map.get(r.question_id)
+        response_dict = {
+            "id": r.id,
+            "session_id": r.session_id,
+            "question_id": r.question_id,
+            "audio_url": r.audio_url,
+            "video_url": r.video_url,
+            "transcript": r.transcript,
+            "duration_seconds": r.duration_seconds,
+            "word_count": r.word_count,
+            "filler_word_count": r.filler_word_count,
+            "processing_status": r.processing_status,
+            "processing_error": r.processing_error,
+            "created_at": r.created_at,
+            "question": {
+                "id": question.id,
+                "content": question.content,
+                "category": question.category,
+                "difficulty": question.difficulty,
+            }
+            if question
+            else None,
+        }
+        response_data.append(response_dict)
+
+    return response_data
+
+
+@router.get("/{interview_id}/feedback")
+async def get_interview_feedback(interview_id: UUID) -> dict[str, str]:
+    """Placeholder for feedback retrieval."""
+    return {"message": f"Get feedback for interview {interview_id} - not yet implemented"}
+
+
+@router.post(
+    "/quick-practice",
+    response_model=InterviewSessionRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_interview_quota)],
+)
+async def create_quick_practice(
+    question_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Create a 1-question practice session with a specific question.
+
+    Allows users to practice individual questions from the question bank.
+    Enforces subscription quota limits (Free: 3/month, Pro: unlimited).
+    """
+    # First, verify the question exists and get its details
+    result = await session.exec(
+        select(Question).where(
+            Question.id == question_id,
+            Question.is_active == True,  # noqa: E712
+        )
+    )
+    question = result.first()
+
+    if not question:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found or is inactive",
+        )
+
+    # Map question category to interview type
+    category_to_type = {
+        "behavioral": InterviewType.BEHAVIORAL,
+        "technical": InterviewType.TECHNICAL,
+        "system_design": InterviewType.SYSTEM_DESIGN,
+    }
+    interview_type = category_to_type.get(question.category, InterviewType.BEHAVIORAL)
+
+    # Create interview session
+    interview = InterviewSession(
+        user_id=current_user.id,
+        interview_type=interview_type,
+        company_style=question.company_tags[0] if question.company_tags else None,
+        question_count=1,
+        status=InterviewStatus.SCHEDULED,
+    )
+    session.add(interview)
+    await session.flush()
+
+    # Assign the specific question
+    try:
+        await interview_service.assign_specific_question(session, interview, question_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from None
+
+    # NOTE: interviews_this_month and total_interviews were already atomically
+    # incremented by check_interview_quota (the route dependency).  Do NOT
+    # increment them again here — that would double-count each interview.
+
+    await session.commit()
+    await session.refresh(interview)
+
+    # Re-read the up-to-date counter from DB so remaining_interviews is accurate.
+    await session.refresh(current_user)
+
+    get_analytics().capture(
+        user_id=str(current_user.id),
+        event=Events.INTERVIEW_CREATED,
+        properties={
+            "interview_id": str(interview.id),
+            "interview_type": str(interview.interview_type),
+            "question_count": interview.question_count,
+        },
+    )
+
+    # Calculate remaining interviews for free users
+    from app.models.user import SubscriptionTier
+
+    free_tier_limit = 3
+    remaining = None
+    if current_user.subscription_tier == SubscriptionTier.FREE:
+        remaining = max(0, free_tier_limit - current_user.interviews_this_month)
+
+    # Return interview with remaining count
+    return {
+        "id": interview.id,
+        "interview_type": interview.interview_type,
+        "company_style": interview.company_style,
+        "target_company": interview.target_company,
+        "status": interview.status,
+        "question_count": interview.question_count,
+        "overall_score": interview.overall_score,
+        "duration_seconds": interview.duration_seconds,
+        "created_at": interview.created_at,
+        "remaining_interviews": remaining,
+    }
+
+
+# ============================================================================
+# Export & Share Endpoints
+# ============================================================================
+
+pdf_service = PDFExportService()
+share_service = ShareService()
+
+
+@router.get("/{interview_id}/export")
+async def export_interview_pdf(
+    interview_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Export interview as PDF document.
+
+    Returns PDF file with interview results, feedback, and scores.
+    """
+    try:
+        pdf_bytes = await pdf_service.generate_interview_pdf(session, interview_id, current_user.id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="interview-{interview_id}.pdf"'},
+        )
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        if "denied" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@router.post("/{interview_id}/share", response_model=InterviewShareRead)
+async def create_share_link(
+    interview_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> InterviewShareRead:
+    """Create a shareable link for an interview.
+
+    Link expires after 7 days. Returns existing link if one already exists.
+    """
+    try:
+        share = await share_service.create_share_link(session, interview_id, current_user.id)
+        return InterviewShareRead(
+            id=share.id,
+            interview_id=share.interview_id,
+            token=share.token,
+            expires_at=share.expires_at,
+            view_count=share.view_count,
+            created_at=share.created_at,
+            share_url=f"/shared/{share.token}",
+        )
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
+
+
+@router.get("/{interview_id}/shares", response_model=list[InterviewShareRead])
+async def list_share_links(
+    interview_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[InterviewShareRead]:
+    """List all share links for an interview."""
+    shares = await share_service.get_shares_for_interview(session, interview_id, current_user.id)
+    return [
+        InterviewShareRead(
+            id=s.id,
+            interview_id=s.interview_id,
+            token=s.token,
+            expires_at=s.expires_at,
+            view_count=s.view_count,
+            created_at=s.created_at,
+            share_url=f"/shared/{s.token}",
+        )
+        for s in shares
+    ]
+
+
+@router.delete("/shares/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_share_link(
+    share_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Revoke (delete) a share link."""
+    try:
+        await share_service.revoke_share_link(session, share_id, current_user.id)
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
+
+
+# Public endpoint - no auth required
+@router.get("/shared/{token}", response_model=SharedInterviewRead)
+async def get_shared_interview(
+    token: str,
+    session: AsyncSession = Depends(get_session),
+) -> SharedInterviewRead:
+    """View a shared interview (public, no auth required).
+
+    Returns read-only interview data if token is valid and not expired.
+    """
+    try:
+        return await share_service.get_shared_interview(session, token)
+    except ValueError as e:
+        if "expired" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_410_GONE,
+                detail="Share link has expired",
+            ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

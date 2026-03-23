@@ -1,0 +1,857 @@
+@import "tailwindcss";
+@import "./design-tokens.css";
+
+@theme {
+  /* Brand Identity Colors */
+  --color-brand-primary: #FF6B9D;    /* Pink/Magenta - The "Soul" */
+  --color-brand-product: #38BDF8;    /* Electric Blue - The "Utility" */
+  --color-brand-accent: #00D9FF;     /* Cyan/Teal - The "Future/AI" */
+  --color-black-pure: #050505;       /* Marketing dark background */
+
+  /* Color Tokens - Design System */
+  --color-charcoal: #111827;
+  --color-electric-blue: #38BDF8;
+  --color-clean-white: #F8FAFC;
+
+  /* Surface Colors - Light Mode */
+  --color-surface-primary: #F8FAFC;
+  --color-surface-secondary: #F1F5F9;
+  --color-surface-tertiary: #E2E8F0;
+  --color-surface-dark: #111827;
+  --color-surface-dark-alt: #1F2937;
+
+  /* Text Colors - Light Mode */
+  --color-text-primary: #111827;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94A3B8;
+  --color-text-inverse: #F8FAFC;
+
+  /* Border Colors - Light Mode */
+  --color-border-light: #E2E8F0;
+  --color-border-medium: #CBD5E1;
+  --color-border-focus: #38BDF8;
+
+  /* Dark Mode Colors */
+  --color-dark-surface-primary: #0F172A;
+  --color-dark-surface-secondary: #1E293B;
+  --color-dark-surface-tertiary: #334155;
+  --color-dark-text-primary: #F8FAFC;
+  --color-dark-text-secondary: #CBD5E1;
+  --color-dark-text-tertiary: #94A3B8;
+  --color-dark-border-light: #334155;
+  --color-dark-border-medium: #475569;
+
+  /* Score Colors */
+  --color-score-excellent: #10B981;
+  --color-score-good: #22C55E;
+  --color-score-average: #EAB308;
+  --color-score-needs-work: #F97316;
+  --color-score-poor: #EF4444;
+
+  /* Status Colors */
+  --color-status-success: #10B981;
+  --color-status-warning: #F59E0B;
+  --color-status-error: #EF4444;
+  --color-status-info: #38BDF8;
+
+  /* State Colors */
+  --color-state-scheduled: #6366F1;
+  --color-state-in-progress: #38BDF8;
+  --color-state-completed: #10B981;
+  --color-state-cancelled: #94A3B8;
+
+  /* Font Families */
+  --font-family-heading: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-body: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* Premium dark palette tokens */
+  --color-bg-primary: #0a0a0b;
+  --color-bg-secondary: #141416;
+  --color-bg-card: rgba(20, 20, 22, 0.8);
+  --color-accent-primary: #3b82f6;
+  --color-accent-secondary: #8b5cf6;
+  --color-accent-success: #10b981;
+  --color-text-premium: #fafafa;
+  --color-text-muted: #71717a;
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-slide-up: slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-scale-in: scale-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --animate-recording-pulse: recording-pulse 2s infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-glow: pulse-glow 3s infinite;
+
+  /* Shadows */
+  --shadow-blue-glow: 0 0 20px rgba(56, 189, 248, 0.3);
+  --shadow-success-glow: 0 0 20px rgba(16, 185, 129, 0.3);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
+  /* Custom breakpoints */
+  --breakpoint-xs: 400px;
+}
+
+@layer base {
+  /* Light mode - default (using HSL from design-tokens.css) */
+  :root {
+    --bg-primary: hsl(var(--background));
+    --bg-secondary: hsl(var(--muted));
+    --bg-tertiary: hsl(var(--muted) / 0.8);
+    --fg-primary: hsl(var(--foreground));
+    --fg-secondary: hsl(var(--muted-foreground));
+    --fg-tertiary: hsl(var(--muted-foreground) / 0.7);
+    --border-color: hsl(var(--border));
+
+    /* Safe Area Insets for iPhone notch/home indicator */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  }
+
+  /* Dark mode overrides applied via design-tokens.css .dark class */
+
+  * {
+    border-color: var(--border-color);
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--fg-primary);
+    font-family: var(--font-family-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visible states */
+  *:focus-visible {
+    outline: 2px solid var(--color-electric-blue);
+    outline-offset: 2px;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Screen reader only utility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .sr-only:focus {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    width: auto;
+    height: auto;
+    padding: 1rem 1.5rem;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    background-color: white;
+    color: var(--color-text-primary);
+    border: 2px solid var(--color-electric-blue);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    font-weight: 600;
+  }
+
+  .dark .sr-only:focus {
+    background-color: var(--color-dark-surface-secondary);
+    color: var(--color-dark-text-primary);
+  }
+
+  /* Safe Area Utilities for iOS notch/home indicator */
+  .safe-area-top {
+    padding-top: max(0.5rem, var(--safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+
+  .safe-area-left {
+    padding-left: max(1rem, var(--safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(1rem, var(--safe-area-inset-right));
+  }
+
+  .safe-area-x {
+    padding-left: max(1rem, var(--safe-area-inset-left));
+    padding-right: max(1rem, var(--safe-area-inset-right));
+  }
+
+  .safe-area-y {
+    padding-top: max(0.5rem, var(--safe-area-inset-top));
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+
+  /* Touch optimizations for mobile */
+  button, a, [role="button"], .clickable {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Keyframe Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes recording-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.8; filter: brightness(1.1); }
+}
+
+/* Micro-Animation Keyframes for Premium Feel */
+@keyframes press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes ring-draw {
+  from { stroke-dashoffset: 251.2; }
+  to { stroke-dashoffset: var(--ring-offset); }
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -3%); }
+  20% { transform: translate(3%, 2%); }
+  30% { transform: translate(-1%, 4%); }
+  40% { transform: translate(4%, -1%); }
+  50% { transform: translate(-3%, 3%); }
+  60% { transform: translate(1%, -4%); }
+  70% { transform: translate(-4%, 1%); }
+  80% { transform: translate(2%, -2%); }
+  90% { transform: translate(-2%, 4%); }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* Waveform bar bounce animation for visualizer placeholder */
+@keyframes bar-bounce {
+  0%, 100% {
+    transform: scaleY(0.3);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Sound wave animation for onboarding illustrations */
+@keyframes soundwave {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+
+/* Line drawing dash animation */
+@keyframes dash {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Onboarding step slide animation */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.onboarding-step-enter {
+  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-bar-bounce,
+  .onboarding-step-enter {
+    animation: none;
+    transform: scaleY(0.5);
+    opacity: 0.4;
+  }
+}
+
+/* Utility Classes */
+/* Dark Mode Surface Overrides - uses dynamic CSS variables */
+@layer base {
+  .dark .bg-surface-primary {
+    background-color: var(--bg-primary) !important;
+  }
+
+  .dark .bg-surface-secondary {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  .dark .bg-surface-tertiary {
+    background-color: var(--bg-tertiary) !important;
+  }
+
+  .dark .text-text-primary {
+    color: var(--fg-primary) !important;
+  }
+
+  .dark .text-text-secondary {
+    color: var(--fg-secondary) !important;
+  }
+
+  .dark .text-text-tertiary {
+    color: var(--fg-tertiary) !important;
+  }
+}
+
+@layer utilities {
+  .heading-hero {
+    font-family: var(--font-family-heading);
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .heading-page {
+    font-family: var(--font-family-heading);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .heading-section {
+    font-family: var(--font-family-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .heading-card {
+    font-family: var(--font-family-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .body-large {
+    font-family: var(--font-family-body);
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+
+  .body-default {
+    font-family: var(--font-family-body);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .body-small {
+    font-family: var(--font-family-body);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .label {
+    font-family: var(--font-family-body);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .score-display {
+    font-family: var(--font-family-mono);
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+
+  /* Button Styles - Using HSL tokens */
+  .btn-primary {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    color: hsl(var(--primary-foreground));
+    background: hsl(var(--primary));
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px hsl(var(--primary) / 0.35);
+    opacity: 0.9;
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px hsl(var(--primary) / 0.2);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    background-color: hsl(var(--muted));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+
+  .btn-secondary:active {
+    transform: translateY(0);
+  }
+
+  .btn-ghost {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+    background: transparent;
+    border: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-ghost:hover {
+    background-color: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
+  }
+
+  .btn-ghost:active {
+    transform: scale(0.98);
+  }
+
+  /* Card Styles - Using HSL tokens */
+  .card {
+    background-color: hsl(var(--card));
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  }
+
+  .card-interactive {
+    background-color: hsl(var(--card));
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-interactive:hover {
+    box-shadow: 0 12px 24px -8px hsl(var(--primary) / 0.15);
+    border-color: hsl(var(--primary) / 0.4);
+    transform: translateY(-3px);
+  }
+
+  .card-interactive:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.3);
+    border-color: hsl(var(--primary));
+  }
+
+  .card-interactive:active {
+    transform: translateY(-1px) scale(0.99);
+  }
+
+  .card-glass {
+    border-radius: 1rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: hsl(var(--card) / 0.9);
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+
+  .dark .card-glass {
+    background: hsl(var(--muted) / 0.7);
+    border: 1px solid hsl(var(--border) / 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Input Styles - Using HSL tokens */
+  .input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    min-height: 44px; /* WCAG 2.1 mobile touch target minimum */
+    border-radius: 0.75rem;
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    font-family: inherit;
+    font-size: 1rem;
+    /* Prevent iOS zoom on focus */
+    font-size: max(1rem, 16px);
+  }
+
+  .dark .input {
+    background-color: hsl(var(--muted) / 0.5);
+  }
+
+  .input::placeholder {
+    color: hsl(var(--muted-foreground) / 0.7);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.15);
+  }
+
+  /* Badge Styles */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .badge-scheduled {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: #4F46E5;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+
+  .badge-in-progress {
+    background-color: rgba(56, 189, 248, 0.1);
+    color: #0284C7;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+  }
+
+  .badge-completed {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  /* Interview-Specific Components */
+  .recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 9999px;
+    background-color: #EF4444;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+
+  .recording-indicator::before {
+    content: '';
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+    background-color: white;
+    animation: var(--animate-recording-pulse);
+  }
+
+  .timer-display {
+    font-family: var(--font-family-mono);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.05em;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .question-card {
+    background: linear-gradient(145deg, #1F2937 0%, #111827 100%);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Desktop: larger padding */
+  @media (min-width: 640px) {
+    .question-card {
+      padding: 3rem;
+    }
+  }
+
+  /* Light mode: Add subtle electric-blue glow to make dark card feel intentional */
+  :root:not(.dark) .question-card {
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.15),
+      0 0 0 1px rgba(56, 189, 248, 0.1),
+      0 0 60px -15px rgba(56, 189, 248, 0.15);
+  }
+
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  }
+
+  /* Recording Deck - Dark studio aesthetic */
+  .recording-deck {
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Light mode: Add subtle glow to recording deck */
+  :root:not(.dark) .recording-deck {
+    box-shadow:
+      0 20px 40px -12px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(56, 189, 248, 0.15),
+      0 0 50px -15px rgba(56, 189, 248, 0.12);
+  }
+
+  /* Progress Bars */
+  .progress-bar {
+    height: 0.625rem;
+    border-radius: 9999px;
+    background-color: var(--color-surface-tertiary);
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, var(--color-electric-blue), #0EA5E9);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Glass Effects - Using HSL tokens */
+  .glass {
+    background: hsl(var(--card) / 0.65);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .dark .glass {
+    background: hsl(var(--background) / 0.65);
+    border: 1px solid hsl(var(--border) / 0.3);
+  }
+}
+
+/* Dark mode styles are now handled via HSL variables in design-tokens.css
+   The .dark class automatically switches the CSS variable values */
+
+/* Micro-Animation Utility Classes */
+@layer utilities {
+  .animate-press {
+    animation: press 0.15s ease-out;
+  }
+
+  .animate-ripple {
+    animation: ripple 0.6s ease-out forwards;
+  }
+
+  .animate-reveal {
+    animation: reveal 0.5s ease-out forwards;
+  }
+
+  .animate-stagger-in {
+    animation: stagger-in 0.3s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-bounce-in {
+    animation: bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Waveform bar animation for visualizer placeholder */
+  .animate-bar-bounce {
+    animation: bar-bounce 1s ease-in-out infinite;
+  }
+
+  /* Stagger delay utilities for list animations */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
+
+  /* Active/pressed state for buttons */
+  .active\:scale-press:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Hover scale for interactive elements */
+  .hover\:scale-hover:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease-out;
+  }
+}
