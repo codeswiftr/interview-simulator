@@ -2,6 +2,14 @@
 
 AI-powered interview practice platform for software engineers. Practice behavioral and technical interviews with real-time audio analysis and AI-generated feedback.
 
+## Current Status
+
+Interview Simulator is a public product/codebase for AI-assisted interview
+practice. The free-tier product surface is live, while the paid upgrade path
+and Stripe Team tier remain under verification. Treat the deployment and
+revenue docs in `docs/` as historical operating records unless a current
+checklist says otherwise.
+
 ## Quick Start (5 minutes)
 
 ### Prerequisites
@@ -13,7 +21,7 @@ AI-powered interview practice platform for software engineers. Practice behavior
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/codeswiftr-com/interview-simulator.git
+git clone https://github.com/codeswiftr/interview-simulator.git
 cd interview-simulator
 ```
 

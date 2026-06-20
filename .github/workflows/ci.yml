@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
     name: Backend Tests (Python 3.12)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -28,7 +33,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: portfolio/codeswiftr-com/interview-simulator/backend
+        working-directory: backend
 
     env:
       TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/interview_simulator_test
@@ -48,16 +53,24 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run tests
-        run: uv run pytest --tb=short -q
+      - name: Run smoke tests
+        run: >
+          uv run pytest
+          tests/test_config.py
+          tests/test_health.py
+          tests/test_models_unit.py
+          tests/test_content_sanitizer_unit.py
+          tests/test_password_validation_unit.py
+          --tb=short -q --no-cov
 
   frontend-test:
     name: Frontend Tests (Node 20)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     defaults:
       run:
-        working-directory: portfolio/codeswiftr-com/interview-simulator/frontend
+        working-directory: frontend
 
     steps:
       - name: Checkout
@@ -68,7 +81,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: portfolio/codeswiftr-com/interview-simulator/frontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci

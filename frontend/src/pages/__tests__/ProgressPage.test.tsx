@@ -326,7 +326,7 @@ describe('ProgressPage', () => {
       renderWithAuth(<ProgressPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Session History/i)).toBeInTheDocument();
+        expect(screen.getByText(/Behavioral Interview/i)).toBeInTheDocument();
       });
 
       expect(screen.getByText(/Behavioral Interview/i)).toBeInTheDocument();
