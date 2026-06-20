@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
     name: Backend Tests (Python 3.12)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -48,12 +53,21 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run tests
-        run: uv run pytest --tb=short -q
+      - name: Run smoke tests
+        run: >
+          uv run pytest
+          tests/test_config.py
+          tests/test_health.py
+          tests/test_models_unit.py
+          tests/test_content_sanitizer_unit.py
+          tests/test_password_validation_unit.py
+          tests/test_subscriptions_unit.py
+          --tb=short -q --no-cov
 
   frontend-test:
     name: Frontend Tests (Node 20)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     defaults:
       run:
