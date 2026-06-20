@@ -430,7 +430,7 @@ describe('PricingPage', () => {
   describe('Responsive Design', () => {
     it('has responsive grid for pricing cards', async () => {
       const { container } = await renderPricingPage();
-      const grid = container.querySelector('.grid.grid-cols-1.md\\:grid-cols-2');
+      const grid = container.querySelector('.grid.grid-cols-1.sm\\:grid-cols-3');
       expect(grid).toBeInTheDocument();
     });
 
