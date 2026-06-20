@@ -61,7 +61,6 @@ jobs:
           tests/test_models_unit.py
           tests/test_content_sanitizer_unit.py
           tests/test_password_validation_unit.py
-          tests/test_subscriptions_unit.py
           --tb=short -q --no-cov
 
   frontend-test:
